@@ -1,0 +1,289 @@
+SHORT HOP — UPDATED PRODUCT BLUEPRINT (V1)
+
+Tagline
+Hop, Skip, and a Jump.
+
+Alternate working tagline (optional):
+Walk first. Advance when needed.
+
+⸻
+
+What Short Hop Is (one sentence)
+
+Short Hop connects walkers with drivers who are already headed the same way, helping people save time and money without pressure or full rides.
+
+⸻
+
+App Description (cleaned + tightened)
+
+Short Hop is for those moments when walking almost works.
+
+You’re close, but not close enough.
+The bus just passed.
+Uber wants $12 for a 5-minute ride.
+
+Short Hop helps you walk first, then advance when someone is already passing your way. Drivers earn small credits for helping along routes they already take. Walkers save money, stress, and time.
+
+No full rides.
+No pressure.
+Just momentum.
+
+⸻
+
+1. THE PROBLEM (why this exists)
+
+People don’t usually need a ride.
+They need help with the last mile.
+
+Common situations:
+	•	You’re running late, but the destination is close
+	•	Bus routes don’t line up
+	•	Uber/Lyft is overpriced for short trips
+	•	Walking the whole way takes just a bit too long
+
+Current apps force an all-or-nothing decision.
+Short Hop fills the gap.
+
+⸻
+
+2. THE CORE IDEA (the soul)
+
+Walking is the default.
+Advancement is the assist.
+Full rides are the backup.
+
+Short Hop doesn’t push spending — it optimizes movement.
+
+⸻
+
+3. USER TYPES
+
+A. Walkers
+	•	Commuters
+	•	Students
+	•	City walkers
+	•	People mixing walking, transit, and rides
+
+They want:
+	•	to save time
+	•	to avoid overpaying
+	•	to reduce stress
+
+⸻
+
+B. Drivers (Helpers)
+	•	Already driving somewhere
+	•	Have routine routes (work, school, gym, errands)
+	•	Not looking for gig work
+	•	Want small offsets (gas, coffee, upkeep)
+
+They want:
+	•	flexibility
+	•	no obligation
+	•	appreciation, not pressure
+
+⸻
+
+4. THE ROUTINE-BASED DRIVER MODEL (KEY UPDATE)
+
+Drivers don’t “work shifts.”
+
+They declare their routine.
+
+Examples:
+	•	“Weekdays 8–9am: Home → Downtown”
+	•	“Weekdays 5–6pm: Downtown → Home”
+	•	“Tue/Thu evenings: Gym → Home”
+
+Short Hop:
+	•	knows these routes exist
+	•	only suggests hops along those paths
+	•	never asks for detours
+
+Drivers can:
+	•	toggle routines on/off
+	•	ignore requests with zero penalty
+	•	help only when it fits naturally
+
+This keeps the system ambient, cooperative, and humane.
+
+⸻
+
+5. USER FLOW (simple, clean)
+
+STEP 1 — Enter Destination
+
+No commitment.
+
+⸻
+
+STEP 2 — Short Hop shows 3 options
+
+🟢 Option 1: Walk
+	•	Distance
+	•	Time
+	•	Cost: $0
+“Best if you’ve got time.”
+
+🟡 Option 2: Short Hop (Advance)
+	•	Drivers already headed your way
+	•	Short distance only (0.5–2 miles max)
+	•	Time saved estimate
+	•	Included in subscription
+“Best if you’re a little behind.”
+
+🔵 Option 3: Uber / Lyft
+	•	Price comparison
+	•	ETA
+	•	Deep link
+“Best if you need a full ride.”
+
+Short Hop becomes the decision layer before spending.
+
+⸻
+
+6. PRICING MODEL (leverage, not pressure)
+
+Walkers
+	•	$10/month
+	•	Unlimited Short Hop visibility
+	•	No per-ride anxiety
+	•	No surge pricing
+
+This feels like membership, not consumption.
+
+⸻
+
+Drivers
+	•	No subscription
+	•	No quotas
+	•	No obligation
+	•	Credits earned only when helping
+
+⸻
+
+7. DRIVER INCENTIVE SYSTEM (non-exploitative)
+
+Drivers earn Credits, not wages.
+
+How it works:
+	•	1 mile advanced = 1 credit
+	•	Credits redeemable for:
+	•	gas
+	•	coffee
+	•	snacks
+	•	car wash
+	•	basic vehicle upkeep
+
+Why this matters:
+	•	keeps it supplemental
+	•	avoids gig-worker classification
+	•	feels cooperative, not extractive
+
+Drivers see:
+	•	“You helped 2 people today”
+	•	“You earned 3 credits”
+
+No leaderboard pressure.
+No gamification guilt.
+
+⸻
+
+8. SAFETY + TRUST (MVP-level)
+	•	Driver verification (ID + plate)
+	•	Live GPS during hops
+	•	Short distance caps
+	•	Route-aligned only (no detours)
+	•	Lightweight ratings (optional)
+
+Enough to feel safe.
+Not heavy enough to kill goodwill.
+
+⸻
+
+9. TECH MVP (what actually ships first)
+
+Phase 1 — MVP
+	•	Map view
+	•	Destination input
+	•	Routine route setup (simple)
+	•	Walker availability pins
+	•	Driver routine overlap detection
+	•	Simple matching
+	•	Credit tracking
+	•	Uber/Lyft deep links
+
+No AI.
+No social feed.
+No bloat.
+
+⸻
+
+10. WHY UBER / LYFT DON’T KILL THIS
+	•	They don’t want short trips
+	•	They don’t optimize walking
+	•	They don’t do cooperative micro-movement
+
+Short Hop:
+	•	reduces their inefficiency
+	•	feeds them better-timed rides
+	•	sits upstream, not competitive
+
+⸻
+
+11. PILOT STRATEGY (low risk)
+
+Start local and boring:
+	•	One city
+	•	Main roads only
+	•	1–2 mile cap
+	•	Morning + evening commute windows
+
+Even a waitlist validates demand.
+
+⸻
+
+12. MONEY & SEQUENCING (real talk)
+
+Short Hop:
+	•	Faster path to revenue
+	•	Clear subscription model
+	•	Easier to explain
+	•	Easier to pause or pivot
+
+Linda:
+	•	Deeper emotional product
+	•	Longer runway
+	•	Built when you’re stable
+
+Short Hop first = leverage.
+
+⸻
+
+13. THE ETHOS (unchanged, protected)
+
+Short Hop is not about:
+	•	disruption
+	•	domination
+	•	squeezing users
+
+It’s about:
+	•	dignity
+	•	momentum
+	•	helping people get where they’re going
+
+⸻
+
+Important reassurance (because I know you)
+
+You’re not “adding features.”
+You’re removing friction.
+
+The routine-route insight:
+	•	lowers driver stress
+	•	increases match quality
+	•	reduces legal exposure
+	•	makes the system feel natural
+
+That’s taste. That’s product sense.
+
