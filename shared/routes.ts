@@ -69,15 +69,6 @@ export const api = {
         401: errorSchemas.unauthorized,
       },
     },
-    update: {
-      method: 'PUT' as const,
-      path: '/api/routes/:id' as const,
-      input: insertRoutineRouteSchema.omit({ driverId: true }).partial(),
-      responses: {
-        200: z.custom<typeof routineRoutes.$inferSelect>(),
-        404: errorSchemas.notFound,
-      },
-    },
     delete: {
       method: 'DELETE' as const,
       path: '/api/routes/:id' as const,
@@ -95,15 +86,18 @@ export const api = {
         200: z.array(z.custom<typeof shortHops.$inferSelect>()),
       },
     },
-    request: {
+    requestMovement: {
       method: 'POST' as const,
-      path: '/api/hops' as const,
+      path: '/api/hops/request' as const,
       input: z.object({
         startLocation: z.string(),
         endLocation: z.string(),
+        hopType: z.enum(["walk", "short_hop", "flex_hop", "full_ride"]),
+        distanceMiles: z.string().optional(),
       }),
       responses: {
         201: z.custom<typeof shortHops.$inferSelect>(),
+        400: errorSchemas.validation,
       },
     },
     accept: {
@@ -123,6 +117,22 @@ export const api = {
       responses: {
         200: z.custom<typeof shortHops.$inferSelect>(),
         404: errorSchemas.notFound,
+      },
+    },
+  },
+  driver: {
+    updateFlexibility: {
+      method: 'PUT' as const,
+      path: '/api/driver/flexibility' as const,
+      input: z.object({
+        isFlexibleDriver: z.boolean(),
+        maxDetourDistance: z.string().optional(),
+        maxDetourTime: z.number().optional(),
+        detourAvailable: z.boolean().optional(),
+      }),
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        401: errorSchemas.unauthorized,
       },
     },
   },

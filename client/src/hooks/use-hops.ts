@@ -18,15 +18,15 @@ export function useRequestHop() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: RequestHopRequest) => {
-      const res = await fetch(api.hops.request.path, {
-        method: api.hops.request.method,
+    mutationFn: async (data: { startLocation: string; endLocation: string; hopType: "walk" | "short_hop" | "flex_hop" | "full_ride" }) => {
+      const res = await fetch(api.hops.requestMovement.path, {
+        method: api.hops.requestMovement.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to request hop");
-      return api.hops.request.responses[201].parse(await res.json());
+      return api.hops.requestMovement.responses[201].parse(await res.json());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.hops.list.path] });

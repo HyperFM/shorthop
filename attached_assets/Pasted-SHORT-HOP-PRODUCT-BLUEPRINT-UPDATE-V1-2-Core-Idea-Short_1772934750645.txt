@@ -1,0 +1,242 @@
+SHORT HOP — PRODUCT BLUEPRINT UPDATE (V1.2)
+
+Core Idea
+
+Short Hop is a movement-first transportation platform designed to reduce unnecessary full rides while still allowing complete trips when needed.
+
+Instead of assuming every journey requires a dedicated vehicle, Short Hop helps people move forward in stages while keeping the entire journey inside one app.
+
+Users can travel from Point A to Point B using a combination of walking and rides, all coordinated by the platform.
+
+The system prioritizes:
+
+• efficiency
+• cooperation
+• low-cost mobility
+• seamless navigation
+
+⸻
+
+Pricing Model
+
+Membership: $10/month
+
+Ride Costs:
+
+Standard Short Hop: $1–$3 per ride depending on distance
+
+Flex Hop (detour requests): dynamic pricing
+
+Full Ride: standard distance-based pricing
+
+⸻
+
+Integrated Navigation System
+
+Short Hop includes a built-in GPS navigation system so users never need to leave the app.
+
+Navigation includes:
+
+• real-time GPS map
+• walking directions
+• voice navigation
+• animated user movement on the map
+
+While walking, the map displays a small animated character or walking icon that moves along the path toward the destination.
+
+Voice guidance provides clear directions such as:
+
+“Walk straight for 0.3 miles.”
+
+“Turn right at the next intersection.”
+
+The system continuously checks for available drivers along the route.
+
+⸻
+
+Movement Options
+
+When a user enters a destination, the app calculates the best route and presents movement options.
+
+⸻
+
+1. Walk
+
+If the distance is short enough, the system encourages walking.
+
+Display:
+
+Distance
+Estimated walking time
+Optional motivational stats (calories burned)
+
+Navigation features:
+
+• GPS path
+• animated walking indicator
+• voice guidance
+
+Cost: $0
+
+⸻
+
+2. Short Hop (Advance)
+
+Short Hop connects users with drivers already traveling along a similar route.
+
+The driver does not change their path.
+
+They simply advance the walker forward along their route.
+
+Example:
+
+Driver route:
+
+Home → Downtown
+
+Walker destination:
+
+2 miles further along that same direction.
+
+The driver advances the walker part of the way.
+
+Cost: $1–$3
+
+Benefits:
+
+• extremely low cost
+• minimal disruption to driver
+• efficient movement for riders
+
+⸻
+
+3. Flex Hop (Flexible Detours)
+
+Some drivers may choose to allow detours beyond their normal route.
+
+These drivers are labeled as Flexible Drivers.
+
+Flex Hop allows users to request a small detour when needed.
+
+Detour Example:
+
+Driver route:
+
+Home → Downtown
+
+Walker destination:
+
+1 mile past the route.
+
+System prompt to driver:
+
+“Flex Hop request available — continue 0.8 miles past route.”
+
+Driver options:
+
+Accept detour
+Continue standard route
+
+Detours are:
+
+• always optional
+• driver controlled
+• priced dynamically
+
+Drivers may configure:
+
+Maximum detour distance
+Maximum extra time
+Detour availability (on/off)
+
+⸻
+
+4. Full Ride
+
+Short Hop can also provide complete trips when needed.
+
+A Full Ride allows a driver to take the user directly from start to destination.
+
+This option is available when:
+
+• the distance is long
+• no route-based drivers are available
+• the user prefers a direct ride
+
+Full Ride pricing adjusts based on distance and demand.
+
+The goal is to provide a complete mobility solution within one platform, without requiring users to leave the app.
+
+⸻
+
+Driver Types
+
+Standard Drivers
+
+Default mode.
+
+Characteristics:
+
+• only accept riders along existing routes
+• no detours requested
+• predictable routes
+• minimal time impact
+
+This maintains the core cooperative routing model.
+
+⸻
+
+Flexible Drivers
+
+Drivers who enable Flex Hop detours.
+
+Capabilities:
+
+• accept detour requests
+• set detour distance limits
+• set maximum extra time
+• toggle detours on/off anytime
+
+⸻
+
+Updated User Flow
+
+User enters destination.
+
+The system calculates route options and available drivers.
+
+The interface displays:
+
+🟢 Walk
+Distance / Time / Cost: $0
+
+🟡 Short Hop
+Advance along driver route
+$1–$3
+
+🟠 Flex Hop
+Flexible detours available
+Dynamic pricing
+
+🔵 Full Ride
+Direct trip from start to destination
+
+⸻
+
+Platform Philosophy
+
+Short Hop assumes most people are capable of partial movement.
+
+Transportation should support momentum rather than replace it.
+
+The system is built on three principles:
+
+Movement should be incremental
+Assistance should be optional
+Full rides should be available when necessary
+
+⸻
+
+Design Principle
+
+“Short Hop does not assume helplessness and it does not re route to other apps it provides a unique and stylish experience and interface the user can enjoy from A to B wherever that may be”

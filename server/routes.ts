@@ -7,7 +7,6 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 
-// Basic mock auth to support the flow without complicated setup
 declare module "express-session" {
   interface SessionData {
     userId: number;
@@ -142,27 +141,39 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     
     if (req.user.isDriver) {
-      // Return requested hops that could match
       const hops = await storage.getAvailableHops();
       res.json(hops);
     } else {
-      // Return walker's active hops
       const hops = await storage.getHopsForWalker(req.user.id);
       res.json(hops);
     }
   });
 
-  app.post(api.hops.request.path, async (req, res) => {
+  app.post(api.hops.requestMovement.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const input = api.hops.request.input.parse(req.body);
+      const input = api.hops.requestMovement.input.parse(req.body);
+      
+      // Calculate pricing based on hop type
+      let priceCents = 0;
+      if (input.hopType === "short_hop") {
+        priceCents = Math.floor((parseFloat(input.distanceMiles || "1") * 150)); // $1.50 per mile
+      } else if (input.hopType === "flex_hop") {
+        priceCents = Math.floor((parseFloat(input.distanceMiles || "1") * 200)); // $2.00 per mile
+      } else if (input.hopType === "full_ride") {
+        priceCents = Math.floor((parseFloat(input.distanceMiles || "5") * 150)); // $1.50 per mile base
+      }
+
       const hop = await storage.createHop({
         walkerId: req.user.id,
         driverId: null,
         status: "requested",
+        hopType: input.hopType as any,
         startLocation: input.startLocation,
         endLocation: input.endLocation,
-        distanceMiles: null
+        distanceMiles: input.distanceMiles ? (input.distanceMiles as any) : null,
+        priceCents,
+        detourDistance: null
       });
       res.status(201).json(hop);
     } catch (err) {
@@ -190,6 +201,22 @@ export async function registerRoutes(
        res.json(hop);
     } catch (e) {
        res.status(404).json({ message: "Hop not found" });
+    }
+  });
+
+  // Driver flexibility settings
+  app.put(api.driver.updateFlexibility.path, async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isDriver) {
+      return res.status(401).json({ message: "Unauthorized or not a driver" });
+    }
+    try {
+      const input = api.driver.updateFlexibility.input.parse(req.body);
+      const user = await storage.updateUserFlexibility(req.user.id, input);
+      res.json(user);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      }
     }
   });
 

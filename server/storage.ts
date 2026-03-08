@@ -17,17 +17,17 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserFlexibility(id: number, updates: any): Promise<User>;
 
   // Routes
   getRoutes(driverId: number): Promise<RoutineRoute[]>;
   createRoute(route: InsertRoutineRoute): Promise<RoutineRoute>;
-  updateRoute(id: number, updates: Partial<InsertRoutineRoute>): Promise<RoutineRoute>;
   deleteRoute(id: number): Promise<void>;
 
   // Hops
   getHopsForWalker(walkerId: number): Promise<ShortHop[]>;
   getHopsForDriver(driverId: number): Promise<ShortHop[]>;
-  getAvailableHops(): Promise<ShortHop[]>; // simplified matching for MVP
+  getAvailableHops(): Promise<ShortHop[]>;
   createHop(hop: InsertShortHop): Promise<ShortHop>;
   acceptHop(hopId: number, driverId: number): Promise<ShortHop>;
   completeHop(hopId: number, distanceMiles: string): Promise<ShortHop>;
@@ -49,6 +49,15 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async updateUserFlexibility(id: number, updates: any): Promise<User> {
+    const [user] = await db.update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    if (!user) throw new Error("User not found");
+    return user;
+  }
+
   async getRoutes(driverId: number): Promise<RoutineRoute[]> {
     return await db.select().from(routineRoutes).where(eq(routineRoutes.driverId, driverId));
   }
@@ -56,15 +65,6 @@ export class DatabaseStorage implements IStorage {
   async createRoute(route: InsertRoutineRoute): Promise<RoutineRoute> {
     const [newRoute] = await db.insert(routineRoutes).values(route).returning();
     return newRoute;
-  }
-
-  async updateRoute(id: number, updates: Partial<InsertRoutineRoute>): Promise<RoutineRoute> {
-    const [updatedRoute] = await db.update(routineRoutes)
-      .set(updates)
-      .where(eq(routineRoutes.id, id))
-      .returning();
-    if (!updatedRoute) throw new Error("Route not found");
-    return updatedRoute;
   }
 
   async deleteRoute(id: number): Promise<void> {
@@ -98,10 +98,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async completeHop(hopId: number, distanceMiles: string): Promise<ShortHop> {
-    // Need to transactionally update hop and driver credits in a real app
-    // Doing it sequentially here for MVP
     const [updatedHop] = await db.update(shortHops)
-      .set({ status: "completed", distanceMiles })
+      .set({ status: "completed", distanceMiles: distanceMiles as any })
       .where(eq(shortHops.id, hopId))
       .returning();
       

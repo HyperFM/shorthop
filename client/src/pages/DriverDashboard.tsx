@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin } from "lucide-react";
+import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -180,6 +180,57 @@ export default function DriverDashboard({ user }: { user: User }) {
               ))
             )}
           </div>
+        </div>
+
+        {/* Middle Col: Flex Hop Settings */}
+        <div className="lg:col-span-1 space-y-6">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <CarFront className="w-5 h-5 text-accent" />
+            Flex Hop Settings
+          </h2>
+          
+          <Card className="bg-accent/5 border-accent/20">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-foreground">Enable Flex Hops</p>
+                  <p className="text-xs text-muted-foreground">Allow small detours beyond your route</p>
+                </div>
+                <Checkbox 
+                  checked={user.isFlexibleDriver || false}
+                  disabled
+                />
+              </div>
+
+              {user.isFlexibleDriver && (
+                <div className="space-y-3 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Max Detour Distance (miles)</Label>
+                    <Input 
+                      type="number" 
+                      step="0.1" 
+                      defaultValue={user.maxDetourDistance || "1.0"}
+                      disabled
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Max Detour Time (minutes)</Label>
+                    <Input 
+                      type="number" 
+                      defaultValue={user.maxDetourTime || 15}
+                      disabled
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <Button disabled className="w-full mt-2 text-xs">
+                {user.isFlexibleDriver ? "Update Settings" : "Enable Flex Hops"}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Col: Active & Available Hops */}

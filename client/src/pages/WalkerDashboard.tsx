@@ -153,26 +153,55 @@ export default function WalkerDashboard({ user }: { user: User }) {
                         </div>
                         <div>
                           <h4 className="font-bold text-foreground">Short Hop</h4>
-                          <p className="text-xs text-muted-foreground">Best if you're a little behind. 3 mins.</p>
+                          <p className="text-xs text-muted-foreground">Advance along a driver's route. $1-3.</p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between w-full sm:w-auto gap-4">
                         <div className="text-left sm:text-right">
-                          <div className="font-bold text-foreground">$10/mo</div>
-                          <div className="text-[10px] text-muted-foreground">Subscription</div>
+                          <div className="font-bold text-foreground">$1–3</div>
+                          <div className="text-[10px] text-muted-foreground">Per ride</div>
                         </div>
                         <Button 
-                          onClick={handleRequestHop}
+                          onClick={() => requestHop.mutate({ ...locations, hopType: "short_hop" }, { onSuccess: () => setShowOptions(false) })}
                           disabled={requestHop.isPending}
                           className="rounded-full shadow-md shadow-primary/20"
                         >
-                          Request Hop
+                          Request
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Option 3: Full Ride */}
+                  {/* Option 3: Flex Hop */}
+                  <Card className="border-secondary/50">
+                    <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+                          <CarFront className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-foreground">Flex Hop</h4>
+                          <p className="text-xs text-muted-foreground">Request a small detour. Dynamic pricing.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+                        <div className="text-left sm:text-right">
+                          <div className="font-bold text-foreground">$2–5</div>
+                          <div className="text-[10px] text-muted-foreground">Per ride</div>
+                        </div>
+                        <Button 
+                          variant="secondary"
+                          onClick={() => requestHop.mutate({ ...locations, hopType: "flex_hop" }, { onSuccess: () => setShowOptions(false) })}
+                          disabled={requestHop.isPending}
+                          className="rounded-full"
+                        >
+                          Request
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Option 4: Full Ride */}
                   <Card className="opacity-75 hover:opacity-100 transition-opacity">
                     <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
@@ -180,8 +209,8 @@ export default function WalkerDashboard({ user }: { user: User }) {
                           <CarFront className="w-5 h-5" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-foreground">Full Ride (Uber/Lyft)</h4>
-                          <p className="text-xs text-muted-foreground">Expensive backup plan. 3 mins.</p>
+                          <h4 className="font-bold text-foreground">Full Ride</h4>
+                          <p className="text-xs text-muted-foreground">Complete trip via Uber/Lyft. ~$12.</p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between w-full sm:w-auto gap-4">
