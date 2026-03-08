@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema, users, routineRoutes, shortHops } from './schema';
+import { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema, users, routineRoutes, shortHops, rewards } from './schema';
 
 export { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema };
 
@@ -116,6 +116,27 @@ export const api = {
       }),
       responses: {
         200: z.custom<typeof shortHops.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+  rewards: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/rewards' as const,
+      responses: {
+        200: z.array(z.custom<typeof rewards.$inferSelect>()),
+      },
+    },
+    redeem: {
+      method: 'POST' as const,
+      path: '/api/rewards/:id/redeem' as const,
+      responses: {
+        201: z.object({
+          code: z.string(),
+          reward: z.custom<typeof rewards.$inferSelect>(),
+        }),
+        400: z.object({ message: z.string() }),
         404: errorSchemas.notFound,
       },
     },

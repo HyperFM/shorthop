@@ -1,0 +1,498 @@
+SHORT HOP — MASTER PRODUCT BLUEPRINT (V3)
+
+Tagline
+
+Hop, Skip, and a Jump
+
+Alternate line:
+Walk first. Advance when needed.
+
+⸻
+
+1. What Short Hop Is
+
+Short Hop is a movement-first transportation platform that helps people travel from point A to point B using the most efficient combination of walking and rides.
+
+Instead of assuming every trip requires a full ride, Short Hop allows users to move forward in stages.
+
+Users can:
+
+• walk when possible
+• advance along routes drivers are already traveling
+• request small detours when needed
+• take full rides when necessary
+
+The entire journey happens inside one app.
+
+⸻
+
+2. The Problem
+
+Most trips don’t require a full ride.
+
+People usually just need help with the last mile.
+
+Common situations:
+
+• the destination is close but walking takes too long
+• bus routes don’t align with where someone needs to go
+• rideshare apps charge too much for short trips
+• someone is running slightly late
+
+Current transportation apps force an all-or-nothing decision.
+
+Either walk the entire way or pay for a full ride.
+
+Short Hop fills the gap between those two options.
+
+⸻
+
+3. Core Philosophy
+
+Short Hop is built around a simple progression.
+
+1️⃣ Walk when possible
+2️⃣ Advance along routes already in motion
+3️⃣ Request flexible help if needed
+4️⃣ Take a full ride only when necessary
+
+Transportation should support momentum, not replace it.
+
+⸻
+
+4. User Types
+
+Walkers
+
+People moving through a city who want flexible travel.
+
+Examples:
+
+• commuters
+• students
+• downtown pedestrians
+• transit users combining walking and rides
+
+Walkers want:
+
+• to save time
+• to avoid expensive rides
+• to keep moving without friction
+
+⸻
+
+Drivers (Helpers)
+
+Drivers are not gig workers.
+
+They are simply people already traveling somewhere.
+
+Examples:
+
+• commuting to work
+• going to the gym
+• running errands
+• heading home
+
+Drivers can help someone along their route when it makes sense.
+
+There is no obligation to accept requests.
+
+⸻
+
+5. Routine-Based Driver Model
+
+Drivers do not work shifts.
+
+Instead, they declare routine routes.
+
+Examples:
+
+• Weekdays 8–9 AM: Home → Downtown
+• Weekdays 5–6 PM: Downtown → Home
+• Tue/Thu evenings: Gym → Home
+
+Short Hop uses these routes to detect possible advances.
+
+The system:
+
+• only suggests hops along declared routes
+• avoids unnecessary detours
+• allows drivers to toggle routes on/off anytime
+
+This keeps the platform cooperative rather than transactional.
+
+⸻
+
+6. Integrated Navigation System
+
+Short Hop includes a built-in GPS navigation system.
+
+Users never need to leave the app.
+
+Navigation includes:
+
+• real-time map
+• walking directions
+• voice guidance
+• animated movement indicator
+
+While walking, the map displays a small animated walking icon moving along the path.
+
+Voice prompts guide the user step-by-step.
+
+Example:
+
+“Walk straight for 0.3 miles.”
+“Turn right at the next intersection.”
+
+During the walk, the system continuously checks for available drivers along the route.
+
+⸻
+
+7. Movement Options
+
+When a user enters a destination, Short Hop calculates the best movement strategy.
+
+The app presents the following options.
+
+⸻
+
+🟢 Walk
+
+Encouraged when the destination is nearby.
+
+Display includes:
+
+• distance
+• estimated time
+• optional health stats
+
+Navigation features:
+
+• GPS path
+• animated walking indicator
+• voice guidance
+
+Cost: $0
+
+⸻
+
+🟡 Short Hop (Advance)
+
+Short Hop connects walkers with drivers already traveling along the same path.
+
+Drivers do not change their route.
+
+They simply advance the walker forward.
+
+Example:
+
+Driver route
+Home → Downtown
+
+Walker destination
+2 miles further along that direction.
+
+Driver advances the walker part of the way.
+
+Cost: $1–$3
+
+Benefits:
+
+• extremely low cost
+• minimal driver disruption
+• efficient movement
+
+⸻
+
+🟠 Flex Hop (Optional Detours)
+
+Some drivers may enable Flex Hop.
+
+These drivers allow small detours when helpful.
+
+Example:
+
+Driver route
+Home → Downtown
+
+Walker destination
+1 mile past the route.
+
+Driver prompt:
+
+“Flex Hop request available — continue 0.8 miles past route.”
+
+Driver options:
+
+• Accept detour
+• Continue normal route
+
+Drivers can configure:
+
+• maximum detour distance
+• maximum extra time
+• detours on/off
+
+Pricing adjusts dynamically.
+
+⸻
+
+🔵 Full Ride
+
+If a longer trip is required, Short Hop can provide a complete ride from start to destination.
+
+This option appears when:
+
+• distance is long
+• no route matches exist
+• the user prefers a direct ride
+
+Full ride pricing adjusts based on distance and demand.
+
+Users can always reach their destination without leaving the app.
+
+⸻
+
+8. Pricing Model
+
+Walkers
+
+Membership: $10 per month
+
+Benefits:
+
+• access to the Short Hop network
+• predictable low-cost movement
+• no surge pricing anxiety
+
+Ride costs:
+
+Short Hop: $1–$3
+Flex Hop: dynamic pricing
+Full Ride: distance-based pricing
+
+⸻
+
+9. Driver Incentive System — Wheels
+
+Short Hop includes a driver reward system called Wheels.
+
+Wheels reward drivers for helping walkers advance along their route.
+
+This encourages cooperation while keeping participation voluntary.
+
+⸻
+
+How Wheels Are Earned
+
+Drivers earn Wheels based on distance advanced.
+
+Example conversion:
+
+1 mile advanced = 1 Wheel
+
+Examples:
+
+Advance walker 2 miles → 2 Wheels
+
+Advance multiple walkers totaling 3 miles → 3 Wheels
+
+Wheels accumulate in the Driver Dashboard.
+
+⸻
+
+Driver Dashboard
+
+Drivers can view:
+
+• total Wheels earned
+• riders helped
+• distance advanced
+• available rewards
+
+Example display:
+
+“You helped 3 people today.”
+“You earned 4 Wheels.”
+
+This keeps the experience positive without competitive pressure.
+
+⸻
+
+10. Reward Redemption System (Launch Version)
+
+At launch, rewards are delivered through digital gift cards.
+
+This allows Short Hop to reward drivers immediately without requiring brand partnerships.
+
+Drivers redeem Wheels for rewards such as:
+
+• coffee
+• gas credits
+• drive-through meals
+• automatic car washes
+
+Example redemption:
+
+Wheels	Reward
+5 Wheels	Coffee reward
+10 Wheels	Gas credit
+15 Wheels	Drive-through meal
+20 Wheels	Car wash
+
+Drivers receive a digital code inside the app.
+
+⸻
+
+11. Driver Reward Store
+
+Drivers can exchange Wheels in a simple Reward Store interface.
+
+Example reward categories:
+
+Coffee
+Gas
+Car Wash
+Drive-Through Meals
+
+Rewards appear with Wheel costs and redemption buttons.
+
+⸻
+
+12. Future Brand Partnership Portal
+
+Short Hop will include a Brand Partnership Portal.
+
+Businesses can apply directly inside the platform.
+
+⸻
+
+Partner With Short Hop Page
+
+Businesses submit:
+
+• company name
+• locations
+• contact email
+• reward type offered
+• promotional interest
+
+Examples:
+
+• coffee rewards
+• fuel discounts
+• drive-through meals
+• automatic car washes
+
+⸻
+
+13. Partner Benefits
+
+Businesses gain:
+
+• visibility inside the app
+• placement in the reward store
+• increased customer traffic
+• promotional opportunities
+
+Example:
+
+Drivers redeem coffee reward → directed to partner coffee location.
+
+⸻
+
+14. Sponsored Rewards (Future)
+
+As the platform grows, brands may offer:
+
+• discounted reward programs
+• sponsored promotions
+• featured placement
+• double-Wheel promotions
+
+This reduces reward costs while increasing driver value.
+
+⸻
+
+15. Safety and Trust
+
+Initial safety systems include:
+
+• driver ID verification
+• license plate verification
+• live GPS during rides
+• short distance caps
+• optional ratings
+
+These features create safety without heavy friction.
+
+⸻
+
+16. Technology MVP
+
+Phase 1 features:
+
+• map interface
+• destination input
+• driver routine setup
+• walker location pins
+• route overlap detection
+• basic matching system
+• Wheel reward tracking
+• reward store
+• ride requests
+
+Advanced features can expand later.
+
+⸻
+
+17. Launch Strategy
+
+Short Hop launches as a small pilot program.
+
+Initial constraints:
+
+• single city
+• main roads only
+• 1–2 mile hop limits
+• commute hours first
+
+The goal is validating demand before scaling.
+
+⸻
+
+18. Strategic Position
+
+Traditional ride apps focus on full rides.
+
+Short Hop focuses on partial movement.
+
+Instead of competing directly, Short Hop fills the gap between walking and rides.
+
+⸻
+
+19. The Ethos
+
+Short Hop is not about disruption.
+
+It is about momentum.
+
+Walking is respected.
+Assistance is optional.
+Movement should feel natural.
+
+Short Hop simply helps people get where they’re already going.
+
+⸻
+
+20. Design Principle
+
+Short Hop assumes capability.
+
+The platform provides a clean, unified experience where users move from A to B without leaving the app.
+
+Transportation should feel simple, human, and cooperative.
+
+⸻

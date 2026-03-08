@@ -10,6 +10,7 @@ import { NavBar } from "@/components/NavBar";
 import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
+import RewardStore from "@/pages/RewardStore";
 
 function Router() {
   return (
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/auth" component={Auth} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/rewards" component={RewardStore} />
       <Route component={NotFound} />
     </Switch>
   );

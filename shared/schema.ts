@@ -43,15 +43,40 @@ export const shortHops = pgTable("short_hops", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const rewards = pgTable("rewards", {
+  id: serial("id").primaryKey(),
+  category: text("category").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  wheelsCost: integer("wheels_cost").notNull(),
+  isAvailable: boolean("is_available").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userRedemptions = pgTable("user_redemptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  rewardId: integer("reward_id").references(() => rewards.id).notNull(),
+  code: text("code").notNull(),
+  redeemedAt: timestamp("redeemed_at").defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   routineRoutes: many(routineRoutes),
   hopsAsWalker: many(shortHops, { relationName: "walker" }),
   hopsAsDriver: many(shortHops, { relationName: "driver" }),
+  redemptions: many(userRedemptions),
+}));
+
+export const rewardRelations = relations(rewards, ({ many }) => ({
+  redemptions: many(userRedemptions),
 }));
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, credits: true });
 export const insertRoutineRouteSchema = createInsertSchema(routineRoutes).omit({ id: true, createdAt: true });
 export const insertShortHopSchema = createInsertSchema(shortHops).omit({ id: true, createdAt: true });
+export const insertRewardSchema = createInsertSchema(rewards).omit({ id: true, createdAt: true });
+export const insertRedemptionSchema = createInsertSchema(userRedemptions).omit({ id: true, redeemedAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -62,21 +87,11 @@ export type InsertRoutineRoute = z.infer<typeof insertRoutineRouteSchema>;
 export type ShortHop = typeof shortHops.$inferSelect;
 export type InsertShortHop = z.infer<typeof insertShortHopSchema>;
 
+export type Reward = typeof rewards.$inferSelect;
+export type InsertReward = z.infer<typeof insertRewardSchema>;
+
+export type UserRedemption = typeof userRedemptions.$inferSelect;
+export type InsertUserRedemption = z.infer<typeof insertRedemptionSchema>;
+
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;
-export type CreateRouteRequest = Omit<InsertRoutineRoute, "driverId">;
-export type UpdateRouteRequest = Partial<CreateRouteRequest>;
-
-export type RequestMovementOptionRequest = {
-  startLocation: string;
-  endLocation: string;
-  hopType: "walk" | "short_hop" | "flex_hop" | "full_ride";
-  distanceMiles?: string;
-};
-
-export type UpdateFlexibilityRequest = {
-  isFlexibleDriver: boolean;
-  maxDetourDistance?: string;
-  maxDetourTime?: number;
-  detourAvailable?: boolean;
-};

@@ -154,14 +154,13 @@ export async function registerRoutes(
     try {
       const input = api.hops.requestMovement.input.parse(req.body);
       
-      // Calculate pricing based on hop type
       let priceCents = 0;
       if (input.hopType === "short_hop") {
-        priceCents = Math.floor((parseFloat(input.distanceMiles || "1") * 150)); // $1.50 per mile
+        priceCents = Math.floor((parseFloat(input.distanceMiles || "1") * 150));
       } else if (input.hopType === "flex_hop") {
-        priceCents = Math.floor((parseFloat(input.distanceMiles || "1") * 200)); // $2.00 per mile
+        priceCents = Math.floor((parseFloat(input.distanceMiles || "1") * 200));
       } else if (input.hopType === "full_ride") {
-        priceCents = Math.floor((parseFloat(input.distanceMiles || "5") * 150)); // $1.50 per mile base
+        priceCents = Math.floor((parseFloat(input.distanceMiles || "5") * 150));
       }
 
       const hop = await storage.createHop({
@@ -201,6 +200,30 @@ export async function registerRoutes(
        res.json(hop);
     } catch (e) {
        res.status(404).json({ message: "Hop not found" });
+    }
+  });
+
+  // Rewards
+  app.get(api.rewards.list.path, async (req, res) => {
+    try {
+      const rewardsAvailable = await storage.getRewards();
+      res.json(rewardsAvailable);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch rewards" });
+    }
+  });
+
+  app.post(api.rewards.redeem.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const result = await storage.redeemReward(req.user.id, Number(req.params.id));
+      res.status(201).json(result);
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("Insufficient")) {
+        res.status(400).json({ message: "Not enough wheels" });
+      } else {
+        res.status(404).json({ message: "Reward not found" });
+      }
     }
   });
 

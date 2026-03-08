@@ -75,11 +75,11 @@ export default function DriverDashboard({ user }: { user: User }) {
         <Card className="bg-gradient-to-r from-secondary/10 to-transparent border-secondary/20 shadow-md">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center text-secondary">
-              <span className="font-bold text-xl">{user.credits}</span>
+              <span className="font-bold text-xl">{user.credits || 0}</span>
             </div>
             <div>
-              <div className="text-sm font-bold text-foreground uppercase tracking-wider">Total Credits</div>
-              <div className="text-xs text-muted-foreground">Earn more by completing hops.</div>
+              <div className="text-sm font-bold text-foreground uppercase tracking-wider">Total Wheels</div>
+              <div className="text-xs text-muted-foreground">Redeem for rewards and perks.</div>
             </div>
           </CardContent>
         </Card>

@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth, useLogout } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Map, LogOut, User } from "lucide-react";
@@ -33,6 +33,11 @@ export function NavBar() {
               <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">
                 Dashboard
               </Link>
+              {user.isDriver && (
+                <Link href="/rewards" className="text-sm font-medium hover:text-primary transition-colors">
+                  Rewards
+                </Link>
+              )}
               <Button 
                 variant="ghost" 
                 size="sm" 

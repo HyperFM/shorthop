@@ -4,33 +4,38 @@ import {
   users,
   routineRoutes,
   shortHops,
+  rewards,
+  userRedemptions,
   type User,
   type InsertUser,
   type RoutineRoute,
   type InsertRoutineRoute,
   type ShortHop,
-  type InsertShortHop
+  type InsertShortHop,
+  type Reward,
+  type UserRedemption,
 } from "@shared/schema";
 
 export interface IStorage {
-  // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserFlexibility(id: number, updates: any): Promise<User>;
 
-  // Routes
   getRoutes(driverId: number): Promise<RoutineRoute[]>;
   createRoute(route: InsertRoutineRoute): Promise<RoutineRoute>;
   deleteRoute(id: number): Promise<void>;
 
-  // Hops
   getHopsForWalker(walkerId: number): Promise<ShortHop[]>;
   getHopsForDriver(driverId: number): Promise<ShortHop[]>;
   getAvailableHops(): Promise<ShortHop[]>;
   createHop(hop: InsertShortHop): Promise<ShortHop>;
   acceptHop(hopId: number, driverId: number): Promise<ShortHop>;
   completeHop(hopId: number, distanceMiles: string): Promise<ShortHop>;
+
+  getRewards(): Promise<Reward[]>;
+  redeemReward(userId: number, rewardId: number): Promise<{ code: string; reward: Reward }>;
+  getUserRedemptions(userId: number): Promise<UserRedemption[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -108,14 +113,46 @@ export class DatabaseStorage implements IStorage {
     if (updatedHop.driverId) {
        const driver = await this.getUser(updatedHop.driverId);
        if (driver) {
-          const creditsToAdd = Math.ceil(parseFloat(distanceMiles));
+          const wheelsToAdd = Math.ceil(parseFloat(distanceMiles));
           await db.update(users)
-            .set({ credits: (driver.credits || 0) + creditsToAdd })
+            .set({ credits: (driver.credits || 0) + wheelsToAdd })
             .where(eq(users.id, driver.id));
        }
     }
 
     return updatedHop;
+  }
+
+  async getRewards(): Promise<Reward[]> {
+    return await db.select().from(rewards).where(eq(rewards.isAvailable, true));
+  }
+
+  async redeemReward(userId: number, rewardId: number): Promise<{ code: string; reward: Reward }> {
+    const [reward] = await db.select().from(rewards).where(eq(rewards.id, rewardId));
+    if (!reward) throw new Error("Reward not found");
+
+    const user = await this.getUser(userId);
+    if (!user || user.credits < reward.wheelsCost) {
+      throw new Error("Insufficient wheels");
+    }
+
+    const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+    
+    await db.insert(userRedemptions).values({
+      userId,
+      rewardId,
+      code,
+    });
+
+    await db.update(users)
+      .set({ credits: user.credits - reward.wheelsCost })
+      .where(eq(users.id, userId));
+
+    return { code, reward };
+  }
+
+  async getUserRedemptions(userId: number): Promise<UserRedemption[]> {
+    return await db.select().from(userRedemptions).where(eq(userRedemptions.userId, userId));
   }
 }
 
