@@ -24,8 +24,9 @@ export default function Home() {
               Hop, Skip, and a <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Jump.</span>
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
-              Walking is the default. Advancement is the assist. Full rides are the backup.
-              Save time and money, or earn credits without the pressure of gig work.
+              Walking is the start. A hop moves you forward.
+              <br className="hidden sm:block" />
+              Help others along your route, meet new people, and earn rewards — all from the comfort of your car.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">

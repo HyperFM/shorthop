@@ -1,0 +1,247 @@
+
+SHORT HOP — MASTER PRODUCT BLUEPRINT (V3.1)
+
+Tagline
+
+Hop, Skip, and a Jump
+
+Alternate line:
+Walk first. Advance when needed.
+
+⸻
+
+1. What Short Hop Is
+
+Short Hop is a movement-first transportation platform that helps people travel from point A to point B using the most efficient combination of walking and rides.
+
+Instead of assuming every trip requires a full ride, Short Hop allows users to move forward in stages.
+
+Users can:
+
+• walk when possible
+• advance along routes drivers are already traveling
+• request small detours when needed
+• take a direct ride when necessary
+
+The entire journey happens inside one app.
+
+Short Hop never redirects users to outside ride platforms.
+
+⸻
+
+2. The Problem
+
+Most trips don’t require a full ride.
+
+People usually just need help with the last mile.
+
+Common situations:
+
+• the destination is close but walking takes too long
+• bus routes don’t align with where someone needs to go
+• traditional rideshare services charge too much for short trips
+• someone is running slightly late
+
+Current transportation apps force an all-or-nothing decision.
+
+Either walk the entire way or pay for a full ride.
+
+Short Hop fills the gap between those two options.
+
+⸻
+
+3. Core Philosophy
+
+Short Hop is built around a simple progression.
+
+1️⃣ Walk when possible
+2️⃣ Advance along routes already in motion
+3️⃣ Request flexible help if needed
+4️⃣ Use Power Hop when you need to go directly
+
+Transportation should support momentum, not replace it.
+
+⸻
+
+7. Movement Options
+
+When a user enters a destination, Short Hop calculates the best movement strategy.
+
+The app presents the following options.
+
+⸻
+
+🟢 Walk
+
+Encouraged when the destination is nearby.
+
+Display includes:
+
+• distance
+• estimated time
+• optional health stats
+
+Navigation features:
+
+• GPS path
+• animated walking indicator
+• voice guidance
+
+Cost: $0
+
+⸻
+
+🟡 Short Hop (Advance)
+
+Short Hop connects walkers with drivers already traveling along the same path.
+
+Drivers do not change their route.
+
+They simply advance the walker forward.
+
+Example:
+
+Driver route
+Home → Downtown
+
+Walker destination
+2 miles further along that direction.
+
+Driver advances the walker part of the way.
+
+Cost: $1–$3
+
+Benefits:
+
+• extremely low cost
+• minimal driver disruption
+• efficient movement
+
+⸻
+
+🟠 Flex Hop (Optional Detours)
+
+Some drivers may enable Flex Hop.
+
+These drivers allow small detours when helpful.
+
+Example:
+
+Driver route
+Home → Downtown
+
+Walker destination
+1 mile past the route.
+
+Driver prompt:
+
+“Flex Hop request available — continue 0.8 miles past route.”
+
+Driver options:
+
+• Accept detour
+• Continue normal route
+
+Drivers can configure:
+
+• maximum detour distance
+• maximum extra time
+• detours on/off
+
+Pricing adjusts dynamically.
+
+⸻
+
+✨ POWER HOP (Unlimited Direct Ride)
+
+Power Hop is the premium direct ride option inside Short Hop.
+
+It allows a rider to travel directly from their starting point to their destination without relying on route overlap.
+
+This option replaces traditional rideshare services within the Short Hop ecosystem.
+
+Power Hop ensures that users never need to leave the app to complete their trip.
+
+Power Hop UI Design
+
+Power Hop appears as a special highlighted option within the movement choices.
+
+Visual design:
+
+• glowing green and orange ring surrounding the option
+• slightly larger visual presence than other options
+• animated glow to signal a premium feature
+
+Slogan displayed beneath the option:
+
+“Reach for the Sky.”
+
+This option represents the most powerful movement choice available inside Short Hop.
+
+⸻
+
+Updated Movement Ladder
+
+Users progress through movement options like this:
+
+🟢 Walk
+🟡 Short Hop
+🟠 Flex Hop
+✨ Power Hop
+
+Each level provides more assistance and faster movement.
+
+⸻
+
+8. Pricing Model (Updated)
+
+Walkers
+
+Membership: $10 per month
+
+Benefits:
+
+• access to the Short Hop network
+• predictable low-cost movement
+• no surge pricing anxiety
+
+Ride costs:
+
+Short Hop: $1–$3
+
+Flex Hop: dynamic pricing
+
+Power Hop: distance-based pricing for direct rides
+
+⸻
+
+18. Strategic Position (Updated)
+
+Traditional rideshare platforms focus only on full rides.
+
+Short Hop focuses on progressive movement.
+
+Walk → Hop → Flex → Power.
+
+By offering Power Hop inside the platform, Short Hop allows users to complete any journey without leaving the app.
+
+This creates a complete mobility ecosystem.
+
+⸻
+
+20. Design Principle
+
+Short Hop assumes capability.
+
+The platform provides a clean, unified experience where users move from A to B without leaving the app.
+
+Transportation should feel:
+
+• simple
+• human
+• cooperative
+• empowering
+
+Short Hop helps people move forward — one hop at a time.
+
+⸻
