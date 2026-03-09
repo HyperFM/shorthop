@@ -23,11 +23,16 @@ export default function Home() {
             <h1 className="text-5xl md:text-7xl font-extrabold text-foreground tracking-tight leading-tight">
               Hop, Skip, and a <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Jump.</span>
             </h1>
-            <p className="text-xl text-muted-foreground leading-relaxed">
-              Walking is the start. A hop moves you forward.
-              <br className="hidden sm:block" />
-              Help others along your route, meet new people, and earn rewards — all from the comfort of your car.
-            </p>
+            <div className="text-lg text-muted-foreground leading-relaxed space-y-4">
+              <p>Walking is the best option for your physical and financial health.</p>
+              <p className="font-semibold text-foreground">A Hop moves you forward.</p>
+              <p>ShortHop turns a driver's everyday route into an opportunity — helping others along the way, meeting new people, and earning rewards, all from the comfort of their car.</p>
+              <div className="pt-4 border-t border-border/30">
+                <p className="font-semibold text-foreground">Your daily routine. Your usual route.</p>
+                <p>You're already heading that direction…</p>
+                <p className="italic">You might as well have some fun. :)</p>
+              </div>
+            </div>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
               <Link href="/auth?tab=register">
