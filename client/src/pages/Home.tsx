@@ -60,7 +60,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold mb-2">For Walkers</h3>
-                    <p className="text-muted-foreground">Running late? Need a quick lift for the last mile? Get a "Short Hop" for just a flat $10/month subscription.</p>
+                    <p className="text-muted-foreground">Move forward in stages. Choose from Walk, Short Hop, Flex Hop, or Power Hop. All rides stay inside Short Hop—no need to switch apps.</p>
                   </div>
                 </div>
                 
@@ -70,7 +70,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold mb-2">For Drivers</h3>
-                    <p className="text-muted-foreground">Register your routine commute. Only pick up requests along your exact path. Earn credits with zero pressure.</p>
+                    <p className="text-muted-foreground">Register your routine routes. Only pick up walkers along your exact path. Help others advance and earn Wheels to redeem for rewards.</p>
                   </div>
                 </div>
               </div>

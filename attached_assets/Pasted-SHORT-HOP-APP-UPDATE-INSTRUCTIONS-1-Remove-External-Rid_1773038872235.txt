@@ -1,0 +1,156 @@
+SHORT HOP — APP UPDATE INSTRUCTIONS
+
+1. Remove External Ride Options
+
+Remove all options that offer Uber or Lyft.
+
+Short Hop should not send users to another app.
+
+All rides must stay inside the Short Hop system.
+
+⸻
+
+2. Replace “Full Ride” With Power Hop
+
+Change the Full Ride option to Power Hop.
+
+Power Hop is the ultimate ride option inside Short Hop.
+
+It allows users to go directly from their starting point to their destination.
+
+⸻
+
+Power Hop Design
+
+Power Hop should visually stand out.
+
+Design requirements:
+
+• glowing orange and green border around the card
+• subtle animated glow effect
+• slightly larger card than the other options
+
+Text under Power Hop:
+
+Reach for the Sky
+
+⸻
+
+3. Movement Options
+
+The app should show four movement options.
+
+ Walk
+Free option. Encourages healthy movement. Shows nearby city transit routes. 
+
+🟡 Short Hop
+Advance along a driver’s route.
+Price: $1–$3 (Free membership)
+
+🟠 Flex Hop
+Allows small driver detours.
+Dynamic pricing. $2-$5 ($5/month)
+
+✨ Power Hop
+Complete mobility freedom. From Benefits included:
+	•	discounted Power Hop rides
+	•	faster driver matching
+	•	priority access to drivers
+	•	bonus Wheels for drivers helping you
+
+Slogan displayed:
+
+Reach for the Sky
+
+Visual design:
+	•	glowing orange + green border
+	•	subtle animated glow
+	•	slightly larger card than other options
+here to anywhere. ($15/month) 
+
+Power Hop is the highest level option in the Short Hop system. Glowing orange yellow and green 
+
+⸻
+
+4. Momentum Suggestions (New Feature)
+
+Add a feature called Momentum Suggestions.
+
+Momentum Suggestions automatically suggest trips based on common movement patterns.
+
+This helps users move quickly without typing destinations.
+
+⸻
+
+Suggested Trips Section
+
+Add a section above the destination search bar.
+
+Section title:
+
+Suggested Trips
+
+Example display:
+
+Home → Work
+12 minute walk
+
+Short Hop available in 3 minutes
+Flex Hop available now
+
+Main button:
+
+Catch a Hop
+
+This allows users to move forward without typing a destination.
+
+⸻
+
+5. Routine Detection
+
+The app should learn common routes over time.
+
+Examples:
+
+Morning commute
+Home → Work
+
+Evening commute
+Work → Home
+
+When the user opens the app during these times, show a suggestion.
+
+Example message:
+
+Heading to work?
+
+Then show movement options:
+
+Walk
+Short Hop
+Flex Hop
+Power Hop
+
+⸻
+
+6. Live Route Awareness
+
+When the user starts walking toward a destination, Short Hop should monitor nearby drivers.
+
+If a driver is traveling along the same route, show a notification:
+
+A hop is heading your way.
+
+Button:
+
+Catch a Hop
+
+⸻
+
+7. Visual Motion Indicator
+
+Add animated indicators on the map.
+
+Drivers should appear as small bouncing hop icons moving along streets.
+
+This shows that transportation opportunities are moving through the city in real time.
