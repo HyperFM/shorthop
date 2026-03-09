@@ -25,12 +25,12 @@ export default function Home() {
             </h1>
             <div className="text-lg text-muted-foreground leading-relaxed space-y-4">
               <p>Walking is the best option for your physical and financial health.</p>
-              <p className="font-semibold text-foreground">A Hop moves you forward.</p>
+              <p className="font-semibold text-foreground">A Hop moves you affordably forward.</p>
               <p>ShortHop turns a driver's everyday route into an opportunity — helping others along the way, meeting new people, and earning rewards, all from the comfort of their car.</p>
               <div className="pt-4 border-t border-border/30">
                 <p className="font-semibold text-foreground">Your daily routine. Your usual route.</p>
                 <p>You're already heading that direction…</p>
-                <p className="italic">You might as well have some fun. :)</p>
+                <p className="italic">you might as well have some fun. :)</p>
               </div>
             </div>
             
