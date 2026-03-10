@@ -208,14 +208,14 @@ export default function WalkerDashboard({ user }: { user: User }) {
         >
           <Card className="border-primary/30 shadow-2xl bg-gradient-to-br from-primary/10 via-accent/5 to-secondary/5 mb-8 game-card overflow-hidden">
             <CardContent className="p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
-              <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden bg-black/5">
+              <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden">
                 {activeHop.status === 'requested' ? (
                   <video
                     autoPlay
                     loop
                     muted
                     playsInline
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-cover"
                     data-testid="video-hop-animation"
                   >
                     <source src="/hop-animation.mp4" type="video/mp4" />
@@ -230,7 +230,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     <video
                       muted
                       playsInline
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
                       data-testid="video-hop-matched"
                       ref={(el) => { if (el) { el.currentTime = 0; el.pause(); } }}
                     >
@@ -245,6 +245,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     </motion.div>
                   </motion.div>
                 )}
+                <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{ boxShadow: "inset 8px 0 16px -4px hsl(var(--card)), inset -8px 0 16px -4px hsl(var(--card)), inset 0 8px 16px -4px hsl(var(--card)), inset 0 -8px 16px -4px hsl(var(--card))" }} />
               </div>
 
               <h2 className="text-xl sm:text-2xl font-bold text-foreground">
