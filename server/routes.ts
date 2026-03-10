@@ -74,7 +74,17 @@ export async function registerRoutes(
       if (existing) {
         return res.status(400).json({ message: "Username exists" });
       }
-      const user = await storage.createUser(req.body);
+      let user = await storage.createUser(req.body);
+      user = await storage.checkAndAssignFounderStatus(user.id, !!user.isDriver);
+
+      await storage.createNotification({
+        userId: user.id,
+        type: "welcome",
+        title: "Welcome to ShortHop! 🛞",
+        message: "You're one of the early people helping bring ShortHop to life in Lexington.",
+        isRead: false,
+      });
+
       req.login(user, (err) => {
         if (err) return next(err);
         res.status(201).json(user);
@@ -392,6 +402,22 @@ export async function registerRoutes(
       } else {
         res.status(500).json({ message: "Failed to update preferences" });
       }
+    }
+  });
+
+  app.post(api.profile.dismissWelcome.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    await storage.dismissWelcome(req.user.id);
+    res.json({ message: "Welcome dismissed" });
+  });
+
+  // Network stats
+  app.get(api.network.stats.path, async (_req, res) => {
+    try {
+      const stats = await storage.getNetworkStats();
+      res.json(stats);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch network stats" });
     }
   });
 

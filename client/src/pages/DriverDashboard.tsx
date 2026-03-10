@@ -2,17 +2,19 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront } from "lucide-react";
+import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useRoutes, useCreateRoute, useDeleteRoute } from "@/hooks/use-routes";
 import { useHops, useAcceptHop, useCompleteHop } from "@/hooks/use-hops";
 import { TrustedHoppers } from "@/components/TrustedHoppers";
 import { HopBuddyRating } from "@/components/HopBuddyRating";
+import { NetworkProgress } from "@/components/NetworkProgress";
 import type { User } from "@shared/routes";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -78,7 +80,14 @@ export default function DriverDashboard({ user }: { user: User }) {
       {/* Header & Stats */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Driver Dashboard</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-display font-bold text-foreground">Driver Dashboard</h1>
+            {user.isFounder && user.founderBadge && (
+              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[10px]" data-testid="badge-founder">
+                🛞 {user.founderBadge}
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground mt-1">Manage your routes and accept short hops along the way.</p>
         </div>
         <Card className="bg-gradient-to-r from-secondary/10 to-transparent border-secondary/20 shadow-md">
@@ -346,11 +355,12 @@ export default function DriverDashboard({ user }: { user: User }) {
         </div>
       </div>
 
-      {user.tier === "flexhop" && (
-        <div className="mt-8">
+      <div className="grid lg:grid-cols-2 gap-8 mt-8">
+        {user.tier === "flexhop" && (
           <TrustedHoppers />
-        </div>
-      )}
+        )}
+        <NetworkProgress />
+      </div>
 
       {ratingHop && (
         <HopBuddyRating

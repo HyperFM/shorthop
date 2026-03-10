@@ -22,7 +22,12 @@ export function NavBar() {
             <>
               <div className="hidden sm:flex items-center gap-3 mr-2">
                 <div className="flex flex-col items-end">
-                  <span className="text-sm font-semibold text-foreground">{user.username}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold text-foreground">{user.username}</span>
+                    {user.isFounder && user.founderBadge && (
+                      <span className="text-[10px] bg-gradient-to-r from-orange-500 to-green-500 text-white px-1.5 py-0.5 rounded-full font-bold leading-none">🛞</span>
+                    )}
+                  </div>
                   <span className="text-xs text-muted-foreground">
                     {user.isDriver ? 'Driver' : 'Walker'}
                     {user.tier === 'flexhop' && ' · FlexHop'}

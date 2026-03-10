@@ -271,6 +271,30 @@ export const api = {
         401: errorSchemas.unauthorized,
       },
     },
+    dismissWelcome: {
+      method: 'POST' as const,
+      path: '/api/profile/dismiss-welcome' as const,
+      responses: {
+        200: z.object({ message: z.string() }),
+        401: errorSchemas.unauthorized,
+      },
+    },
+  },
+  network: {
+    stats: {
+      method: 'GET' as const,
+      path: '/api/network-stats' as const,
+      responses: {
+        200: z.object({
+          totalUsers: z.number(),
+          totalDrivers: z.number(),
+          totalHoppers: z.number(),
+          nextMilestone: z.number(),
+          foundingHoppersRemaining: z.number(),
+          foundingDriversRemaining: z.number(),
+        }),
+      },
+    },
   },
 };
 

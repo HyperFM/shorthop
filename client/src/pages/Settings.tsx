@@ -20,6 +20,7 @@ interface NotificationPreferences {
   hopperNearbyAlerts: boolean;
   busyRouteAlerts: boolean;
   communityNotifications: boolean;
+  growthNotifications: boolean;
 }
 
 const defaultPreferences: NotificationPreferences = {
@@ -28,6 +29,7 @@ const defaultPreferences: NotificationPreferences = {
   hopperNearbyAlerts: true,
   busyRouteAlerts: false,
   communityNotifications: true,
+  growthNotifications: true,
 };
 
 function loadPreferences(): NotificationPreferences {
@@ -111,6 +113,7 @@ export default function Settings() {
     { key: "hopperNearbyAlerts", label: "Hopper Nearby Alerts", description: "Know when a hopper is nearby and ready to connect.", icon: Users },
     { key: "busyRouteAlerts", label: "Busy Route Alerts", description: "Get updates when your common routes are especially active.", icon: TrendingUp },
     { key: "communityNotifications", label: "Community Notifications", description: "Stay in the loop with community updates and Short Hop news.", icon: MessageCircle },
+    { key: "growthNotifications", label: "Network Growth Updates", description: "Get notified about founder milestones, new members, and network progress.", icon: TrendingUp },
   ];
 
   return (

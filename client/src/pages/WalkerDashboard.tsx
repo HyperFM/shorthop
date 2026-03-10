@@ -3,12 +3,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, CarFront, Footprints, Clock, CheckCircle2 } from "lucide-react";
+import { MapPin, Navigation, CarFront, Footprints, Clock, CheckCircle2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useHops, useRequestHop } from "@/hooks/use-hops";
+import { NetworkProgress } from "@/components/NetworkProgress";
 import type { User } from "@shared/routes";
 
 const searchSchema = z.object({
@@ -40,11 +42,37 @@ export default function WalkerDashboard({ user }: { user: User }) {
     });
   };
 
+  const handleInvite = async () => {
+    const shareData = {
+      title: "Join ShortHop",
+      text: "Join me on ShortHop — a new way for people in Lexington to share rides along their routes. Shared routes. Real connections.",
+      url: window.location.origin,
+    };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch {}
+    } else {
+      await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-display font-bold text-foreground">Where to?</h1>
-        <p className="text-muted-foreground mt-1">Find the best way to get there.</p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-display font-bold text-foreground">Where to?</h1>
+            {user.isFounder && user.founderBadge && (
+              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[10px]" data-testid="badge-founder">
+                🛞 {user.founderBadge}
+              </Badge>
+            )}
+          </div>
+          <p className="text-muted-foreground mt-1">Find the best way to get there.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleInvite} data-testid="button-invite-friends" className="self-start sm:self-auto">
+          <Share2 className="w-4 h-4 mr-1.5" />
+          Invite Friends
+        </Button>
       </div>
 
       {activeHop ? (
@@ -266,6 +294,10 @@ export default function WalkerDashboard({ user }: { user: User }) {
           </div>
         </div>
       )}
+
+      <div className="mt-8">
+        <NetworkProgress />
+      </div>
     </div>
   );
 }

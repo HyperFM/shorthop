@@ -48,6 +48,16 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Flex Hop settings (detour distance/time)
 - Reward Store (coffee, gas, meals, car wash)
 
+### Early Network & Growth System
+- Founding members: first 20 walkers = "Founding Hopper", first 20 drivers = "Founding Driver"
+- Founders get lifetime FlexHop tier + badge (auto-assigned at registration)
+- Welcome modal shown on first login with invite functionality (Web Share API)
+- Network progress card on both dashboards showing driver/hopper/total counts
+- Milestone progress bar with founder spots remaining
+- Invite Friends button on both dashboards
+- Growth notification toggle in Settings
+- Schema fields: `isFounder`, `founderBadge`, `hasSeenWelcome` on users table
+
 ### Safety & Privacy
 - Block/report user (backend-ready)
 - Ride history logs
@@ -74,8 +84,9 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Community: GET/POST /api/community
 - Follows: GET /api/follows, POST /api/follow/:id, DELETE /api/follow/:id
 - Ratings: POST /api/ratings
-- Profile: PUT /api/profile/preferences
+- Profile: PUT /api/profile/preferences, POST /api/profile/dismiss-welcome
 - Driver: PUT /api/driver/flexibility
+- Network: GET /api/network-stats
 
 ## Tech Stack
 - Frontend: React + Vite + Tailwind + Framer Motion + TanStack Query

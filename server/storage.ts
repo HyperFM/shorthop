@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, sql, count } from "drizzle-orm";
 import {
   users,
   routineRoutes,
@@ -33,6 +33,9 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserFlexibility(id: number, updates: any): Promise<User>;
   updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string }): Promise<User>;
+  dismissWelcome(id: number): Promise<void>;
+  getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }>;
+  checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User>;
 
   getRoutes(driverId: number): Promise<RoutineRoute[]>;
   createRoute(route: InsertRoutineRoute): Promise<RoutineRoute>;
@@ -98,6 +101,52 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     if (!user) throw new Error("User not found");
+    return user;
+  }
+
+  async dismissWelcome(id: number): Promise<void> {
+    await db.update(users).set({ hasSeenWelcome: true }).where(eq(users.id, id));
+  }
+
+  async getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }> {
+    const allUsers = await db.select().from(users);
+    const totalUsers = allUsers.length;
+    const totalDrivers = allUsers.filter(u => u.isDriver).length;
+    const totalHoppers = allUsers.filter(u => !u.isDriver).length;
+
+    const milestones = [10, 25, 50, 100, 250, 500, 1000, 2000, 3000, 5000];
+    const nextMilestone = milestones.find(m => m > totalUsers) || 5000;
+
+    const foundingDrivers = allUsers.filter(u => u.isDriver && u.isFounder).length;
+    const foundingHoppers = allUsers.filter(u => !u.isDriver && u.isFounder).length;
+
+    return {
+      totalUsers,
+      totalDrivers,
+      totalHoppers,
+      nextMilestone,
+      foundingHoppersRemaining: Math.max(0, 20 - foundingHoppers),
+      foundingDriversRemaining: Math.max(0, 20 - foundingDrivers),
+    };
+  }
+
+  async checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User> {
+    const allUsers = await db.select().from(users);
+    const founderCount = allUsers.filter(u =>
+      u.isFounder && (isDriver ? u.isDriver : !u.isDriver)
+    ).length;
+
+    if (founderCount < 20) {
+      const badge = isDriver ? "Founding Driver" : "Founding Hopper";
+      const tier = isDriver ? "flexhop" : "flexhop";
+      const [updated] = await db.update(users)
+        .set({ isFounder: true, founderBadge: badge, tier })
+        .where(eq(users.id, userId))
+        .returning();
+      return updated;
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
     return user;
   }
 

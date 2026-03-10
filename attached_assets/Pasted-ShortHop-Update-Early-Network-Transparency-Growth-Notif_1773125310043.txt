@@ -1,0 +1,181 @@
+ShortHop Update – Early Network Transparency + Growth Notifications + Founding Members
+
+Goal:
+Implement a transparent onboarding system, founding member rewards, and community growth notifications so early users understand they are part of building the ShortHop network in Lexington.
+
+The system should encourage users to stay engaged, invite friends, and watch the network grow.
+
+---
+
+1. New User Welcome Notification
+
+When a user first installs and creates an account, show a welcome card with the following message.
+
+Display this as a clean modal card inside the app.
+
+Welcome to ShortHop 🛞
+
+Hey Hopper or Driver!
+
+You’re one of the early people helping bring something new to life in Lexington.
+
+Apps that connect people — like Uber or Airbnb — didn’t grow overnight. They started with small communities of people who believed in the idea.
+
+ShortHop is starting right here in Lexington, and together we’re building a new way to move around the city.
+
+Right now rides may not appear instantly yet — but every new Hopper and Driver brings us closer to that moment where a ride is just minutes away.
+
+And the best part?
+
+You’re part of the beginning.
+
+Invite friends, tell family, and help grow the network. Every new user helps the city move a little more together.
+
+We’ll keep you updated as our community grows.
+
+Shared routes. Real connections.
+
+– SHORT HOP
+
+---
+
+2. Founding Hoppers & Founding Drivers
+
+Reward the earliest community members.
+
+The first:
+
+20 Hoppers  
+20 Drivers
+
+should automatically receive:
+
+Founding Hopper or Founding Driver status.
+
+Benefits:
+
+• Lifetime FlexHop / PowerHop access  
+• Special profile badge: "Founding Hopper" or "Founding Driver"  
+• Early supporter recognition in the system
+
+Example badge:
+
+🛞 Founding Hopper
+
+These users helped start the ShortHop network and should always retain this status.
+
+---
+
+3. Invite Friends Button
+
+Below the welcome message include two buttons:
+
+Invite Friends  
+Turn On Growth Notifications
+
+Invite Friends should open the phone share sheet so users can send the app to friends through:
+
+• text message  
+• social media  
+• messenger apps  
+• email
+
+Encourage inviting 10–15 friends to help the network grow.
+
+Example invite text:
+
+"Join me on ShortHop — a new way for people in Lexington to share rides along their routes. Shared routes. Real connections."
+
+---
+
+4. Growth Notifications System
+
+Implement a community growth notification system that updates users as the network grows.
+
+Example notifications:
+
+"2 new Hoppers joined this week!"
+
+"Welcome new Drivers to the network."
+
+"ShortHop now has 15 users in Lexington."
+
+"Lexington is growing — more routes are becoming active."
+
+"50 Hoppers have joined ShortHop!"
+
+"The network is growing. Keep hopping!"
+
+---
+
+5. Lexington Network Milestones
+
+Track total Lexington users and send milestone notifications.
+
+Example milestones:
+
+10 users  
+25 users  
+50 users  
+100 users  
+250 users  
+500 users  
+1,000 users  
+2,000 users  
+3,000 users  
+5,000 users
+
+When milestones occur send notifications like:
+
+"ShortHop just reached 500 users in Lexington."
+
+"1,000 Hoppers and Drivers are now part of ShortHop!"
+
+These notifications should automatically stop once Lexington reaches approximately 5,000 users.
+
+After this point the network should be active enough that growth updates are no longer needed.
+
+---
+
+6. Community Progress Indicator
+
+Add a small section in the app showing network growth.
+
+Example:
+
+Lexington ShortHop Network
+
+Drivers: 132  
+Hoppers: 417  
+
+Total Community: 549
+
+Next milestone: 1,000 users
+
+This helps early users feel involved in building the network.
+
+---
+
+7. Notification Limits
+
+Limit growth notifications to prevent spam.
+
+Maximum recommended frequency:
+
+1–2 notifications per week.
+
+Users can disable growth notifications anytime in settings.
+
+---
+
+8. Purpose of This Feature
+
+ShortHop is a network-based platform.
+
+Early transparency helps users understand that the community is growing together and encourages them to help expand the network by inviting others.
+
+This builds trust and engagement during the early growth stage.
+
+---
+
+End update request.

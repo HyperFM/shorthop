@@ -15,6 +15,9 @@ export const users = pgTable("users", {
   detourAvailable: boolean("detour_available").default(false),
   tier: text("tier").default("standard"),
   rideVibe: text("ride_vibe").default("friendly_chat"),
+  isFounder: boolean("is_founder").default(false),
+  founderBadge: text("founder_badge"),
+  hasSeenWelcome: boolean("has_seen_welcome").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
