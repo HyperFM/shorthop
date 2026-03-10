@@ -3,7 +3,7 @@ import { useAuth, useLogout } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings as SettingsIcon, Users } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
-import logoImg from '@assets/13690F00-BEA8-489A-BC31-6EBB418D4545_1772922571220.png';
+import logoImg from '@assets/shorthop_logo_nobg.png';
 
 export function NavBar() {
   const { data: user, isLoading } = useAuth();
@@ -13,7 +13,7 @@ export function NavBar() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-6xl">
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <img src={logoImg} alt="Short Hop Logo" className="w-8 h-8 object-contain" />
+          <img src={logoImg} alt="Short Hop Logo" className="w-9 h-9 object-contain rounded-lg" />
           <span className="font-display font-bold text-xl text-primary tracking-tight">Short Hop</span>
         </Link>
 

@@ -9,9 +9,9 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-10 pointer-events-none">
+        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
           <img src={heroImg} alt="Background" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background via-background/50 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/40 to-background" />
         </div>
         
         <div className="container mx-auto px-4 max-w-6xl relative z-10">
