@@ -14,6 +14,7 @@ import { useHops, useRequestHop } from "@/hooks/use-hops";
 import { NetworkProgress } from "@/components/NetworkProgress";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking, usePickupGuidance } from "@/hooks/use-location";
+import { PickupMapVisual } from "@/components/PickupMapVisual";
 import type { User } from "@shared/routes";
 
 const searchSchema = z.object({
@@ -336,37 +337,10 @@ export default function WalkerDashboard({ user }: { user: User }) {
           <div className="md:col-span-5 space-y-6">
             <Card className="game-card bg-gradient-to-b from-accent/5 to-transparent border-accent/20">
               <CardContent className="p-5">
-                <h3 className="text-sm font-bold text-foreground mb-4 uppercase tracking-wider flex items-center gap-2" data-testid="text-pickup-tips-heading">
+                <h3 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider flex items-center gap-2" data-testid="text-pickup-tips-heading">
                   📍 Best Pickup Spots Nearby
                 </h3>
-                <p className="text-xs text-muted-foreground mb-4">Head to a main road for the best chance of catching a driver on their route.</p>
-                <div className="space-y-3">
-                  {pickupSpots.length > 0 ? pickupSpots.map((spot, i) => (
-                    <motion.div
-                      key={spot.name}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-background hover:bg-muted/50 transition-colors"
-                      data-testid={`pickup-spot-${i}`}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                        <MapPin className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="text-sm min-w-0">
-                        <p className="font-semibold text-foreground">{spot.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{spot.desc}</p>
-                        {spot.distance !== undefined && (
-                          <p className="text-xs text-primary font-medium mt-1">{spot.distance < 0.1 ? "You're here!" : `~${spot.distance.toFixed(1)} mi away`}</p>
-                        )}
-                      </div>
-                    </motion.div>
-                  )) : (
-                    <div className="text-xs text-muted-foreground py-2">
-                      Allow location access to see personalized pickup spots near you.
-                    </div>
-                  )}
-                </div>
+                <PickupMapVisual spots={pickupSpots} hasLocation={geo.permitted && geo.latitude !== null} />
               </CardContent>
             </Card>
 

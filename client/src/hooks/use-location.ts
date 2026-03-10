@@ -230,8 +230,12 @@ export interface PickupSpot {
 export function usePickupGuidance(latitude: number | null, longitude: number | null) {
   const [spots, setSpots] = useState<PickupSpot[]>([]);
   const [loading, setLoading] = useState(false);
+  const fetchedRef = useRef<string>('');
 
   useEffect(() => {
+    const key = `${latitude},${longitude}`;
+    if (key === fetchedRef.current) return;
+
     const fetchSpots = async () => {
       setLoading(true);
       try {
@@ -240,6 +244,7 @@ export function usePickupGuidance(latitude: number | null, longitude: number | n
         if (res.ok) {
           const data = await res.json();
           setSpots(data.spots);
+          fetchedRef.current = key;
         }
       } catch {}
       setLoading(false);

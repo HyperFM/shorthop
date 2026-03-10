@@ -6,6 +6,8 @@ import { z } from "zod";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 
 declare module "express-session" {
   interface SessionData {
@@ -73,8 +75,16 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  const PgStore = connectPgSimple(session);
+  const sessionPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+
   app.use(
     session({
+      store: new PgStore({
+        pool: sessionPool,
+        createTableIfMissing: true,
+        tableName: 'session',
+      }),
       secret: process.env.SESSION_SECRET || 'dev_secret',
       resave: false,
       saveUninitialized: false,

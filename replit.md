@@ -56,6 +56,9 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Subscribe/cancel endpoints: `POST /api/subscription`, `DELETE /api/subscription`
 - Subscription management in Settings page (view active plan, cancel)
 - Schema fields: `subscription` (null | "flex_hop" | "power_hop"), `subscriptionStartDate` on users table
+- Session store: PostgreSQL-backed via `connect-pg-simple` (30-day persistent sessions survive server restarts)
+- Live GPS tracking: POST /api/location broadcasts user position, GET /api/hops/:id/tracking returns partner distance/direction
+- Pickup guidance: GET /api/pickup-guidance returns 3 nearest main road spots in Lexington, visual GPS mini-map on walker dashboard
 
 ### Growth Features & Viral Expansion
 - **Hop Streak System**: Tracks consecutive hops per user, resets after 48h inactivity
