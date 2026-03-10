@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, unique } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -13,6 +13,8 @@ export const users = pgTable("users", {
   maxDetourDistance: text("max_detour_distance").default("1.0"),
   maxDetourTime: integer("max_detour_time").default(15),
   detourAvailable: boolean("detour_available").default(false),
+  tier: text("tier").default("standard"),
+  rideVibe: text("ride_vibe").default("friendly_chat"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -71,11 +73,40 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const hopBuddyRatings = pgTable("hop_buddy_ratings", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").references(() => shortHops.id).notNull(),
+  raterId: integer("rater_id").references(() => users.id).notNull(),
+  ratedUserId: integer("rated_user_id").references(() => users.id).notNull(),
+  rating: text("rating").notNull(),
+  wantRideAgain: boolean("want_ride_again").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const follows = pgTable("follows", {
+  id: serial("id").primaryKey(),
+  followerId: integer("follower_id").references(() => users.id).notNull(),
+  followingId: integer("following_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueFollow: unique().on(table.followerId, table.followingId),
+}));
+
+export const communityPosts = pgTable("community_posts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   routineRoutes: many(routineRoutes),
   hopsAsWalker: many(shortHops, { relationName: "walker" }),
   hopsAsDriver: many(shortHops, { relationName: "driver" }),
   redemptions: many(userRedemptions),
+  posts: many(communityPosts),
+  ratingsGiven: many(hopBuddyRatings, { relationName: "rater" }),
+  ratingsReceived: many(hopBuddyRatings, { relationName: "rated" }),
 }));
 
 export const rewardRelations = relations(rewards, ({ many }) => ({
@@ -88,6 +119,9 @@ export const insertShortHopSchema = createInsertSchema(shortHops).omit({ id: tru
 export const insertRewardSchema = createInsertSchema(rewards).omit({ id: true, createdAt: true });
 export const insertRedemptionSchema = createInsertSchema(userRedemptions).omit({ id: true, redeemedAt: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
+export const insertHopBuddyRatingSchema = createInsertSchema(hopBuddyRatings).omit({ id: true, createdAt: true });
+export const insertFollowSchema = createInsertSchema(follows).omit({ id: true, createdAt: true });
+export const insertCommunityPostSchema = createInsertSchema(communityPosts).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -106,6 +140,15 @@ export type InsertUserRedemption = z.infer<typeof insertRedemptionSchema>;
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+export type HopBuddyRating = typeof hopBuddyRatings.$inferSelect;
+export type InsertHopBuddyRating = z.infer<typeof insertHopBuddyRatingSchema>;
+
+export type Follow = typeof follows.$inferSelect;
+export type InsertFollow = z.infer<typeof insertFollowSchema>;
+
+export type CommunityPost = typeof communityPosts.$inferSelect;
+export type InsertCommunityPost = z.infer<typeof insertCommunityPostSchema>;
 
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

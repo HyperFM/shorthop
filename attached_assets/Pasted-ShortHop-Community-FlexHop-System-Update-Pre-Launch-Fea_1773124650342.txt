@@ -1,0 +1,202 @@
+ShortHop – Community + FlexHop System Update (Pre-Launch Feature Expansion)
+
+Goal:  
+Introduce a flexible community layer, ride preferences, and trust features while keeping the core ride experience simple and optional for users who only want transportation.
+
+All social and community features must be fully optional and user-controlled.
+
+---
+
+# 1. User Tiers
+
+## Standard ShortHop (Free)
+
+Core ride features:
+
+• Request a Hop  
+• Offer a Hop (drivers)  
+• Receive ride notifications  
+• Background route awareness  
+• Hopper pickup alerts  
+• View ShortHop Community posts and stories (read-only)
+
+Limitations:
+
+• Cannot post in community  
+• Cannot request specific drivers  
+• Cannot message other users  
+• Cannot create ride preference profiles beyond basic ride vibe selection
+
+---
+
+## FlexHop (Premium Community Tier)
+
+FlexHop unlocks the social and connection features of the platform.
+
+FlexHop members can:
+
+• Post in ShortHop Community  
+• Share Hop Stories  
+• Follow other users  
+• Message mutual Hop connections  
+• Request rides from trusted drivers  
+• Save preferred drivers  
+• Set detailed ride preferences  
+• View “Trusted Hoppers” network
+
+FlexHop essentially becomes the community layer of ShortHop.
+
+---
+
+# 2. Ride Vibe Preferences
+
+Before matching, drivers and riders select a ride vibe.
+
+Ride Preferences:
+
+• Quiet Ride – minimal conversation  
+• Friendly Chat – open to small talk  
+• Community Mode – happy to connect
+
+When a ride match occurs, both users see:
+
+"Ride vibe: Friendly Chat"
+
+Purpose:
+
+• prevent awkward social expectations  
+• protect user comfort  
+• allow flexible ride experiences
+
+---
+
+# 3. Hop Buddy Rating System
+
+After every ride, both users are prompted:
+
+How was your Hop Buddy?
+
+Options:
+
+⭐ Great Hop  
+⭐ Good Ride  
+⭐ Neutral  
+⚠ Issue
+
+Optional actions:
+
+• “Ride again with this person”  
+• “Follow Hop Buddy”
+
+This creates a trust network and improves ride quality.
+
+---
+
+# 4. Trusted Hoppers (Follow System)
+
+After a successful ride, users can follow each other.
+
+If both users follow each other:
+
+They become Trusted Hoppers.
+
+Benefits:
+
+• easier repeat rides  
+• safer known connections  
+• faster future matching
+
+Trusted Hoppers appear in a personal list.
+
+FlexHop members may also request rides from trusted drivers.
+
+---
+
+# 5. ShortHop Community Feed
+
+Create a simple story feed called:
+
+ShortHop Community
+
+Examples of posts:
+
+• “First Hop completed!”  
+• “Met someone awesome today.”  
+• “Helped someone get to work.”  
+• “Great ride today.”
+
+Standard users:
+
+• can view posts
+
+FlexHop members:
+
+• can post  
+• can comment  
+• can follow other users
+
+Goal:
+
+Encourage positive stories and community culture without turning the platform into full social media.
+
+---
+
+# 6. Smart Ride Notifications
+
+Continue implementing location-aware notifications.
+
+Examples:
+
+• "You have a Hopper nearby."  
+• "Hop Hop — a rider is ahead."  
+• "Hop Hippity Hop Hop! A Hopper is nearby."  
+• "Someone nearby needs a hop. Want to help them move forward? 🛞"  
+• "You’re passing a lot of Hoppers today. Want to go active?"
+
+Limit notifications to avoid spam.
+
+Recommended: maximum 3–5 per day.
+
+---
+
+# 7. Safety + Privacy Controls
+
+Transportation platforms require strong safety controls.
+
+Include:
+
+• block user  
+• report user  
+• ride history logs  
+• optional social interaction  
+• profile privacy settings
+
+Users can disable:
+
+• community features  
+• messaging  
+• follow requests
+
+Participation in community must be 100% optional.
+
+---
+
+# 8. Core Platform Vision
+
+ShortHop should function as two connected systems:
+
+Core Layer:
+
+Transportation network that helps people move along shared routes.
+
+Community Layer:
+
+Optional ecosystem where people can build trusted connections and share stories.
+
+Tagline reference:
+
+Shared routes. Real connections.
+
+---
+
+End of feature update request.

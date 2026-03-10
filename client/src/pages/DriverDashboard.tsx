@@ -11,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useRoutes, useCreateRoute, useDeleteRoute } from "@/hooks/use-routes";
 import { useHops, useAcceptHop, useCompleteHop } from "@/hooks/use-hops";
+import { TrustedHoppers } from "@/components/TrustedHoppers";
+import { HopBuddyRating } from "@/components/HopBuddyRating";
 import type { User } from "@shared/routes";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -35,6 +37,7 @@ export default function DriverDashboard({ user }: { user: User }) {
   const [isRouteOpen, setIsRouteOpen] = useState(false);
   const [completeHopId, setCompleteHopId] = useState<number | null>(null);
   const [distance, setDistance] = useState("1.0");
+  const [ratingHop, setRatingHop] = useState<{ tripId: number; ratedUserId: number } | null>(null);
 
   const form = useForm<z.infer<typeof routeSchema>>({
     resolver: zodResolver(routeSchema),
@@ -54,8 +57,14 @@ export default function DriverDashboard({ user }: { user: User }) {
 
   const handleComplete = () => {
     if (completeHopId) {
+      const hop = activeHops.find(h => h.id === completeHopId);
       completeHop.mutate({ id: completeHopId, data: { distanceMiles: distance } }, {
-        onSuccess: () => setCompleteHopId(null)
+        onSuccess: () => {
+          setCompleteHopId(null);
+          if (hop?.walkerId) {
+            setRatingHop({ tripId: hop.id, ratedUserId: hop.walkerId });
+          }
+        }
       });
     }
   };
@@ -336,6 +345,22 @@ export default function DriverDashboard({ user }: { user: User }) {
 
         </div>
       </div>
+
+      {user.tier === "flexhop" && (
+        <div className="mt-8">
+          <TrustedHoppers />
+        </div>
+      )}
+
+      {ratingHop && (
+        <HopBuddyRating
+          open={!!ratingHop}
+          onOpenChange={(open) => !open && setRatingHop(null)}
+          tripId={ratingHop.tripId}
+          ratedUserId={ratingHop.ratedUserId}
+          userTier={user.tier}
+        />
+      )}
     </div>
   );
 }

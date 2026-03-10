@@ -1,7 +1,9 @@
 import { z } from 'zod';
-import { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema, users, routineRoutes, shortHops, rewards, notifications } from './schema';
+import { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema, users, routineRoutes, shortHops, rewards, notifications, communityPosts, hopBuddyRatings, follows } from './schema';
 
 export { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema };
+
+export type User = typeof users.$inferSelect;
 
 export const errorSchemas = {
   validation: z.object({
@@ -176,6 +178,93 @@ export const api = {
         maxDetourDistance: z.string().optional(),
         maxDetourTime: z.number().optional(),
         detourAvailable: z.boolean().optional(),
+      }),
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+      },
+    },
+  },
+  community: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/community' as const,
+      responses: {
+        200: z.array(z.object({
+          id: z.number(),
+          userId: z.number(),
+          content: z.string(),
+          createdAt: z.string().nullable(),
+          username: z.string(),
+        })),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/community' as const,
+      input: z.object({
+        content: z.string().min(1).max(500),
+      }),
+      responses: {
+        201: z.custom<typeof communityPosts.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+        403: z.object({ message: z.string() }),
+      },
+    },
+  },
+  follows: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/follows' as const,
+      responses: {
+        200: z.array(z.object({
+          id: z.number(),
+          userId: z.number(),
+          username: z.string(),
+          isMutual: z.boolean(),
+        })),
+      },
+    },
+    follow: {
+      method: 'POST' as const,
+      path: '/api/follow/:id' as const,
+      responses: {
+        201: z.custom<typeof follows.$inferSelect>(),
+        400: z.object({ message: z.string() }),
+      },
+    },
+    unfollow: {
+      method: 'DELETE' as const,
+      path: '/api/follow/:id' as const,
+      responses: {
+        200: z.object({ message: z.string() }),
+        404: errorSchemas.notFound,
+      },
+    },
+  },
+  ratings: {
+    create: {
+      method: 'POST' as const,
+      path: '/api/ratings' as const,
+      input: z.object({
+        tripId: z.number(),
+        ratedUserId: z.number(),
+        rating: z.enum(["great_hop", "good_ride", "neutral", "issue"]),
+        wantRideAgain: z.boolean().optional(),
+      }),
+      responses: {
+        201: z.custom<typeof hopBuddyRatings.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+  },
+  profile: {
+    updatePreferences: {
+      method: 'PUT' as const,
+      path: '/api/profile/preferences' as const,
+      input: z.object({
+        rideVibe: z.enum(["quiet", "friendly_chat", "community"]).optional(),
+        tier: z.enum(["standard", "flexhop"]).optional(),
       }),
       responses: {
         200: z.custom<typeof users.$inferSelect>(),

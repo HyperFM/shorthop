@@ -19,6 +19,7 @@ declare global {
       id: number;
       username: string;
       isDriver: boolean | null;
+      tier: string | null;
     }
   }
 }
@@ -262,6 +263,134 @@ export async function registerRoutes(
     } catch (err) {
       if (err instanceof z.ZodError) {
         res.status(400).json({ message: err.errors[0].message });
+      }
+    }
+  });
+
+  // Community
+  app.get(api.community.list.path, async (req, res) => {
+    try {
+      const posts = await storage.getCommunityPosts();
+      res.json(posts);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch posts" });
+    }
+  });
+
+  app.post(api.community.create.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    if (!user || user.tier !== "flexhop") {
+      return res.status(403).json({ message: "FlexHop membership required to post" });
+    }
+    try {
+      const input = api.community.create.input.parse(req.body);
+      const post = await storage.createCommunityPost({ userId: req.user.id, content: input.content });
+      res.status(201).json(post);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Failed to create post" });
+      }
+    }
+  });
+
+  // Follows
+  app.get(api.follows.list.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    if (!user || user.tier !== "flexhop") {
+      return res.status(403).json({ message: "FlexHop membership required" });
+    }
+    try {
+      const followsList = await storage.getFollows(req.user.id);
+      res.json(followsList);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch follows" });
+    }
+  });
+
+  app.post(api.follows.follow.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    if (!user || user.tier !== "flexhop") {
+      return res.status(403).json({ message: "FlexHop membership required to follow users" });
+    }
+    const targetId = Number(req.params.id);
+    if (targetId === req.user.id) {
+      return res.status(400).json({ message: "Cannot follow yourself" });
+    }
+    try {
+      const follow = await storage.followUser(req.user.id, targetId);
+      res.status(201).json(follow);
+    } catch (err) {
+      res.status(400).json({ message: "Already following this user" });
+    }
+  });
+
+  app.delete(api.follows.unfollow.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.unfollowUser(req.user.id, Number(req.params.id));
+      res.json({ message: "Unfollowed" });
+    } catch (err) {
+      res.status(404).json({ message: "Follow not found" });
+    }
+  });
+
+  // Ratings
+  app.post(api.ratings.create.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.ratings.create.input.parse(req.body);
+
+      const allHops = [...await storage.getHopsForWalker(req.user.id), ...await storage.getHopsForDriver(req.user.id)];
+      const trip = allHops.find(h => h.id === input.tripId && h.status === "completed");
+      if (!trip) {
+        return res.status(400).json({ message: "Trip not found or not completed" });
+      }
+
+      const isWalker = trip.walkerId === req.user.id;
+      const isDriver = trip.driverId === req.user.id;
+      if (!isWalker && !isDriver) {
+        return res.status(400).json({ message: "You did not participate in this trip" });
+      }
+
+      const expectedRatedUser = isWalker ? trip.driverId : trip.walkerId;
+      if (input.ratedUserId !== expectedRatedUser) {
+        return res.status(400).json({ message: "Invalid rated user for this trip" });
+      }
+
+      const rating = await storage.createRating({
+        tripId: input.tripId,
+        raterId: req.user.id,
+        ratedUserId: input.ratedUserId,
+        rating: input.rating,
+        wantRideAgain: input.wantRideAgain || false,
+      });
+      res.status(201).json(rating);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Failed to create rating" });
+      }
+    }
+  });
+
+  // Profile preferences
+  app.put(api.profile.updatePreferences.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const input = api.profile.updatePreferences.input.parse(req.body);
+      const user = await storage.updateUserPreferences(req.user.id, input);
+      res.json(user);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Failed to update preferences" });
       }
     }
   });

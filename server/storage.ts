@@ -1,6 +1,5 @@
 import { db } from "./db";
-import { eq } from "drizzle-orm";
-import { desc } from "drizzle-orm";
+import { eq, and, or, desc } from "drizzle-orm";
 import {
   users,
   routineRoutes,
@@ -8,6 +7,9 @@ import {
   rewards,
   userRedemptions,
   notifications,
+  hopBuddyRatings,
+  follows,
+  communityPosts,
   type User,
   type InsertUser,
   type RoutineRoute,
@@ -18,6 +20,11 @@ import {
   type UserRedemption,
   type Notification,
   type InsertNotification,
+  type HopBuddyRating,
+  type InsertHopBuddyRating,
+  type Follow,
+  type CommunityPost,
+  type InsertCommunityPost,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -25,6 +32,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserFlexibility(id: number, updates: any): Promise<User>;
+  updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string }): Promise<User>;
 
   getRoutes(driverId: number): Promise<RoutineRoute[]>;
   createRoute(route: InsertRoutineRoute): Promise<RoutineRoute>;
@@ -45,6 +53,15 @@ export interface IStorage {
   getUserNotifications(userId: number): Promise<Notification[]>;
   markNotificationRead(id: number): Promise<Notification>;
   markAllNotificationsRead(userId: number): Promise<void>;
+
+  createRating(rating: InsertHopBuddyRating): Promise<HopBuddyRating>;
+
+  followUser(followerId: number, followingId: number): Promise<Follow>;
+  unfollowUser(followerId: number, followingId: number): Promise<void>;
+  getFollows(userId: number): Promise<{ id: number; userId: number; username: string; isMutual: boolean }[]>;
+
+  getCommunityPosts(): Promise<{ id: number; userId: number; content: string; createdAt: Date | null; username: string }[]>;
+  createCommunityPost(post: InsertCommunityPost): Promise<CommunityPost>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -66,6 +83,18 @@ export class DatabaseStorage implements IStorage {
   async updateUserFlexibility(id: number, updates: any): Promise<User> {
     const [user] = await db.update(users)
       .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    if (!user) throw new Error("User not found");
+    return user;
+  }
+
+  async updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string }): Promise<User> {
+    const setValues: any = {};
+    if (updates.rideVibe) setValues.rideVibe = updates.rideVibe;
+    if (updates.tier) setValues.tier = updates.tier;
+    const [user] = await db.update(users)
+      .set(setValues)
       .where(eq(users.id, id))
       .returning();
     if (!user) throw new Error("User not found");
@@ -188,6 +217,67 @@ export class DatabaseStorage implements IStorage {
     await db.update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.userId, userId));
+  }
+
+  async createRating(rating: InsertHopBuddyRating): Promise<HopBuddyRating> {
+    const [r] = await db.insert(hopBuddyRatings).values(rating).returning();
+    return r;
+  }
+
+  async followUser(followerId: number, followingId: number): Promise<Follow> {
+    const [f] = await db.insert(follows).values({ followerId, followingId }).returning();
+    return f;
+  }
+
+  async unfollowUser(followerId: number, followingId: number): Promise<void> {
+    await db.delete(follows).where(
+      and(eq(follows.followerId, followerId), eq(follows.followingId, followingId))
+    );
+  }
+
+  async getFollows(userId: number): Promise<{ id: number; userId: number; username: string; isMutual: boolean }[]> {
+    const following = await db.select({
+      id: follows.id,
+      followingId: follows.followingId,
+      username: users.username,
+    })
+      .from(follows)
+      .innerJoin(users, eq(follows.followingId, users.id))
+      .where(eq(follows.followerId, userId));
+
+    const followers = await db.select({
+      followerId: follows.followerId,
+    })
+      .from(follows)
+      .where(eq(follows.followingId, userId));
+
+    const followerIds = new Set(followers.map(f => f.followerId));
+
+    return following.map(f => ({
+      id: f.id,
+      userId: f.followingId,
+      username: f.username,
+      isMutual: followerIds.has(f.followingId),
+    }));
+  }
+
+  async getCommunityPosts(): Promise<{ id: number; userId: number; content: string; createdAt: Date | null; username: string }[]> {
+    const posts = await db.select({
+      id: communityPosts.id,
+      userId: communityPosts.userId,
+      content: communityPosts.content,
+      createdAt: communityPosts.createdAt,
+      username: users.username,
+    })
+      .from(communityPosts)
+      .innerJoin(users, eq(communityPosts.userId, users.id))
+      .orderBy(desc(communityPosts.createdAt));
+    return posts;
+  }
+
+  async createCommunityPost(post: InsertCommunityPost): Promise<CommunityPost> {
+    const [p] = await db.insert(communityPosts).values(post).returning();
+    return p;
   }
 }
 

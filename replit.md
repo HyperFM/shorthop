@@ -1,15 +1,13 @@
 # Short Hop - Product Notes
 
-## Current Version (V3 with Notifications)
-Full V3 with Wheels economy, reward store, notification system, and location awareness:
-- 4 movement options: Walk, Short Hop, Flex Hop, Power Hop
-- Wheels economy: drivers earn and redeem rewards
-- Smart notification system with nearby hopper detection
-- In-app notification center with brand voice alerts
-- Notification settings with toggle controls
-- Privacy policy and support/safety pages
+## Current Version (V4 - Community + FlexHop Update)
+Full community layer with user tiers, ride vibe preferences, hop buddy ratings, trusted hoppers, and community feed.
 
 ## Features
+
+### User Tiers
+- **Standard ShortHop (Free)**: Core ride features, view community (read-only)
+- **FlexHop (Premium)**: Post in community, follow users, message connections, save preferred drivers, trusted hoppers network
 
 ### Movement Options
 - Walk ($0) - Healthy movement, transit routes
@@ -17,13 +15,32 @@ Full V3 with Wheels economy, reward store, notification system, and location awa
 - Flex Hop ($2-5, $5/mo) - Small detours, dynamic pricing
 - Power Hop ($15/mo) - Unlimited, anywhere to anywhere, "Reach for the Sky"
 
+### Ride Vibe Preferences
+- Quiet Ride - minimal conversation
+- Friendly Chat - open to small talk (default)
+- Community Mode - happy to connect
+
+### Hop Buddy Rating System
+- After ride completion: Great Hop, Good Ride, Neutral, Issue
+- Optional: "Ride again" checkbox, "Follow Hop Buddy" button
+- Builds trust network for better matching
+
+### Trusted Hoppers (Follow System)
+- Follow users after rides
+- Mutual follows = "Trusted Hoppers"
+- Displayed in driver dashboard with mutual/following distinction
+
+### ShortHop Community Feed
+- `/community` page with story feed
+- Standard users: read-only
+- FlexHop users: can post (500 char limit)
+- Shows username, content, timestamp
+
 ### Notification System
-- In-app notification center (bell icon in navbar with unread badge)
+- In-app notification center (bell icon with unread badge)
 - Nearby hopper detection with simulated matching
-- Brand voice alerts: "Hop Hop!", "A Hopper is nearby"
 - Browser notification API integration
-- Auto-dismiss floating alerts for drivers
-- Notification settings page with toggles (ride, route, hopper, community alerts)
+- Notification settings with toggles
 
 ### Driver Features
 - Routine routes (not shifts)
@@ -31,12 +48,20 @@ Full V3 with Wheels economy, reward store, notification system, and location awa
 - Flex Hop settings (detour distance/time)
 - Reward Store (coffee, gas, meals, car wash)
 
+### Safety & Privacy
+- Block/report user (backend-ready)
+- Ride history logs
+- Community features fully optional
+- Profile privacy toggle in settings
+- All social interaction opt-in
+
 ### Pages
-- / - Home (landing page with tagline)
+- / - Home (landing page)
 - /auth - Login/Register
 - /dashboard - Walker or Driver dashboard
 - /rewards - Reward Store (drivers)
-- /settings - Notification preferences
+- /community - Community feed
+- /settings - Tier, ride vibe, notifications, privacy
 - /privacy - Privacy policy
 - /support - Support & safety info
 
@@ -46,6 +71,10 @@ Full V3 with Wheels economy, reward store, notification system, and location awa
 - Hops: GET /api/hops, POST /api/hops/request, POST /api/hops/:id/accept, /api/hops/:id/complete
 - Rewards: GET /api/rewards, POST /api/rewards/:id/redeem
 - Notifications: GET /api/notifications, POST /api/notifications/:id/read, POST /api/notifications/read-all
+- Community: GET/POST /api/community
+- Follows: GET /api/follows, POST /api/follow/:id, DELETE /api/follow/:id
+- Ratings: POST /api/ratings
+- Profile: PUT /api/profile/preferences
 - Driver: PUT /api/driver/flexibility
 
 ## Tech Stack
@@ -56,13 +85,18 @@ Full V3 with Wheels economy, reward store, notification system, and location awa
 - UI: Shadcn components
 
 ## Database Tables
-- users (auth, wheels/credits, driver flexibility settings)
-- routine_routes (driver's regular commutes)
-- short_hops (hop requests with type, status, pricing)
-- rewards (coffee, gas, meal, carwash categories)
-- user_redemptions (redeemed reward codes)
-- notifications (user alerts with type, read status)
+- users (auth, wheels/credits, tier, rideVibe, driver flexibility)
+- routine_routes (driver commutes)
+- short_hops (ride requests)
+- rewards / user_redemptions (reward store)
+- notifications (user alerts)
+- hop_buddy_ratings (post-ride ratings)
+- follows (follow system with unique constraint)
+- community_posts (community feed)
 
-## Test Accounts
-- Walker: username `walker`, password `password`
-- Driver: username `driver`, password `password`
+## Important Notes
+- DB uses `credits` column but UI shows "Wheels" — do NOT rename
+- `tier` column: "standard" (default) or "flexhop"
+- `rideVibe` column: "quiet", "friendly_chat" (default), "community"
+- Power Hop uses `hopType: "full_ride"` internally
+- Test accounts: walker/password (walker), driver/password (driver)

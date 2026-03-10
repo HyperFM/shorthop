@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useAuth, useLogout } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings as SettingsIcon } from "lucide-react";
+import { LogOut, Settings as SettingsIcon, Users } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import logoImg from '@assets/13690F00-BEA8-489A-BC31-6EBB418D4545_1772922571220.png';
 
@@ -23,7 +23,10 @@ export function NavBar() {
               <div className="hidden sm:flex items-center gap-3 mr-2">
                 <div className="flex flex-col items-end">
                   <span className="text-sm font-semibold text-foreground">{user.username}</span>
-                  <span className="text-xs text-muted-foreground">{user.isDriver ? 'Driver' : 'Walker'}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {user.isDriver ? 'Driver' : 'Walker'}
+                    {user.tier === 'flexhop' && ' · FlexHop'}
+                  </span>
                 </div>
                 {user.isDriver && (
                   <div className="bg-secondary/10 text-secondary-foreground px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 border border-secondary/20">
@@ -39,6 +42,10 @@ export function NavBar() {
                   Rewards
                 </Link>
               )}
+              <Link href="/community" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-community">
+                <span className="hidden sm:inline">Community</span>
+                <Users className="w-4 h-4 sm:hidden" />
+              </Link>
               <NotificationCenter />
               <Link href="/settings" data-testid="link-settings">
                 <SettingsIcon className="w-4 h-4 text-muted-foreground hover:text-primary transition-colors" />

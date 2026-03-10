@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { NavBar } from "@/components/NavBar";
 
-// Pages
 import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
@@ -14,6 +13,7 @@ import RewardStore from "@/pages/RewardStore";
 import Privacy from "@/pages/Privacy";
 import Support from "@/pages/Support";
 import Settings from "@/pages/Settings";
+import Community from "@/pages/Community";
 
 function Router() {
   return (
@@ -25,6 +25,7 @@ function Router() {
       <Route path="/privacy" component={Privacy} />
       <Route path="/support" component={Support} />
       <Route path="/settings" component={Settings} />
+      <Route path="/community" component={Community} />
       <Route component={NotFound} />
     </Switch>
   );

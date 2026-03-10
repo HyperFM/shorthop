@@ -3,8 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Bell, Route, Users, TrendingUp, MessageCircle, Globe } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { api } from "@shared/routes";
+import { RideVibeSelector } from "@/components/RideVibeSelector";
 
 const STORAGE_KEY = "shorthop-notification-preferences";
 
@@ -37,9 +43,16 @@ function savePreferences(prefs: NotificationPreferences) {
 }
 
 export default function Settings() {
+  const { data: user } = useAuth();
   const [prefs, setPrefs] = useState<NotificationPreferences>(loadPreferences);
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [rideVibe, setRideVibe] = useState(user?.rideVibe || "friendly_chat");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (user?.rideVibe) setRideVibe(user.rideVibe);
+  }, [user?.rideVibe]);
 
   useEffect(() => {
     if ("Notification" in window) {
@@ -71,6 +84,27 @@ export default function Settings() {
     }
   }
 
+  const updatePreferences = useMutation({
+    mutationFn: async (updates: { rideVibe?: string; tier?: string }) => {
+      const res = await apiRequest(api.profile.updatePreferences.method, api.profile.updatePreferences.path, updates);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
+      toast({ title: "Preferences updated", description: "Your profile has been saved." });
+    },
+  });
+
+  const handleVibeChange = (value: string) => {
+    setRideVibe(value);
+    updatePreferences.mutate({ rideVibe: value });
+  };
+
+  const handleTierToggle = () => {
+    const newTier = user?.tier === "flexhop" ? "standard" : "flexhop";
+    updatePreferences.mutate({ tier: newTier });
+  };
+
   const toggleItems: { key: keyof NotificationPreferences; label: string; description: string; icon: typeof Bell }[] = [
     { key: "rideAlerts", label: "Ride Alerts", description: "Get notified when a ride matches your route or a driver is heading your way.", icon: Bell },
     { key: "routeAlerts", label: "Route Alerts", description: "Receive alerts about your saved routes and schedule changes.", icon: Route },
@@ -82,9 +116,98 @@ export default function Settings() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-2xl">
       <h1 data-testid="text-settings-title" className="text-4xl font-display font-bold mb-2">Settings</h1>
-      <p className="text-muted-foreground mb-8">Manage your notification preferences and permissions.</p>
+      <p className="text-muted-foreground mb-8">Manage your preferences, ride vibe, and notifications.</p>
 
       <div className="space-y-6">
+        {user && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-secondary" />
+                Membership Tier
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-foreground flex items-center gap-2">
+                    {user.tier === "flexhop" ? "FlexHop" : "Standard ShortHop"}
+                    {user.tier === "flexhop" && (
+                      <Badge className="bg-secondary text-secondary-foreground text-[10px]">Premium</Badge>
+                    )}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {user.tier === "flexhop"
+                      ? "Full community access: post stories, follow hoppers, message connections."
+                      : "Core ride features. Upgrade to FlexHop for community access."}
+                  </p>
+                </div>
+              </div>
+              <Button
+                data-testid="button-toggle-tier"
+                variant={user.tier === "flexhop" ? "outline" : "default"}
+                onClick={handleTierToggle}
+                disabled={updatePreferences.isPending}
+                className="w-full"
+              >
+                {user.tier === "flexhop" ? "Switch to Standard" : "Upgrade to FlexHop"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {user && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                Ride Vibe
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Set your ride vibe so matches know what to expect. This helps prevent awkward social expectations and protects everyone's comfort.
+              </p>
+              <RideVibeSelector
+                value={rideVibe}
+                onChange={handleVibeChange}
+                disabled={updatePreferences.isPending}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {user && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="w-5 h-5" />
+                Privacy Controls
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground mb-2">
+                All social features are optional. You can disable community interactions at any time.
+              </p>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <EyeOff className="w-5 h-5 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <Label htmlFor="toggle-community" className="text-sm font-medium cursor-pointer">Community Features</Label>
+                    <p className="text-sm text-muted-foreground mt-0.5">Show your profile in the community and allow follows.</p>
+                  </div>
+                </div>
+                <Switch
+                  id="toggle-community"
+                  data-testid="switch-community-features"
+                  checked={prefs.communityNotifications}
+                  onCheckedChange={() => toggle("communityNotifications")}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
