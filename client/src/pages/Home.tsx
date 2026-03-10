@@ -21,7 +21,7 @@ export default function Home() {
               Shared routes. Real connections.
             </div>
             <h1 className="text-5xl md:text-7xl font-extrabold text-foreground tracking-tight leading-tight">
-              A Hop, Skip, and a <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Jump.</span>
+              A Jump, Skip, and a <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Hop.</span>
             </h1>
             <div className="text-lg text-muted-foreground leading-relaxed space-y-4">
               <p>Walking is the best option for your physical and financial health.</p>
