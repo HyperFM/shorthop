@@ -107,6 +107,8 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Auth: POST /api/login, /api/register, GET /api/me, POST /api/logout
 - Routes: GET/POST /api/routes, DELETE /api/routes/:id
 - Hops: GET /api/hops, POST /api/hops/request, POST /api/hops/:id/accept, /api/hops/:id/complete
+- Location: POST /api/location (broadcast GPS), GET /api/hops/:id/tracking (get partner distance/direction)
+- Pickup Guidance: GET /api/pickup-guidance?lat=&lng= (nearest 3 main road pickup spots in Lexington)
 - Rewards: GET /api/rewards, POST /api/rewards/:id/redeem
 - Notifications: GET /api/notifications, POST /api/notifications/:id/read, POST /api/notifications/read-all
 - Community: GET/POST /api/community

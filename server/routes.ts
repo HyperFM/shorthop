@@ -24,6 +24,50 @@ declare global {
   }
 }
 
+interface UserLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  updatedAt: number;
+}
+
+const liveLocations = new Map<number, UserLocation>();
+
+const LEXINGTON_PICKUP_SPOTS = [
+  { name: "Nicholasville Rd & Reynolds Rd", lat: 38.0126, lng: -84.5078, desc: "High traffic corridor — drivers pass every few minutes" },
+  { name: "Richmond Rd near Kroger", lat: 38.0280, lng: -84.4752, desc: "Busy shopping area with steady driver flow" },
+  { name: "New Circle Rd & Tates Creek", lat: 38.0092, lng: -84.4926, desc: "Major intersection — great for catching commuters" },
+  { name: "Main St & Broadway", lat: 38.0496, lng: -84.4983, desc: "Downtown hub — lots of drivers during rush hours" },
+  { name: "Limestone & Euclid (UK Campus)", lat: 38.0382, lng: -84.5040, desc: "Campus area — frequent short trips available" },
+  { name: "Man o' War Blvd & Nicholasville", lat: 37.9890, lng: -84.5264, desc: "Busy retail corridor — consistent traffic" },
+  { name: "Versailles Rd near Keeneland", lat: 38.0504, lng: -84.5336, desc: "West side commuter route" },
+  { name: "Harrodsburg Rd & Lane Allen", lat: 38.0178, lng: -84.5300, desc: "Popular commuter path through south Lexington" },
+  { name: "Leestown Rd & Georgetown", lat: 38.0640, lng: -84.5150, desc: "North side connector — steady morning traffic" },
+  { name: "Winchester Rd near I-75", lat: 38.0550, lng: -84.4650, desc: "East side highway access — lots of commuters" },
+];
+
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): string {
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
+  const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+    Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
+  const bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  if (bearing < 45 || bearing >= 315) return "north";
+  if (bearing < 135) return "east";
+  if (bearing < 225) return "south";
+  return "west";
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -179,13 +223,19 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     
     if (req.user.isDriver) {
-      const hops = await storage.getAvailableHops();
+      const availableHops = await storage.getAvailableHops();
+      const driverHops = await storage.getHopsForDriver(req.user.id);
+      const availableIds = new Set(availableHops.map(h => h.id));
+      const mergedHops = [
+        ...availableHops,
+        ...driverHops.filter(h => !availableIds.has(h.id)),
+      ];
 
-      if (hops.length > 0) {
+      if (availableHops.length > 0) {
         const todayCount = await storage.getNotificationCountToday(req.user.id);
         if (todayCount < 5 && Math.random() < 0.3) {
           const messages = [
-            `${hops.length} Hopper${hops.length > 1 ? 's are' : ' is'} moving along your usual route.`,
+            `${availableHops.length} Hopper${availableHops.length > 1 ? 's are' : ' is'} moving along your usual route.`,
             "You're near a busy route — want to go active?",
             "Hoppers are nearby along your route today.",
           ];
@@ -199,7 +249,7 @@ export async function registerRoutes(
         }
       }
 
-      res.json(hops);
+      res.json(mergedHops);
     } else {
       const hops = await storage.getHopsForWalker(req.user.id);
       res.json(hops);
@@ -587,6 +637,73 @@ export async function registerRoutes(
     } catch (err) {
       res.status(500).json({ message: "Failed to cancel subscription" });
     }
+  });
+
+  app.post('/api/location', (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const { latitude, longitude, accuracy } = req.body;
+    if (typeof latitude !== 'number' || typeof longitude !== 'number' ||
+        latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return res.status(400).json({ message: "Invalid coordinates" });
+    }
+    liveLocations.set(req.user.id, { latitude, longitude, accuracy: accuracy || 0, updatedAt: Date.now() });
+    res.json({ ok: true });
+  });
+
+  app.get('/api/hops/:id/tracking', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const walkerHops = await storage.getHopsForWalker(req.user.id);
+      const driverHops = await storage.getHopsForDriver(req.user.id);
+      const hop = [...walkerHops, ...driverHops].find(h => h.id === hopId && h.status === 'matched');
+      if (!hop) return res.status(404).json({ message: "No active matched hop" });
+
+      const isWalker = hop.walkerId === req.user.id;
+      const partnerId = isWalker ? hop.driverId : hop.walkerId;
+      if (!partnerId) return res.json({ available: false });
+
+      const partnerLoc = liveLocations.get(partnerId);
+      const myLoc = liveLocations.get(req.user.id);
+
+      if (!partnerLoc || Date.now() - partnerLoc.updatedAt > 60000) {
+        return res.json({ available: false });
+      }
+
+      let distance = null;
+      let direction = null;
+      if (myLoc && Date.now() - myLoc.updatedAt < 60000) {
+        distance = getDistance(myLoc.latitude, myLoc.longitude, partnerLoc.latitude, partnerLoc.longitude);
+        direction = getBearing(myLoc.latitude, myLoc.longitude, partnerLoc.latitude, partnerLoc.longitude);
+      }
+
+      res.json({
+        available: true,
+        distance: distance !== null ? Math.round(distance * 100) / 100 : null,
+        direction,
+        partnerRole: isWalker ? "driver" : "walker",
+        updatedAt: partnerLoc.updatedAt,
+      });
+    } catch {
+      res.status(500).json({ message: "Tracking error" });
+    }
+  });
+
+  app.get('/api/pickup-guidance', (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const lat = parseFloat(req.query.lat as string);
+    const lng = parseFloat(req.query.lng as string);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      return res.json({ spots: LEXINGTON_PICKUP_SPOTS.slice(0, 3) });
+    }
+
+    const spotsWithDistance = LEXINGTON_PICKUP_SPOTS
+      .map(s => ({ ...s, distance: getDistance(lat, lng, s.lat, s.lng) }))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 3);
+
+    res.json({ spots: spotsWithDistance });
   });
 
   // Expansion

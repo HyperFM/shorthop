@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, CarFront, Footprints, Clock, CheckCircle2, Share2, Flame, Award, Star, Lock } from "lucide-react";
+import { MapPin, Navigation, CarFront, Footprints, Clock, CheckCircle2, Share2, Flame, Award, Star, Lock, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { useHops, useRequestHop } from "@/hooks/use-hops";
 import { NetworkProgress } from "@/components/NetworkProgress";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
+import { useGeolocation, useLiveLocationBroadcast, useHopTracking, usePickupGuidance } from "@/hooks/use-location";
 import type { User } from "@shared/routes";
 
 const searchSchema = z.object({
@@ -47,6 +48,12 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const [matchedElapsed, setMatchedElapsed] = useState(0);
   const matchedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const geo = useGeolocation();
+  const hasActiveHop = !!activeHop;
+  useLiveLocationBroadcast(hasActiveHop);
+  const tracking = useHopTracking(activeHop?.id, activeHop?.status === 'matched');
+  const { spots: pickupSpots } = usePickupGuidance(geo.latitude, geo.longitude);
+
   const hasFlexSub = user.subscription === "flex_hop" || user.subscription === "power_hop";
   const hasPowerSub = user.subscription === "power_hop";
 
@@ -65,6 +72,12 @@ export default function WalkerDashboard({ user }: { user: User }) {
     prevStatusRef.current = activeHop?.status;
     return () => { if (matchedTimerRef.current) clearInterval(matchedTimerRef.current); };
   }, [activeHop?.status]);
+
+  useEffect(() => {
+    if (!geo.permitted) {
+      geo.requestPermission();
+    }
+  }, []);
 
   useEffect(() => {
     if (activeHop?.status === 'requested') {
@@ -267,17 +280,38 @@ export default function WalkerDashboard({ user }: { user: User }) {
               )}
 
               {activeHop.status === 'matched' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-3 bg-primary/10 rounded-full px-4 py-2 border border-primary/20"
-                >
-                  <Clock className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-bold text-foreground tabular-nums">
-                    {Math.floor(matchedElapsed / 60)}:{String(matchedElapsed % 60).padStart(2, '0')}
-                  </span>
-                  <span className="text-xs text-muted-foreground">on their way</span>
-                </motion.div>
+                <div className="space-y-3 w-full max-w-xs">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-center gap-3 bg-primary/10 rounded-full px-4 py-2 border border-primary/20"
+                  >
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-bold text-foreground tabular-nums">
+                      {Math.floor(matchedElapsed / 60)}:{String(matchedElapsed % 60).padStart(2, '0')}
+                    </span>
+                    <span className="text-xs text-muted-foreground">on their way</span>
+                  </motion.div>
+
+                  {tracking.available && tracking.distance !== null && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex items-center justify-center gap-2 bg-accent/10 rounded-full px-4 py-2 border border-accent/20"
+                      data-testid="tracking-distance"
+                    >
+                      <Compass className="w-4 h-4 text-accent" />
+                      <span className="text-sm font-bold text-foreground">
+                        {tracking.distance < 0.1 ? 'Almost here!' : `${tracking.distance} mi ${tracking.direction || ''}`}
+                      </span>
+                      <motion.span
+                        className="w-2 h-2 rounded-full bg-green-500"
+                        animate={{ scale: [1, 1.3, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      />
+                    </motion.div>
+                  )}
+                </div>
               )}
 
               <AnimatePresence>
@@ -300,21 +334,38 @@ export default function WalkerDashboard({ user }: { user: User }) {
       ) : (
         <div className="grid md:grid-cols-12 gap-8">
           <div className="md:col-span-5 space-y-6">
-            {/* Momentum Suggestions */}
             <Card className="game-card bg-gradient-to-b from-accent/5 to-transparent border-accent/20">
               <CardContent className="p-5">
-                <h3 className="text-sm font-bold text-foreground mb-4 uppercase tracking-wider flex items-center gap-2">💡 Suggested Trips</h3>
+                <h3 className="text-sm font-bold text-foreground mb-4 uppercase tracking-wider flex items-center gap-2" data-testid="text-pickup-tips-heading">
+                  📍 Best Pickup Spots Nearby
+                </h3>
+                <p className="text-xs text-muted-foreground mb-4">Head to a main road for the best chance of catching a driver on their route.</p>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-background hover:bg-muted/50 transition-colors cursor-pointer group">
-                    <div className="text-sm">
-                      <p className="font-semibold text-foreground">Home → Work</p>
-                      <p className="text-xs text-muted-foreground">12 minute walk</p>
-                      <p className="text-xs text-primary mt-1">Short Hop available in 3 minutes</p>
+                  {pickupSpots.length > 0 ? pickupSpots.map((spot, i) => (
+                    <motion.div
+                      key={spot.name}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-background hover:bg-muted/50 transition-colors"
+                      data-testid={`pickup-spot-${i}`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <MapPin className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="text-sm min-w-0">
+                        <p className="font-semibold text-foreground">{spot.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{spot.desc}</p>
+                        {spot.distance !== undefined && (
+                          <p className="text-xs text-primary font-medium mt-1">{spot.distance < 0.1 ? "You're here!" : `~${spot.distance.toFixed(1)} mi away`}</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  )) : (
+                    <div className="text-xs text-muted-foreground py-2">
+                      Allow location access to see personalized pickup spots near you.
                     </div>
-                    <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      Catch a Hop
-                    </Button>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

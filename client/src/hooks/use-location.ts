@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface GeolocationState {
   latitude: number | null;
@@ -155,4 +156,96 @@ export function useNearbyHopperSimulation(enabled: boolean = true) {
   }, [enabled, permission, showNotification]);
 
   return { currentHopper, dismiss };
+}
+
+export function useLiveLocationBroadcast(enabled: boolean = false) {
+  const watchIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !navigator.geolocation) return;
+
+    const sendLocation = (position: GeolocationPosition) => {
+      apiRequest('POST', '/api/location', {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+      }).catch(() => {});
+    };
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      sendLocation,
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, [enabled]);
+}
+
+export interface TrackingData {
+  available: boolean;
+  distance: number | null;
+  direction: string | null;
+  partnerRole: string | null;
+  updatedAt: number | null;
+}
+
+export function useHopTracking(hopId: number | undefined, enabled: boolean = false) {
+  const [tracking, setTracking] = useState<TrackingData>({ available: false, distance: null, direction: null, partnerRole: null, updatedAt: null });
+
+  useEffect(() => {
+    if (!enabled || !hopId) return;
+
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/hops/${hopId}/tracking`, { credentials: 'include' });
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setTracking(data);
+        }
+      } catch {}
+    };
+
+    poll();
+    const interval = setInterval(poll, 5000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [hopId, enabled]);
+
+  return tracking;
+}
+
+export interface PickupSpot {
+  name: string;
+  desc: string;
+  distance?: number;
+  lat: number;
+  lng: number;
+}
+
+export function usePickupGuidance(latitude: number | null, longitude: number | null) {
+  const [spots, setSpots] = useState<PickupSpot[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchSpots = async () => {
+      setLoading(true);
+      try {
+        const params = latitude !== null && longitude !== null ? `?lat=${latitude}&lng=${longitude}` : '';
+        const res = await fetch(`/api/pickup-guidance${params}`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setSpots(data.spots);
+        }
+      } catch {}
+      setLoading(false);
+    };
+    fetchSpots();
+  }, [latitude, longitude]);
+
+  return { spots, loading };
 }

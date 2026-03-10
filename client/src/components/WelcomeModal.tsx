@@ -37,7 +37,7 @@ export function WelcomeModal({ open, onOpenChange, user }: WelcomeModalProps) {
       const timer = setTimeout(() => {
         setVisible(false);
         onOpenChange(false);
-      }, 2800);
+      }, 1800);
       return () => clearTimeout(timer);
     } else {
       setVisible(false);

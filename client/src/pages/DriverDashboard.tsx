@@ -18,6 +18,7 @@ import { TrustedHoppers } from "@/components/TrustedHoppers";
 import { HopBuddyRating } from "@/components/HopBuddyRating";
 import { NetworkProgress } from "@/components/NetworkProgress";
 import { ShareRideCard } from "@/components/ShareRideCard";
+import { useLiveLocationBroadcast } from "@/hooks/use-location";
 import type { User } from "@shared/routes";
 import type { ShortHop } from "@shared/schema";
 
@@ -53,6 +54,9 @@ export default function DriverDashboard({ user }: { user: User }) {
   const { data: badges } = useQuery<{ id: number; badge: string; earnedAt: string | null }[]>({
     queryKey: ['/api/profile/badges'],
   });
+  
+  const hasMatchedHop = hops?.some(h => h.status === 'matched') ?? false;
+  useLiveLocationBroadcast(hasMatchedHop);
   
   const [isRouteOpen, setIsRouteOpen] = useState(false);
   const [completeHopId, setCompleteHopId] = useState<number | null>(null);
