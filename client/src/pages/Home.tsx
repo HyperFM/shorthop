@@ -68,7 +68,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold mb-2">For Walkers</h3>
-                    <p className="text-muted-foreground">Move forward in stages. Choose from Walk, Short Hop, Flex Hop, or Power Hop. All rides stay inside Short Hop—no need to switch apps.</p>
+                    <p className="text-muted-foreground">Move forward in stages. Choose from Walk, Short Hop, Flex Hop, or Power Hop. All rides stay inside Short Hop—no more switching through multiple apps.</p>
                   </div>
                 </div>
                 
