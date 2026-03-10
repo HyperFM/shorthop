@@ -1,16 +1,24 @@
 {
-  "name": "Short Hop",
-  "short_name": "Short Hop",
+  "name": "ShortHop",
+  "short_name": "ShortHop",
+  "description": "Shared routes. Real connections. A micro-rideshare for Lexington, KY.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#faf9f6",
   "theme_color": "#2a9d5c",
+  "orientation": "portrait",
   "icons": [
+    {
+      "src": "/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "/app-icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
