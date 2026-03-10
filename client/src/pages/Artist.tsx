@@ -56,6 +56,26 @@ export default function Artist() {
             ShortHop is the work of a Lexington-originated artist known as HyperFM, focused on building new music and creating opportunities for growth and creativity. The platform began with a simple moment of curiosity — running late for work, watching cars pass by, and wondering what it would look like if there were something that connected those passing moments and people together. Since then, the idea has continued to evolve as both a creative project and a digital environment for expression.
           </p>
         </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="mt-12 flex justify-center"
+        >
+          <a
+            href="https://beacons.ai/hyperfm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex flex-col items-center gap-2 group"
+            data-testid="link-beacons"
+          >
+            <span className="w-16 h-16 rounded-full bg-foreground flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <img src={artistIcon} alt="HyperFM" className="w-10 h-10 rounded-full invert dark:invert-0" />
+            </span>
+            <span className="text-xs font-bold text-muted-foreground group-hover:text-foreground transition-colors tracking-wide">beacons.ai/hyperfm</span>
+          </a>
+        </motion.div>
       </div>
     </div>
   );
