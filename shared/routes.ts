@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema, users, routineRoutes, shortHops, rewards, notifications, communityPosts, hopBuddyRatings, follows } from './schema';
+import { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema, insertExpansionWaitlistSchema, users, routineRoutes, shortHops, rewards, notifications, communityPosts, hopBuddyRatings, follows, expansionWaitlist } from './schema';
 
 export { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema };
 
@@ -293,6 +293,24 @@ export const api = {
           foundingHoppersRemaining: z.number(),
           foundingDriversRemaining: z.number(),
         }),
+      },
+    },
+  },
+  expansion: {
+    checkCity: {
+      method: 'GET' as const,
+      path: '/api/expansion/check-city' as const,
+      responses: {
+        200: z.object({ available: z.boolean(), city: z.string() }),
+      },
+    },
+    joinWaitlist: {
+      method: 'POST' as const,
+      path: '/api/expansion/waitlist' as const,
+      input: z.object({ username: z.string(), city: z.string(), phone: z.string() }),
+      responses: {
+        201: z.object({ message: z.string() }),
+        400: errorSchemas.validation,
       },
     },
   },

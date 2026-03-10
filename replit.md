@@ -48,6 +48,14 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Flex Hop settings (detour distance/time)
 - Reward Store (coffee, gas, meals, car wash)
 
+### City Availability & Expansion System
+- City field on registration form ("What city are you in?")
+- Lexington users proceed to normal onboarding
+- Non-Lexington users see expansion modal explaining city-by-city rollout
+- "Notify Me" button collects phone number for expansion waitlist
+- Expansion waitlist stored in `expansion_waitlist` table (username, city, phone)
+- API endpoints: GET /api/expansion/check-city, POST /api/expansion/waitlist
+
 ### Early Network & Growth System
 - Founding members: first 20 walkers = "Founding Hopper", first 20 drivers = "Founding Driver"
 - Founders get lifetime FlexHop tier + badge (auto-assigned at registration)

@@ -10,6 +10,7 @@ import {
   hopBuddyRatings,
   follows,
   communityPosts,
+  expansionWaitlist,
   type User,
   type InsertUser,
   type RoutineRoute,
@@ -25,6 +26,8 @@ import {
   type Follow,
   type CommunityPost,
   type InsertCommunityPost,
+  type InsertExpansionWaitlist,
+  type ExpansionWaitlist,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -36,6 +39,8 @@ export interface IStorage {
   dismissWelcome(id: number): Promise<void>;
   getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }>;
   checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User>;
+
+  addToExpansionWaitlist(entry: InsertExpansionWaitlist): Promise<ExpansionWaitlist>;
 
   getRoutes(driverId: number): Promise<RoutineRoute[]>;
   createRoute(route: InsertRoutineRoute): Promise<RoutineRoute>;
@@ -327,6 +332,11 @@ export class DatabaseStorage implements IStorage {
   async createCommunityPost(post: InsertCommunityPost): Promise<CommunityPost> {
     const [p] = await db.insert(communityPosts).values(post).returning();
     return p;
+  }
+
+  async addToExpansionWaitlist(entry: InsertExpansionWaitlist): Promise<ExpansionWaitlist> {
+    const [w] = await db.insert(expansionWaitlist).values(entry).returning();
+    return w;
   }
 }
 

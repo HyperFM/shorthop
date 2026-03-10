@@ -15,9 +15,19 @@ export const users = pgTable("users", {
   detourAvailable: boolean("detour_available").default(false),
   tier: text("tier").default("standard"),
   rideVibe: text("ride_vibe").default("friendly_chat"),
+  city: text("city"),
   isFounder: boolean("is_founder").default(false),
   founderBadge: text("founder_badge"),
   hasSeenWelcome: boolean("has_seen_welcome").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const expansionWaitlist = pgTable("expansion_waitlist", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull(),
+  city: text("city").notNull(),
+  phone: text("phone").notNull(),
+  notified: boolean("notified").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -116,6 +126,8 @@ export const rewardRelations = relations(rewards, ({ many }) => ({
   redemptions: many(userRedemptions),
 }));
 
+export const insertExpansionWaitlistSchema = createInsertSchema(expansionWaitlist).omit({ id: true, createdAt: true });
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, credits: true });
 export const insertRoutineRouteSchema = createInsertSchema(routineRoutes).omit({ id: true, createdAt: true });
 export const insertShortHopSchema = createInsertSchema(shortHops).omit({ id: true, createdAt: true });
@@ -152,6 +164,9 @@ export type InsertFollow = z.infer<typeof insertFollowSchema>;
 
 export type CommunityPost = typeof communityPosts.$inferSelect;
 export type InsertCommunityPost = z.infer<typeof insertCommunityPostSchema>;
+
+export type ExpansionWaitlist = typeof expansionWaitlist.$inferSelect;
+export type InsertExpansionWaitlist = z.infer<typeof insertExpansionWaitlistSchema>;
 
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

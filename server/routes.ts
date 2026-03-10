@@ -68,13 +68,23 @@ export async function registerRoutes(
   });
 
   // Auth
+  const LAUNCH_CITIES_AUTH = ["lexington"];
+
   app.post(api.auth.register.path, async (req, res, next) => {
     try {
-      const existing = await storage.getUserByUsername(req.body.username);
+      const { username, password, isDriver, city } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+      const cityStr = (city || "").trim().toLowerCase();
+      if (!cityStr || !LAUNCH_CITIES_AUTH.some(c => cityStr.includes(c))) {
+        return res.status(409).json({ message: "ShortHop is not yet available in your city. Join our waitlist to be notified!", unavailableCity: true });
+      }
+      const existing = await storage.getUserByUsername(username);
       if (existing) {
         return res.status(400).json({ message: "Username exists" });
       }
-      let user = await storage.createUser(req.body);
+      let user = await storage.createUser({ username, password, isDriver: !!isDriver, city: city?.trim() || null });
       user = await storage.checkAndAssignFounderStatus(user.id, !!user.isDriver);
 
       await storage.createNotification({
@@ -418,6 +428,26 @@ export async function registerRoutes(
       res.json(stats);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch network stats" });
+    }
+  });
+
+  // Expansion
+  app.get(api.expansion.checkCity.path, (req, res) => {
+    const city = (req.query.city as string || "").trim().toLowerCase();
+    const available = LAUNCH_CITIES_AUTH.some(c => city.includes(c));
+    res.json({ available, city: req.query.city as string });
+  });
+
+  app.post(api.expansion.joinWaitlist.path, async (req, res) => {
+    try {
+      const { username, city, phone } = req.body;
+      if (!username || !city || !phone) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+      await storage.addToExpansionWaitlist({ username, city, phone, notified: false });
+      res.status(201).json({ message: "You're on the list! We'll notify you when ShortHop launches in your city." });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to join waitlist" });
     }
   });
 

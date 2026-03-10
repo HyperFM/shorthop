@@ -1,0 +1,109 @@
+ShortHop Update – City Availability + Expansion Notification System
+
+Goal:  
+Implement a city availability check during signup so users outside the launch city (Lexington) understand the platform is expanding gradually and can opt in to be notified when ShortHop launches in their city.
+
+This keeps potential users engaged while the network grows.
+
+---
+
+1. City Selection During Signup
+
+During account creation, ask the user:
+
+"What city are you in?"
+
+Allow users to:
+
+• enter their city manually  
+or  
+• detect their location automatically (if permissions are enabled)
+
+Example:
+
+City: Lexington, Kentucky
+
+---
+
+2. City Availability Check
+
+After the city is submitted, the system checks whether ShortHop is currently active in that city.
+
+Current launch city:
+
+Lexington, Kentucky
+
+If the user selects Lexington, they continue to normal onboarding.
+
+If the user selects another city, show the following message.
+
+---
+
+3. Expansion Message
+
+Display a friendly message explaining the rollout strategy.
+
+Example message:
+
+ShortHop is starting in Lexington 🛞
+
+Hey Hopper!
+
+We’re launching the ShortHop network city by city, starting in Lexington, Kentucky.
+
+Apps that connect people take time to grow, so we’re building a strong community in one city first before expanding.
+
+But don’t worry — we’d love to bring ShortHop to your city next.
+
+Tap the button below and we’ll notify you as soon as ShortHop launches where you are.
+
+Shared routes. Real connections.
+
+---
+
+4. Notify Me Button
+
+Below the message include:
+
+Notify Me When ShortHop Comes To My City
+
+When clicked, prompt the user to enter:
+
+• phone number  
+• city confirmation
+
+This allows the system to notify them later when expansion reaches their location.
+
+Store the following data:
+
+username  
+city  
+phone number
+
+These users are added to the Expansion Notification List.
+
+---
+
+5. Expansion Notification System
+
+When ShortHop launches in a new city, send a notification or message such as:
+
+"ShortHop has arrived in your city! 🛞  
+Drivers and Hoppers are now active nearby. Open the app and start hopping."
+
+---
+
+6. Purpose of This Feature
+
+This feature prevents users outside Lexington from feeling like the app is broken or unavailable.
+
+Instead, it:
+
+• explains the early rollout  
+• builds anticipation  
+• collects future users  
+• supports city-by-city expansion
+
+---
+
+End update request.
