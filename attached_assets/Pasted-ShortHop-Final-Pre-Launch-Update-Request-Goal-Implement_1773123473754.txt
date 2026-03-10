@@ -1,0 +1,180 @@
+ShortHop – Final Pre-Launch Update Request
+
+Goal:  
+Implement a smart notification and background awareness system that allows drivers and riders to connect without needing to constantly open the app. The app should notify users about nearby ride opportunities and guide them using simple, clear notifications.
+
+---
+
+# 1. Enable Push Notifications
+
+Implement push notifications for both iOS and Android.
+
+Request permissions on first launch:
+
+- Allow Notifications
+- Allow Location Access
+- Allow Location Access Always
+- Enable Background App Refresh
+
+Explain to the user:
+
+"ShortHop uses your location to connect you with nearby riders along your route."
+
+Users must be able to opt in or opt out anytime in settings.
+
+---
+
+# 2. Background Location Awareness
+
+When a user is driving or moving:
+
+The app should monitor location in the background and detect:
+
+- Nearby riders (Hoppers)
+- Busy routes
+- Passing opportunities
+- Riders along the user's travel direction
+
+If a match is detected within a reasonable radius (ex: 0.5–2 miles), trigger a notification.
+
+The system should prioritize minimal detours so drivers know they do not have to leave their route significantly.
+
+---
+
+# 3. Nearby Hopper Notifications
+
+When a rider is detected near the driver's route:
+
+Example notifications:
+
+• "You have a Hopper nearby."  
+• "Hop Hop — a rider is ahead."  
+• "Hop Hippity Hop Hop! A Hopper is nearby."  
+• "Someone nearby needs a hop. Want to help them move forward? 🛞"  
+• "Looks like you're passing a rider. Want to give them a hop? 🚙"  
+• "Shared routes. Real connections. A rider is nearby."
+
+These notifications should open the ride details if tapped.
+
+---
+
+# 4. Directional Notifications (Without Opening App)
+
+If a driver keeps the phone locked, provide simplified navigation updates via notifications.
+
+Example:
+
+"There is a Hopper near McDonald's about 0.5 miles ahead."
+
+Then provide step notifications such as:
+
+• "Hopper pickup coming up."  
+• "Turn left ahead."  
+• "Park near the gas station."  
+• "Your Hopper is arriving at the pickup point."
+
+These notifications should act like lightweight guidance.
+
+The user should still be able to open the app for the full map.
+
+---
+
+# 5. Hopper Pickup Optimization
+
+When riders request a hop:
+
+The system should automatically suggest pickup points near:
+
+- Gas stations
+- Fast food restaurants
+- Parking lots
+- Main road access points
+- Safe roadside pull-off areas
+
+Example notification:
+
+"Your Hopper is waiting near the Shell station on Main Street."
+
+This minimizes driver detours and improves safety.
+
+---
+
+# 6. Engagement Notifications
+
+Send occasional engagement notifications when relevant activity exists.
+
+Examples:
+
+• "You’re passing a lot of Hoppers today. Want to go active?"  
+• "You’re near a busy route. Turn on hopping?"  
+• "You could help someone and earn at the same time."  
+• "You missed a few hopeful Hops nearby today. Want to catch the next one?"  
+• "Lots of riders moving right now."  
+• "Don’t ride alone — someone nearby could use the company."  
+• "You never know who you'll bump into next. Let’s go active today."
+
+Limit notifications to prevent spam.
+
+Recommended: maximum 3–5 per day.
+
+---
+
+# 7. Friendly Brand Voice Notifications
+
+Include playful brand alerts:
+
+• "Hop Hop!"  
+• "Hop Hippity Hop Hop!"  
+• "You have a Hopper."  
+
+These should appear when a ride request appears.
+
+Future update idea: allow custom voice notifications.
+
+---
+
+# 8. Notification Settings Menu
+
+Add a settings page allowing users to control:
+
+Toggle options:
+
+- Ride alerts
+- Route alerts
+- Hopper nearby alerts
+- Busy route alerts
+- Community notifications
+
+Users can also disable all notifications if desired.
+
+---
+
+# 9. Safety + Privacy
+
+Location should only be used for:
+
+- Matching drivers and riders
+- Route awareness
+- Pickup coordination
+
+Users must be able to disable background location at any time.
+
+---
+
+# 10. Goal of this System
+
+ShortHop should feel like a passive ride-sharing network that works naturally with everyday travel.
+
+Drivers should feel like:
+
+"I’m already going this way, I can help someone along the route."
+
+The app should reduce friction and encourage community-based movement.
+
+Tagline reminder:
+
+Shared routes. Real connections.
+
+---
+
+End of feature request.
