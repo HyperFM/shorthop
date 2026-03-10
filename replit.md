@@ -1,70 +1,68 @@
 # Short Hop - Product Notes
 
-## Current Version (V3 with App Updates)
-Full V3 implementation with Wheels economy, reward store, and updated movement options:
-- 4 movement options: Walk ($0), Short Hop ($1-3), Flex Hop ($2-5), Power Hop ($15/month)
-- Power Hop is the premium unlimited option with glowing orange/green design
-- Wheels economy replaces credits - drivers earn and redeem rewards
-- Momentum Suggestions feature shows suggested trips
-- All rides stay within Short Hop (no external app redirects)
+## Current Version (V3 with Notifications)
+Full V3 with Wheels economy, reward store, notification system, and location awareness:
+- 4 movement options: Walk, Short Hop, Flex Hop, Power Hop
+- Wheels economy: drivers earn and redeem rewards
+- Smart notification system with nearby hopper detection
+- In-app notification center with brand voice alerts
+- Notification settings with toggle controls
+- Privacy policy and support/safety pages
 
-## Key Features
+## Features
 
-### Walkers
-- Choose movement option based on urgency and budget
-- Walk ($0) - Encourages healthy movement, shows transit routes
-- Short Hop ($1-3) - Advance along driver's routine route
-- Flex Hop ($2-5, $5/month) - Request small detours with dynamic pricing
-- Power Hop ($15/month) - Unlimited rides, priority matching, bonus wheels for drivers
-- Momentum Suggestions showing common routes (Home→Work, etc.)
+### Movement Options
+- Walk ($0) - Healthy movement, transit routes
+- Short Hop ($1-3) - Advance along driver's route, free membership
+- Flex Hop ($2-5, $5/mo) - Small detours, dynamic pricing
+- Power Hop ($15/mo) - Unlimited, anywhere to anywhere, "Reach for the Sky"
 
-### Drivers
-- Register routine routes (not shifts) - set your own schedule
-- Wheels reward system: 1 mile = 1 Wheel
-- Flex Hop toggle: enable/disable small detours with distance/time limits
-- Reward Store: redeem Wheels for coffee, gas, meals, car wash
+### Notification System
+- In-app notification center (bell icon in navbar with unread badge)
+- Nearby hopper detection with simulated matching
+- Brand voice alerts: "Hop Hop!", "A Hopper is nearby"
+- Browser notification API integration
+- Auto-dismiss floating alerts for drivers
+- Notification settings page with toggles (ride, route, hopper, community alerts)
 
-### Database
-- Users (with driver flexibility settings, wheels/credits)
-- RoutineRoutes (driver's regular commutes)
-- ShortHops (hop requests with type, status, pricing)
-- Rewards (categories: coffee, gas, meal, carwash)
-- UserRedemptions (tracks redeemed codes)
+### Driver Features
+- Routine routes (not shifts)
+- Wheels reward system (1 mile = 1 Wheel)
+- Flex Hop settings (detour distance/time)
+- Reward Store (coffee, gas, meals, car wash)
+
+### Pages
+- / - Home (landing page with tagline)
+- /auth - Login/Register
+- /dashboard - Walker or Driver dashboard
+- /rewards - Reward Store (drivers)
+- /settings - Notification preferences
+- /privacy - Privacy policy
+- /support - Support & safety info
 
 ## API Endpoints
 - Auth: POST /api/login, /api/register, GET /api/me, POST /api/logout
 - Routes: GET/POST /api/routes, DELETE /api/routes/:id
 - Hops: GET /api/hops, POST /api/hops/request, POST /api/hops/:id/accept, /api/hops/:id/complete
 - Rewards: GET /api/rewards, POST /api/rewards/:id/redeem
+- Notifications: GET /api/notifications, POST /api/notifications/:id/read, POST /api/notifications/read-all
 - Driver: PUT /api/driver/flexibility
 
 ## Tech Stack
 - Frontend: React + Vite + Tailwind + Framer Motion + TanStack Query
-- Backend: Express + Passport.js (local strategy)
+- Backend: Express + Passport.js (local strategy, session-based)
 - Database: PostgreSQL + Drizzle ORM
 - Validation: Zod schemas
+- UI: Shadcn components
 
-## Visual Design
-- Nature-inspired colors: green (primary), orange (secondary), blue (accent)
-- Power Hop glows with orange-green gradient
-- Momentum Suggestions card above search with "Suggested Trips"
-- Rounded cards, smooth animations, clean typography
-
-## Future Features (Blueprint)
-- Routine Detection: Auto-learn common routes based on user patterns
-- Live Route Awareness: Notify walkers when drivers appear on their route
-- Visual Motion Indicator: Animated hop icons showing driver movement
-- Driver Verification: ID + license plate checks
-- Real-time GPS navigation with voice guidance
-- Brand Partnership Portal for businesses to offer rewards
-- Sponsored rewards with promotions
+## Database Tables
+- users (auth, wheels/credits, driver flexibility settings)
+- routine_routes (driver's regular commutes)
+- short_hops (hop requests with type, status, pricing)
+- rewards (coffee, gas, meal, carwash categories)
+- user_redemptions (redeemed reward codes)
+- notifications (user alerts with type, read status)
 
 ## Test Accounts
 - Walker: username `walker`, password `password`
 - Driver: username `driver`, password `password`
-
-## Notable Implementation Decisions
-- Using `credits` column in DB but displaying as "Wheels" in UI
-- Power Hop uses same `full_ride` hop type internally
-- Momentum Suggestions currently shows static example (backend would provide real suggestions)
-- Mobile-responsive design with grid layout adjustments

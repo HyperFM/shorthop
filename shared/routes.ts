@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema, users, routineRoutes, shortHops, rewards } from './schema';
+import { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema, users, routineRoutes, shortHops, rewards, notifications } from './schema';
 
 export { insertUserSchema, insertRoutineRouteSchema, insertShortHopSchema };
 
@@ -138,6 +138,32 @@ export const api = {
         }),
         400: z.object({ message: z.string() }),
         404: errorSchemas.notFound,
+      },
+    },
+  },
+  notifications: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/notifications' as const,
+      responses: {
+        200: z.array(z.custom<typeof notifications.$inferSelect>()),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    markRead: {
+      method: 'POST' as const,
+      path: '/api/notifications/:id/read' as const,
+      responses: {
+        200: z.custom<typeof notifications.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    markAllRead: {
+      method: 'POST' as const,
+      path: '/api/notifications/read-all' as const,
+      responses: {
+        200: z.object({ message: z.string() }),
+        401: errorSchemas.unauthorized,
       },
     },
   },

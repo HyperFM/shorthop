@@ -227,6 +227,29 @@ export async function registerRoutes(
     }
   });
 
+  // Notifications
+  app.get(api.notifications.list.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const notifs = await storage.getUserNotifications(req.user.id);
+    res.json(notifs);
+  });
+
+  app.post(api.notifications.markAllRead.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    await storage.markAllNotificationsRead(req.user.id);
+    res.json({ message: "All notifications marked as read" });
+  });
+
+  app.post(api.notifications.markRead.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const notif = await storage.markNotificationRead(Number(req.params.id));
+      res.json(notif);
+    } catch (e) {
+      res.status(404).json({ message: "Notification not found" });
+    }
+  });
+
   // Driver flexibility settings
   app.put(api.driver.updateFlexibility.path, async (req, res) => {
     if (!req.isAuthenticated() || !req.user.isDriver) {

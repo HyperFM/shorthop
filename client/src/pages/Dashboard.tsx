@@ -2,11 +2,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import WalkerDashboard from "./WalkerDashboard";
 import DriverDashboard from "./DriverDashboard";
+import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
+import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { Loader2 } from "lucide-react";
 
 export default function Dashboard() {
   const { data: user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const { currentHopper, dismiss } = useNearbyHopperSimulation(!!user?.isDriver);
 
   if (isLoading) {
     return (
@@ -21,9 +24,12 @@ export default function Dashboard() {
     return null;
   }
 
-  if (user.isDriver) {
-    return <DriverDashboard user={user} />;
-  }
-
-  return <WalkerDashboard user={user} />;
+  return (
+    <>
+      {user.isDriver && (
+        <NearbyHopperAlert hopper={currentHopper} onDismiss={dismiss} />
+      )}
+      {user.isDriver ? <DriverDashboard user={user} /> : <WalkerDashboard user={user} />}
+    </>
+  );
 }

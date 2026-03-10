@@ -1,11 +1,13 @@
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import {
   users,
   routineRoutes,
   shortHops,
   rewards,
   userRedemptions,
+  notifications,
   type User,
   type InsertUser,
   type RoutineRoute,
@@ -14,6 +16,8 @@ import {
   type InsertShortHop,
   type Reward,
   type UserRedemption,
+  type Notification,
+  type InsertNotification,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -36,6 +40,11 @@ export interface IStorage {
   getRewards(): Promise<Reward[]>;
   redeemReward(userId: number, rewardId: number): Promise<{ code: string; reward: Reward }>;
   getUserRedemptions(userId: number): Promise<UserRedemption[]>;
+
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getUserNotifications(userId: number): Promise<Notification[]>;
+  markNotificationRead(id: number): Promise<Notification>;
+  markAllNotificationsRead(userId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -153,6 +162,32 @@ export class DatabaseStorage implements IStorage {
 
   async getUserRedemptions(userId: number): Promise<UserRedemption[]> {
     return await db.select().from(userRedemptions).where(eq(userRedemptions.userId, userId));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [n] = await db.insert(notifications).values(notification).returning();
+    return n;
+  }
+
+  async getUserNotifications(userId: number): Promise<Notification[]> {
+    return await db.select().from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationRead(id: number): Promise<Notification> {
+    const [n] = await db.update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, id))
+      .returning();
+    if (!n) throw new Error("Notification not found");
+    return n;
+  }
+
+  async markAllNotificationsRead(userId: number): Promise<void> {
+    await db.update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
   }
 }
 

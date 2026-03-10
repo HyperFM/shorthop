@@ -13,6 +13,7 @@ import Dashboard from "@/pages/Dashboard";
 import RewardStore from "@/pages/RewardStore";
 import Privacy from "@/pages/Privacy";
 import Support from "@/pages/Support";
+import Settings from "@/pages/Settings";
 
 function Router() {
   return (
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/rewards" component={RewardStore} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/support" component={Support} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );

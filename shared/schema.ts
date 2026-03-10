@@ -61,6 +61,16 @@ export const userRedemptions = pgTable("user_redemptions", {
   redeemedAt: timestamp("redeemed_at").defaultNow(),
 });
 
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   routineRoutes: many(routineRoutes),
   hopsAsWalker: many(shortHops, { relationName: "walker" }),
@@ -77,6 +87,7 @@ export const insertRoutineRouteSchema = createInsertSchema(routineRoutes).omit({
 export const insertShortHopSchema = createInsertSchema(shortHops).omit({ id: true, createdAt: true });
 export const insertRewardSchema = createInsertSchema(rewards).omit({ id: true, createdAt: true });
 export const insertRedemptionSchema = createInsertSchema(userRedemptions).omit({ id: true, redeemedAt: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -92,6 +103,9 @@ export type InsertReward = z.infer<typeof insertRewardSchema>;
 
 export type UserRedemption = typeof userRedemptions.$inferSelect;
 export type InsertUserRedemption = z.infer<typeof insertRedemptionSchema>;
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;
