@@ -693,6 +693,8 @@ export async function registerRoutes(
         direction,
         partnerRole: isWalker ? "driver" : "walker",
         updatedAt: partnerLoc.updatedAt,
+        partnerLat: partnerLoc.latitude,
+        partnerLng: partnerLoc.longitude,
       });
     } catch {
       res.status(500).json({ message: "Tracking error" });

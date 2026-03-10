@@ -281,11 +281,11 @@ export default function WalkerDashboard({ user }: { user: User }) {
               )}
 
               {activeHop.status === 'matched' && (
-                <div className="space-y-3 w-full max-w-xs">
+                <div className="space-y-3 w-full">
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-center gap-3 bg-primary/10 rounded-full px-4 py-2 border border-primary/20"
+                    className="flex items-center justify-center gap-3 bg-primary/10 rounded-full px-4 py-2 border border-primary/20 max-w-xs mx-auto"
                   >
                     <Clock className="w-4 h-4 text-primary" />
                     <span className="text-sm font-bold text-foreground tabular-nums">
@@ -294,11 +294,21 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     <span className="text-xs text-muted-foreground">on their way</span>
                   </motion.div>
 
+                  <PickupMapVisual
+                    spots={[]}
+                    hasLocation={geo.permitted && geo.latitude !== null}
+                    userLat={geo.latitude}
+                    userLng={geo.longitude}
+                    tracking={tracking}
+                    driverLat={tracking.partnerLat}
+                    driverLng={tracking.partnerLng}
+                  />
+
                   {tracking.available && tracking.distance !== null && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="flex items-center justify-center gap-2 bg-accent/10 rounded-full px-4 py-2 border border-accent/20"
+                      className="flex items-center justify-center gap-2 bg-accent/10 rounded-full px-4 py-2 border border-accent/20 max-w-xs mx-auto"
                       data-testid="tracking-distance"
                     >
                       <Compass className="w-4 h-4 text-accent" />
@@ -340,7 +350,15 @@ export default function WalkerDashboard({ user }: { user: User }) {
                 <h3 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider flex items-center gap-2" data-testid="text-pickup-tips-heading">
                   📍 Best Pickup Spots Nearby
                 </h3>
-                <PickupMapVisual spots={pickupSpots} hasLocation={geo.permitted && geo.latitude !== null} />
+                <PickupMapVisual
+                  spots={pickupSpots}
+                  hasLocation={geo.permitted && geo.latitude !== null}
+                  userLat={geo.latitude}
+                  userLng={geo.longitude}
+                  tracking={tracking}
+                  driverLat={tracking.partnerLat}
+                  driverLng={tracking.partnerLng}
+                />
               </CardContent>
             </Card>
 

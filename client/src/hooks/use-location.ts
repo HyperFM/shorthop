@@ -192,6 +192,8 @@ export interface TrackingData {
   direction: string | null;
   partnerRole: string | null;
   updatedAt: number | null;
+  partnerLat?: number | null;
+  partnerLng?: number | null;
 }
 
 export function useHopTracking(hopId: number | undefined, enabled: boolean = false) {

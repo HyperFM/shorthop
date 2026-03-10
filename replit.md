@@ -58,7 +58,9 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Schema fields: `subscription` (null | "flex_hop" | "power_hop"), `subscriptionStartDate` on users table
 - Session store: PostgreSQL-backed via `connect-pg-simple` (30-day persistent sessions survive server restarts)
 - Live GPS tracking: POST /api/location broadcasts user position, GET /api/hops/:id/tracking returns partner distance/direction
-- Pickup guidance: GET /api/pickup-guidance returns 3 nearest main road spots in Lexington, visual GPS mini-map on walker dashboard
+- Pickup guidance: GET /api/pickup-guidance returns 3 nearest main road spots in Lexington
+- Interactive Leaflet/OpenStreetMap on walker dashboard: blue pulsing marker (rider), green pulsing marker (driver when matched), blue dashed route line showing driver approach, green star markers for pickup spots
+- Tracking API (GET /api/hops/:id/tracking) returns partnerLat/partnerLng for real-time map positioning
 
 ### Growth Features & Viral Expansion
 - **Hop Streak System**: Tracks consecutive hops per user, resets after 48h inactivity
