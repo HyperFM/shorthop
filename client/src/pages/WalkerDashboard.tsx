@@ -145,45 +145,45 @@ export default function WalkerDashboard({ user }: { user: User }) {
                   <h3 className="text-lg font-bold mb-4">Available Options</h3>
                   
                   {/* Option 1: Walk */}
-                  <Card className="hover:border-border transition-colors cursor-default">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                          <Footprints className="w-5 h-5" />
+                  <Card className="hover:border-primary/30 transition-all cursor-default group">
+                    <CardContent className="p-6 flex items-center justify-between">
+                      <div className="flex items-center gap-6">
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                          <Footprints className="w-6 h-6" />
                         </div>
-                        <div>
-                          <h4 className="font-bold text-foreground">Walk</h4>
-                          <p className="text-xs text-muted-foreground">Encourages healthy movement. Shows transit routes.</p>
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-foreground text-lg">Walk</h4>
+                          <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Encourages healthy movement. Shows transit routes.</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-foreground">$0</div>
+                        <div className="font-bold text-foreground text-xl">$0</div>
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Option 2: Short Hop */}
-                  <Card className="border-primary ring-2 ring-primary/20 shadow-md relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded-bl-lg">RECOMMENDED</div>
-                    <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                          <CarFront className="w-5 h-5" />
+                  <Card className="border-primary ring-2 ring-primary/20 shadow-lg relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[11px] font-bold px-3 py-1.5 rounded-bl-lg uppercase tracking-wider">RECOMMENDED</div>
+                    <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                      <div className="flex items-center gap-6">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors">
+                          <CarFront className="w-6 h-6" />
                         </div>
-                        <div>
-                          <h4 className="font-bold text-foreground">Short Hop</h4>
-                          <p className="text-xs text-muted-foreground">Advance along a driver's route. Free membership.</p>
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-foreground text-lg">Short Hop</h4>
+                          <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Advance along a driver's route. Free membership.</p>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+                      <div className="flex items-center justify-between w-full sm:w-auto gap-8">
                         <div className="text-left sm:text-right">
-                          <div className="font-bold text-foreground">$1–3</div>
-                          <div className="text-[10px] text-muted-foreground">Per ride</div>
+                          <div className="font-bold text-foreground text-xl">$1–3</div>
+                          <div className="text-[11px] text-muted-foreground uppercase font-semibold">Per ride</div>
                         </div>
                         <Button 
                           onClick={() => requestHop.mutate({ ...locations, hopType: "short_hop" }, { onSuccess: () => setShowOptions(false) })}
                           disabled={requestHop.isPending}
-                          className="rounded-full shadow-md shadow-primary/20"
+                          className="rounded-full shadow-lg shadow-primary/25 h-12 px-8 font-bold text-base"
                         >
                           Request
                         </Button>
@@ -192,27 +192,27 @@ export default function WalkerDashboard({ user }: { user: User }) {
                   </Card>
 
                   {/* Option 3: Flex Hop */}
-                  <Card className="border-secondary/50">
-                    <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                          <CarFront className="w-5 h-5" />
+                  <Card className="border-secondary/30 hover:border-secondary transition-all group">
+                    <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                      <div className="flex items-center gap-6">
+                        <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary group-hover:bg-secondary/20 transition-colors">
+                          <CarFront className="w-6 h-6" />
                         </div>
-                        <div>
-                          <h4 className="font-bold text-foreground">Flex Hop</h4>
-                          <p className="text-xs text-muted-foreground">Allows small driver detours. Dynamic pricing.</p>
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-foreground text-lg">Flex Hop</h4>
+                          <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Allows small driver detours. Dynamic pricing.</p>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+                      <div className="flex items-center justify-between w-full sm:w-auto gap-8">
                         <div className="text-left sm:text-right">
-                          <div className="font-bold text-foreground">$2–5</div>
-                          <div className="text-[10px] text-muted-foreground">Per ride • $5/mo</div>
+                          <div className="font-bold text-foreground text-xl">$2–5</div>
+                          <div className="text-[11px] text-muted-foreground uppercase font-semibold">Per ride • $5/mo</div>
                         </div>
                         <Button 
                           variant="secondary"
                           onClick={() => requestHop.mutate({ ...locations, hopType: "flex_hop" }, { onSuccess: () => setShowOptions(false) })}
                           disabled={requestHop.isPending}
-                          className="rounded-full"
+                          className="rounded-full h-12 px-8 font-bold text-base"
                         >
                           Request
                         </Button>
@@ -221,32 +221,32 @@ export default function WalkerDashboard({ user }: { user: User }) {
                   </Card>
 
                   {/* Option 4: Power Hop */}
-                  <Card className="relative overflow-hidden shadow-xl hover:shadow-2xl transition-all border-2 border-transparent"
+                  <Card className="relative overflow-hidden shadow-xl hover:shadow-2xl transition-all border-2 border-transparent group"
                     style={{
                       background: "linear-gradient(135deg, rgba(249,115,22,0.05) 0%, rgba(34,197,94,0.05) 100%)",
                       borderImage: "linear-gradient(135deg, #f97316 0%, #22c55e 100%) 1",
-                      boxShadow: "0 0 20px rgba(249, 115, 22, 0.3), 0 0 40px rgba(34, 197, 94, 0.2), inset 0 0 30px rgba(249, 115, 22, 0.05)"
+                      boxShadow: "0 10px 30px -10px rgba(249, 115, 22, 0.2), 0 20px 40px -15px rgba(34, 197, 94, 0.15)"
                     }}>
-                    <CardContent className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-green-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                    <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                      <div className="flex items-center gap-6">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-green-500 flex items-center justify-center text-white font-bold text-xl shadow-lg group-hover:scale-105 transition-transform">
                           ✨
                         </div>
-                        <div>
-                          <h4 className="font-bold text-foreground text-lg">Power Hop</h4>
-                          <p className="text-xs text-muted-foreground">Complete mobility freedom. Anywhere to anywhere.</p>
-                          <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 mt-1">Reach for the Sky</p>
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-foreground text-xl">Power Hop</h4>
+                          <p className="text-sm text-muted-foreground leading-snug max-w-[300px]">Complete mobility freedom. Anywhere to anywhere.</p>
+                          <p className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-2 uppercase tracking-widest">Reach for the Sky</p>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+                      <div className="flex items-center justify-between w-full sm:w-auto gap-8">
                         <div className="text-left sm:text-right">
-                          <div className="font-bold text-foreground">$15/mo</div>
-                          <div className="text-[10px] text-muted-foreground">Unlimited</div>
+                          <div className="font-bold text-foreground text-2xl">$15/mo</div>
+                          <div className="text-[11px] text-muted-foreground uppercase font-bold tracking-tight">Unlimited access</div>
                         </div>
                         <Button 
                           onClick={() => requestHop.mutate({ ...locations, hopType: "full_ride" }, { onSuccess: () => setShowOptions(false) })}
                           disabled={requestHop.isPending}
-                          className="rounded-full bg-gradient-to-r from-orange-500 to-green-500 hover:from-orange-600 hover:to-green-600 text-white shadow-lg shadow-orange-500/30"
+                          className="rounded-full bg-gradient-to-r from-orange-500 to-green-500 hover:from-orange-600 hover:to-green-600 text-white shadow-xl shadow-orange-500/40 h-14 px-10 font-black text-lg"
                         >
                           Reach
                         </Button>

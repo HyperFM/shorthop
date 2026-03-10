@@ -18,7 +18,7 @@ export default function Home() {
           <div className="max-w-3xl mx-auto text-center space-y-8">
             <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4 border border-primary/20">
               <Leaf className="w-4 h-4 mr-2" />
-              The smarter way to commute
+              Shared routes. Real connections.
             </div>
             <h1 className="text-5xl md:text-7xl font-extrabold text-foreground tracking-tight leading-tight">
               A Hop, Skip, and a <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Jump.</span>
@@ -31,8 +31,8 @@ export default function Home() {
                 <p className="text-foreground font-medium">Instead of high prices and pressure, ShortHop is built on convenience, opportunity, and connection.</p>
                 <div className="space-y-2">
                   <p className="font-semibold text-foreground">Your route. Your routine.</p>
-                  <p>You're already heading that direction…</p>
-                  <p className="italic">you might as well have some fun. :)</p>
+                  <p>You're already heading that way…</p>
+                  <p className="italic">might as well have some fun. :)</p>
                 </div>
               </div>
             </div>
