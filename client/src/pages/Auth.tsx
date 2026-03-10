@@ -46,7 +46,7 @@ export default function Auth() {
 
   const registerForm = useForm<RegisterRequest & { city: string }>({
     resolver: zodResolver(insertUserSchema.extend({ city: insertUserSchema.shape.username })),
-    defaultValues: { username: "", password: "", isDriver: false, city: "" },
+    defaultValues: { username: "", password: "", isDriver: false, city: "", referredBy: "" },
   });
 
   const waitlistMutation = useMutation({
@@ -72,7 +72,7 @@ export default function Auth() {
       return;
     }
 
-    registerMutation.mutate({ ...data, city: data.city.trim() });
+    registerMutation.mutate({ ...data, city: data.city.trim(), referredBy: data.referredBy?.trim() || undefined });
   };
 
   const handleWaitlistSubmit = () => {
@@ -177,6 +177,16 @@ export default function Auth() {
                         {...registerForm.register("city")} 
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-referral">Referral Code (optional)</Label>
+                    <Input 
+                      id="reg-referral" 
+                      placeholder="Enter a friend's referral code" 
+                      className="rounded-xl px-4 py-6 bg-background border-border"
+                      data-testid="input-reg-referral"
+                      {...registerForm.register("referredBy")} 
+                    />
                   </div>
                   <div className="flex items-center space-x-3 p-4 rounded-xl border border-border bg-muted/30 mt-4">
                     <Switch 

@@ -19,7 +19,19 @@ export const users = pgTable("users", {
   isFounder: boolean("is_founder").default(false),
   founderBadge: text("founder_badge"),
   hasSeenWelcome: boolean("has_seen_welcome").default(false),
+  hopStreak: integer("hop_streak").default(0),
+  totalHops: integer("total_hops").default(0),
+  lastHopDate: timestamp("last_hop_date"),
+  referralCode: text("referral_code").unique(),
+  referredBy: text("referred_by"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userBadges = pgTable("user_badges", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  badge: text("badge").notNull(),
+  earnedAt: timestamp("earned_at").defaultNow(),
 });
 
 export const expansionWaitlist = pgTable("expansion_waitlist", {
@@ -127,6 +139,7 @@ export const rewardRelations = relations(rewards, ({ many }) => ({
 }));
 
 export const insertExpansionWaitlistSchema = createInsertSchema(expansionWaitlist).omit({ id: true, createdAt: true });
+export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({ id: true, earnedAt: true });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, credits: true });
 export const insertRoutineRouteSchema = createInsertSchema(routineRoutes).omit({ id: true, createdAt: true });
@@ -167,6 +180,9 @@ export type InsertCommunityPost = z.infer<typeof insertCommunityPostSchema>;
 
 export type ExpansionWaitlist = typeof expansionWaitlist.$inferSelect;
 export type InsertExpansionWaitlist = z.infer<typeof insertExpansionWaitlistSchema>;
+
+export type UserBadge = typeof userBadges.$inferSelect;
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
 
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

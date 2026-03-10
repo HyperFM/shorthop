@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useAuth, useLogout } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings as SettingsIcon, Users } from "lucide-react";
+import { LogOut, Settings as SettingsIcon, Users, Trophy } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import logoImg from '@assets/shorthop_logo_nobg.png';
 
@@ -50,6 +50,10 @@ export function NavBar() {
               <Link href="/community" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-community">
                 <span className="hidden sm:inline">Community</span>
                 <Users className="w-4 h-4 sm:hidden" />
+              </Link>
+              <Link href="/leaderboard" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-leaderboard">
+                <span className="hidden sm:inline">Leaderboard</span>
+                <Trophy className="w-4 h-4 sm:hidden" />
               </Link>
               <NotificationCenter />
               <Link href="/settings" data-testid="link-settings">

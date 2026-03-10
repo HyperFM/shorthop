@@ -11,6 +11,7 @@ import {
   follows,
   communityPosts,
   expansionWaitlist,
+  userBadges,
   type User,
   type InsertUser,
   type RoutineRoute,
@@ -28,6 +29,7 @@ import {
   type InsertCommunityPost,
   type InsertExpansionWaitlist,
   type ExpansionWaitlist,
+  type UserBadge,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -41,6 +43,13 @@ export interface IStorage {
   checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User>;
 
   addToExpansionWaitlist(entry: InsertExpansionWaitlist): Promise<ExpansionWaitlist>;
+
+  updateHopStreak(userId: number): Promise<{ streak: number; totalHops: number; newBadges: string[] }>;
+  getUserBadges(userId: number): Promise<UserBadge[]>;
+  awardBadge(userId: number, badge: string): Promise<UserBadge>;
+  getLeaderboard(): Promise<{ mostHops: { username: string; totalHops: number; isDriver: boolean | null }[]; topDrivers: { username: string; credits: number }[]; communityHoppers: { username: string; postCount: number }[] }>;
+  processReferral(newUserId: number, referralCode: string): Promise<boolean>;
+  getNotificationCountToday(userId: number): Promise<number>;
 
   getRoutes(driverId: number): Promise<RoutineRoute[]>;
   createRoute(route: InsertRoutineRoute): Promise<RoutineRoute>;
@@ -337,6 +346,140 @@ export class DatabaseStorage implements IStorage {
   async addToExpansionWaitlist(entry: InsertExpansionWaitlist): Promise<ExpansionWaitlist> {
     const [w] = await db.insert(expansionWaitlist).values(entry).returning();
     return w;
+  }
+
+  async updateHopStreak(userId: number): Promise<{ streak: number; totalHops: number; newBadges: string[] }> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+
+    const now = new Date();
+    const lastHop = user.lastHopDate ? new Date(user.lastHopDate) : null;
+    const oneDayAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+    let newStreak = (user.hopStreak || 0) + 1;
+    if (lastHop && lastHop < oneDayAgo) {
+      newStreak = 1;
+    }
+
+    const newTotal = (user.totalHops || 0) + 1;
+
+    await db.update(users).set({
+      hopStreak: newStreak,
+      totalHops: newTotal,
+      lastHopDate: now,
+    }).where(eq(users.id, userId));
+
+    const milestones: Record<number, string> = {
+      3: "🛞 3 Hop Club",
+      10: "🛞 10 Hop Club",
+      25: "🛞 25 Hop Club",
+      50: "🛞 50 Hop Club",
+      100: "🛞 100 Hop Club",
+    };
+
+    const newBadges: string[] = [];
+    const existingBadges = await this.getUserBadges(userId);
+    const existingNames = new Set(existingBadges.map(b => b.badge));
+
+    for (const [threshold, badgeName] of Object.entries(milestones)) {
+      if (newTotal >= parseInt(threshold) && !existingNames.has(badgeName)) {
+        await this.awardBadge(userId, badgeName);
+        newBadges.push(badgeName);
+      }
+    }
+
+    return { streak: newStreak, totalHops: newTotal, newBadges };
+  }
+
+  async getUserBadges(userId: number): Promise<UserBadge[]> {
+    return db.select().from(userBadges).where(eq(userBadges.userId, userId)).orderBy(desc(userBadges.earnedAt));
+  }
+
+  async awardBadge(userId: number, badge: string): Promise<UserBadge> {
+    const [b] = await db.insert(userBadges).values({ userId, badge }).returning();
+    return b;
+  }
+
+  async getLeaderboard(): Promise<{
+    mostHops: { username: string; totalHops: number; isDriver: boolean | null }[];
+    topDrivers: { username: string; credits: number }[];
+    communityHoppers: { username: string; postCount: number }[];
+  }> {
+    const mostHops = await db.select({
+      username: users.username,
+      totalHops: users.totalHops,
+      isDriver: users.isDriver,
+    })
+      .from(users)
+      .where(sql`${users.totalHops} > 0`)
+      .orderBy(desc(users.totalHops))
+      .limit(10);
+
+    const topDrivers = await db.select({
+      username: users.username,
+      credits: users.credits,
+    })
+      .from(users)
+      .where(eq(users.isDriver, true))
+      .orderBy(desc(users.credits))
+      .limit(10);
+
+    const communityHoppers = await db.select({
+      username: users.username,
+      postCount: count(communityPosts.id),
+    })
+      .from(users)
+      .innerJoin(communityPosts, eq(users.id, communityPosts.userId))
+      .groupBy(users.username)
+      .orderBy(desc(count(communityPosts.id)))
+      .limit(10);
+
+    return {
+      mostHops: mostHops.map(h => ({ ...h, totalHops: h.totalHops || 0 })),
+      topDrivers: topDrivers.map(d => ({ ...d, credits: d.credits || 0 })),
+      communityHoppers: communityHoppers.map(c => ({ ...c, postCount: Number(c.postCount) })),
+    };
+  }
+
+  async processReferral(newUserId: number, referralCode: string): Promise<boolean> {
+    const referrer = await db.select().from(users).where(eq(users.referralCode, referralCode)).limit(1);
+    if (!referrer.length) return false;
+
+    const referrerId = referrer[0].id;
+    if (referrerId === newUserId) return false;
+
+    await db.update(users).set({ credits: sql`${users.credits} + 5` }).where(eq(users.id, referrerId));
+    await db.update(users).set({ credits: sql`${users.credits} + 3`, referredBy: referralCode }).where(eq(users.id, newUserId));
+
+    await this.createNotification({
+      userId: referrerId,
+      type: "referral",
+      title: "Referral Reward! 🎉",
+      message: "Someone joined ShortHop using your referral code! You earned 5 Wheels.",
+      isRead: false,
+    });
+
+    await this.createNotification({
+      userId: newUserId,
+      type: "referral",
+      title: "Welcome Bonus! 🎉",
+      message: "You joined with a referral code and earned 3 bonus Wheels!",
+      isRead: false,
+    });
+
+    return true;
+  }
+
+  async getNotificationCountToday(userId: number): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const result = await db.select({ cnt: count(notifications.id) })
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        sql`${notifications.createdAt} >= ${today}`
+      ));
+    return Number(result[0]?.cnt || 0);
   }
 }
 

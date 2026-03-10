@@ -296,6 +296,40 @@ export const api = {
       },
     },
   },
+  leaderboard: {
+    get: {
+      method: 'GET' as const,
+      path: '/api/leaderboard' as const,
+      responses: {
+        200: z.object({
+          mostHops: z.array(z.object({ username: z.string(), totalHops: z.number(), isDriver: z.boolean().nullable() })),
+          topDrivers: z.array(z.object({ username: z.string(), credits: z.number() })),
+          communityHoppers: z.array(z.object({ username: z.string(), postCount: z.number() })),
+        }),
+      },
+    },
+  },
+  badges: {
+    get: {
+      method: 'GET' as const,
+      path: '/api/profile/badges' as const,
+      responses: {
+        200: z.array(z.object({ id: z.number(), badge: z.string(), earnedAt: z.string().nullable() })),
+        401: errorSchemas.unauthorized,
+      },
+    },
+  },
+  referral: {
+    apply: {
+      method: 'POST' as const,
+      path: '/api/referral/apply' as const,
+      input: z.object({ referralCode: z.string() }),
+      responses: {
+        200: z.object({ message: z.string() }),
+        400: errorSchemas.validation,
+      },
+    },
+  },
   expansion: {
     checkCity: {
       method: 'GET' as const,

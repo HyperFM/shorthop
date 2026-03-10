@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, CarFront, Footprints, Clock, CheckCircle2, Share2 } from "lucide-react";
+import { MapPin, Navigation, CarFront, Footprints, Clock, CheckCircle2, Share2, Flame, Award, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +19,25 @@ const searchSchema = z.object({
   endLocation: z.string().min(2, "Required"),
 });
 
+function getBadgeStyle(badge: string): { icon: typeof Flame; color: string } {
+  if (badge.includes("100")) return { icon: Award, color: "text-red-600" };
+  if (badge.includes("50")) return { icon: Flame, color: "text-red-500" };
+  if (badge.includes("25")) return { icon: Flame, color: "text-orange-600" };
+  if (badge.includes("10")) return { icon: Flame, color: "text-orange-500" };
+  if (badge.includes("3")) return { icon: Star, color: "text-yellow-500" };
+  if (badge.includes("Founding")) return { icon: Award, color: "text-green-500" };
+  return { icon: Award, color: "text-blue-500" };
+}
+
 export default function WalkerDashboard({ user }: { user: User }) {
   const { data: hops } = useHops();
   const requestHop = useRequestHop();
   const [showOptions, setShowOptions] = useState(false);
   const [locations, setLocations] = useState({ startLocation: "", endLocation: "" });
+
+  const { data: badges } = useQuery<{ id: number; badge: string; earnedAt: string | null }[]>({
+    queryKey: ['/api/profile/badges'],
+  });
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
 
@@ -74,6 +89,49 @@ export default function WalkerDashboard({ user }: { user: User }) {
           Invite Friends
         </Button>
       </div>
+
+      <div className="mb-8 flex flex-col sm:flex-row gap-4">
+        <Card className="flex-1 bg-gradient-to-r from-orange-500/10 to-transparent border-orange-500/20">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+              <Flame className="w-6 h-6 text-orange-500" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-muted-foreground uppercase tracking-wider" data-testid="text-streak-label">Hop Streak</div>
+              <div className="text-2xl font-bold text-foreground" data-testid="text-streak-count">{user.hopStreak || 0}</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="flex-1 bg-gradient-to-r from-primary/10 to-transparent border-primary/20">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+              <Star className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-muted-foreground uppercase tracking-wider" data-testid="text-total-hops-label">Total Hops</div>
+              <div className="text-2xl font-bold text-foreground" data-testid="text-total-hops-count">{user.totalHops || 0}</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {badges && badges.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3" data-testid="text-badges-heading">Achievement Badges</h3>
+          <div className="flex flex-wrap gap-2">
+            {badges.map((b) => {
+              const badgeInfo = getBadgeStyle(b.badge);
+              const IconComponent = badgeInfo.icon;
+              return (
+                <Badge key={b.id} variant="secondary" className="gap-1.5 py-1" data-testid={`badge-achievement-${b.id}`}>
+                  <IconComponent className={`w-3.5 h-3.5 ${badgeInfo.color}`} />
+                  {b.badge}
+                </Badge>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {activeHop ? (
         <Card className="border-primary/20 shadow-xl bg-gradient-to-br from-primary/5 to-transparent mb-8">

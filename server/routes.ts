@@ -72,7 +72,8 @@ export async function registerRoutes(
 
   app.post(api.auth.register.path, async (req, res, next) => {
     try {
-      const { username, password, isDriver, city } = req.body;
+      const { username, password, isDriver, city, referralCode: refCode, referredBy: refBy } = req.body;
+      const referralInput = refCode || refBy || null;
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
       }
@@ -84,8 +85,18 @@ export async function registerRoutes(
       if (existing) {
         return res.status(400).json({ message: "Username exists" });
       }
-      let user = await storage.createUser({ username, password, isDriver: !!isDriver, city: city?.trim() || null });
+      const userReferralCode = "SH" + username.slice(0, 4).toUpperCase() + Math.random().toString(36).slice(2, 8).toUpperCase();
+      let user = await storage.createUser({
+        username, password, isDriver: !!isDriver,
+        city: city?.trim() || null,
+        referralCode: userReferralCode,
+        referredBy: referralInput || null,
+      });
       user = await storage.checkAndAssignFounderStatus(user.id, !!user.isDriver);
+
+      if (referralInput) {
+        await storage.processReferral(user.id, referralInput);
+      }
 
       await storage.createNotification({
         userId: user.id,
@@ -163,6 +174,25 @@ export async function registerRoutes(
     
     if (req.user.isDriver) {
       const hops = await storage.getAvailableHops();
+
+      if (hops.length > 0) {
+        const todayCount = await storage.getNotificationCountToday(req.user.id);
+        if (todayCount < 5 && Math.random() < 0.3) {
+          const messages = [
+            `${hops.length} Hopper${hops.length > 1 ? 's are' : ' is'} moving along your usual route.`,
+            "You're near a busy route — want to go active?",
+            "Hoppers are nearby along your route today.",
+          ];
+          await storage.createNotification({
+            userId: req.user.id,
+            type: "busy_route",
+            title: "Route Activity 🛞",
+            message: messages[Math.floor(Math.random() * messages.length)],
+            isRead: false,
+          });
+        }
+      }
+
       res.json(hops);
     } else {
       const hops = await storage.getHopsForWalker(req.user.id);
@@ -217,7 +247,41 @@ export async function registerRoutes(
     if (!req.isAuthenticated() || !req.user.isDriver) return res.status(401).json({ message: "Unauthorized" });
     try {
        const input = api.hops.complete.input.parse(req.body);
+       const existingHops = await storage.getHopsForDriver(req.user.id);
+       const targetHop = existingHops.find(h => h.id === Number(req.params.id) && h.status === "matched");
+       if (!targetHop) return res.status(403).json({ message: "Not authorized to complete this hop" });
        const hop = await storage.completeHop(Number(req.params.id), input.distanceMiles);
+
+       const driverStreak = await storage.updateHopStreak(req.user.id);
+       for (const badge of driverStreak.newBadges) {
+         const todayCount = await storage.getNotificationCountToday(req.user.id);
+         if (todayCount < 5) {
+           await storage.createNotification({
+             userId: req.user.id,
+             type: "badge",
+             title: "New Badge Earned! 🏆",
+             message: `You earned: ${badge}`,
+             isRead: false,
+           });
+         }
+       }
+
+       if (hop.walkerId) {
+         const walkerStreak = await storage.updateHopStreak(hop.walkerId);
+         for (const badge of walkerStreak.newBadges) {
+           const todayCount = await storage.getNotificationCountToday(hop.walkerId);
+           if (todayCount < 5) {
+             await storage.createNotification({
+               userId: hop.walkerId,
+               type: "badge",
+               title: "New Badge Earned! 🏆",
+               message: `You earned: ${badge}`,
+               isRead: false,
+             });
+           }
+         }
+       }
+
        res.json(hop);
     } catch (e) {
        res.status(404).json({ message: "Hop not found" });
@@ -428,6 +492,43 @@ export async function registerRoutes(
       res.json(stats);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch network stats" });
+    }
+  });
+
+  // Leaderboard
+  app.get(api.leaderboard.get.path, async (_req, res) => {
+    try {
+      const leaderboard = await storage.getLeaderboard();
+      res.json(leaderboard);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch leaderboard" });
+    }
+  });
+
+  // Badges
+  app.get(api.badges.get.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const badges = await storage.getUserBadges(req.user.id);
+      res.json(badges);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch badges" });
+    }
+  });
+
+  // Referral
+  app.post(api.referral.apply.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { referralCode } = req.body;
+      if (!referralCode) return res.status(400).json({ message: "Referral code is required" });
+      const user = await storage.getUser(req.user.id);
+      if (user?.referredBy) return res.status(400).json({ message: "You've already used a referral code" });
+      const success = await storage.processReferral(req.user.id, referralCode);
+      if (!success) return res.status(400).json({ message: "Invalid referral code" });
+      res.json({ message: "Referral applied! You both earned Wheels." });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to apply referral" });
     }
   });
 

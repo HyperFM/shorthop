@@ -4,7 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff } from "lucide-react";
+import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -49,8 +49,37 @@ export default function Settings() {
   const [prefs, setPrefs] = useState<NotificationPreferences>(loadPreferences);
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">("default");
   const [rideVibe, setRideVibe] = useState(user?.rideVibe || "friendly_chat");
+  const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const copyReferralCode = async () => {
+    if (!user?.referralCode) return;
+    try {
+      await navigator.clipboard.writeText(user.referralCode);
+      setCopied(true);
+      toast({ title: "Copied!", description: "Referral code copied to clipboard." });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Copy failed", description: "Could not copy to clipboard.", variant: "destructive" });
+    }
+  };
+
+  const shareReferralCode = async () => {
+    if (!user?.referralCode) return;
+    const shareData = {
+      title: "Join ShortHop!",
+      text: `Use my referral code "${user.referralCode}" to join ShortHop and we both earn bonus credits! Hop, skip, and a jump away from your next ride.`,
+      url: window.location.origin + "/auth?tab=register",
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {}
+    } else {
+      copyReferralCode();
+    }
+  };
 
   useEffect(() => {
     if (user?.rideVibe) setRideVibe(user.rideVibe);
@@ -155,6 +184,48 @@ export default function Settings() {
               >
                 {user.tier === "flexhop" ? "Switch to Standard" : "Upgrade to FlexHop"}
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {user && user.referralCode && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gift className="w-5 h-5 text-secondary" />
+                Referral Program
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Share your referral code with friends. When they sign up, you both earn bonus credits!
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex-1 min-w-[200px] bg-muted rounded-xl px-4 py-3 font-mono text-lg text-foreground tracking-wider text-center" data-testid="text-referral-code">
+                  {user.referralCode}
+                </div>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={copyReferralCode}
+                  data-testid="button-copy-referral"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={shareReferralCode}
+                  data-testid="button-share-referral"
+                >
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              </div>
+              {user.referredBy && (
+                <p className="text-xs text-muted-foreground">
+                  You were referred by code: <span className="font-mono font-medium text-foreground">{user.referredBy}</span>
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

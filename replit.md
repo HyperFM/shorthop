@@ -48,6 +48,16 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Flex Hop settings (detour distance/time)
 - Reward Store (coffee, gas, meals, car wash)
 
+### Growth Features & Viral Expansion
+- **Hop Streak System**: Tracks consecutive hops per user, resets after 48h inactivity
+- **Achievement Badges**: Automatically awarded at milestones (3, 10, 25, 50, 100 hops), stored in `user_badges` table
+- **Referral System**: Unique referral codes per user (generated at registration), referrer gets 5 Wheels, new user gets 3 Wheels
+- **Leaderboard**: /leaderboard page with 3 tabs: Most Hops, Top Drivers (by Wheels), Community Hoppers (by posts)
+- **Busy Route Notifications**: Simulated notifications when hoppers are active along driver routes (max 5/day)
+- **Shareable Ride Cards**: Post-ride share option via Web Share API
+- **Notification Limits**: Max 5 notifications per day per user enforced server-side
+- Schema fields added: `hopStreak`, `totalHops`, `lastHopDate`, `referralCode`, `referredBy` on users table
+
 ### City Availability & Expansion System
 - City field on registration form ("What city are you in?")
 - Lexington users proceed to normal onboarding

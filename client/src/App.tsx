@@ -14,6 +14,7 @@ import Privacy from "@/pages/Privacy";
 import Support from "@/pages/Support";
 import Settings from "@/pages/Settings";
 import Community from "@/pages/Community";
+import Leaderboard from "@/pages/Leaderboard";
 
 function Router() {
   return (
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/support" component={Support} />
       <Route path="/settings" component={Settings} />
       <Route path="/community" component={Community} />
+      <Route path="/leaderboard" component={Leaderboard} />
       <Route component={NotFound} />
     </Switch>
   );

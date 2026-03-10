@@ -1,0 +1,198 @@
+ShortHop Update – Growth Features & Viral Expansion System
+
+Goal:
+Implement built-in growth mechanics that encourage users to invite friends, stay active, and share ShortHop organically as the Lexington network grows.
+
+These features should create a fun, community-driven environment while helping the platform expand naturally.
+
+---
+
+1. Hop Streak System
+
+Add a “Hop Streak” tracker that rewards users for consecutive rides or activity.
+
+Example notifications:
+
+"You completed 3 hops this week!"
+
+"Your Hop Streak is growing 🛞"
+
+"Keep the streak alive — someone nearby needs a hop."
+
+Display streak information inside the user profile.
+
+Example:
+
+Hop Streak: 5  
+Total Hops: 23
+
+Optional rewards for streak milestones:
+
+3 hops  
+10 hops  
+25 hops  
+50 hops
+
+Rewards may include:
+
+• FlexHop trial days  
+• special badges  
+• recognition in the community
+
+---
+
+2. Referral Rewards System
+
+Add an Invite Friends feature that rewards users for bringing new Hoppers and Drivers into the network.
+
+Inside the app include:
+
+Invite Friends
+
+Allow sharing via:
+
+• text message  
+• social media  
+• messenger apps  
+• email
+
+Example invite text:
+
+"Join me on ShortHop — a new way for people in Lexington to share rides along their routes. Shared routes. Real connections."
+
+Referral rewards examples:
+
+• 1 free FlexHop week  
+• ride credit  
+• bonus Hop points
+
+Both the inviter and the new user should receive the reward.
+
+---
+
+3. Lexington Leaderboard
+
+Create a local leaderboard to highlight active community members.
+
+Example page:
+
+Lexington Hopper Leaders
+
+1️⃣ Alex – 32 hops  
+2️⃣ Jordan – 29 hops  
+3️⃣ Sam – 24 hops
+
+Leaderboard categories:
+
+• Most Hops  
+• Most Helpful Drivers  
+• Community Hoppers
+
+This feature encourages friendly competition and participation.
+
+---
+
+4. Busy Route Notifications
+
+Implement route awareness notifications.
+
+If the system detects active riders along common routes, notify drivers.
+
+Example notifications:
+
+"3 Hoppers are moving along your usual route."
+
+"You’re near a busy route — want to go active?"
+
+"Hoppers are nearby along your route today."
+
+This encourages drivers to activate when demand is present.
+
+---
+
+5. Hop Stories (Community Feed)
+
+Add a simple community feed called:
+
+Hop Stories
+
+Users can share short updates about rides.
+
+Examples:
+
+"First Hop today!"
+
+"Met someone awesome on my route."
+
+"Helped someone get to work this morning."
+
+This builds social proof and strengthens the community.
+
+Standard users:
+
+• can view posts
+
+FlexHop users:
+
+• can post  
+• can comment  
+• can follow other users
+
+---
+
+6. Achievement Badges
+
+Create badge rewards for participation.
+
+Examples:
+
+🛞 Founding Hopper  
+🛞 10 Hop Club  
+🛞 100 Hop Club  
+🛞 Community Driver  
+🛞 Trusted Hopper
+
+Badges should appear on user profiles.
+
+---
+
+7. Shareable Ride Cards
+
+After completing a ride, offer a share option.
+
+Example card text:
+
+"Just completed a ShortHop ride in Lexington 🛞  
+Shared routes. Real connections."
+
+Allow users to share this via social media or messaging apps.
+
+This helps spread awareness of the platform.
+
+---
+
+8. Notification Balance
+
+Ensure notifications are helpful but not overwhelming.
+
+Recommended limits:
+
+• no more than 3–5 notifications per day  
+• users can disable any notification type in settings
+
+---
+
+9. Goal of These Features
+
+ShortHop should grow primarily through:
+
+• community participation  
+• referrals  
+• visible activity  
+• user achievements
+
+The platform should feel like a movement forming inside the city rather than just a transportation app.
+
+---
+
+End update req
