@@ -38,6 +38,12 @@ export function NavBar() {
                   Rewards
                 </Link>
               )}
+              <Link href="/support" className="text-sm font-medium hover:text-primary transition-colors">
+                Support
+              </Link>
+              <Link href="/privacy" className="text-sm font-medium hover:text-primary transition-colors">
+                Privacy
+              </Link>
               <Button 
                 variant="ghost" 
                 size="sm" 

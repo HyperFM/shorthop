@@ -11,6 +11,8 @@ import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import RewardStore from "@/pages/RewardStore";
+import Privacy from "@/pages/Privacy";
+import Support from "@/pages/Support";
 
 function Router() {
   return (
@@ -19,6 +21,8 @@ function Router() {
       <Route path="/auth" component={Auth} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/rewards" component={RewardStore} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/support" component={Support} />
       <Route component={NotFound} />
     </Switch>
   );
