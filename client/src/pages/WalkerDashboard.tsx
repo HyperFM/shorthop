@@ -341,6 +341,23 @@ export default function WalkerDashboard({ user }: { user: User }) {
               </AnimatePresence>
             </CardContent>
           </Card>
+
+          <Card className="game-card bg-gradient-to-b from-accent/5 to-transparent border-accent/20 mt-4">
+            <CardContent className="p-5">
+              <h3 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider flex items-center gap-2" data-testid="text-pickup-tips-heading-active">
+                📍 Nearby Pickup Spots
+              </h3>
+              <PickupMapVisual
+                spots={pickupSpots}
+                hasLocation={geo.permitted && geo.latitude !== null}
+                userLat={geo.latitude}
+                userLng={geo.longitude}
+                tracking={tracking}
+                driverLat={tracking.partnerLat}
+                driverLng={tracking.partnerLng}
+              />
+            </CardContent>
+          </Card>
         </motion.div>
       ) : (
         <div className="grid md:grid-cols-12 gap-8">

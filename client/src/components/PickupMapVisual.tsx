@@ -77,6 +77,9 @@ export function PickupMapVisual({ spots, hasLocation, userLat, userLng, tracking
     markersRef.current = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
 
+    setTimeout(() => map.invalidateSize(), 100);
+    setTimeout(() => map.invalidateSize(), 500);
+
     return () => {
       map.remove();
       mapInstanceRef.current = null;
@@ -139,9 +142,9 @@ export function PickupMapVisual({ spots, hasLocation, userLat, userLng, tracking
     <div className="space-y-3">
       <div
         ref={mapRef}
-        className="w-full h-56 sm:h-64 rounded-2xl overflow-hidden border border-border/50 shadow-inner"
+        className="w-full rounded-2xl overflow-hidden border border-border/50 shadow-inner"
         data-testid="pickup-map"
-        style={{ zIndex: 0 }}
+        style={{ zIndex: 0, height: '250px', minHeight: '250px' }}
       />
 
       {!hasLocation && (
