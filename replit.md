@@ -115,6 +115,18 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Driver: PUT /api/driver/flexibility
 - Network: GET /api/network-stats
 
+### Fun/Game-Like UI Theme
+- All pages use Framer Motion animations (bounce-in, float, wiggle, slide-up, shimmer)
+- Stat cards use gradient icon circles with emojis (🔥 Hop Streak, ⭐ Total Hops, 🛞 Wheels)
+- Game-card utility class with rounded-2xl, border-2, hover lift
+- XP-bar with rainbow gradient for progress indicators
+- Emoji headers throughout (🗺️ Where to?, 🚗 Driver Dashboard, 🏆 Leaderboard, etc.)
+- Floating emoji background on Home page
+- Motion hover/tap effects on buttons (scale bounce)
+- Leaderboard uses medal emojis (🥇🥈🥉) and animated trophy
+- Empty states use bouncing emoji animations
+- Gradient CTA buttons (primary-to-accent)
+
 ## Tech Stack
 - Frontend: React + Vite + Tailwind + Framer Motion + TanStack Query
 - Backend: Express + Passport.js (local strategy, session-based)

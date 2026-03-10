@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront, Share2, Flame, Award, Star } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,73 +99,103 @@ export default function DriverDashboard({ user }: { user: User }) {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl space-y-12">
       
-      {/* Header & Stats */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+      >
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-display font-bold text-foreground">Driver Dashboard</h1>
+            <h1 className="text-3xl font-display font-bold text-foreground">Driver Dashboard 🚗</h1>
             {user.isFounder && user.founderBadge && (
-              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[10px]" data-testid="badge-founder">
+              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[10px] animate-bounce-in" data-testid="badge-founder">
                 🛞 {user.founderBadge}
               </Badge>
             )}
           </div>
           <p className="text-muted-foreground mt-1">Manage your routes and accept short hops along the way.</p>
         </div>
-        <Card className="bg-gradient-to-r from-secondary/10 to-transparent border-secondary/20 shadow-md">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center text-secondary">
-              <span className="font-bold text-xl">{user.credits || 0}</span>
-            </div>
-            <div>
-              <div className="text-sm font-bold text-foreground uppercase tracking-wider">Total Wheels</div>
-              <div className="text-xs text-muted-foreground">Redeem for rewards and perks.</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <motion.div whileHover={{ scale: 1.03 }}>
+          <Card className="game-card border-secondary/30 bg-gradient-to-br from-secondary/10 via-secondary/5 to-transparent hover:border-secondary/50">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-secondary to-orange-600 flex items-center justify-center text-white shadow-lg shadow-secondary/30">
+                <span className="text-2xl">🛞</span>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-secondary uppercase tracking-wider">Total Wheels</div>
+                <div className="text-3xl font-black text-foreground">{user.credits || 0}</div>
+                <div className="text-[10px] text-muted-foreground">Redeem for rewards!</div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <Card className="flex-1 bg-gradient-to-r from-orange-500/10 to-transparent border-orange-500/20">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
-              <Flame className="w-6 h-6 text-orange-500" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-muted-foreground uppercase tracking-wider" data-testid="text-streak-label">Hop Streak</div>
-              <div className="text-2xl font-bold text-foreground" data-testid="text-streak-count">{user.hopStreak || 0}</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="flex-1 bg-gradient-to-r from-primary/10 to-transparent border-primary/20">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-              <Star className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-muted-foreground uppercase tracking-wider" data-testid="text-total-hops-label">Total Hops</div>
-              <div className="text-2xl font-bold text-foreground" data-testid="text-total-hops-count">{user.totalHops || 0}</div>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="flex-1"
+        >
+          <Card className="game-card border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent hover:border-orange-500/50">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
+                <span className="text-2xl">🔥</span>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider" data-testid="text-streak-label">Hop Streak</div>
+                <div className="text-3xl font-black text-foreground" data-testid="text-streak-count">{user.hopStreak || 0}</div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="flex-1"
+        >
+          <Card className="game-card border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:border-primary/50">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-lg shadow-primary/30">
+                <span className="text-2xl">⭐</span>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-primary uppercase tracking-wider" data-testid="text-total-hops-label">Total Hops</div>
+                <div className="text-3xl font-black text-foreground" data-testid="text-total-hops-count">{user.totalHops || 0}</div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {badges && badges.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3" data-testid="text-badges-heading">Achievement Badges</h3>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="mb-8"
+        >
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2" data-testid="text-badges-heading">
+            🏆 Achievement Badges
+          </h3>
           <div className="flex flex-wrap gap-2">
-            {badges.map((b) => {
+            {badges.map((b, i) => {
               const badgeInfo = getBadgeStyle(b.badge);
               const IconComponent = badgeInfo.icon;
               return (
-                <Badge key={b.id} variant="secondary" className="gap-1.5 py-1" data-testid={`badge-achievement-${b.id}`}>
-                  <IconComponent className={`w-3.5 h-3.5 ${badgeInfo.color}`} />
-                  {b.badge}
-                </Badge>
+                <motion.div key={b.id} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}>
+                  <Badge variant="secondary" className="gap-1.5 py-1.5 px-3 text-sm hover:scale-105 transition-transform cursor-default" data-testid={`badge-achievement-${b.id}`}>
+                    <IconComponent className={`w-4 h-4 ${badgeInfo.color}`} />
+                    {b.badge}
+                  </Badge>
+                </motion.div>
               );
             })}
           </div>
-        </div>
+        </motion.div>
       )}
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -173,8 +204,7 @@ export default function DriverDashboard({ user }: { user: User }) {
         <div className="lg:col-span-1 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold flex items-center gap-2">
-              <RouteIcon className="w-5 h-5 text-primary" />
-              My Routine Routes
+              🛣️ My Routine Routes
             </h2>
             <Dialog open={isRouteOpen} onOpenChange={setIsRouteOpen}>
               <DialogTrigger asChild>
@@ -238,27 +268,45 @@ export default function DriverDashboard({ user }: { user: User }) {
 
           <div className="space-y-4">
             {routes?.length === 0 ? (
-              <div className="text-center p-8 bg-muted/30 border border-dashed rounded-xl">
-                <p className="text-sm text-muted-foreground">No routes registered yet.</p>
-              </div>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center p-8 border-2 border-dashed border-primary/20 rounded-2xl bg-gradient-to-b from-primary/5 to-transparent"
+              >
+                <motion.span 
+                  animate={{ y: [0, -5, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="text-3xl block mb-2"
+                >
+                  🛣️
+                </motion.span>
+                <p className="text-sm text-muted-foreground font-medium">No routes yet — add your first one!</p>
+              </motion.div>
             ) : (
-              routes?.map(route => (
-                <Card key={route.id} className="relative overflow-hidden group hover:border-primary/50 transition-colors">
-                  <div className="absolute top-0 bottom-0 left-0 w-1 bg-primary" />
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-bold text-foreground">{route.name}</h3>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => deleteRoute.mutate(route.id)}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <div className="space-y-1 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2"><MapPin className="w-3 h-3"/> {route.startLocation} &rarr; {route.endLocation}</div>
-                      <div className="flex items-center gap-2"><Clock className="w-3 h-3"/> {route.startTime} - {route.endTime}</div>
-                      <div className="flex items-center gap-2"><Calendar className="w-3 h-3"/> {Array.isArray(route.days) ? route.days.join(", ") : ''}</div>
-                    </div>
-                  </CardContent>
-                </Card>
+              routes?.map((route, i) => (
+                <motion.div 
+                  key={route.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                >
+                  <Card className="game-card relative overflow-hidden group hover:border-primary/50">
+                    <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-gradient-to-b from-primary to-accent rounded-r-full" />
+                    <CardContent className="p-4 pl-5">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-foreground">{route.name}</h3>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => deleteRoute.mutate(route.id)}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="space-y-1.5 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">📍 {route.startLocation} → {route.endLocation}</div>
+                        <div className="flex items-center gap-2">🕐 {route.startTime} - {route.endTime}</div>
+                        <div className="flex items-center gap-2">📅 {Array.isArray(route.days) ? route.days.join(", ") : ''}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))
             )}
           </div>
@@ -267,11 +315,10 @@ export default function DriverDashboard({ user }: { user: User }) {
         {/* Middle Col: Flex Hop Settings */}
         <div className="lg:col-span-1 space-y-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <CarFront className="w-5 h-5 text-accent" />
-            Flex Hop Settings
+            🚕 Flex Hop Settings
           </h2>
           
-          <Card className="bg-accent/5 border-accent/20">
+          <Card className="game-card bg-gradient-to-b from-accent/5 to-transparent border-accent/20">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -322,8 +369,7 @@ export default function DriverDashboard({ user }: { user: User }) {
           {activeHops.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-xl font-bold flex items-center gap-2 text-primary">
-                <Play className="w-5 h-5" />
-                Active Hops
+                🟢 Active Hops
               </h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 {activeHops.map(hop => (
@@ -375,14 +421,20 @@ export default function DriverDashboard({ user }: { user: User }) {
           {/* Available Matches */}
           <div className="space-y-4">
             <h2 className="text-xl font-bold flex items-center gap-2">
-              <Map className="w-5 h-5 text-secondary" />
-              Available Matches Along Routes
+              🗺️ Available Matches Along Routes
             </h2>
             
             {availableHops.length === 0 ? (
-              <Card className="bg-muted/20 border-dashed">
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  No match requests currently align with your routes.
+              <Card className="border-2 border-dashed border-secondary/20 bg-gradient-to-b from-secondary/5 to-transparent">
+                <CardContent className="p-8 text-center">
+                  <motion.span 
+                    animate={{ y: [0, -6, 0] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="text-3xl block mb-2"
+                  >
+                    🔍
+                  </motion.span>
+                  <p className="text-muted-foreground font-medium">No match requests right now — check back soon!</p>
                 </CardContent>
               </Card>
             ) : (

@@ -77,94 +77,140 @@ export default function WalkerDashboard({ user }: { user: User }) {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
+      >
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-display font-bold text-foreground">Where to?</h1>
+            <h1 className="text-3xl font-display font-bold text-foreground">Where to? 🗺️</h1>
             {user.isFounder && user.founderBadge && (
-              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[10px]" data-testid="badge-founder">
+              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[10px] animate-bounce-in" data-testid="badge-founder">
                 🛞 {user.founderBadge}
               </Badge>
             )}
           </div>
           <p className="text-muted-foreground mt-1">Find the best way to get there.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleInvite} data-testid="button-invite-friends" className="self-start sm:self-auto">
-          <Share2 className="w-4 h-4 mr-1.5" />
-          Invite Friends
-        </Button>
-      </div>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button variant="outline" size="sm" onClick={handleInvite} data-testid="button-invite-friends" className="self-start sm:self-auto rounded-full">
+            <Share2 className="w-4 h-4 mr-1.5" />
+            Invite Friends
+          </Button>
+        </motion.div>
+      </motion.div>
 
       <div className="mb-8 flex flex-col sm:flex-row gap-4">
-        <Card className="flex-1 bg-gradient-to-r from-orange-500/10 to-transparent border-orange-500/20">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
-              <Flame className="w-6 h-6 text-orange-500" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-muted-foreground uppercase tracking-wider" data-testid="text-streak-label">Hop Streak</div>
-              <div className="text-2xl font-bold text-foreground" data-testid="text-streak-count">{user.hopStreak || 0}</div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="flex-1 bg-gradient-to-r from-primary/10 to-transparent border-primary/20">
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-              <Star className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-muted-foreground uppercase tracking-wider" data-testid="text-total-hops-label">Total Hops</div>
-              <div className="text-2xl font-bold text-foreground" data-testid="text-total-hops-count">{user.totalHops || 0}</div>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="flex-1"
+        >
+          <Card className="game-card border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent hover:border-orange-500/50">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
+                <span className="text-2xl">🔥</span>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider" data-testid="text-streak-label">Hop Streak</div>
+                <div className="text-3xl font-black text-foreground" data-testid="text-streak-count">{user.hopStreak || 0}</div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="flex-1"
+        >
+          <Card className="game-card border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:border-primary/50">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-lg shadow-primary/30">
+                <span className="text-2xl">⭐</span>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-primary uppercase tracking-wider" data-testid="text-total-hops-label">Total Hops</div>
+                <div className="text-3xl font-black text-foreground" data-testid="text-total-hops-count">{user.totalHops || 0}</div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {badges && badges.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3" data-testid="text-badges-heading">Achievement Badges</h3>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="mb-8"
+        >
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2" data-testid="text-badges-heading">
+            🏆 Achievement Badges
+          </h3>
           <div className="flex flex-wrap gap-2">
-            {badges.map((b) => {
+            {badges.map((b, i) => {
               const badgeInfo = getBadgeStyle(b.badge);
               const IconComponent = badgeInfo.icon;
               return (
-                <Badge key={b.id} variant="secondary" className="gap-1.5 py-1" data-testid={`badge-achievement-${b.id}`}>
-                  <IconComponent className={`w-3.5 h-3.5 ${badgeInfo.color}`} />
-                  {b.badge}
-                </Badge>
+                <motion.div key={b.id} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}>
+                  <Badge variant="secondary" className="gap-1.5 py-1.5 px-3 text-sm hover:scale-105 transition-transform cursor-default" data-testid={`badge-achievement-${b.id}`}>
+                    <IconComponent className={`w-4 h-4 ${badgeInfo.color}`} />
+                    {b.badge}
+                  </Badge>
+                </motion.div>
               );
             })}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {activeHop ? (
-        <Card className="border-primary/20 shadow-xl bg-gradient-to-br from-primary/5 to-transparent mb-8">
-          <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary mb-2">
-              {activeHop.status === 'requested' ? <Clock className="w-8 h-8 animate-pulse" /> : <CheckCircle2 className="w-8 h-8" />}
-            </div>
-            <h2 className="text-2xl font-bold text-foreground">
-              {activeHop.status === 'requested' ? 'Looking for a Driver...' : 'Driver Matched!'}
-            </h2>
-            <p className="text-muted-foreground max-w-md">
-              From <strong className="text-foreground">{activeHop.startLocation}</strong> to <strong className="text-foreground">{activeHop.endLocation}</strong>
-            </p>
-            {activeHop.status === 'requested' && (
-              <p className="text-sm text-primary font-medium mt-4">We are checking routine routes along your path.</p>
-            )}
-            {activeHop.status === 'matched' && (
-              <p className="text-sm text-primary font-medium mt-4">A driver is heading your way! Wait at the start location.</p>
-            )}
-          </CardContent>
-        </Card>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", damping: 20 }}
+        >
+          <Card className="border-primary/30 shadow-2xl bg-gradient-to-br from-primary/10 via-accent/5 to-secondary/5 mb-8 game-card">
+            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+              <motion.div 
+                className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white mb-2 shadow-xl shadow-primary/40"
+                animate={activeHop.status === 'requested' ? { scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] } : { scale: [1, 1.15, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <span className="text-3xl">{activeHop.status === 'requested' ? '🔍' : '🎉'}</span>
+              </motion.div>
+              <h2 className="text-2xl font-bold text-foreground">
+                {activeHop.status === 'requested' ? 'Looking for a Driver... 👀' : '🎉 Driver Matched!'}
+              </h2>
+              <p className="text-muted-foreground max-w-md">
+                From <strong className="text-foreground">{activeHop.startLocation}</strong> to <strong className="text-foreground">{activeHop.endLocation}</strong>
+              </p>
+              {activeHop.status === 'requested' && (
+                <motion.p 
+                  className="text-sm text-primary font-medium mt-4"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  Scanning routine routes along your path...
+                </motion.p>
+              )}
+              {activeHop.status === 'matched' && (
+                <p className="text-sm text-primary font-bold mt-4">A driver is heading your way! 🚗 Wait at the start location.</p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       ) : (
         <div className="grid md:grid-cols-12 gap-8">
           <div className="md:col-span-5 space-y-6">
             {/* Momentum Suggestions */}
-            <Card className="bg-accent/5 border-accent/20 shadow-sm">
+            <Card className="game-card bg-gradient-to-b from-accent/5 to-transparent border-accent/20">
               <CardContent className="p-5">
-                <h3 className="text-sm font-bold text-foreground mb-4 uppercase tracking-wider">Suggested Trips</h3>
+                <h3 className="text-sm font-bold text-foreground mb-4 uppercase tracking-wider flex items-center gap-2">💡 Suggested Trips</h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 rounded-lg bg-background hover:bg-muted/50 transition-colors cursor-pointer group">
                     <div className="text-sm">
@@ -213,12 +259,14 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     </div>
                   </div>
                   
-                  <Button 
-                    type="submit" 
-                    className="w-full rounded-xl py-6 text-base font-bold shadow-lg shadow-primary/20 hover:-translate-y-0.5"
-                  >
-                    Find Options
-                  </Button>
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button 
+                      type="submit" 
+                      className="w-full rounded-xl py-6 text-base font-black shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all"
+                    >
+                      ⚡ Find Options
+                    </Button>
+                  </motion.div>
                 </form>
               </CardContent>
             </Card>
@@ -233,61 +281,70 @@ export default function WalkerDashboard({ user }: { user: User }) {
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-4"
                 >
-                  <h3 className="text-lg font-bold mb-4">Available Options</h3>
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">⚡ Available Options</h3>
                   
                   {/* Option 1: Walk */}
-                  <Card className="hover:border-primary/30 transition-all cursor-default group">
-                    <CardContent className="p-6 flex items-center justify-between">
-                      <div className="flex items-center gap-6">
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                          <Footprints className="w-6 h-6" />
+                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+                    <Card className="game-card border-muted hover:border-primary/30 cursor-default group">
+                      <CardContent className="p-6 flex items-center justify-between">
+                        <div className="flex items-center gap-6">
+                          <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                            <span className="text-2xl">🚶</span>
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="font-bold text-foreground text-lg">Walk</h4>
+                            <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Encourages healthy movement. Shows transit routes.</p>
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <h4 className="font-bold text-foreground text-lg">Walk</h4>
-                          <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Encourages healthy movement. Shows transit routes.</p>
+                        <div className="text-right">
+                          <div className="font-bold text-primary text-xl">Free</div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-foreground text-xl">$0</div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
 
                   {/* Option 2: Short Hop */}
-                  <Card className="border-primary ring-2 ring-primary/20 shadow-lg relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[11px] font-bold px-3 py-1.5 rounded-bl-lg uppercase tracking-wider">RECOMMENDED</div>
-                    <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                      <div className="flex items-center gap-6">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors">
-                          <CarFront className="w-6 h-6" />
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="font-bold text-foreground text-lg">Short Hop</h4>
-                          <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Advance along a driver's route. Free membership.</p>
-                        </div>
+                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                    <Card className="game-card border-primary/50 ring-2 ring-primary/20 shadow-xl relative overflow-hidden group bg-gradient-to-r from-primary/5 to-transparent">
+                      <div className="absolute top-0 right-0 bg-gradient-to-r from-primary to-accent text-white text-[11px] font-black px-3 py-1.5 rounded-bl-xl uppercase tracking-wider flex items-center gap-1">
+                        ⭐ RECOMMENDED
                       </div>
-                      <div className="flex items-center justify-between w-full sm:w-auto gap-8">
-                        <div className="text-left sm:text-right">
-                          <div className="font-bold text-foreground text-xl">$1–3</div>
-                          <div className="text-[11px] text-muted-foreground uppercase font-semibold">Per ride</div>
+                      <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                        <div className="flex items-center gap-6">
+                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                            <span className="text-2xl">🏎️</span>
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="font-bold text-foreground text-lg">Short Hop</h4>
+                            <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Advance along a driver's route. Free membership.</p>
+                          </div>
                         </div>
-                        <Button 
-                          onClick={() => requestHop.mutate({ ...locations, hopType: "short_hop" }, { onSuccess: () => setShowOptions(false) })}
-                          disabled={requestHop.isPending}
-                          className="rounded-full shadow-lg shadow-primary/25 h-12 px-8 font-bold text-base"
-                        >
-                          Request
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <div className="flex items-center justify-between w-full sm:w-auto gap-8">
+                          <div className="text-left sm:text-right">
+                            <div className="font-bold text-foreground text-xl">$1–3</div>
+                            <div className="text-[11px] text-muted-foreground uppercase font-semibold">Per ride</div>
+                          </div>
+                          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button 
+                              onClick={() => requestHop.mutate({ ...locations, hopType: "short_hop" }, { onSuccess: () => setShowOptions(false) })}
+                              disabled={requestHop.isPending}
+                              className="rounded-full shadow-lg shadow-primary/25 h-12 px-8 font-bold text-base bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                            >
+                              Request 🚀
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
 
                   {/* Option 3: Flex Hop */}
-                  <Card className="border-secondary/30 hover:border-secondary transition-all group">
+                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                  <Card className="game-card border-secondary/30 hover:border-secondary group">
                     <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                       <div className="flex items-center gap-6">
-                        <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary group-hover:bg-secondary/20 transition-colors">
-                          <CarFront className="w-6 h-6" />
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-secondary/20 to-secondary/5 flex items-center justify-center">
+                          <span className="text-2xl">🚕</span>
                         </div>
                         <div className="space-y-1">
                           <h4 className="font-bold text-foreground text-lg">Flex Hop</h4>
@@ -326,9 +383,11 @@ export default function WalkerDashboard({ user }: { user: User }) {
                       </div>
                     </CardContent>
                   </Card>
+                  </motion.div>
 
                   {/* Option 4: Power Hop */}
-                  <Card className="relative overflow-hidden shadow-xl hover:shadow-2xl transition-all border-2 border-transparent group"
+                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                  <Card className="game-card relative overflow-hidden shadow-xl hover:shadow-2xl border-2 border-transparent group"
                     style={{
                       background: "linear-gradient(135deg, rgba(249,115,22,0.05) 0%, rgba(34,197,94,0.05) 100%)",
                       borderImage: "linear-gradient(135deg, #f97316 0%, #22c55e 100%) 1",
@@ -375,15 +434,26 @@ export default function WalkerDashboard({ user }: { user: User }) {
                       </div>
                     </CardContent>
                   </Card>
+                  </motion.div>
 
                 </motion.div>
               )}
             </AnimatePresence>
             {!showOptions && (
-              <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 opacity-50 p-12 text-center border-2 border-dashed border-border rounded-2xl">
-                <MapPin className="w-12 h-12" />
-                <p>Enter your locations to see travel options.</p>
-              </div>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 p-12 text-center border-2 border-dashed border-primary/20 rounded-2xl bg-gradient-to-b from-primary/5 to-transparent"
+              >
+                <motion.span 
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="text-4xl"
+                >
+                  📍
+                </motion.span>
+                <p className="font-medium">Enter your locations to see travel options!</p>
+              </motion.div>
             )}
           </div>
         </div>

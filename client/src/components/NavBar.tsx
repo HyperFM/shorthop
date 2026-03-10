@@ -3,6 +3,7 @@ import { useAuth, useLogout } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings as SettingsIcon, Users, Trophy } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { motion } from "framer-motion";
 import logoImg from '@assets/shorthop_logo_nobg.png';
 
 export function NavBar() {
@@ -12,8 +13,14 @@ export function NavBar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-6xl">
-        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <img src={logoImg} alt="Short Hop Logo" className="w-9 h-9 object-contain rounded-lg" />
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
+          <motion.img 
+            src={logoImg} 
+            alt="Short Hop Logo" 
+            className="w-9 h-9 object-contain rounded-lg"
+            whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
+            transition={{ duration: 0.4 }}
+          />
           <span className="font-display font-bold text-xl text-primary tracking-tight">Short Hop</span>
         </Link>
 
@@ -29,14 +36,18 @@ export function NavBar() {
                     )}
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {user.isDriver ? 'Driver' : 'Walker'}
+                    {user.isDriver ? '🚗 Driver' : '🏃 Walker'}
                     {user.tier === 'flexhop' && ' · FlexHop'}
                   </span>
                 </div>
                 {user.isDriver && (
-                  <div className="bg-secondary/10 text-secondary-foreground px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 border border-secondary/20">
-                    <span className="text-secondary">{user.credits}</span> Wheels
-                  </div>
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className="bg-gradient-to-r from-secondary/15 to-secondary/5 text-foreground px-3 py-1.5 rounded-full text-sm font-black flex items-center gap-1.5 border border-secondary/25"
+                  >
+                    <span className="text-base">🛞</span>
+                    <span className="text-secondary">{user.credits}</span>
+                  </motion.div>
                 )}
               </div>
               <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-dashboard">
@@ -77,9 +88,11 @@ export function NavBar() {
                 <Button variant="ghost" className="font-medium" data-testid="button-login">Log in</Button>
               </Link>
               <Link href="/auth?tab=register">
-                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-full px-6 shadow-md shadow-primary/20" data-testid="button-register">
-                  Get Started
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-primary-foreground font-bold rounded-full px-6 shadow-lg shadow-primary/25" data-testid="button-register">
+                    Get Started
+                  </Button>
+                </motion.div>
               </Link>
             </div>
           ) : null}
