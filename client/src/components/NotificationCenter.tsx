@@ -53,7 +53,7 @@ function NotificationItem({
   return (
     <button
       data-testid={`notification-item-${notification.id}`}
-      className={`w-full text-left p-3 flex items-start gap-3 transition-colors hover-elevate ${
+      className={`w-full text-left p-4 flex items-start gap-3 transition-colors min-h-[56px] active:bg-accent/50 ${
         notification.isRead
           ? "opacity-60"
           : "bg-accent/30"
@@ -99,13 +99,13 @@ export function NotificationCenter() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative min-w-[44px] min-h-[44px]"
           data-testid="button-notifications"
         >
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
             <Badge
-              className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] px-1 no-default-hover-elevate no-default-active-elevate"
+              className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center text-[11px] px-1.5 pointer-events-none"
               data-testid="badge-notification-count"
             >
               {unreadCount > 99 ? "99+" : unreadCount}
@@ -114,11 +114,12 @@ export function NotificationCenter() {
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-80 p-0"
+        className="w-[calc(100vw-2rem)] sm:w-80 p-0 max-h-[70vh]"
         align="end"
         sideOffset={8}
+        collisionPadding={16}
       >
-        <div className="flex items-center justify-between gap-2 p-3">
+        <div className="flex items-center justify-between gap-2 p-3 min-h-[44px]">
           <h3 className="font-semibold text-sm" data-testid="text-notifications-title">
             Notifications
           </h3>
@@ -126,7 +127,7 @@ export function NotificationCenter() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs text-muted-foreground"
+              className="text-xs text-muted-foreground min-h-[36px]"
               onClick={() => markAllRead.mutate()}
               disabled={markAllRead.isPending}
               data-testid="button-mark-all-read"
@@ -137,7 +138,7 @@ export function NotificationCenter() {
           )}
         </div>
         <Separator />
-        <ScrollArea className="max-h-80">
+        <ScrollArea className="max-h-[calc(70vh-60px)]">
           {isLoading ? (
             <div className="p-6 text-center">
               <p className="text-sm text-muted-foreground" data-testid="text-notifications-loading">

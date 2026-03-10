@@ -133,7 +133,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }> {
-    const allUsers = await db.select().from(users);
+    const TEST_ACCOUNTS = ["walker", "driver"];
+    const allUsers = (await db.select().from(users)).filter(u => !TEST_ACCOUNTS.includes(u.username));
     const totalUsers = allUsers.length;
     const totalDrivers = allUsers.filter(u => u.isDriver).length;
     const totalHoppers = allUsers.filter(u => !u.isDriver).length;
@@ -415,13 +416,15 @@ export class DatabaseStorage implements IStorage {
     topDrivers: { username: string; credits: number }[];
     communityHoppers: { username: string; postCount: number }[];
   }> {
+    const excludeTest = sql`${users.username} NOT IN ('walker', 'driver')`;
+
     const mostHops = await db.select({
       username: users.username,
       totalHops: users.totalHops,
       isDriver: users.isDriver,
     })
       .from(users)
-      .where(sql`${users.totalHops} > 0`)
+      .where(and(sql`${users.totalHops} > 0`, excludeTest))
       .orderBy(desc(users.totalHops))
       .limit(10);
 
@@ -430,7 +433,7 @@ export class DatabaseStorage implements IStorage {
       credits: users.credits,
     })
       .from(users)
-      .where(eq(users.isDriver, true))
+      .where(and(eq(users.isDriver, true), excludeTest))
       .orderBy(desc(users.credits))
       .limit(10);
 
@@ -440,6 +443,7 @@ export class DatabaseStorage implements IStorage {
     })
       .from(users)
       .innerJoin(communityPosts, eq(users.id, communityPosts.userId))
+      .where(excludeTest)
       .groupBy(users.username)
       .orderBy(desc(count(communityPosts.id)))
       .limit(10);

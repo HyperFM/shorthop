@@ -47,11 +47,11 @@ export function WelcomeModal({ open, onOpenChange, user }: WelcomeModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) dismiss.mutate(); }}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
-        <div className="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 p-8">
-          <div className="text-center space-y-6">
-            <div className="text-5xl">🛞</div>
-            <h2 className="text-2xl font-display font-bold text-foreground" data-testid="text-welcome-title">
+      <DialogContent className="sm:max-w-lg p-0 max-h-[85vh] overflow-y-auto">
+        <div className="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 p-6 sm:p-8">
+          <div className="text-center space-y-4">
+            <div className="text-4xl">🛞</div>
+            <h2 className="text-xl sm:text-2xl font-display font-bold text-foreground" data-testid="text-welcome-title">
               Welcome to ShortHop
             </h2>
 
@@ -61,30 +61,18 @@ export function WelcomeModal({ open, onOpenChange, user }: WelcomeModalProps) {
               </Badge>
             )}
 
-            <div className="text-left space-y-4 text-sm text-muted-foreground leading-relaxed bg-background/60 rounded-xl p-6 backdrop-blur-sm">
+            <div className="text-left space-y-3 text-sm text-muted-foreground leading-relaxed bg-background/60 rounded-xl p-4 sm:p-6 backdrop-blur-sm">
               <p>
-                <strong className="text-foreground">Hey {user.isDriver ? "Driver" : "Hopper"}!</strong>
+                <strong className="text-foreground">Hey {user.isDriver ? "Driver" : "Hopper"}!</strong> You're one of the early people helping bring something new to life in Lexington.
               </p>
               <p>
-                You're one of the early people helping bring something new to life in Lexington.
-              </p>
-              <p>
-                Apps that connect people — like Uber or Airbnb — didn't grow overnight. They started with small communities of people who believed in the idea.
-              </p>
-              <p>
-                ShortHop is starting right here in Lexington, and together we're building a new way to move around the city.
-              </p>
-              <p>
-                Right now rides may not appear instantly yet — but every new Hopper and Driver brings us closer to that moment where a ride is just minutes away.
+                ShortHop is starting right here, and together we're building a new way to move around the city. Rides may not appear instantly yet — but every new Hopper and Driver brings us closer.
               </p>
               <p className="font-medium text-foreground">
-                And the best part? You're part of the beginning.
+                You're part of the beginning.
               </p>
               <p>
-                Invite friends, tell family, and help grow the network. Every new user helps the city move a little more together.
-              </p>
-              <p>
-                We'll keep you updated as our community grows.
+                Invite friends, tell family, and help grow the network.
               </p>
               <p className="italic text-primary font-medium">
                 Shared routes. Real connections.
@@ -94,7 +82,7 @@ export function WelcomeModal({ open, onOpenChange, user }: WelcomeModalProps) {
 
             {user.isFounder && (
               <Card className="border-secondary/30 bg-secondary/5">
-                <CardContent className="p-4 text-center">
+                <CardContent className="p-3 text-center">
                   <p className="text-sm font-semibold text-foreground">
                     🎉 You earned {user.founderBadge} status!
                   </p>
@@ -105,7 +93,7 @@ export function WelcomeModal({ open, onOpenChange, user }: WelcomeModalProps) {
               </Card>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-3 pt-2 sticky bottom-0 bg-gradient-to-t from-primary/5 pb-1">
               <Button
                 data-testid="button-invite-friends"
                 className="flex-1"
