@@ -95,12 +95,13 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 ### Pages
 - / - Home (landing page)
 - /auth - Login/Register
-- /dashboard - Walker or Driver dashboard
+- /dashboard - Walker or Driver dashboard (video animation while searching, timer on match, vibration + first-time tooltip)
 - /rewards - Reward Store (drivers)
 - /community - Community feed
 - /settings - Tier, ride vibe, notifications, privacy
 - /privacy - Privacy policy
 - /support - Support & safety info
+- /artist - Artist page (HyperFM bio, photo, links)
 
 ## API Endpoints
 - Auth: POST /api/login, /api/register, GET /api/me, POST /api/logout

@@ -184,6 +184,13 @@ export default function Home() {
             <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} ShortHop. Shared routes. Real connections.</p>
             <div className="flex items-center gap-6 text-sm">
               <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/artist" className="relative group text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+                <span className="relative">
+                  <img src="/artist-icon.png" alt="" className="w-4 h-4 inline-block dark:invert" />
+                  <span className="absolute inset-0 rounded-full animate-ping bg-primary/20 pointer-events-none" />
+                </span>
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-medium" style={{ textShadow: "0 0 12px rgba(42,157,92,0.3)" }}>Artist</span>
+              </Link>
               <Link href="/support" className="text-muted-foreground hover:text-foreground transition-colors">Support</Link>
             </div>
           </div>

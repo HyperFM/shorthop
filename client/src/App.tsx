@@ -15,6 +15,7 @@ import Support from "@/pages/Support";
 import Settings from "@/pages/Settings";
 import Community from "@/pages/Community";
 import Leaderboard from "@/pages/Leaderboard";
+import Artist from "@/pages/Artist";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/community" component={Community} />
       <Route path="/leaderboard" component={Leaderboard} />
+      <Route path="/artist" component={Artist} />
       <Route component={NotFound} />
     </Switch>
   );

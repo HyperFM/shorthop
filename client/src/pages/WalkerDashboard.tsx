@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -42,9 +42,41 @@ export default function WalkerDashboard({ user }: { user: User }) {
   });
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
+  const prevStatusRef = useRef<string | undefined>(undefined);
+  const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
+  const [matchedElapsed, setMatchedElapsed] = useState(0);
+  const matchedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasFlexSub = user.subscription === "flex_hop" || user.subscription === "power_hop";
   const hasPowerSub = user.subscription === "power_hop";
+
+  useEffect(() => {
+    if (activeHop?.status === 'matched' && prevStatusRef.current === 'requested') {
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200, 100, 300]);
+      }
+    }
+    if (activeHop?.status === 'matched') {
+      setMatchedElapsed(0);
+      matchedTimerRef.current = setInterval(() => setMatchedElapsed(s => s + 1), 1000);
+    } else {
+      if (matchedTimerRef.current) clearInterval(matchedTimerRef.current);
+    }
+    prevStatusRef.current = activeHop?.status;
+    return () => { if (matchedTimerRef.current) clearInterval(matchedTimerRef.current); };
+  }, [activeHop?.status]);
+
+  useEffect(() => {
+    if (activeHop?.status === 'requested') {
+      const seenKey = `shorthop_first_hop_seen_${user.id}`;
+      if (!localStorage.getItem(seenKey)) {
+        setShowFirstTimeHint(true);
+        localStorage.setItem(seenKey, '1');
+        const t = setTimeout(() => setShowFirstTimeHint(false), 6000);
+        return () => clearTimeout(t);
+      }
+    }
+  }, [activeHop?.status, user.id]);
 
   const form = useForm<z.infer<typeof searchSchema>>({
     resolver: zodResolver(searchSchema),
@@ -174,33 +206,93 @@ export default function WalkerDashboard({ user }: { user: User }) {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", damping: 20 }}
         >
-          <Card className="border-primary/30 shadow-2xl bg-gradient-to-br from-primary/10 via-accent/5 to-secondary/5 mb-8 game-card">
-            <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-              <motion.div 
-                className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white mb-2 shadow-xl shadow-primary/40"
-                animate={activeHop.status === 'requested' ? { scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] } : { scale: [1, 1.15, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <span className="text-3xl">{activeHop.status === 'requested' ? '🔍' : '🎉'}</span>
-              </motion.div>
-              <h2 className="text-2xl font-bold text-foreground">
-                {activeHop.status === 'requested' ? 'Looking for a Driver... 👀' : '🎉 Driver Matched!'}
+          <Card className="border-primary/30 shadow-2xl bg-gradient-to-br from-primary/10 via-accent/5 to-secondary/5 mb-8 game-card overflow-hidden">
+            <CardContent className="p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
+              <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl overflow-hidden bg-black/5">
+                {activeHop.status === 'requested' ? (
+                  <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-contain"
+                    data-testid="video-hop-animation"
+                  >
+                    <source src="/hop-animation.mp4" type="video/mp4" />
+                  </video>
+                ) : (
+                  <motion.div
+                    className="w-full h-full relative"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", damping: 12 }}
+                  >
+                    <video
+                      muted
+                      playsInline
+                      className="w-full h-full object-contain"
+                      data-testid="video-hop-matched"
+                      ref={(el) => { if (el) { el.currentTime = 0; el.pause(); } }}
+                    >
+                      <source src="/hop-animation.mp4" type="video/mp4" />
+                    </video>
+                    <motion.div
+                      className="absolute inset-0 flex items-center justify-center"
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <span className="text-5xl drop-shadow-lg">👋</span>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground">
+                {activeHop.status === 'requested' ? 'Looking for a Driver...' : '🎉 Driver Matched!'}
               </h2>
-              <p className="text-muted-foreground max-w-md">
+
+              <p className="text-sm text-muted-foreground max-w-md">
                 From <strong className="text-foreground">{activeHop.startLocation}</strong> to <strong className="text-foreground">{activeHop.endLocation}</strong>
               </p>
+
               {activeHop.status === 'requested' && (
                 <motion.p 
-                  className="text-sm text-primary font-medium mt-4"
-                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  className="text-xs text-primary font-medium"
+                  animate={{ opacity: [0.4, 1, 0.4] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
                   Scanning routine routes along your path...
                 </motion.p>
               )}
+
               {activeHop.status === 'matched' && (
-                <p className="text-sm text-primary font-bold mt-4">A driver is heading your way! 🚗 Wait at the start location.</p>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-3 bg-primary/10 rounded-full px-4 py-2 border border-primary/20"
+                >
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-bold text-foreground tabular-nums">
+                    {Math.floor(matchedElapsed / 60)}:{String(matchedElapsed % 60).padStart(2, '0')}
+                  </span>
+                  <span className="text-xs text-muted-foreground">on their way</span>
+                </motion.div>
               )}
+
+              <AnimatePresence>
+                {showFirstTimeHint && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="bg-foreground text-background text-xs rounded-xl px-4 py-3 max-w-xs shadow-lg"
+                    data-testid="tooltip-first-hop"
+                  >
+                    <p className="font-bold mb-1">How it works 👋</p>
+                    <p>We're checking nearby drivers on their routine routes. Your phone will vibrate when someone is heading your way!</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </CardContent>
           </Card>
         </motion.div>

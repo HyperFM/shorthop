@@ -1,9 +1,6 @@
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Share2, Bell } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import type { User } from "@shared/routes";
@@ -14,8 +11,15 @@ interface WelcomeModalProps {
   user: User;
 }
 
+const welcomeLines = [
+  { text: "Welcome back", color: "text-primary" },
+  { text: "to ShortHop", color: "text-accent" },
+  { text: "🛞", color: "" },
+];
+
 export function WelcomeModal({ open, onOpenChange, user }: WelcomeModalProps) {
   const queryClient = useQueryClient();
+  const [visible, setVisible] = useState(open);
 
   const dismiss = useMutation({
     mutationFn: async () => {
@@ -23,98 +27,74 @@ export function WelcomeModal({ open, onOpenChange, user }: WelcomeModalProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
-      onOpenChange(false);
     },
   });
 
-  const handleInvite = async () => {
-    const shareData = {
-      title: "Join ShortHop",
-      text: "Join me on ShortHop — a new way for people in Lexington to share rides along their routes. Shared routes. Real connections.",
-      url: window.location.origin,
-    };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {}
+  useEffect(() => {
+    if (open) {
+      setVisible(true);
+      dismiss.mutate();
+      const timer = setTimeout(() => {
+        setVisible(false);
+        onOpenChange(false);
+      }, 2800);
+      return () => clearTimeout(timer);
     } else {
-      await navigator.clipboard.writeText(
-        `${shareData.text} ${shareData.url}`
-      );
+      setVisible(false);
     }
-  };
+  }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) dismiss.mutate(); }}>
-      <DialogContent className="sm:max-w-lg p-0 max-h-[85vh] overflow-y-auto">
-        <div className="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 p-6 sm:p-8">
-          <div className="text-center space-y-4">
-            <div className="text-4xl">🛞</div>
-            <h2 className="text-xl sm:text-2xl font-display font-bold text-foreground" data-testid="text-welcome-title">
-              Welcome to ShortHop
-            </h2>
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="text-center space-y-2">
+            {welcomeLines.map((line, i) => (
+              <motion.p
+                key={i}
+                className={`text-lg font-display font-bold ${line.color}`}
+                initial={{ opacity: 0, y: 15, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{
+                  enter: { delay: i * 0.2, duration: 0.4 },
+                  exit: { delay: i * 0.1, duration: 0.5 },
+                }}
+              >
+                {line.text}
+              </motion.p>
+            ))}
 
             {user.isFounder && user.founderBadge && (
-              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 px-4 py-1.5 text-sm font-bold" data-testid="badge-founder">
+              <motion.p
+                className="text-xs font-bold bg-gradient-to-r from-orange-500 to-green-500 bg-clip-text text-transparent mt-3"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ delay: 0.6, duration: 0.4 }}
+              >
                 🛞 {user.founderBadge}
-              </Badge>
+              </motion.p>
             )}
 
-            <div className="text-left space-y-3 text-sm text-muted-foreground leading-relaxed bg-background/60 rounded-xl p-4 sm:p-6 backdrop-blur-sm">
-              <p>
-                <strong className="text-foreground">Hey {user.isDriver ? "Driver" : "Hopper"}!</strong> You're one of the early people helping bring something new to life in Lexington.
-              </p>
-              <p>
-                ShortHop is starting right here, and together we're building a new way to move around the city. Rides may not appear instantly yet — but every new Hopper and Driver brings us closer.
-              </p>
-              <p className="font-medium text-foreground">
-                You're part of the beginning.
-              </p>
-              <p>
-                Invite friends, tell family, and help grow the network.
-              </p>
-              <p className="italic text-primary font-medium">
-                Shared routes. Real connections.
-              </p>
-              <p className="font-bold text-foreground">– SHORT HOP</p>
-            </div>
-
-            {user.isFounder && (
-              <Card className="border-secondary/30 bg-secondary/5">
-                <CardContent className="p-3 text-center">
-                  <p className="text-sm font-semibold text-foreground">
-                    🎉 You earned {user.founderBadge} status!
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Lifetime FlexHop access and early supporter recognition.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-2 sticky bottom-0 bg-gradient-to-t from-primary/5 pb-1">
-              <Button
-                data-testid="button-invite-friends"
-                className="flex-1"
-                onClick={handleInvite}
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                Invite Friends
-              </Button>
-              <Button
-                data-testid="button-dismiss-welcome"
-                variant="outline"
-                className="flex-1"
-                onClick={() => dismiss.mutate()}
-                disabled={dismiss.isPending}
-              >
-                Get Started
-              </Button>
-            </div>
+            <motion.p
+              className="text-xs text-muted-foreground font-medium mt-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.7 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 0.8, duration: 0.4 }}
+            >
+              {user.username}
+            </motion.p>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
