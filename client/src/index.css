@@ -53,6 +53,9 @@
     --destructive-foreground: 0 0% 100%;
     --destructive-border: 0 84% 50%;
 
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 30% 15%;
+
     --border: 150 15% 90%;
     --input: 150 15% 90%;
     --ring: 152 65% 42%;
@@ -91,6 +94,9 @@
     --destructive: 0 70% 60%;
     --destructive-foreground: 0 0% 100%;
     --destructive-border: 0 70% 50%;
+
+    --popover: 160 25% 14%;
+    --popover-foreground: 40 33% 98%;
 
     --border: 160 20% 20%;
     --input: 160 20% 20%;
