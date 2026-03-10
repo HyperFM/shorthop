@@ -48,6 +48,15 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Flex Hop settings (detour distance/time)
 - Reward Store (coffee, gas, meals, car wash)
 
+### Subscription System
+- **Free tier**: Short Hop only (no subscription required)
+- **Flex Hop ($5/mo)**: Requires active subscription — allows small driver detours, dynamic pricing
+- **Power Hop ($15/mo)**: Requires active subscription — complete mobility freedom, unlimited rides
+- Server enforces subscription check on `POST /api/hops/request` (403 if not subscribed)
+- Subscribe/cancel endpoints: `POST /api/subscription`, `DELETE /api/subscription`
+- Subscription management in Settings page (view active plan, cancel)
+- Schema fields: `subscription` (null | "flex_hop" | "power_hop"), `subscriptionStartDate` on users table
+
 ### Growth Features & Viral Expansion
 - **Hop Streak System**: Tracks consecutive hops per user, resets after 48h inactivity
 - **Achievement Badges**: Automatically awarded at milestones (3, 10, 25, 50, 100 hops), stored in `user_badges` table

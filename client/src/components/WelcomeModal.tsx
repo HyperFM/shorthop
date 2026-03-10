@@ -47,7 +47,7 @@ export function WelcomeModal({ open, onOpenChange, user }: WelcomeModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) dismiss.mutate(); }}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 p-8">
           <div className="text-center space-y-6">
             <div className="text-5xl">🛞</div>

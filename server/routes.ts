@@ -204,6 +204,16 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const input = api.hops.requestMovement.input.parse(req.body);
+
+      const currentUser = await storage.getUser(req.user.id);
+      if (!currentUser) return res.status(401).json({ message: "Unauthorized" });
+
+      if (input.hopType === "flex_hop" && currentUser.subscription !== "flex_hop" && currentUser.subscription !== "power_hop") {
+        return res.status(403).json({ message: "Flex Hop requires an active Flex Hop or Power Hop subscription." });
+      }
+      if (input.hopType === "full_ride" && currentUser.subscription !== "power_hop") {
+        return res.status(403).json({ message: "Power Hop requires an active Power Hop subscription." });
+      }
       
       let priceCents = 0;
       if (input.hopType === "short_hop") {
@@ -529,6 +539,47 @@ export async function registerRoutes(
       res.json({ message: "Referral applied! You both earned Wheels." });
     } catch (err) {
       res.status(500).json({ message: "Failed to apply referral" });
+    }
+  });
+
+  // Subscription
+  app.post(api.subscription.subscribe.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    let plan: string;
+    try {
+      const parsed = api.subscription.subscribe.input.parse(req.body);
+      plan = parsed.plan;
+    } catch (err) {
+      return res.status(400).json({ message: "Invalid plan" });
+    }
+    try {
+      const updated = await storage.updateUser(req.user.id, {
+        subscription: plan,
+        subscriptionStartDate: new Date(),
+      });
+      await storage.createNotification({
+        userId: req.user.id,
+        type: "subscription",
+        title: "Subscription Activated",
+        message: `Your ${plan === "flex_hop" ? "Flex Hop ($5/mo)" : "Power Hop ($15/mo)"} subscription is now active!`,
+        isRead: false,
+      });
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to subscribe" });
+    }
+  });
+
+  app.delete(api.subscription.cancel.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.updateUser(req.user.id, {
+        subscription: null,
+        subscriptionStartDate: null,
+      });
+      res.json({ message: "Subscription cancelled" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to cancel subscription" });
     }
   });
 

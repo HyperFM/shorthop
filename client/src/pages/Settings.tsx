@@ -81,6 +81,19 @@ export default function Settings() {
     }
   };
 
+  const cancelSubscription = useMutation({
+    mutationFn: async () => {
+      await apiRequest(api.subscription.cancel.method, api.subscription.cancel.path);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
+      toast({ title: "Subscription cancelled", description: "You're back on the free Short Hop plan." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to cancel subscription.", variant: "destructive" });
+    },
+  });
+
   useEffect(() => {
     if (user?.rideVibe) setRideVibe(user.rideVibe);
   }, [user?.rideVibe]);
@@ -184,6 +197,55 @@ export default function Settings() {
               >
                 {user.tier === "flexhop" ? "Switch to Standard" : "Upgrade to FlexHop"}
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {user && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                Subscription Plan
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {user.subscription ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-foreground" data-testid="text-subscription-plan">
+                        {user.subscription === "power_hop" ? "Power Hop" : "Flex Hop"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {user.subscription === "power_hop" ? "$15/month — Unlimited rides" : "$5/month — Dynamic pricing"}
+                      </p>
+                    </div>
+                    <Badge className="bg-green-500/10 text-green-600 border-green-500/30">Active</Badge>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    data-testid="button-cancel-subscription"
+                    onClick={() => {
+                      cancelSubscription.mutate();
+                    }}
+                    disabled={cancelSubscription.isPending}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    Cancel Subscription
+                  </Button>
+                </>
+              ) : (
+                <div className="text-center py-2">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    You're on the free Short Hop plan. Upgrade to Flex Hop or Power Hop for more options.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Choose a plan when requesting a ride from the dashboard.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

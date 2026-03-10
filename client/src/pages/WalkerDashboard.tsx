@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, CarFront, Footprints, Clock, CheckCircle2, Share2, Flame, Award, Star } from "lucide-react";
+import { MapPin, Navigation, CarFront, Footprints, Clock, CheckCircle2, Share2, Flame, Award, Star, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useHops, useRequestHop } from "@/hooks/use-hops";
 import { NetworkProgress } from "@/components/NetworkProgress";
+import { SubscriptionModal } from "@/components/SubscriptionModal";
 import type { User } from "@shared/routes";
 
 const searchSchema = z.object({
@@ -34,12 +35,16 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const requestHop = useRequestHop();
   const [showOptions, setShowOptions] = useState(false);
   const [locations, setLocations] = useState({ startLocation: "", endLocation: "" });
+  const [subscriptionPlan, setSubscriptionPlan] = useState<"flex_hop" | "power_hop" | null>(null);
 
   const { data: badges } = useQuery<{ id: number; badge: string; earnedAt: string | null }[]>({
     queryKey: ['/api/profile/badges'],
   });
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
+
+  const hasFlexSub = user.subscription === "flex_hop" || user.subscription === "power_hop";
+  const hasPowerSub = user.subscription === "power_hop";
 
   const form = useForm<z.infer<typeof searchSchema>>({
     resolver: zodResolver(searchSchema),
@@ -287,6 +292,9 @@ export default function WalkerDashboard({ user }: { user: User }) {
                         <div className="space-y-1">
                           <h4 className="font-bold text-foreground text-lg">Flex Hop</h4>
                           <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Allows small driver detours. Dynamic pricing.</p>
+                          {hasFlexSub && (
+                            <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">Active</Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center justify-between w-full sm:w-auto gap-8">
@@ -294,14 +302,27 @@ export default function WalkerDashboard({ user }: { user: User }) {
                           <div className="font-bold text-foreground text-xl">$2–5</div>
                           <div className="text-[11px] text-muted-foreground uppercase font-semibold">Per ride • $5/mo</div>
                         </div>
-                        <Button 
-                          variant="secondary"
-                          onClick={() => requestHop.mutate({ ...locations, hopType: "flex_hop" }, { onSuccess: () => setShowOptions(false) })}
-                          disabled={requestHop.isPending}
-                          className="rounded-full h-12 px-8 font-bold text-base"
-                        >
-                          Request
-                        </Button>
+                        {hasFlexSub ? (
+                          <Button 
+                            variant="secondary"
+                            data-testid="button-request-flex-hop"
+                            onClick={() => requestHop.mutate({ ...locations, hopType: "flex_hop" }, { onSuccess: () => setShowOptions(false) })}
+                            disabled={requestHop.isPending}
+                            className="rounded-full h-12 px-8 font-bold text-base"
+                          >
+                            Request
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="secondary"
+                            data-testid="button-subscribe-flex-hop"
+                            onClick={() => setSubscriptionPlan("flex_hop")}
+                            className="rounded-full h-12 px-8 font-bold text-base"
+                          >
+                            <Lock className="w-4 h-4 mr-2" />
+                            Subscribe
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -322,6 +343,9 @@ export default function WalkerDashboard({ user }: { user: User }) {
                           <h4 className="font-bold text-foreground text-xl">Power Hop</h4>
                           <p className="text-sm text-muted-foreground leading-snug max-w-[300px]">Complete mobility freedom. Anywhere to anywhere.</p>
                           <p className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-2 uppercase tracking-widest">Reach for the Sky</p>
+                          {hasPowerSub && (
+                            <Badge className="text-xs bg-gradient-to-r from-orange-500/10 to-green-500/10 text-orange-600 border-orange-500/30">Active</Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center justify-between w-full sm:w-auto gap-8">
@@ -329,13 +353,25 @@ export default function WalkerDashboard({ user }: { user: User }) {
                           <div className="font-bold text-foreground text-2xl">$15/mo</div>
                           <div className="text-[11px] text-muted-foreground uppercase font-bold tracking-tight">Unlimited access</div>
                         </div>
-                        <Button 
-                          onClick={() => requestHop.mutate({ ...locations, hopType: "full_ride" }, { onSuccess: () => setShowOptions(false) })}
-                          disabled={requestHop.isPending}
-                          className="rounded-full bg-gradient-to-r from-orange-500 to-green-500 hover:from-orange-600 hover:to-green-600 text-white shadow-xl shadow-orange-500/40 h-14 px-10 font-black text-lg"
-                        >
-                          Reach
-                        </Button>
+                        {hasPowerSub ? (
+                          <Button
+                            data-testid="button-request-power-hop"
+                            onClick={() => requestHop.mutate({ ...locations, hopType: "full_ride" }, { onSuccess: () => setShowOptions(false) })}
+                            disabled={requestHop.isPending}
+                            className="rounded-full bg-gradient-to-r from-orange-500 to-green-500 hover:from-orange-600 hover:to-green-600 text-white shadow-xl shadow-orange-500/40 h-14 px-10 font-black text-lg"
+                          >
+                            Reach
+                          </Button>
+                        ) : (
+                          <Button
+                            data-testid="button-subscribe-power-hop"
+                            onClick={() => setSubscriptionPlan("power_hop")}
+                            className="rounded-full bg-gradient-to-r from-orange-500 to-green-500 hover:from-orange-600 hover:to-green-600 text-white shadow-xl shadow-orange-500/40 h-14 px-10 font-black text-lg"
+                          >
+                            <Lock className="w-4 h-4 mr-2" />
+                            Subscribe
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -356,6 +392,15 @@ export default function WalkerDashboard({ user }: { user: User }) {
       <div className="mt-8">
         <NetworkProgress />
       </div>
+
+      {subscriptionPlan && (
+        <SubscriptionModal
+          open={!!subscriptionPlan}
+          onOpenChange={(open) => { if (!open) setSubscriptionPlan(null); }}
+          plan={subscriptionPlan}
+          user={user}
+        />
+      )}
     </div>
   );
 }

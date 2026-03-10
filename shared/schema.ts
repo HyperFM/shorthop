@@ -24,6 +24,8 @@ export const users = pgTable("users", {
   lastHopDate: timestamp("last_hop_date"),
   referralCode: text("referral_code").unique(),
   referredBy: text("referred_by"),
+  subscription: text("subscription"),
+  subscriptionStartDate: timestamp("subscription_start_date"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

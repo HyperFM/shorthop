@@ -330,6 +330,27 @@ export const api = {
       },
     },
   },
+  subscription: {
+    subscribe: {
+      method: 'POST' as const,
+      path: '/api/subscription' as const,
+      input: z.object({
+        plan: z.enum(["flex_hop", "power_hop"]),
+      }),
+      responses: {
+        200: z.custom<typeof users.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+      },
+    },
+    cancel: {
+      method: 'DELETE' as const,
+      path: '/api/subscription' as const,
+      responses: {
+        200: z.object({ message: z.string() }),
+        401: errorSchemas.unauthorized,
+      },
+    },
+  },
   expansion: {
     checkCity: {
       method: 'GET' as const,
