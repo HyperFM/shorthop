@@ -20,7 +20,23 @@ export default function Dashboard() {
   useEffect(() => {
     if (user && !welcomeShown.current) {
       welcomeShown.current = true;
-      showFlash("👋", `Welcome back, ${user.username}!`, "welcome");
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("subscription") === "success") {
+        const plan = params.get("plan");
+        showFlash("🎉", `${plan === "power_hop" ? "Power Hop" : "Flex Hop"} subscription activated!`, "success");
+        window.history.replaceState({}, "", "/dashboard");
+      } else if (params.get("subscription") === "cancelled") {
+        showFlash("ℹ️", "Subscription checkout cancelled", "info");
+        window.history.replaceState({}, "", "/dashboard");
+      } else if (params.get("tip") === "success") {
+        showFlash("💰", "Tip sent successfully!", "success");
+        window.history.replaceState({}, "", "/dashboard");
+      } else if (params.get("tip") === "cancelled") {
+        showFlash("ℹ️", "Tip cancelled", "info");
+        window.history.replaceState({}, "", "/dashboard");
+      } else {
+        showFlash("👋", `Welcome back, ${user.username}!`, "welcome");
+      }
     }
   }, [user]);
 

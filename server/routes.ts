@@ -431,18 +431,27 @@ export async function registerRoutes(
       if (!hop) return res.status(404).json({ message: "Hop not found" });
       if (hop.walkerId !== req.user.id) return res.status(403).json({ message: "Not your hop" });
       if (hop.status !== "completed") return res.status(400).json({ message: "Hop not completed" });
-      await storage.tipDriver(hopId, tipCents);
-      if (hop.driverId) {
-        await storage.createNotification({
-          userId: hop.driverId,
-          type: "tip",
-          title: "You got a tip! 💰",
-          message: `${req.user.username} tipped you $${(tipCents / 100).toFixed(2)} for your hop. Thanks for driving!`,
-          isRead: false,
-        });
-      }
-      res.json({ message: "Tip sent!", tipCents });
-    } catch {
+
+      const stripe = await getUncachableStripeClient();
+      const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+      const checkoutSession = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: { name: 'Driver Tip' },
+            unit_amount: tipCents,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        metadata: { userId: String(req.user.id), type: 'tip', hopId: String(hopId), driverId: String(hop.driverId), tipCents: String(tipCents) },
+        success_url: `https://${domain}/dashboard?tip=success`,
+        cancel_url: `https://${domain}/dashboard?tip=cancelled`,
+      });
+      res.json({ url: checkoutSession.url, checkoutRequired: true });
+    } catch (e: any) {
+      console.error('Tip checkout error:', e.message);
       res.status(500).json({ message: "Failed to send tip" });
     }
   });
@@ -455,9 +464,26 @@ export async function registerRoutes(
       if (!amountCents || amountCents < 50) {
         return res.status(400).json({ message: "Minimum donation is $0.50" });
       }
-      await storage.createDonation(req.user.id, amountCents, message || null);
-      res.json({ message: "Thank you for supporting ShortHop!", amountCents });
-    } catch {
+      const stripe = await getUncachableStripeClient();
+      const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+      const checkoutSession = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: { name: 'ShortHop Donation' },
+            unit_amount: amountCents,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        metadata: { userId: String(req.user.id), type: 'donation', message: message || '', amountCents: String(amountCents) },
+        success_url: `https://${domain}/community?donation=success`,
+        cancel_url: `https://${domain}/community?donation=cancelled`,
+      });
+      res.json({ url: checkoutSession.url, checkoutRequired: true });
+    } catch (e: any) {
+      console.error('Donation checkout error:', e.message);
       res.status(500).json({ message: "Failed to process donation" });
     }
   });
@@ -742,7 +768,7 @@ export async function registerRoutes(
     }
   });
 
-  // Subscription
+  // Subscription via Stripe Checkout
   app.post(api.subscription.subscribe.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     let plan: string;
@@ -753,20 +779,33 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Invalid plan" });
     }
     try {
-      const updated = await storage.updateUser(req.user.id, {
-        subscription: plan,
-        subscriptionStartDate: new Date(),
+      const stripe = await getUncachableStripeClient();
+      const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+      const priceMap: Record<string, number> = { flex_hop: 500, power_hop: 1500 };
+      const nameMap: Record<string, string> = { flex_hop: "Flex Hop", power_hop: "Power Hop" };
+      const amountCents = priceMap[plan];
+      if (!amountCents) return res.status(400).json({ message: "Invalid plan" });
+
+      const checkoutSession = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: { name: `${nameMap[plan]} Subscription` },
+            unit_amount: amountCents,
+            recurring: { interval: 'month' },
+          },
+          quantity: 1,
+        }],
+        mode: 'subscription',
+        metadata: { userId: String(req.user.id), plan, type: 'subscription' },
+        success_url: `https://${domain}/dashboard?subscription=success&plan=${plan}`,
+        cancel_url: `https://${domain}/dashboard?subscription=cancelled`,
       });
-      await storage.createNotification({
-        userId: req.user.id,
-        type: "subscription",
-        title: "Subscription Activated",
-        message: `Your ${plan === "flex_hop" ? "Flex Hop ($5/mo)" : "Power Hop ($15/mo)"} subscription is now active!`,
-        isRead: false,
-      });
-      res.json(updated);
-    } catch (err) {
-      res.status(500).json({ message: "Failed to subscribe" });
+      res.json({ url: checkoutSession.url, checkoutRequired: true });
+    } catch (err: any) {
+      console.error('Subscription checkout error:', err.message);
+      res.status(500).json({ message: "Failed to start subscription" });
     }
   });
 

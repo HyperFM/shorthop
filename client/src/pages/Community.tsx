@@ -282,6 +282,17 @@ export default function Community() {
   const [customDonate, setCustomDonate] = useState("");
   const [showCustomDonate, setShowCustomDonate] = useState(false);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("donation") === "success") {
+      showFlash("💚", "Donation received — thank you!", "success");
+      window.history.replaceState({}, "", "/community");
+    } else if (params.get("donation") === "cancelled") {
+      showFlash("ℹ️", "Donation cancelled", "info");
+      window.history.replaceState({}, "", "/community");
+    }
+  }, []);
+
   const { data: posts = [], isLoading } = useQuery<
     { id: number; userId: number; content: string; createdAt: string | null; username: string }[]
   >({
@@ -313,18 +324,23 @@ export default function Community() {
     mutationFn: async () => {
       const finalCents = showCustomDonate ? Math.round(parseFloat(customDonate) * 100) : donateAmount;
       if (!finalCents || finalCents < 50) throw new Error("Minimum $0.50");
-      await apiRequest("POST", "/api/donate", {
+      const res = await apiRequest("POST", "/api/donate", {
         amountCents: finalCents,
         message: donateMsg.trim() || null,
       });
+      return res.json();
     },
-    onSuccess: () => {
-      const finalCents = showCustomDonate ? Math.round(parseFloat(customDonate) * 100) : donateAmount;
-      showFlash("💚", `$${((finalCents || 0) / 100).toFixed(2)} donated — thank you!`, "success");
-      setDonateAmount(null);
-      setDonateMsg("");
-      setCustomDonate("");
-      setShowCustomDonate(false);
+    onSuccess: (data: any) => {
+      if (data.checkoutRequired && data.url) {
+        window.location.href = data.url;
+      } else {
+        const finalCents = showCustomDonate ? Math.round(parseFloat(customDonate) * 100) : donateAmount;
+        showFlash("💚", `$${((finalCents || 0) / 100).toFixed(2)} donated — thank you!`, "success");
+        setDonateAmount(null);
+        setDonateMsg("");
+        setCustomDonate("");
+        setShowCustomDonate(false);
+      }
     },
     onError: () => {
       showFlash("❌", "Failed to process donation", "error");

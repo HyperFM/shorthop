@@ -57,12 +57,17 @@ export function SubscriptionModal({ open, onOpenChange, plan, user, onSubscribed
 
   const subscribe = useMutation({
     mutationFn: async () => {
-      await apiRequest(api.subscription.subscribe.method, api.subscription.subscribe.path, { plan });
+      const res = await apiRequest(api.subscription.subscribe.method, api.subscription.subscribe.path, { plan });
+      return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
-      onOpenChange(false);
-      onSubscribed?.();
+    onSuccess: (data: any) => {
+      if (data.checkoutRequired && data.url) {
+        window.location.href = data.url;
+      } else {
+        queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
+        onOpenChange(false);
+        onSubscribed?.();
+      }
     },
   });
 

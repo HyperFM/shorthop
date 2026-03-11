@@ -42,7 +42,7 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Super Admin Role**: A single, designated super-admin account (HyperFM) with exclusive access to critical admin functions.
 
 ## External Dependencies
-- **Stripe**: Payment gateway for hop payments and driver cashouts. Connected account: `acct_1T9cTFEPpyO5NSxU`. Env vars: `STRIPE_SECRET_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`. Stripe Connect Express for driver bank payouts (stripe_account_id, stripe_payouts_enabled columns). Trust proxy enabled for production session cookies.
+- **Stripe**: Payment gateway for ALL revenue streams. Connected account: `acct_1T9cTFEPpyO5NSxU`. Env vars: `STRIPE_SECRET_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` (optional, for production webhook verification). All 4 revenue streams use Stripe Checkout: hop payments ($2.50/mile), subscriptions (FlexHop $5/mo, PowerHop $15/mo recurring), donations (one-time), and tips (one-time). Webhook handler at `/api/stripe/webhook` processes `checkout.session.completed` and `customer.subscription.deleted` events. Stripe Connect Express for driver bank payouts (stripe_account_id, stripe_payouts_enabled columns). Trust proxy enabled for production session cookies.
 - **React**: Frontend library.
 - **Vite**: Build tool for frontend.
 - **Tailwind CSS**: Utility-first CSS framework.

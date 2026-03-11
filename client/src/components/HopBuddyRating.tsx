@@ -80,13 +80,18 @@ export function HopBuddyRating({
     mutationFn: async () => {
       const finalTip = showCustom ? Math.round(parseFloat(customTip) * 100) : tipCents;
       if (!finalTip || finalTip < 50) return;
-      await apiRequest("POST", `/api/hops/${tripId}/tip`, { tipCents: finalTip });
+      const res = await apiRequest("POST", `/api/hops/${tripId}/tip`, { tipCents: finalTip });
+      return res.json();
     },
-    onSuccess: () => {
-      const finalTip = showCustom ? Math.round(parseFloat(customTip) * 100) : tipCents;
-      showFlash("💰", `$${((finalTip || 0) / 100).toFixed(2)} tip sent!`, "success");
-      onOpenChange(false);
-      resetState();
+    onSuccess: (data: any) => {
+      if (data?.checkoutRequired && data?.url) {
+        window.location.href = data.url;
+      } else {
+        const finalTip = showCustom ? Math.round(parseFloat(customTip) * 100) : tipCents;
+        showFlash("💰", `$${((finalTip || 0) / 100).toFixed(2)} tip sent!`, "success");
+        onOpenChange(false);
+        resetState();
+      }
     },
     onError: () => {
       showFlash("❌", "Failed to send tip", "error");
