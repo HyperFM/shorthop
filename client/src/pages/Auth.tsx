@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { insertUserSchema, type LoginRequest, type RegisterRequest } from "@shared/routes";
 import { useLogin, useRegister, useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ export default function Auth() {
   }, [user, authLoading, setLocation]);
 
   const loginForm = useForm<LoginRequest & { rememberMe?: boolean }>({
-    resolver: zodResolver(insertUserSchema.omit({ isDriver: true, credits: true }).extend({ rememberMe: require("zod").z.boolean().optional() })),
+    resolver: zodResolver(insertUserSchema.omit({ isDriver: true, credits: true }).extend({ rememberMe: z.boolean().optional() })),
     defaultValues: { username: "", password: "", rememberMe: false },
   });
 
