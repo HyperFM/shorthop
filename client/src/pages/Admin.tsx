@@ -33,6 +33,8 @@ type AdminUser = {
   isFounder: boolean;
   credits: number;
   totalHops: number;
+  phone: string | null;
+  notificationsEnabled: boolean;
   vehicleMake: string | null;
   vehicleModel: string | null;
   vehicleColor: string | null;
@@ -497,6 +499,12 @@ export default function Admin() {
                       {u.isAdmin && <Badge className="text-[9px] bg-purple-100 text-purple-700 border-0">Super Admin</Badge>}
                       {u.isDisabled && <Badge className="text-[9px] bg-red-100 text-red-700 border-0">Disabled</Badge>}
                     </div>
+                    {u.phone && (
+                      <p className="text-[10px] text-foreground mt-1 flex items-center gap-1">
+                        📱 {u.phone}
+                        {u.notificationsEnabled && <Badge className="text-[8px] bg-green-100 text-green-700 border-0 ml-1">Notifs ON</Badge>}
+                      </p>
+                    )}
                     {u.vehicleMake && (
                       <p className="text-[10px] text-muted-foreground mt-1">
                         {u.vehicleColor} {u.vehicleMake} {u.vehicleModel} · {u.licensePlate}

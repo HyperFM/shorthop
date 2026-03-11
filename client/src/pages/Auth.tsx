@@ -15,7 +15,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
-import { MapPin, Bell, Loader2 } from "lucide-react";
+import { MapPin, Bell, Loader2, Phone } from "lucide-react";
 import circleImg from '@assets/CF1B7305-B114-452D-A723-927238626E41_1772922571220.png';
 
 export default function Auth() {
@@ -45,9 +45,9 @@ export default function Auth() {
     defaultValues: { username: "", password: "", rememberMe: false },
   });
 
-  const registerForm = useForm<RegisterRequest & { city: string }>({
-    resolver: zodResolver(insertUserSchema.extend({ city: insertUserSchema.shape.username })),
-    defaultValues: { username: "", password: "", isDriver: false, city: "", referredBy: "" },
+  const registerForm = useForm<RegisterRequest & { city: string; phone: string; notificationsEnabled: boolean }>({
+    resolver: zodResolver(insertUserSchema.extend({ city: insertUserSchema.shape.username, phone: z.string().min(1, "Phone number is required"), notificationsEnabled: z.boolean().optional() })),
+    defaultValues: { username: "", password: "", isDriver: false, city: "", referredBy: "", phone: "", notificationsEnabled: true },
   });
 
   const waitlistMutation = useMutation({
@@ -80,7 +80,7 @@ export default function Auth() {
     }
   }, [activeTab, loginForm]);
 
-  const onRegister = (data: RegisterRequest & { city: string }) => {
+  const onRegister = (data: RegisterRequest & { city: string; phone: string; notificationsEnabled: boolean }) => {
     const cityLower = data.city.trim().toLowerCase();
     const isLexington = cityLower.includes("lexington");
 
@@ -91,7 +91,7 @@ export default function Auth() {
       return;
     }
 
-    registerMutation.mutate({ ...data, city: data.city.trim(), referredBy: data.referredBy?.trim() || undefined });
+    registerMutation.mutate({ ...data, city: data.city.trim(), phone: data.phone.trim(), notificationsEnabled: data.notificationsEnabled, referredBy: data.referredBy?.trim() || undefined } as any);
   };
 
   const handleWaitlistSubmit = () => {
@@ -202,6 +202,34 @@ export default function Auth() {
                         data-testid="input-reg-city"
                         {...registerForm.register("city")} 
                       />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-phone">Phone Number</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input 
+                        id="reg-phone" 
+                        type="tel"
+                        placeholder="(555) 123-4567" 
+                        className="rounded-xl px-4 py-6 bg-background border-border pl-10"
+                        data-testid="input-reg-phone"
+                        {...registerForm.register("phone")} 
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-4 rounded-xl border border-border bg-muted/30">
+                    <Switch 
+                      id="notifications-toggle" 
+                      checked={registerForm.watch("notificationsEnabled") || false}
+                      onCheckedChange={(val) => registerForm.setValue("notificationsEnabled", val)}
+                      data-testid="switch-notifications"
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="notifications-toggle" className="text-base font-semibold cursor-pointer flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-secondary" /> Enable Notifications
+                      </Label>
+                      <p className="text-xs text-muted-foreground">Get updates about hops, community news, and more.</p>
                     </div>
                   </div>
                   <div className="space-y-2">

@@ -136,10 +136,13 @@ export async function registerRoutes(
 
   app.post(api.auth.register.path, async (req, res, next) => {
     try {
-      const { username, password, isDriver, city, referralCode: refCode, referredBy: refBy } = req.body;
+      const { username, password, isDriver, city, referralCode: refCode, referredBy: refBy, phone, notificationsEnabled } = req.body;
       const referralInput = refCode || refBy || null;
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
+      }
+      if (!phone || !phone.trim()) {
+        return res.status(400).json({ message: "Phone number is required" });
       }
       const cityStr = (city || "").trim().toLowerCase();
       if (!cityStr || !LAUNCH_CITIES_AUTH.some(c => cityStr.includes(c))) {
@@ -153,6 +156,8 @@ export async function registerRoutes(
       let user = await storage.createUser({
         username, password, isDriver: !!isDriver,
         city: city?.trim() || null,
+        phone: phone?.trim() || null,
+        notificationsEnabled: !!notificationsEnabled,
         referralCode: userReferralCode,
         referredBy: referralInput || null,
       });
