@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { FounderChat } from "@/components/FounderChat";
@@ -87,7 +87,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
@@ -268,6 +268,7 @@ export default function Admin() {
     { key: "notify", label: "Notify", icon: Send },
     { key: "founders", label: "Founders", icon: Crown },
     { key: "dms", label: "DMs", icon: Star, badge: vipConvos?.reduce((sum, c) => sum + c.unread, 0) || 0 },
+    { key: "payments", label: "Payments", icon: DollarSign },
   ];
 
   return (
@@ -871,6 +872,114 @@ export default function Admin() {
             </div>
           )}
         </div>
+      )}
+      {tab === "payments" && (
+        <PaymentsTab />
+      )}
+    </div>
+  );
+}
+
+function PaymentsTab() {
+  const { data: balance } = useQuery<{ available: { amount: number; currency: string }[]; pending: { amount: number; currency: string }[] }>({
+    queryKey: ["/api/stripe/balance"],
+  });
+  const { data: account } = useQuery<{ id: string; payoutsEnabled: boolean; chargesEnabled: boolean; externalAccounts: { id: string; type: string; last4: string; bank_name?: string; brand?: string }[] }>({
+    queryKey: ["/api/stripe/account"],
+  });
+
+  const availableUsd = balance?.available?.find(b => b.currency === "usd")?.amount || 0;
+  const pendingUsd = balance?.pending?.find(b => b.currency === "usd")?.amount || 0;
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-green-500/30 bg-gradient-to-br from-green-500/5 to-transparent">
+        <CardContent className="p-4">
+          <p className="text-xs font-bold text-green-600 uppercase tracking-wider mb-3">Stripe Balance</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-[10px] text-muted-foreground">Available</p>
+              <p className="text-2xl font-black text-green-600" data-testid="text-stripe-available">${(availableUsd / 100).toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground">Pending</p>
+              <p className="text-2xl font-black text-foreground" data-testid="text-stripe-pending">${(pendingUsd / 100).toFixed(2)}</p>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-3">
+            This is your platform earnings from hop payments. Stripe automatically deposits to your linked bank account.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/50">
+        <CardContent className="p-4">
+          <p className="text-xs font-bold text-foreground mb-3">Linked Bank Account</p>
+          {account?.externalAccounts && account.externalAccounts.length > 0 ? (
+            <div className="space-y-2">
+              {account.externalAccounts.map(ea => (
+                <div key={ea.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shrink-0">
+                    {ea.type === "bank_account" ? <Building2 className="w-5 h-5" /> : <CreditCard className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold">{ea.bank_name || ea.brand || "Account"}</p>
+                    <p className="text-xs text-muted-foreground">····{ea.last4}</p>
+                  </div>
+                  <Badge className="text-[9px] bg-green-100 text-green-700 border-0">Active</Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <p className="text-sm text-muted-foreground">No bank account linked yet.</p>
+              <p className="text-xs text-muted-foreground mt-1">Add one through your Stripe Dashboard to receive payouts.</p>
+              <Button
+                className="mt-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
+                onClick={() => window.open("https://dashboard.stripe.com/settings/payouts", "_blank")}
+                data-testid="button-stripe-dashboard"
+              >
+                Open Stripe Dashboard
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/50">
+        <CardContent className="p-4">
+          <p className="text-xs font-bold text-foreground mb-2">How Payments Work</p>
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <div className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">1.</span>
+              <p>Hopper requests a ride → pays $2.50/mile via Stripe</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">2.</span>
+              <p>Driver earns 1 Wheel/mile ($1 value) → cashes out to their payment method</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">3.</span>
+              <p>ShortHop keeps $1.50/mile → deposited to your bank automatically</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {account && (
+        <Card className="border-border/50">
+          <CardContent className="p-4">
+            <p className="text-xs font-bold text-foreground mb-2">Account Status</p>
+            <div className="flex gap-2">
+              <Badge className={`text-[9px] border-0 ${account.chargesEnabled ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                {account.chargesEnabled ? "Charges Enabled" : "Charges Disabled"}
+              </Badge>
+              <Badge className={`text-[9px] border-0 ${account.payoutsEnabled ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                {account.payoutsEnabled ? "Payouts Enabled" : "Payouts Disabled"}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

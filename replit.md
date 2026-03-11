@@ -70,7 +70,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 
 ### Admin Panel (Super Admin: HyperFM only)
 - `/admin` route (restricted to isAdmin users)
-- 9 Tabs: Overview, Inbox (unread badge), Reports (open badge), Users, Apps, Active Drivers, Logs, Notify, Founders
+- 11 Tabs: Overview, Inbox (unread badge), Reports (open badge), Users, Apps, Active Drivers, Logs, Notify, Founders, DMs, Payments
 - Overview: stats cards + alert banners for unread inbox/open reports/pending apps
 - Inbox: view/reply to user contact messages, sends notification on reply
 - Reports: view/resolve user reports (safety, bugs, harassment)
@@ -248,6 +248,17 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - contact_messages (user contact form submissions, admin replies)
 - reports (user-submitted reports: safety, bugs, harassment)
 - founder_messages (founder-to-admin direct chat)
+
+### Stripe Payment Integration
+- Connected Stripe account (acct_1T9cTFEPpyO5NSxU)
+- Environment vars: `STRIPE_SECRET_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`
+- Server-side pricing: $2.50/mile (server calculates, never trust client amount)
+- Driver earns 1 Wheel/mile ($1 value), platform keeps $1.50/mile
+- Minimum charge: $2.50 (1 mile minimum)
+- `server/stripeClient.ts`: Stripe client factory using env var
+- Payment flow: POST `/api/stripe/create-hop-payment` with `hopId` + `distanceMiles` → Stripe Checkout URL
+- Admin endpoints: GET `/api/stripe/balance`, GET `/api/stripe/account`, POST `/api/stripe/create-payout`
+- Admin Payments tab: balance display, linked bank account, payment flow explanation, account status
 
 ## Important Notes
 - DB uses `credits` column but UI shows "Wheels" — do NOT rename

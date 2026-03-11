@@ -8,6 +8,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
+import { getUncachableStripeClient } from "./stripeClient";
 
 declare module "express-session" {
   interface SessionData {
@@ -1601,6 +1602,102 @@ export async function registerRoutes(
       res.status(201).json({ message: "You're on the list! We'll notify you when ShortHop launches in your city." });
     } catch (err) {
       res.status(500).json({ message: "Failed to join waitlist" });
+    }
+  });
+
+  // Stripe payment routes
+  app.post('/api/stripe/create-hop-payment', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { hopId, distanceMiles } = req.body;
+      if (!hopId) return res.status(400).json({ message: "Missing hop ID" });
+      const distance = Number(distanceMiles);
+      if (!distance || distance <= 0 || distance > 100) {
+        return res.status(400).json({ message: "Invalid distance" });
+      }
+      const RATE_PER_MILE_CENTS = 250;
+      const amountCents = Math.round(distance * RATE_PER_MILE_CENTS);
+      const minChargeCents = 250;
+      const finalAmount = Math.max(amountCents, minChargeCents);
+
+      const stripe = await getUncachableStripeClient();
+      const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+      const checkoutSession = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `ShortHop Ride (${distance.toFixed(1)} mi)`,
+              description: `$2.50/mile × ${distance.toFixed(1)} miles`,
+            },
+            unit_amount: finalAmount,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        metadata: {
+          hopId: String(hopId),
+          userId: String(req.user.id),
+          distanceMiles: String(distance),
+          driverWheels: String(Math.max(1, Math.round(distance))),
+        },
+        success_url: `https://${domain}/dashboard?payment=success`,
+        cancel_url: `https://${domain}/dashboard?payment=cancelled`,
+      });
+      res.json({ url: checkoutSession.url, amount: finalAmount });
+    } catch (e: any) {
+      console.error('Stripe checkout error:', e.message);
+      res.status(500).json({ message: "Failed to create payment" });
+    }
+  });
+
+  app.get('/api/stripe/balance', requireAdmin, async (_req, res) => {
+    try {
+      const stripe = await getUncachableStripeClient();
+      const balance = await stripe.balance.retrieve();
+      res.json({
+        available: balance.available.map(b => ({ amount: b.amount, currency: b.currency })),
+        pending: balance.pending.map(b => ({ amount: b.amount, currency: b.currency })),
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message || "Failed to get balance" });
+    }
+  });
+
+  app.post('/api/stripe/create-payout', requireAdmin, async (req, res) => {
+    try {
+      const { amount } = req.body;
+      if (!amount || amount < 100) return res.status(400).json({ message: "Minimum payout is $1.00" });
+      const stripe = await getUncachableStripeClient();
+      const payout = await stripe.payouts.create({
+        amount,
+        currency: 'usd',
+      });
+      res.json({ id: payout.id, amount: payout.amount, status: payout.status });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message || "Failed to create payout" });
+    }
+  });
+
+  app.get('/api/stripe/account', requireAdmin, async (_req, res) => {
+    try {
+      const stripe = await getUncachableStripeClient();
+      const account = await stripe.accounts.retrieve();
+      res.json({
+        id: account.id,
+        payoutsEnabled: account.payouts_enabled,
+        chargesEnabled: account.charges_enabled,
+        externalAccounts: account.external_accounts?.data?.map((ea: any) => ({
+          id: ea.id,
+          type: ea.object,
+          last4: ea.last4,
+          bank_name: ea.bank_name,
+          brand: ea.brand,
+        })) || [],
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message || "Failed to get account" });
     }
   });
 
