@@ -15,14 +15,6 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<"hopper" | "driver">(
     user?.isDriver ? "driver" : "hopper"
   );
-  const welcomeShown = useRef(false);
-
-  useEffect(() => {
-    if (user && !welcomeShown.current) {
-      welcomeShown.current = true;
-      showFlash("👋", `Welcome back, ${user.username}!`, "welcome");
-    }
-  }, [user]);
 
   if (isLoading) {
     return (

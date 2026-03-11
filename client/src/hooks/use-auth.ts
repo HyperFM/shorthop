@@ -37,7 +37,6 @@ export function useLogin() {
     },
     onSuccess: (user) => {
       queryClient.setQueryData([api.auth.me.path], user);
-      toast({ title: "Welcome back!" });
       setLocation("/dashboard");
     },
     onError: (err: Error) => {
