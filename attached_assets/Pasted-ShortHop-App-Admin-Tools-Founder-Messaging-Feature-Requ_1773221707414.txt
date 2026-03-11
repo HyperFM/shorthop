@@ -1,0 +1,88 @@
+ShortHop App – Admin Tools + Founder Messaging Feature Request
+
+I need several updates added to the ShortHop app. Please implement the following features clearly and cleanly in the system.
+
+---
+
+## 1. Community Tab – Direct Chat Feature
+Add a direct chat option inside the Community tab.
+
+- There should be a green chat button visible at the bottom of the Community section.
+- The chat should allow users to directly message the creator (Hyper).
+- The chat should function like a simple inbox / direct message system.
+- Messages should appear in a conversation-style interface.
+
+Display name: Hyper  
+Purpose: Allow early users to directly communicate with the creator for feedback, questions, and suggestions.
+
+---
+
+## 2. Founder Notification Message
+Send a push notification to all current users explaining that they are early founders of the app.
+
+The message should be friendly, welcoming, and encourage exploration of the app.
+
+Suggested tone (not word-for-word):
+
+- Introduce the creator (Hyper).
+- Thank them for being among the first users of ShortHop.
+- Mention that the creator is actively promoting the app in real life.
+- Encourage them to:
+  - Explore the app
+  - Set up their account
+  - Look around and test features
+- Tell them they are part of the first 50 early users, who have direct messaging access to the creator.
+- Explain they can message Hyper through the green chat button in the Community section.
+
+---
+
+## 3. Admin Control Panel (Creator Account)
+My account should have full administrator access.
+
+Add a hidden admin interface available only to my account.
+
+Admin tools should include the ability to view:
+
+- All rides taken on the platform
+- All accounts created
+- User activity (who has logged in, explored, or interacted)
+- Submitted information or reports
+- General app usage data
+
+---
+
+## 4. User Moderation Controls
+Admin tools should include moderation capabilities:
+
+- Ability to block users
+- Ability to block user phone numbers
+- Optional ability to block device identifiers (IMEI or device ID) if necessary
+
+These tools are strictly for security and abuse prevention, but I want them available.
+
+---
+
+## 5. Admin Button (Creator Only)
+Add a special admin button visible only on my account.
+
+Design requirements:
+
+- Located at the bottom of my screen
+- No other user should see this
+- Icon should contain the letter “A” for Admin
+- Visual style:
+  - Red button
+  - Subtle glow effect using orange, red, and blue
+- Tapping this opens the Admin Control Panel
+
+---
+
+## 6. Overall Goal
+The goal is to:
+
+- Improve communication with early users
+- Allow direct feedback between users and the creator
+- Give the creator proper administrative oversight of the platform
+- Maintain moderation and safety tools if needed
+
+Please implement these features in a way that keeps the UI simple and clean.

@@ -93,6 +93,8 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<TabKey>("overview");
   const [notifyMsg, setNotifyMsg] = useState("");
+  const [notifyAllTitle, setNotifyAllTitle] = useState("");
+  const [notifyAllMsg, setNotifyAllMsg] = useState("");
   const [replyText, setReplyText] = useState<Record<number, string>>({});
   const [resolveText, setResolveText] = useState<Record<number, string>>({});
 
@@ -144,6 +146,34 @@ export default function Admin() {
     onSuccess: (data: { sent: number }) => {
       setNotifyMsg("");
       showFlash("📢", `Sent to ${data.sent} drivers`, "success");
+    },
+  });
+
+  const notifyAll = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/notify-all", { title: notifyAllTitle, message: notifyAllMsg });
+      return res.json();
+    },
+    onSuccess: (data: { sent: number }) => {
+      setNotifyAllTitle("");
+      setNotifyAllMsg("");
+      showFlash("📢", `Sent to ${data.sent} users`, "success");
+    },
+    onError: () => {
+      showFlash("❌", "Failed to notify users", "error");
+    },
+  });
+
+  const blockUser = useMutation({
+    mutationFn: async ({ id, reason }: { id: number; reason?: string }) => {
+      await apiRequest("POST", `/api/admin/users/${id}/block`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      showFlash("🚫", "User blocked", "success");
+    },
+    onError: () => {
+      showFlash("❌", "Failed to block user", "error");
     },
   });
 
@@ -440,6 +470,18 @@ export default function Admin() {
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="text-xs h-6 px-2 text-orange-500 hover:text-orange-700"
+                        onClick={() => {
+                          const reason = prompt(`Block "${u.username}" — reason (optional):`);
+                          if (reason !== null) blockUser.mutate({ id: u.id, reason: reason || "Blocked by admin" });
+                        }}
+                        data-testid={`button-block-${u.id}`}
+                      >
+                        <Shield className="w-3 h-3 mr-0.5" /> Block
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         className="text-xs h-6 px-2 text-red-500 hover:text-red-700"
                         onClick={() => {
                           if (confirm(`Delete user "${u.username}" permanently?`)) {
@@ -563,32 +605,68 @@ export default function Admin() {
       )}
 
       {tab === "notify" && (
-        <Card className="border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Broadcast to Drivers</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Send a notification to all active drivers (or all drivers if none are active).
-            </p>
-            <Textarea
-              placeholder="HOP REQUEST NEAR YOU — A rider needs a pickup at..."
-              value={notifyMsg}
-              onChange={e => setNotifyMsg(e.target.value)}
-              className="text-sm"
-              rows={3}
-              data-testid="input-notify-message"
-            />
-            <Button
-              className="w-full bg-gradient-to-r from-primary to-accent"
-              onClick={() => sendNotify.mutate()}
-              disabled={!notifyMsg.trim() || sendNotify.isPending}
-              data-testid="button-send-notify"
-            >
-              <Send className="w-4 h-4 mr-1" /> Send to Drivers
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="space-y-3">
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Notify All Users</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Send a notification to every user on the platform.
+              </p>
+              <Input
+                placeholder="Notification title..."
+                value={notifyAllTitle}
+                onChange={e => setNotifyAllTitle(e.target.value)}
+                className="text-sm"
+                data-testid="input-notify-all-title"
+              />
+              <Textarea
+                placeholder="Notification message..."
+                value={notifyAllMsg}
+                onChange={e => setNotifyAllMsg(e.target.value)}
+                className="text-sm"
+                rows={3}
+                data-testid="input-notify-all-message"
+              />
+              <Button
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500"
+                onClick={() => notifyAll.mutate()}
+                disabled={!notifyAllTitle.trim() || !notifyAllMsg.trim() || notifyAll.isPending}
+                data-testid="button-send-notify-all"
+              >
+                <Send className="w-4 h-4 mr-1" /> Send to All Users
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Broadcast to Drivers</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Send a notification to all active drivers (or all drivers if none are active).
+              </p>
+              <Textarea
+                placeholder="HOP REQUEST NEAR YOU — A rider needs a pickup at..."
+                value={notifyMsg}
+                onChange={e => setNotifyMsg(e.target.value)}
+                className="text-sm"
+                rows={3}
+                data-testid="input-notify-message"
+              />
+              <Button
+                className="w-full bg-gradient-to-r from-primary to-accent"
+                onClick={() => sendNotify.mutate()}
+                disabled={!notifyMsg.trim() || sendNotify.isPending}
+                data-testid="button-send-notify"
+              >
+                <Send className="w-4 h-4 mr-1" /> Send to Drivers
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {tab === "founders" && (

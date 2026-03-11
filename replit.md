@@ -35,6 +35,8 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Standard users: read-only
 - FlexHop users: can post (500 char limit)
 - Shows username, content, timestamp
+- Floating green "Chat with Hyper" button (all users) opens DirectChat panel
+- DirectChat uses `/api/founder-chat` endpoint, messages go to admin Founders tab
 
 ### Notification System
 - In-app notification center in bottom tab bar (Alerts tab)
@@ -67,11 +69,11 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Overview: stats cards + alert banners for unread inbox/open reports/pending apps
 - Inbox: view/reply to user contact messages, sends notification on reply
 - Reports: view/resolve user reports (safety, bugs, harassment)
-- Users: list with disable/enable toggle + permanent delete (with FK-safe cascade)
+- Users: list with disable/enable toggle + block (with reason) + permanent delete (with FK-safe cascade)
 - Applications: approve/reject driver applications
 - Active Drivers: live list of currently active drivers
 - Logs: recent ride request/acceptance logs
-- Notify: manual notification blast to active drivers
+- Notify: "Notify All Users" (title + message to all) and "Broadcast to Drivers" (active drivers)
 - Founders: direct chat with founding members (messages notify admin)
 - Dashboard button for quick role switching back to driver view
 
@@ -103,7 +105,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Server enforces subscription check on `POST /api/hops/request` (403 if not subscribed)
 
 ### App-Like UI
-- **Bottom Tab Bar**: Home / Community / Board / Settings / Alerts (fixed at bottom, only for authenticated users)
+- **Bottom Tab Bar**: Home / Community / Board / Settings / Alerts + Admin "A" button (red glow, admin-only) (fixed at bottom, only for authenticated users)
 - **NavBar**: Hidden for authenticated users (only shows for unauthenticated/landing page)
 - **Compact layouts**: All dashboard pages use `max-w-lg mx-auto` with tight padding
 - **App-style headers**: "Hey, {username}" greeting with small ShortHop label

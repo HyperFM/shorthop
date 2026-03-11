@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, Users, Sparkles, Lock } from "lucide-react";
+import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield } from "lucide-react";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -21,10 +22,144 @@ function timeAgo(date: string | null): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+type ChatMsg = {
+  id: number;
+  userId: number;
+  username: string;
+  message: string;
+  isAdminReply: boolean;
+  createdAt: string;
+};
+
+function DirectChat({ user, onClose }: { user: any; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [msg, setMsg] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const { data: messages, isLoading } = useQuery<ChatMsg[]>({
+    queryKey: ["/api/founder-chat"],
+    refetchInterval: 8000,
+  });
+
+  const sendMsg = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/founder-chat", { message: msg });
+    },
+    onSuccess: () => {
+      setMsg("");
+      queryClient.invalidateQueries({ queryKey: ["/api/founder-chat"] });
+    },
+    onError: () => {
+      showFlash("❌", "Failed to send", "error");
+    },
+  });
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const sorted = messages ? [...messages].sort((a, b) =>
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  ) : [];
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col bg-background" data-testid="direct-chat-panel">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/95 backdrop-blur-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-bold">H</div>
+          <div>
+            <p className="text-sm font-bold">Hyper</p>
+            <p className="text-[10px] text-green-600 font-medium">ShortHop Creator</p>
+          </div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0" data-testid="button-close-chat">
+          <X className="w-5 h-5" />
+        </Button>
+      </div>
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+        {isLoading && (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {!isLoading && sorted.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center px-8">
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-3">
+              <MessageCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <p className="text-sm font-bold">Chat with Hyper</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Got feedback, questions, or ideas? Send a message directly to the creator of ShortHop.
+            </p>
+          </div>
+        )}
+
+        {sorted.map(m => {
+          const isMe = m.userId === user.id;
+          const isAdmin = m.isAdminReply;
+          return (
+            <div key={m.id} className={`flex ${isMe && !isAdmin ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 ${
+                isAdmin
+                  ? "bg-green-100 dark:bg-green-900/30 border border-green-200"
+                  : isMe
+                  ? "bg-primary text-white"
+                  : "bg-muted"
+              }`}>
+                {isAdmin && (
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <span className="text-[10px] font-bold text-green-700 dark:text-green-300">Hyper</span>
+                    <Shield className="w-2.5 h-2.5 text-green-600" />
+                  </div>
+                )}
+                {!isAdmin && !isMe && (
+                  <p className="text-[10px] font-bold text-foreground/70 mb-0.5">{m.username}</p>
+                )}
+                <p className={`text-sm leading-relaxed ${isMe && !isAdmin ? "text-white" : ""}`}>{m.message}</p>
+                <p className={`text-[9px] mt-1 ${
+                  isMe && !isAdmin ? "text-white/50" : "text-muted-foreground"
+                }`}>
+                  {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="px-4 py-3 border-t border-border/50 bg-background/95 backdrop-blur-lg safe-area-bottom">
+        <div className="flex gap-2">
+          <Input
+            placeholder="Message Hyper..."
+            value={msg}
+            onChange={e => setMsg(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && msg.trim()) sendMsg.mutate(); }}
+            className="text-sm"
+            data-testid="input-direct-chat"
+          />
+          <Button
+            className="bg-green-500 hover:bg-green-600 px-3"
+            disabled={!msg.trim() || sendMsg.isPending}
+            onClick={() => sendMsg.mutate()}
+            data-testid="button-send-direct-chat"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Community() {
   const { data: user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [newPost, setNewPost] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
 
   const { data: posts = [], isLoading } = useQuery<
     { id: number; userId: number; content: string; createdAt: string | null; username: string }[]
@@ -64,7 +199,7 @@ export default function Community() {
   }
 
   return (
-    <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
+    <div className="px-4 pt-4 pb-24 max-w-lg mx-auto">
       <div className="flex items-center gap-2 mb-1">
         <Users className="w-5 h-5 text-primary" />
         <h1 data-testid="text-community-title" className="text-xl font-display font-bold">
@@ -165,6 +300,20 @@ export default function Community() {
           ))
         )}
       </div>
+
+      {user && (
+        <button
+          onClick={() => setChatOpen(true)}
+          className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/30 flex items-center justify-center transition-all hover:scale-105 z-50"
+          data-testid="button-open-direct-chat"
+        >
+          <MessageCircle className="w-6 h-6" />
+        </button>
+      )}
+
+      {chatOpen && user && (
+        <DirectChat user={user} onClose={() => setChatOpen(false)} />
+      )}
     </div>
   );
 }

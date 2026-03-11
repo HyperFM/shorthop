@@ -1083,6 +1083,43 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/admin/notify-all', requireAdmin, async (req, res) => {
+    try {
+      const { title, message } = req.body;
+      if (!title || !message) return res.status(400).json({ message: "Title and message required" });
+      const allUsers = await storage.getAllUsers();
+      let sent = 0;
+      for (const u of allUsers) {
+        if (u.isAdmin) continue;
+        await storage.createNotification({
+          userId: u.id,
+          type: "general",
+          title,
+          message,
+          isRead: false,
+        });
+        sent++;
+      }
+      res.json({ sent });
+    } catch {
+      res.status(500).json({ message: "Failed to notify users" });
+    }
+  });
+
+  app.post('/api/admin/users/:id/block', requireAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) return res.status(404).json({ message: "User not found" });
+      if (targetUser.isAdmin) return res.status(403).json({ message: "Cannot block admin" });
+      const { phone, deviceId, reason } = req.body;
+      await storage.disableUser(userId, true);
+      res.json({ message: "User blocked", userId, phone: phone || null, deviceId: deviceId || null, reason: reason || "Blocked by admin" });
+    } catch {
+      res.status(500).json({ message: "Failed to block user" });
+    }
+  });
+
   app.post('/api/admin/users/:id/delete', requireAdmin, async (req, res) => {
     try {
       const userId = Number(req.params.id);
@@ -1201,7 +1238,6 @@ export async function registerRoutes(
   // Founder chat
   app.get('/api/founder-chat', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    if (!req.user.isFounder && !req.user.isAdmin) return res.status(403).json({ message: "Founders only" });
     try {
       const messages = await storage.getFounderMessages();
       res.json(messages);
@@ -1212,7 +1248,6 @@ export async function registerRoutes(
 
   app.post('/api/founder-chat', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    if (!req.user.isFounder && !req.user.isAdmin) return res.status(403).json({ message: "Founders only" });
     try {
       const { message } = req.body;
       if (!message) return res.status(400).json({ message: "Message required" });
