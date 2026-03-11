@@ -289,12 +289,13 @@ export async function registerRoutes(
       }
       
       let priceCents = 0;
+      const miles = parseFloat(input.distanceMiles || "1");
       if (input.hopType === "short_hop") {
-        priceCents = Math.floor((parseFloat(input.distanceMiles || "1") * 150));
+        priceCents = Math.floor(miles * 250);
       } else if (input.hopType === "flex_hop") {
-        priceCents = Math.floor((parseFloat(input.distanceMiles || "1") * 200));
+        priceCents = Math.floor(miles * 250);
       } else if (input.hopType === "full_ride") {
-        priceCents = Math.floor((parseFloat(input.distanceMiles || "5") * 150));
+        priceCents = Math.floor(parseFloat(input.distanceMiles || "5") * 250);
       }
 
       const payWithWheels = req.body.payWithWheels === true;
@@ -1390,6 +1391,90 @@ export async function registerRoutes(
       res.json(msg);
     } catch {
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Cashout routes
+  app.post('/api/cashout', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const amount = Math.floor(Number(req.body.amount));
+      if (!amount || amount < 5 || !Number.isInteger(amount)) {
+        return res.status(400).json({ message: "Minimum cashout is $5 (5 Wheels)" });
+      }
+      const user = await storage.getUser(req.user.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user.paymentMethod || !user.paymentHandle) {
+        return res.status(400).json({ message: "Please add a payment method first" });
+      }
+      if ((user.credits || 0) < amount) {
+        return res.status(400).json({ message: `Not enough Wheels. You have ${user.credits || 0}, need ${amount}.` });
+      }
+      const cashout = await storage.createCashoutAtomic(user.id, amount, user.paymentMethod, user.paymentHandle);
+      const admins = (await storage.getAllUsers()).filter(u => u.isAdmin);
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          type: "general",
+          title: "Cashout Request",
+          message: `${user.username} requested $${amount} cashout to ${user.paymentMethod}`,
+          isRead: false,
+        });
+      }
+      res.json(cashout);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message || "Failed to process cashout" });
+    }
+  });
+
+  app.get('/api/cashouts', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const cashouts = await storage.getUserCashouts(req.user.id);
+      res.json(cashouts);
+    } catch {
+      res.status(500).json({ message: "Failed to get cashouts" });
+    }
+  });
+
+  app.post('/api/payment-method', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { paymentMethod, paymentHandle } = req.body;
+      if (!paymentMethod || !paymentHandle) {
+        return res.status(400).json({ message: "Payment method and details required" });
+      }
+      const updated = await storage.updateUser(req.user.id, { paymentMethod, paymentHandle });
+      res.json({ paymentMethod: updated.paymentMethod, paymentHandle: updated.paymentHandle });
+    } catch {
+      res.status(500).json({ message: "Failed to save payment method" });
+    }
+  });
+
+  app.get('/api/admin/cashouts', requireAdmin, async (_req, res) => {
+    try {
+      const cashouts = await storage.getAllCashouts();
+      res.json(cashouts);
+    } catch {
+      res.status(500).json({ message: "Failed to get cashouts" });
+    }
+  });
+
+  app.post('/api/admin/cashouts/:id/process', requireAdmin, async (req, res) => {
+    try {
+      const cashout = await storage.processCashout(Number(req.params.id));
+      if (cashout.userId) {
+        await storage.createNotification({
+          userId: cashout.userId,
+          type: "reward",
+          title: "Cashout Complete! 💰",
+          message: `Your $${cashout.amount} cashout has been processed.`,
+          isRead: false,
+        });
+      }
+      res.json(cashout);
+    } catch {
+      res.status(500).json({ message: "Failed to process cashout" });
     }
   });
 

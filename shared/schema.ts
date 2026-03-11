@@ -291,5 +291,20 @@ export const insertVipMessageSchema = createInsertSchema(vipMessages).omit({ id:
 export type VipMessage = typeof vipMessages.$inferSelect;
 export type InsertVipMessage = z.infer<typeof insertVipMessageSchema>;
 
+export const cashoutRequests = pgTable("cashout_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  amount: integer("amount").notNull(),
+  paymentMethod: text("payment_method").notNull(),
+  paymentHandle: text("payment_handle").notNull(),
+  status: text("status").default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+});
+
+export const insertCashoutSchema = createInsertSchema(cashoutRequests).omit({ id: true, createdAt: true, processedAt: true, status: true });
+export type CashoutRequest = typeof cashoutRequests.$inferSelect;
+export type InsertCashoutRequest = z.infer<typeof insertCashoutSchema>;
+
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

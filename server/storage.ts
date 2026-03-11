@@ -47,6 +47,9 @@ import {
   vipMessages,
   type VipMessage,
   type InsertVipMessage,
+  cashoutRequests,
+  type CashoutRequest,
+  type InsertCashoutRequest,
   donations,
 } from "@shared/schema";
 
@@ -94,6 +97,11 @@ export interface IStorage {
   setAdmin(userId: number, isAdmin: boolean): Promise<void>;
   getUserRedemptions(userId: number): Promise<UserRedemption[]>;
   getAllRedemptions(): Promise<(UserRedemption & { username: string; rewardName: string })[]>;
+  createCashout(cashout: InsertCashoutRequest): Promise<CashoutRequest>;
+  createCashoutAtomic(userId: number, amount: number, paymentMethod: string, paymentHandle: string): Promise<CashoutRequest>;
+  getUserCashouts(userId: number): Promise<CashoutRequest[]>;
+  getAllCashouts(): Promise<(CashoutRequest & { username: string })[]>;
+  processCashout(id: number): Promise<CashoutRequest>;
 
   createNotification(notification: InsertNotification): Promise<Notification>;
   getUserNotifications(userId: number): Promise<Notification[]>;
@@ -298,20 +306,10 @@ export class DatabaseStorage implements IStorage {
     if (updatedHop.driverId) {
        const driver = await this.getUser(updatedHop.driverId);
        if (driver) {
-          const wheelsToAdd = Math.max(1, Math.ceil(dist));
+          const driverEarnings = Math.max(1, Math.floor(dist));
           await db.update(users)
-            .set({ credits: (driver.credits || 0) + wheelsToAdd })
+            .set({ credits: (driver.credits || 0) + driverEarnings })
             .where(eq(users.id, driver.id));
-       }
-    }
-
-    if (updatedHop.walkerId) {
-       const walker = await this.getUser(updatedHop.walkerId);
-       if (walker) {
-          const walkerWheels = Math.max(1, Math.ceil(dist * 0.5));
-          await db.update(users)
-            .set({ credits: (walker.credits || 0) + walkerWheels })
-            .where(eq(users.id, walker.id));
        }
     }
 
@@ -392,6 +390,51 @@ export class DatabaseStorage implements IStorage {
 
   async getUserRedemptions(userId: number): Promise<UserRedemption[]> {
     return await db.select().from(userRedemptions).where(eq(userRedemptions.userId, userId));
+  }
+
+  async createCashout(cashout: InsertCashoutRequest): Promise<CashoutRequest> {
+    const [created] = await db.insert(cashoutRequests).values(cashout).returning();
+    return created;
+  }
+
+  async createCashoutAtomic(userId: number, amount: number, paymentMethod: string, paymentHandle: string): Promise<CashoutRequest> {
+    const result = await db.execute(sql`
+      UPDATE users SET credits = credits - ${amount}
+      WHERE id = ${userId} AND credits >= ${amount}
+      RETURNING credits
+    `);
+    if (!result.rows || result.rows.length === 0) {
+      throw new Error("Insufficient Wheels balance");
+    }
+    const [created] = await db.insert(cashoutRequests).values({
+      userId, amount, paymentMethod, paymentHandle,
+    }).returning();
+    return created;
+  }
+
+  async getUserCashouts(userId: number): Promise<CashoutRequest[]> {
+    return await db.select().from(cashoutRequests)
+      .where(eq(cashoutRequests.userId, userId))
+      .orderBy(desc(cashoutRequests.createdAt));
+  }
+
+  async getAllCashouts(): Promise<(CashoutRequest & { username: string })[]> {
+    const all = await db.select().from(cashoutRequests).orderBy(desc(cashoutRequests.createdAt));
+    const result = [];
+    for (const c of all) {
+      const user = await this.getUser(c.userId);
+      result.push({ ...c, username: user?.username || "unknown" });
+    }
+    return result;
+  }
+
+  async processCashout(id: number): Promise<CashoutRequest> {
+    const [updated] = await db.update(cashoutRequests)
+      .set({ status: "completed", processedAt: new Date() })
+      .where(and(eq(cashoutRequests.id, id), eq(cashoutRequests.status, "pending")))
+      .returning();
+    if (!updated) throw new Error("Cashout not found or already processed");
+    return updated;
   }
 
   async getAllRedemptions(): Promise<(UserRedemption & { username: string; rewardName: string })[]> {

@@ -285,7 +285,7 @@ export default function DriverDashboard({ user }: { user: User }) {
         data-testid="card-driver-philosophy"
       >
         <p className="text-xs text-foreground font-medium leading-relaxed">
-          "You're already heading that way. Helping someone along your route earns Wheels you can redeem for rewards."
+          "You're already heading that way. Helping someone along your route earns Wheels you can cash out anytime."
         </p>
         <p className="text-[10px] text-muted-foreground mt-1">
           ShortHop is not gig work — just community movement.

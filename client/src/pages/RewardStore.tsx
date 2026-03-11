@@ -1,64 +1,76 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { api } from "@shared/routes";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Gift, Coffee, Fuel, CreditCard, Check, Sparkles, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Wallet, DollarSign, CreditCard, Building2, Smartphone, Check, Loader2, ChevronRight, Clock, CircleDollarSign } from "lucide-react";
 import { showFlash } from "@/components/FlashNotification";
-import type { Reward } from "@shared/schema";
 
-const categoryIcons: Record<string, typeof Coffee> = {
-  coffee: Coffee,
-  gas: Fuel,
-  meal: CreditCard,
-  carwash: Gift,
-  giftcard: CreditCard,
+const PAYMENT_METHODS = [
+  { id: "cashapp", label: "Cash App", placeholder: "$cashtag", icon: CircleDollarSign, color: "from-green-500 to-green-600" },
+  { id: "venmo", label: "Venmo", placeholder: "@username", icon: Smartphone, color: "from-blue-500 to-blue-600" },
+  { id: "paypal", label: "PayPal", placeholder: "email@example.com", icon: DollarSign, color: "from-blue-600 to-indigo-600" },
+  { id: "debit_card", label: "Debit Card", placeholder: "Name on card (linked in-app)", icon: CreditCard, color: "from-orange-500 to-red-500" },
+  { id: "bank_account", label: "Bank Account", placeholder: "Account nickname (linked in-app)", icon: Building2, color: "from-purple-500 to-violet-600" },
+];
+
+type CashoutItem = {
+  id: number;
+  amount: number;
+  paymentMethod: string;
+  paymentHandle: string;
+  status: string;
+  createdAt: string;
+  processedAt: string | null;
 };
-
-const categoryColors: Record<string, { bg: string; text: string; glow: string }> = {
-  coffee: { bg: "from-amber-500 to-orange-600", text: "text-amber-600", glow: "shadow-amber-500/30" },
-  gas: { bg: "from-blue-500 to-blue-700", text: "text-blue-600", glow: "shadow-blue-500/30" },
-  meal: { bg: "from-green-500 to-emerald-600", text: "text-green-600", glow: "shadow-green-500/30" },
-  carwash: { bg: "from-purple-500 to-violet-600", text: "text-purple-600", glow: "shadow-purple-500/30" },
-  giftcard: { bg: "from-pink-500 to-rose-600", text: "text-pink-600", glow: "shadow-pink-500/30" },
-};
-
-function useRewards() {
-  return useQuery({
-    queryKey: [api.rewards.list.path],
-    queryFn: async () => {
-      const res = await fetch(api.rewards.list.path, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch rewards");
-      return res.json() as Promise<Reward[]>;
-    },
-  });
-}
-
-function useRedeemReward() {
-  return useMutation({
-    mutationFn: async (rewardId: number) => {
-      const res = await fetch(api.rewards.redeem.path.replace(":id", String(rewardId)), {
-        method: api.rewards.redeem.method,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to redeem reward");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.rewards.list.path] });
-      queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
-    },
-  });
-}
 
 export default function RewardStore() {
   const { data: user, isLoading: authLoading } = useAuth();
-  const { data: rewards, isLoading } = useRewards();
-  const redeem = useRedeemReward();
-  const [redeemCode, setRedeemCode] = useState<string | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [handle, setHandle] = useState("");
+  const [cashoutAmount, setCashoutAmount] = useState("");
+  const [showPaymentSetup, setShowPaymentSetup] = useState(false);
+
+  const { data: cashouts = [] } = useQuery<CashoutItem[]>({
+    queryKey: ["/api/cashouts"],
+  });
+
+  const savePayment = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/payment-method", {
+        paymentMethod: selectedMethod,
+        paymentHandle: handle,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      setShowPaymentSetup(false);
+      showFlash("✅", "Payment method saved", "success");
+    },
+    onError: () => {
+      showFlash("❌", "Failed to save", "error");
+    },
+  });
+
+  const requestCashout = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/cashout", { amount: Number(cashoutAmount) });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashouts"] });
+      setCashoutAmount("");
+      showFlash("💰", `$${cashoutAmount} cashout requested!`, "success");
+    },
+    onError: (e: any) => {
+      showFlash("❌", e.message || "Cashout failed", "error");
+    },
+  });
 
   if (authLoading || !user) {
     return (
@@ -68,7 +80,9 @@ export default function RewardStore() {
     );
   }
 
-  const canRedeem = (wheelsCost: number) => user.credits >= wheelsCost;
+  const hasPayment = !!(user as any).paymentMethod && !!(user as any).paymentHandle;
+  const currentMethod = PAYMENT_METHODS.find(m => m.id === (user as any).paymentMethod);
+  const canCashout = hasPayment && user.credits >= 5 && Number(cashoutAmount) >= 5 && Number(cashoutAmount) <= user.credits;
 
   return (
     <motion.div
@@ -78,9 +92,9 @@ export default function RewardStore() {
       className="px-4 pt-4 pb-24 max-w-lg mx-auto"
     >
       <div className="flex items-center gap-2 mb-6">
-        <Gift className="w-5 h-5 text-secondary" />
-        <h1 className="text-xl font-display font-bold text-foreground" data-testid="text-rewards-title">
-          Rewards
+        <Wallet className="w-5 h-5 text-secondary" />
+        <h1 className="text-xl font-display font-bold text-foreground" data-testid="text-wheels-title">
+          Wheels
         </h1>
       </div>
 
@@ -104,7 +118,7 @@ export default function RewardStore() {
               </motion.div>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Wheels Balance</p>
+              <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Your Balance</p>
               <motion.p
                 key={user.credits}
                 initial={{ scale: 1.2 }}
@@ -114,8 +128,9 @@ export default function RewardStore() {
               >
                 {user.credits || 0}
               </motion.p>
+              <p className="text-lg font-bold text-secondary mt-1">${(user.credits || 0).toFixed(2)}</p>
               <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed max-w-[240px] mx-auto">
-                1 Wheel = $1 in reward value. Use Wheels for rewards or rides!
+                1 Wheel = $1. Cash out anytime with a $5 minimum.
               </p>
             </div>
           </CardContent>
@@ -125,139 +140,228 @@ export default function RewardStore() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-gradient-to-r from-primary/5 to-green-500/5 border border-primary/20 rounded-xl px-4 py-3 mb-6"
-        data-testid="card-philosophy"
+        transition={{ delay: 0.15 }}
+        className="mb-6"
       >
-        <p className="text-xs text-foreground font-medium leading-relaxed">
-          "You're already heading that way. Drivers earn Wheels for giving hops, and riders earn Wheels for every completed ride too."
-        </p>
-        <p className="text-[10px] text-muted-foreground mt-1">
-          ShortHop is not gig work — it's community movement. Use Wheels for rewards or rides.
-        </p>
+        <Card className="border-border/50" data-testid="card-payment-method">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-bold text-foreground">Payment Method</p>
+              {hasPayment && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-[10px] h-6 px-2"
+                  onClick={() => { setShowPaymentSetup(true); setSelectedMethod((user as any).paymentMethod); setHandle((user as any).paymentHandle || ""); }}
+                  data-testid="button-change-payment"
+                >
+                  Change
+                </Button>
+              )}
+            </div>
+
+            {hasPayment && !showPaymentSetup ? (
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                {currentMethod && (
+                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${currentMethod.color} flex items-center justify-center text-white shadow-md shrink-0`}>
+                    <currentMethod.icon className="w-5 h-5" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-bold">{currentMethod?.label || (user as any).paymentMethod}</p>
+                  <p className="text-xs text-muted-foreground">{(user as any).paymentHandle}</p>
+                </div>
+                <Check className="w-4 h-4 text-green-500" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {!showPaymentSetup && !hasPayment && (
+                  <p className="text-xs text-muted-foreground mb-2">Add a payment method to cash out your Wheels.</p>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  {PAYMENT_METHODS.map(m => (
+                    <button
+                      key={m.id}
+                      onClick={() => { setSelectedMethod(m.id); setHandle(""); setShowPaymentSetup(true); }}
+                      className={`flex items-center gap-2 p-2.5 rounded-xl text-left transition-all ${
+                        selectedMethod === m.id
+                          ? "bg-secondary/10 border-2 border-secondary shadow-sm"
+                          : "bg-muted/30 border-2 border-transparent hover:border-border"
+                      }`}
+                      data-testid={`payment-method-${m.id}`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${m.color} flex items-center justify-center text-white shrink-0`}>
+                        <m.icon className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-bold">{m.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {selectedMethod && showPaymentSetup && (
+                  <div className="space-y-2 pt-2">
+                    <Input
+                      placeholder={PAYMENT_METHODS.find(m => m.id === selectedMethod)?.placeholder || "Enter details"}
+                      value={handle}
+                      onChange={e => setHandle(e.target.value)}
+                      className="text-sm"
+                      data-testid="input-payment-handle"
+                    />
+                    {selectedMethod === "bank_account" && (
+                      <p className="text-[10px] text-muted-foreground">Give your account a nickname. Secure bank linking coming soon.</p>
+                    )}
+                    {selectedMethod === "debit_card" && (
+                      <p className="text-[10px] text-muted-foreground">Enter the name on your card. Secure card linking coming soon.</p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 bg-secondary hover:bg-secondary/90 text-white font-bold"
+                        disabled={!handle.trim() || savePayment.isPending}
+                        onClick={() => savePayment.mutate()}
+                        data-testid="button-save-payment"
+                      >
+                        {savePayment.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
+                      </Button>
+                      {hasPayment && (
+                        <Button variant="outline" onClick={() => setShowPaymentSetup(false)} data-testid="button-cancel-payment">
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
 
-      {redeemCode && (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mb-6"
+      >
+        <Card className={`border-2 ${hasPayment && user.credits >= 5 ? "border-green-500/30" : "border-border/30"}`} data-testid="card-cashout">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <DollarSign className="w-4 h-4 text-green-500" />
+              <p className="text-sm font-bold">Cash Out</p>
+              {user.credits < 5 && (
+                <Badge className="text-[8px] bg-muted text-muted-foreground border-0 ml-auto">
+                  Need {5 - (user.credits || 0)} more Wheels
+                </Badge>
+              )}
+            </div>
+
+            {!hasPayment ? (
+              <p className="text-xs text-muted-foreground">Add a payment method above to cash out your Wheels.</p>
+            ) : user.credits < 5 ? (
+              <div className="text-center py-4">
+                <p className="text-xs text-muted-foreground">You need at least 5 Wheels ($5) to cash out.</p>
+                <div className="w-full bg-muted rounded-full h-2 mt-3">
+                  <div
+                    className="bg-gradient-to-r from-secondary to-green-500 h-2 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, ((user.credits || 0) / 5) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">{user.credits || 0}/5 Wheels</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      min="5"
+                      max={user.credits}
+                      placeholder="Amount"
+                      value={cashoutAmount}
+                      onChange={e => setCashoutAmount(e.target.value)}
+                      className="pl-8 text-lg font-bold"
+                      data-testid="input-cashout-amount"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs font-bold h-10 px-3"
+                    onClick={() => setCashoutAmount(String(user.credits))}
+                    data-testid="button-cashout-max"
+                  >
+                    Max
+                  </Button>
+                </div>
+                <Button
+                  className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-base"
+                  disabled={!canCashout || requestCashout.isPending}
+                  onClick={() => requestCashout.mutate()}
+                  data-testid="button-cashout"
+                >
+                  {requestCashout.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <DollarSign className="w-5 h-5 mr-1" />
+                      Cash Out {cashoutAmount ? `$${Number(cashoutAmount).toFixed(2)}` : ""}
+                    </>
+                  )}
+                </Button>
+                <p className="text-[10px] text-center text-muted-foreground">
+                  Sent to your {currentMethod?.label || "payment method"}. Processing may take 1-3 business days.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {cashouts.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
         >
-          <Card className="border-green-400 bg-green-50 dark:bg-green-950/20 mb-6" data-testid="card-redeem-code">
-            <CardContent className="p-5 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center mx-auto">
-                <Check className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="font-bold text-foreground text-sm">Reward Redeemed!</p>
-                <p className="text-[10px] text-muted-foreground">Your reward code is ready to use</p>
-              </div>
-              <div className="bg-background/80 p-4 rounded-xl font-mono text-lg font-black text-foreground tracking-wider border border-border">
-                {redeemCode}
-              </div>
-              <p className="text-[10px] text-muted-foreground">Show this code at participating locations.</p>
-              <Button variant="outline" size="sm" onClick={() => setRedeemCode(null)} className="rounded-full" data-testid="button-close-redeem">
-                Done
-              </Button>
-            </CardContent>
-          </Card>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Clock className="w-3 h-3" /> Cashout History
+          </p>
+          <div className="space-y-2">
+            {cashouts.map(c => (
+              <Card key={c.id} className="border-border/30" data-testid={`cashout-${c.id}`}>
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold ${
+                    c.status === "completed" ? "bg-green-500" : c.status === "pending" ? "bg-amber-500" : "bg-red-500"
+                  }`}>
+                    {c.status === "completed" ? <Check className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold">${c.amount}.00</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {new Date(c.createdAt).toLocaleDateString([], { month: "short", day: "numeric" })} — {c.paymentMethod}
+                    </p>
+                  </div>
+                  <Badge className={`text-[9px] border-0 ${
+                    c.status === "completed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                  }`}>
+                    {c.status === "completed" ? "Sent" : "Processing"}
+                  </Badge>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </motion.div>
       )}
-
-      <div className="mb-3">
-        <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2" data-testid="text-rewards-heading">
-          <Sparkles className="w-3.5 h-3.5" />
-          Rewards
-        </h2>
-      </div>
-
-      <div className="space-y-3">
-        {isLoading ? (
-          <div className="text-center py-12">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-8 h-8 border-2 border-secondary border-t-transparent rounded-full mx-auto"
-            />
-          </div>
-        ) : !rewards || rewards.length === 0 ? (
-          <div className="text-center py-10 space-y-3">
-            <motion.span
-              animate={{ y: [0, -5, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="text-4xl block"
-            >
-              🎁
-            </motion.span>
-            <p className="text-sm text-muted-foreground font-medium">No rewards available yet</p>
-            <p className="text-xs text-muted-foreground">Check back soon for Starbucks, gas, and cash gift cards!</p>
-          </div>
-        ) : (
-          rewards.map((reward, i) => {
-            const Icon = categoryIcons[reward.category] || Gift;
-            const colors = categoryColors[reward.category] || categoryColors.giftcard;
-            return (
-              <motion.div
-                key={reward.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-              >
-                <Card className="border-border/50 hover:border-border transition-colors" data-testid={`reward-${reward.id}`}>
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colors.bg} flex items-center justify-center text-white shadow-lg ${colors.glow} shrink-0`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-foreground truncate">{reward.name}</p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">{reward.description}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-xs font-black text-secondary">{reward.wheelsCost}</span>
-                        <span className="text-[10px] text-muted-foreground">Wheels</span>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      className={`h-8 px-4 rounded-full text-xs font-bold shrink-0 ${
-                        canRedeem(reward.wheelsCost)
-                          ? "bg-secondary hover:bg-secondary/90 text-white"
-                          : ""
-                      }`}
-                      variant={canRedeem(reward.wheelsCost) ? "default" : "outline"}
-                      onClick={() => redeem.mutate(reward.id, {
-                        onSuccess: (data) => {
-                          setRedeemCode(data.code);
-                          showFlash("🎉", "Reward redeemed!", "success");
-                        },
-                      })}
-                      disabled={!canRedeem(reward.wheelsCost) || redeem.isPending}
-                      data-testid={`button-redeem-${reward.id}`}
-                    >
-                      {canRedeem(reward.wheelsCost) ? "Redeem" : "Need More"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })
-        )}
-      </div>
 
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="mt-8 text-center space-y-2"
+        className="mt-8 text-center"
       >
-        <div className="flex items-center justify-center gap-3 text-muted-foreground">
-          <div className="h-px w-8 bg-border" />
-          <Sparkles className="w-3 h-3" />
-          <div className="h-px w-8 bg-border" />
-        </div>
-        <p className="text-xs text-muted-foreground font-medium" data-testid="text-more-rewards">
-          More rewards coming soon.
-        </p>
         <p className="text-[10px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
-          Local business discounts, free rides, community perks, and event invitations.
+          Earn Wheels by giving hops. Every completed ride puts Wheels in your balance. Cash out whenever you're ready.
         </p>
       </motion.div>
     </motion.div>

@@ -98,7 +98,7 @@ export default function Home() {
                 <Zap className="w-5 h-5 text-secondary" />
                 A Hop moves you affordably forward.
               </p>
-              <p>ShortHop turns a driver's everyday route into an opportunity — helping others along the way, meeting new people, and earning rewards, all from the comfort of their car.</p>
+              <p>ShortHop turns a driver's everyday route into an opportunity — helping others along the way, meeting new people, and earning real money, all from the comfort of their car.</p>
               <div className="pt-8 border-t border-border/30 space-y-6">
                 <p className="text-foreground font-medium">Instead of high prices and pressure, ShortHop is built on convenience, opportunity, and connection.</p>
                 <div className="space-y-2">
@@ -170,7 +170,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold mb-2">For Drivers</h3>
-                    <p className="text-muted-foreground">Register your routine routes. Only pick up walkers along your exact path. Help others advance and earn Wheels to redeem for rewards.</p>
+                    <p className="text-muted-foreground">Register your routine routes. Only pick up walkers along your exact path. Help others advance and earn Wheels you can cash out anytime.</p>
                   </div>
                 </motion.div>
               </div>

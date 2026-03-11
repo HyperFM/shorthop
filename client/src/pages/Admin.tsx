@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { FounderChat } from "@/components/FounderChat";
@@ -85,7 +85,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "redemptions";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "cashouts";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
@@ -106,9 +106,9 @@ export default function Admin() {
   const { data: logs } = useQuery<RideLog[]>({ queryKey: ["/api/admin/logs"], enabled: tab === "logs" });
   const { data: inbox } = useQuery<ContactMsg[]>({ queryKey: ["/api/admin/inbox"], enabled: tab === "inbox" || tab === "overview" });
   const { data: reportsList } = useQuery<ReportItem[]>({ queryKey: ["/api/admin/reports"], enabled: tab === "reports" || tab === "overview" });
-  const { data: redemptions } = useQuery<{ id: number; userId: number; rewardId: number; code: string; redeemedAt: string; username: string; rewardName: string }[]>({
-    queryKey: ["/api/admin/redemptions"],
-    enabled: tab === "redemptions" || tab === "overview",
+  const { data: cashouts } = useQuery<{ id: number; userId: number; amount: number; paymentMethod: string; paymentHandle: string; status: string; createdAt: string; processedAt: string | null; username: string }[]>({
+    queryKey: ["/api/admin/cashouts"],
+    enabled: tab === "cashouts" || tab === "overview",
   });
   const { data: vipConvos } = useQuery<{ userId: number; username: string; lastMessage: string; lastAt: string; unread: number }[]>({
     queryKey: ["/api/admin/vip-conversations"],
@@ -269,7 +269,7 @@ export default function Admin() {
     { key: "logs", label: "Logs", icon: Eye },
     { key: "notify", label: "Notify", icon: Send },
     { key: "founders", label: "Founders", icon: Crown },
-    { key: "redemptions", label: "Rewards", icon: Gift, badge: redemptions?.length || 0 },
+    { key: "cashouts", label: "Cashouts", icon: Gift, badge: cashouts?.filter(c => c.status === "pending").length || 0 },
     { key: "dms", label: "DMs", icon: Star, badge: vipConvos?.reduce((sum, c) => sum + c.unread, 0) || 0 },
   ];
 
@@ -743,34 +743,62 @@ export default function Admin() {
         </div>
       )}
 
-      {tab === "redemptions" && (
+      {tab === "cashouts" && (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            All reward redemptions from users. When someone redeems Wheels for a reward, you fulfill it by sending the actual gift card.
+            User cashout requests. Pending cashouts need to be processed through the user's selected payment method.
           </p>
-          {(!redemptions || redemptions.length === 0) ? (
+          {(!cashouts || cashouts.length === 0) ? (
             <div className="text-center py-12">
               <Gift className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground font-medium">No redemptions yet</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">When users redeem Wheels for rewards, they'll show up here.</p>
+              <p className="text-sm text-muted-foreground font-medium">No cashout requests yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">When users cash out their Wheels, requests appear here.</p>
             </div>
           ) : (
-            redemptions.map(r => (
-              <Card key={r.id} className="border-border/50" data-testid={`redemption-${r.id}`}>
+            cashouts.map(c => (
+              <Card key={c.id} className={`border-border/50 ${c.status === "pending" ? "border-l-4 border-l-amber-500" : ""}`} data-testid={`cashout-admin-${c.id}`}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-white shadow-md shrink-0">
-                      <Gift className="w-5 h-5" />
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md shrink-0 ${
+                      c.status === "completed" ? "bg-green-500" : "bg-amber-500"
+                    }`}>
+                      <DollarSign className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-bold">{r.username}</p>
-                        <Badge className="text-[9px] bg-pink-100 text-pink-700 border-0">{r.code}</Badge>
+                        <p className="text-sm font-bold">{c.username}</p>
+                        <Badge className={`text-[9px] border-0 ${
+                          c.status === "completed" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                        }`}>
+                          {c.status === "completed" ? "Sent" : "Pending"}
+                        </Badge>
                       </div>
-                      <p className="text-xs font-medium text-foreground mt-0.5">{r.rewardName}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        Redeemed {new Date(r.redeemedAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      <p className="text-lg font-black text-foreground">${c.amount}.00</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {c.paymentMethod === "cashapp" ? "Cash App" :
+                         c.paymentMethod === "venmo" ? "Venmo" :
+                         c.paymentMethod === "paypal" ? "PayPal" :
+                         c.paymentMethod === "debit_card" ? "Debit Card" :
+                         c.paymentMethod === "bank_account" ? "Bank Account" : c.paymentMethod}: <span className="font-bold text-foreground">{c.paymentHandle}</span>
                       </p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {new Date(c.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                      {c.status === "pending" && (
+                        <Button
+                          size="sm"
+                          className="mt-2 h-7 text-xs bg-green-500 hover:bg-green-600 text-white"
+                          onClick={async () => {
+                            try {
+                              await apiRequest("POST", `/api/admin/cashouts/${c.id}/process`);
+                              queryClient.invalidateQueries({ queryKey: ["/api/admin/cashouts"] });
+                            } catch {}
+                          }}
+                          data-testid={`button-process-cashout-${c.id}`}
+                        >
+                          Mark as Sent
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
