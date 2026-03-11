@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl, type RequestHopRequest, type CompleteHopRequest } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+import { showFlash } from "@/components/FlashNotification";
 
 export function useHops() {
   return useQuery({
@@ -61,7 +62,6 @@ export function useAcceptHop() {
 
 export function useCancelHop() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (id: number) => {
@@ -74,10 +74,10 @@ export function useCancelHop() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.hops.list.path] });
-      toast({ title: "Hop cancelled" });
+      showFlash("🔄", "Hop cancelled", "info");
     },
-    onError: (err: Error) => {
-      toast({ title: "Failed to cancel", description: err.message, variant: "destructive" });
+    onError: () => {
+      showFlash("❌", "Failed to cancel", "error");
     },
   });
 }

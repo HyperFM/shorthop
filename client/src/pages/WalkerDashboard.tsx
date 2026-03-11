@@ -16,7 +16,7 @@ import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking, usePickupGuidance } from "@/hooks/use-location";
 import { PickupMapVisual } from "@/components/PickupMapVisual";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { showFlash } from "@/components/FlashNotification";
 import type { User } from "@shared/routes";
 
 const searchSchema = z.object({
@@ -40,7 +40,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const { data: hops } = useHops();
   const requestHop = useRequestHop();
   const cancelHop = useCancelHop();
-  const { toast } = useToast();
   const [showOptions, setShowOptions] = useState(false);
   const [locations, setLocations] = useState({ startLocation: "", endLocation: "" });
   const [subscriptionPlan, setSubscriptionPlan] = useState<"flex_hop" | "power_hop" | null>(null);
@@ -69,7 +68,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/walker-routes'] });
       setAddRouteOpen(false);
-      toast({ title: "Route saved!" });
+      showFlash("📍", "Route saved!", "success");
     },
   });
 
