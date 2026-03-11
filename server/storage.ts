@@ -86,6 +86,7 @@ export interface IStorage {
 
   getRewards(): Promise<Reward[]>;
   redeemReward(userId: number, rewardId: number): Promise<{ code: string; reward: Reward }>;
+  deductCredits(userId: number, amount: number): Promise<void>;
   getUserRedemptions(userId: number): Promise<UserRedemption[]>;
 
   createNotification(notification: InsertNotification): Promise<Notification>;
@@ -284,13 +285,24 @@ export class DatabaseStorage implements IStorage {
       
     if (!updatedHop) throw new Error("Hop not found");
     
+    const dist = parseFloat(distanceMiles);
     if (updatedHop.driverId) {
        const driver = await this.getUser(updatedHop.driverId);
        if (driver) {
-          const wheelsToAdd = Math.ceil(parseFloat(distanceMiles));
+          const wheelsToAdd = Math.max(1, Math.ceil(dist));
           await db.update(users)
             .set({ credits: (driver.credits || 0) + wheelsToAdd })
             .where(eq(users.id, driver.id));
+       }
+    }
+
+    if (updatedHop.walkerId) {
+       const walker = await this.getUser(updatedHop.walkerId);
+       if (walker) {
+          const walkerWheels = Math.max(1, Math.ceil(dist * 0.5));
+          await db.update(users)
+            .set({ credits: (walker.credits || 0) + walkerWheels })
+            .where(eq(users.id, walker.id));
        }
     }
 
@@ -347,6 +359,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
 
     return { code, reward };
+  }
+
+  async deductCredits(userId: number, amount: number): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user || user.credits < amount) throw new Error("Insufficient wheels");
+    await db.update(users)
+      .set({ credits: user.credits - amount })
+      .where(eq(users.id, userId));
   }
 
   async getUserRedemptions(userId: number): Promise<UserRedemption[]> {

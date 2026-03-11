@@ -23,7 +23,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 ### Hop Buddy Rating System
 - After ride completion: Great Hop, Good Ride, Neutral, Issue
 - Optional: "Ride again" checkbox, "Follow Hop Buddy" button
-- Tipping system: $1/$2/$5/Custom tip options (min $0.50, 100% to driver)
+- Tipping system: $1/$2/$3/Custom tip options (min $0.50, 100% to driver)
 - Auto-opens on completed hop for walkers (WalkerDashboard integration)
 - Driver gets notification when tipped
 - Builds trust network for better matching
@@ -40,8 +40,8 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Shows username, content, timestamp
 - Floating green "Chat with Hyper" button (all users) opens DirectChat panel
 - DirectChat uses `/api/founder-chat` endpoint, messages go to admin Founders tab
-- **Donation section**: $1/$5/$10/$25 + custom amounts, optional message, orange/amber gradient card
-  - POST /api/donate endpoint, min $1, stored in `donations` table
+- **Donation section**: $0.50/$1/$5 + custom amounts, optional message, orange/amber gradient card
+  - POST /api/donate endpoint, min $0.50, stored in `donations` table
 
 ### Notification System
 - In-app notification center in bottom tab bar (Alerts tab)
@@ -86,7 +86,10 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Anyone can register as a driver (chosen at registration)
 - Multi-step verification required before going active
 - Routine routes (not shifts)
-- Wheels reward system (1 mile = 1 Wheel)
+- Wheels reward system (1 mile driven = 1 Wheel for drivers, 0.5 Wheels/mile for riders, min 1)
+- Riders can pay for rides with Wheels (toggle on Short Hop card)
+- Rewards: Starbucks gift cards, Shell gas cards, Cash gift cards (5-25 Wheels)
+- Wheels can be redeemed for rewards or used to pay for rides
 - Flex Hop settings (detour distance/time)
 - Reward Store (coffee, gas, meals, car wash)
 

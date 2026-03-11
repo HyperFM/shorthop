@@ -62,6 +62,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const [addRouteOpen, setAddRouteOpen] = useState(false);
   const [ratingOpen, setRatingOpen] = useState(false);
   const [ratingHop, setRatingHop] = useState<{ tripId: number; driverId: number; driverName: string } | null>(null);
+  const [payWithWheels, setPayWithWheels] = useState(false);
   const lastCompletedRef = useRef<number | null>(null);
 
   const { data: badges } = useQuery<{ id: number; badge: string; earnedAt: string | null }[]>({
@@ -184,8 +185,8 @@ export default function WalkerDashboard({ user }: { user: User }) {
   };
 
   const handleRequestHop = (hopType: string = 'short_hop') => {
-    requestHop.mutate({ ...locations, hopType } as any, {
-      onSuccess: () => setShowOptions(false)
+    requestHop.mutate({ ...locations, hopType, payWithWheels } as any, {
+      onSuccess: () => { setShowOptions(false); setPayWithWheels(false); }
     });
   };
 
@@ -567,26 +568,43 @@ export default function WalkerDashboard({ user }: { user: User }) {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
               <Card className="border-primary/40 shadow-sm bg-primary/5 relative overflow-hidden" data-testid="option-short-hop">
                 <div className="absolute top-0 right-0 bg-primary text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-lg uppercase">Recommended</div>
-                <CardContent className="p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🏎️</span>
-                    <div>
-                      <p className="text-sm font-bold text-foreground">Short Hop</p>
-                      <p className="text-[10px] text-muted-foreground">Ride along a driver's route</p>
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">🏎️</span>
+                      <div>
+                        <p className="text-sm font-bold text-foreground">Short Hop</p>
+                        <p className="text-[10px] text-muted-foreground">Ride along a driver's route</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{payWithWheels ? `${Math.max(1, Math.ceil(1.5))} 🛞` : '$1–3'}</span>
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs rounded-lg px-3 font-bold"
+                        onClick={() => handleRequestHop('short_hop')}
+                        disabled={requestHop.isPending}
+                        data-testid="button-request-short-hop"
+                      >
+                        {requestHop.isPending ? '...' : 'Request'}
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">$1–3</span>
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs rounded-lg px-3 font-bold"
-                      onClick={() => handleRequestHop('short_hop')}
-                      disabled={requestHop.isPending}
-                      data-testid="button-request-short-hop"
+                  {(user.credits || 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPayWithWheels(!payWithWheels)}
+                      className={`mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                        payWithWheels
+                          ? 'bg-secondary/20 text-secondary border border-secondary/40'
+                          : 'bg-muted/30 text-muted-foreground border border-transparent hover:border-secondary/30'
+                      }`}
+                      data-testid="toggle-pay-wheels"
                     >
-                      {requestHop.isPending ? '...' : 'Request'}
-                    </Button>
-                  </div>
+                      <span>🛞</span>
+                      {payWithWheels ? `Paying with Wheels (${user.credits} available)` : `Pay with Wheels (${user.credits} 🛞)`}
+                    </button>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

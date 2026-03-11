@@ -1,0 +1,155 @@
+ShortHop Feature Update Verification Checklist
+
+Use this checklist after the update is completed to confirm all requested features are working correctly.
+
+------------------------------------------------
+
+REWARDS SYSTEM
+
+☐ Wheels system implemented
+
+☐ 1 Wheel equals $1 reward value internally
+
+☐ Drivers receive 0.5 Wheels for a short hop (~0.5 mile)
+
+☐ Wheels accumulate correctly in the driver profile
+
+☐ Riders can also earn or use Wheels when applicable
+
+☐ Wheels can be used to redeem rewards
+
+☐ Wheels can also be used to take rides
+
+☐ App messaging explains that ShortHop is community participation, not gig work
+
+------------------------------------------------
+
+WHEELS PAGE INTERFACE
+
+☐ Wheels icon is clickable even when balance is zero
+
+☐ Tapping Wheels opens a new animated screen
+
+☐ Screen slides open smoothly
+
+☐ Large wheel balance bubble displayed at the top
+
+☐ Wheel balance bubble is visually larger than normal UI elements
+
+☐ Wheel icon and number are clearly visible
+
+------------------------------------------------
+
+REWARDS SECTION
+
+☐ “Rewards” section appears below Wheels balance
+
+☐ Initial reward options visible
+
+☐ Starbucks gift cards listed
+
+☐ Gas gift cards listed
+
+☐ Cash gift cards listed
+
+☐ Message displayed: “More rewards coming soon”
+
+------------------------------------------------
+
+DRIVER TIP FEATURE
+
+☐ After a hop is completed, riders can tip the driver
+
+☐ Tip options appear
+
+☐ Tip options include small amounts (ex: $1, $2, $3)
+
+☐ Custom tip option works
+
+☐ Driver receives the tip notification
+
+------------------------------------------------
+
+COMMUNITY DONATIONS
+
+☐ Community tab contains “Support ShortHop” section
+
+☐ Donation options visible
+
+☐ $0.50 option works
+
+☐ $1 option works
+
+☐ $5 option works
+
+☐ Custom donation option works
+
+------------------------------------------------
+
+WALK OPTION
+
+☐ After entering a destination, users are asked if they want to start walking
+
+☐ “Start Walking” option appears before driver search begins
+
+☐ Estimated walking time is displayed
+
+☐ Number of drivers heading that direction is shown
+
+☐ Riders can still request a hop while walking
+
+------------------------------------------------
+
+ROUTE-BASED DRIVER SYSTEM
+
+☐ Drivers remain on their original route
+
+☐ Drivers are not forced to detour
+
+☐ Riders are matched with drivers already heading in their direction
+
+☐ Drivers can see riders along their route
+
+☐ Riders can see how far along the driver’s route they will travel
+
+------------------------------------------------
+
+GPS SYSTEM UPDATE
+
+☐ GPS interface updated to look cleaner and more modern
+
+☐ Map loads smoothly
+
+☐ Driver route displayed with blue line
+
+☐ Direction arrow visible on driver route
+
+☐ Rider can see how far along the route they will travel
+
+☐ Driver can see riders located along their route
+
+------------------------------------------------
+
+GENERAL APP FUNCTION
+
+☐ No crashes after update
+
+☐ Navigation between screens works smoothly
+
+☐ Animations run smoothly
+
+☐ User profiles still function correctly
+
+☐ Ride request and hop completion still work correctly
+
+------------------------------------------------
+
+FINAL CONFIRMATION
+
+☐ All features above tested successfully
+
+☐ No bugs or broken screens found
+
+☐ App performance remains smooth
+
+☐ Ready for continued user testing

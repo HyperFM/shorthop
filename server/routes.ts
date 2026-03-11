@@ -293,6 +293,16 @@ export async function registerRoutes(
         priceCents = Math.floor((parseFloat(input.distanceMiles || "5") * 150));
       }
 
+      const payWithWheels = req.body.payWithWheels === true;
+      if (payWithWheels) {
+        const wheelsNeeded = Math.max(1, Math.ceil(priceCents / 100));
+        if (currentUser.credits < wheelsNeeded) {
+          return res.status(400).json({ message: `Not enough Wheels. You need ${wheelsNeeded} but have ${currentUser.credits}.` });
+        }
+        await storage.deductCredits(currentUser.id, wheelsNeeded);
+        priceCents = 0;
+      }
+
       const hop = await storage.createHop({
         walkerId: req.user.id,
         driverId: null,

@@ -115,7 +115,7 @@ export default function RewardStore() {
                 {user.credits || 0}
               </motion.p>
               <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed max-w-[240px] mx-auto">
-                1 Wheel = $1 in reward value
+                1 Wheel = $1 in reward value. Use Wheels for rewards or rides!
               </p>
             </div>
           </CardContent>
@@ -130,10 +130,10 @@ export default function RewardStore() {
         data-testid="card-philosophy"
       >
         <p className="text-xs text-foreground font-medium leading-relaxed">
-          "You're already heading that way. Helping someone along your route earns Wheels you can redeem for rewards."
+          "You're already heading that way. Drivers earn Wheels for giving hops, and riders earn Wheels for every completed ride too."
         </p>
         <p className="text-[10px] text-muted-foreground mt-1">
-          ShortHop is not gig work — it's community movement.
+          ShortHop is not gig work — it's community movement. Use Wheels for rewards or rides.
         </p>
       </motion.div>
 
