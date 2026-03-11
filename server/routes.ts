@@ -178,7 +178,7 @@ export async function registerRoutes(
         userId: user.id,
         type: "welcome",
         title: "Welcome to ShortHop! 🛞",
-        message: "You're one of the early people helping bring ShortHop to life in Lexington.",
+        message: "Hello! It was nice seeing you earlier — welcome aboard! You're one of the early people helping bring ShortHop to life in Lexington. We're still growing, so if you know anyone who could use a ride or wants to help others get around, share the app with them. Every person makes this community stronger!",
         isRead: false,
       });
 
