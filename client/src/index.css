@@ -4,11 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
-[class*="share-your-feedback"],
-iframe[src*="feedback"],
-div[data-testid*="feedback-widget"],
-#replit-feedback-button,
-.replit-ui-theme-root {
+body.hide-feedback [class*="share-your-feedback"],
+body.hide-feedback iframe[src*="feedback"],
+body.hide-feedback div[data-testid*="feedback-widget"],
+body.hide-feedback #replit-feedback-button,
+body.hide-feedback .replit-ui-theme-root {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;

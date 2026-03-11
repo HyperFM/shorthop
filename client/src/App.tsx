@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { FlashNotificationContainer } from "@/components/FlashNotification";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import { NavBar } from "@/components/NavBar";
 import { BottomTabBar } from "@/components/BottomTabBar";
@@ -43,10 +45,23 @@ function Router() {
   );
 }
 
+function FeedbackToggle() {
+  const { data: user } = useAuth();
+  useEffect(() => {
+    if (user) {
+      document.body.classList.add("hide-feedback");
+    } else {
+      document.body.classList.remove("hide-feedback");
+    }
+  }, [user]);
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <FeedbackToggle />
         <Toaster />
         <FlashNotificationContainer />
         <NavBar />
