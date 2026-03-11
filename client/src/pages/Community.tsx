@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield, Heart, DollarSign, Crown, Star } from "lucide-react";
+import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield, Heart, DollarSign, Crown, Star, Languages } from "lucide-react";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -30,6 +30,46 @@ type ChatMsg = {
   isAdminReply: boolean;
   createdAt: string;
 };
+
+function TranslateButton({ text, light }: { text: string; light?: boolean }) {
+  const { data: user } = useAuth();
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const userLang = (user as any)?.language || "en";
+
+  if (userLang === "en" && !text.match(/[^\u0000-\u007F]/)) return null;
+
+  const doTranslate = async () => {
+    if (translated) { setTranslated(null); return; }
+    setLoading(true);
+    try {
+      const res = await apiRequest("POST", "/api/translate", { text, from: "auto", to: userLang === "en" ? "en" : userLang });
+      const data = await res.json();
+      setTranslated(data.translated);
+    } catch {
+      showFlash("❌", "Translation failed", "error");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <button
+        onClick={doTranslate}
+        className={`flex items-center gap-0.5 text-[9px] mt-1 ${light ? "text-white/60 hover:text-white/90" : "text-muted-foreground hover:text-foreground"} transition-colors`}
+        data-testid="button-translate"
+      >
+        <Languages className="w-2.5 h-2.5" />
+        {loading ? "..." : translated ? "Show original" : "Translate"}
+      </button>
+      {translated && (
+        <p className={`text-xs mt-1 italic ${light ? "text-white/80" : "text-muted-foreground"}`}>
+          {translated}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function VipHyperChat({ user, onClose }: { user: any; onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -119,9 +159,12 @@ function VipHyperChat({ user, onClose }: { user: any; onClose: () => void }) {
                   </div>
                 )}
                 <p className={`text-sm leading-relaxed ${!isAdmin ? "text-white" : ""}`}>{m.message}</p>
-                <p className={`text-[9px] mt-1 ${!isAdmin ? "text-white/50" : "text-muted-foreground"}`}>
-                  {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className={`text-[9px] mt-1 ${!isAdmin ? "text-white/50" : "text-muted-foreground"}`}>
+                    {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                  <TranslateButton text={m.message} light={!isAdmin} />
+                </div>
               </div>
             </div>
           );
@@ -234,9 +277,12 @@ function FoundersGroupChat({ user }: { user: any }) {
                     {isAdmin && <Shield className="w-2.5 h-2.5 text-purple-500" />}
                   </div>
                   <p className={`text-xs leading-relaxed ${isMe && !isAdmin ? "text-white" : ""}`}>{m.message}</p>
-                  <p className={`text-[9px] mt-0.5 ${isMe && !isAdmin ? "text-white/50" : "text-muted-foreground"}`}>
-                    {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className={`text-[9px] mt-0.5 ${isMe && !isAdmin ? "text-white/50" : "text-muted-foreground"}`}>
+                      {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                    <TranslateButton text={m.message} light={isMe && !isAdmin} />
+                  </div>
                 </div>
               </div>
             );

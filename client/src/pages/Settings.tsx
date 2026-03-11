@@ -63,12 +63,23 @@ export default function Settings() {
     const raw = (user as any)?.interests;
     return raw ? raw.split(',').filter(Boolean) : [];
   });
+  const [language, setLanguage] = useState((user as any)?.language || "en");
+
+  useEffect(() => {
+    if (user) {
+      setBio((user as any)?.bio || "");
+      setLanguage((user as any)?.language || "en");
+      const raw = (user as any)?.interests;
+      setSelectedInterests(raw ? raw.split(',').filter(Boolean) : []);
+    }
+  }, [user]);
 
   const saveProfile = useMutation({
     mutationFn: async () => {
       await apiRequest("PATCH", "/api/user/profile", {
         bio: bio.trim() || null,
         interests: selectedInterests.join(',') || null,
+        language,
       });
     },
     onSuccess: () => {
@@ -235,6 +246,34 @@ export default function Settings() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <Label className="text-xs font-bold mb-1.5 block flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-green-500" />
+                  Language
+                </Label>
+                <Select value={language} onValueChange={setLanguage}>
+                  <SelectTrigger className="text-sm" data-testid="select-language">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="es">Español (Spanish)</SelectItem>
+                    <SelectItem value="fr">Français (French)</SelectItem>
+                    <SelectItem value="zh">中文 (Chinese)</SelectItem>
+                    <SelectItem value="ar">العربية (Arabic)</SelectItem>
+                    <SelectItem value="hi">हिन्दी (Hindi)</SelectItem>
+                    <SelectItem value="pt">Português (Portuguese)</SelectItem>
+                    <SelectItem value="ja">日本語 (Japanese)</SelectItem>
+                    <SelectItem value="ko">한국어 (Korean)</SelectItem>
+                    <SelectItem value="de">Deutsch (German)</SelectItem>
+                    <SelectItem value="sw">Kiswahili (Swahili)</SelectItem>
+                    <SelectItem value="tl">Tagalog (Filipino)</SelectItem>
+                    <SelectItem value="vi">Tiếng Việt (Vietnamese)</SelectItem>
+                    <SelectItem value="ru">Русский (Russian)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[9px] text-muted-foreground mt-0.5">Messages you receive will be auto-translated to your language</p>
+              </div>
               <div>
                 <Label className="text-xs font-bold mb-1.5 block">Bio</Label>
                 <Textarea

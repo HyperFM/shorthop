@@ -9,6 +9,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
+import { translateText, getLanguages } from "./translate";
 
 function sanitizeUser(user: any) {
   if (!user) return user;
@@ -718,10 +719,14 @@ export async function registerRoutes(
   app.patch('/api/user/profile', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests'];
+      const SUPPORTED_LANGUAGES = Object.keys(getLanguages());
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language'];
       const updates: Record<string, any> = {};
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      if (updates.language && !SUPPORTED_LANGUAGES.includes(updates.language)) {
+        updates.language = "en";
       }
       if (Object.keys(updates).length === 0) return res.status(400).json({ message: "No valid fields" });
       const user = await storage.updateUser(req.user.id, updates);
@@ -1312,11 +1317,18 @@ export async function registerRoutes(
       const { reply } = req.body;
       if (!reply) return res.status(400).json({ message: "Reply required" });
       const msg = await storage.replyToContactMessage(Number(req.params.id), reply);
+      const targetUser = await storage.getUser(msg.userId);
+      const targetLang = targetUser?.language || "en";
+      let replyText = reply;
+      if (targetLang !== "en") {
+        const translated = await translateText(reply, "en", targetLang);
+        replyText = `${reply}\n\n🌐 [${targetLang}]: ${translated}`;
+      }
       await storage.createNotification({
         userId: msg.userId,
         type: "general",
         title: "Reply from ShortHop",
-        message: reply,
+        message: replyText,
         isRead: false,
       });
       res.json(msg);
@@ -1457,9 +1469,15 @@ export async function registerRoutes(
     try {
       const { message } = req.body;
       if (!message) return res.status(400).json({ message: "Message required" });
+      const userLang = user.language || "en";
+      let storedMessage = message;
+      if (userLang !== "en") {
+        const translated = await translateText(message, userLang, "en");
+        storedMessage = `${message}\n\n🌐 [EN]: ${translated}`;
+      }
       const msg = await storage.createFounderMessage({
         userId: req.user.id,
-        message,
+        message: storedMessage,
         isAdminReply: req.user.isAdmin || false,
       });
       if (!req.user.isAdmin) {
@@ -1520,9 +1538,17 @@ export async function registerRoutes(
     try {
       const { message } = req.body;
       if (!message) return res.status(400).json({ message: "Message required" });
+      const userLang = user.language || "en";
+      let translatedMessage = message;
+      if (userLang !== "en") {
+        translatedMessage = await translateText(message, userLang, "en");
+      }
+      const storedMessage = userLang !== "en"
+        ? `${message}\n\n🌐 [Auto-translated to English]: ${translatedMessage}`
+        : message;
       const msg = await storage.createVipMessage({
         userId: req.user.id,
-        message,
+        message: storedMessage,
         isAdminReply: false,
       });
       const admins = (await storage.getAllUsers()).filter(u => u.isAdmin);
@@ -1531,7 +1557,7 @@ export async function registerRoutes(
           userId: admin.id,
           type: "general",
           title: "VIP DM from " + user.username,
-          message: message.substring(0, 100),
+          message: translatedMessage.substring(0, 100),
           isRead: false,
         });
       }
@@ -1564,16 +1590,23 @@ export async function registerRoutes(
       const targetUserId = Number(req.params.userId);
       const { message } = req.body;
       if (!message) return res.status(400).json({ message: "Message required" });
+      const targetUser = await storage.getUser(targetUserId);
+      const targetLang = targetUser?.language || "en";
+      let storedMessage = message;
+      if (targetLang !== "en") {
+        const translated = await translateText(message, "en", targetLang);
+        storedMessage = `${message}\n\n🌐 [Auto-translated to ${targetLang}]: ${translated}`;
+      }
       const msg = await storage.createVipMessage({
         userId: targetUserId,
-        message,
+        message: storedMessage,
         isAdminReply: true,
       });
       await storage.createNotification({
         userId: targetUserId,
         type: "general",
         title: "Message from Hyper",
-        message: message.substring(0, 100),
+        message: storedMessage.substring(0, 100),
         isRead: false,
       });
       res.json(msg);
@@ -1800,6 +1833,22 @@ export async function registerRoutes(
       });
     } catch (e: any) {
       res.status(500).json({ message: e.message || "Failed to get account" });
+    }
+  });
+
+  app.get('/api/languages', (_req, res) => {
+    res.json(getLanguages());
+  });
+
+  app.post('/api/translate', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const { text, from, to } = req.body;
+    if (!text || !to) return res.status(400).json({ message: "Missing text or target language" });
+    try {
+      const translated = await translateText(text, from || "en", to);
+      res.json({ translated, from: from || "en", to });
+    } catch {
+      res.json({ translated: text, from: from || "en", to });
     }
   });
 

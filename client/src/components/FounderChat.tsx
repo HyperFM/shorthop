@@ -5,9 +5,49 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Send, Shield, Loader2 } from "lucide-react";
+import { Crown, Send, Shield, Loader2, Languages } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
+
+function ChatTranslateButton({ text, light }: { text: string; light?: boolean }) {
+  const { data: user } = useAuth();
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const userLang = (user as any)?.language || "en";
+
+  if (userLang === "en" && !text.match(/[^\u0000-\u007F]/)) return null;
+
+  const doTranslate = async () => {
+    if (translated) { setTranslated(null); return; }
+    setLoading(true);
+    try {
+      const res = await apiRequest("POST", "/api/translate", { text, from: "auto", to: userLang === "en" ? "en" : userLang });
+      const data = await res.json();
+      setTranslated(data.translated);
+    } catch {
+      showFlash("❌", "Translation failed", "error");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <button
+        onClick={doTranslate}
+        className={`flex items-center gap-0.5 text-[9px] mt-1 ${light ? "text-white/60 hover:text-white/90" : "text-muted-foreground hover:text-foreground"} transition-colors`}
+        data-testid="button-translate"
+      >
+        <Languages className="w-2.5 h-2.5" />
+        {loading ? "..." : translated ? "Show original" : "Translate"}
+      </button>
+      {translated && (
+        <p className={`text-xs mt-1 italic ${light ? "text-white/80" : "text-muted-foreground"}`}>
+          {translated}
+        </p>
+      )}
+    </div>
+  );
+}
 
 type ChatMessage = {
   id: number;
@@ -104,11 +144,14 @@ export function FounderChat({ isAdminView = false }: { isAdminView?: boolean }) 
                   <p className={`text-xs leading-relaxed ${
                     isMe && !isAdmin ? "text-white" : ""
                   }`}>{m.message}</p>
-                  <p className={`text-[9px] mt-0.5 ${
-                    isMe && !isAdmin ? "text-white/50" : "text-muted-foreground"
-                  }`}>
-                    {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className={`text-[9px] mt-0.5 ${
+                      isMe && !isAdmin ? "text-white/50" : "text-muted-foreground"
+                    }`}>
+                      {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                    <ChatTranslateButton text={m.message} light={isMe && !isAdmin} />
+                  </div>
                 </div>
               </div>
             );

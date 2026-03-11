@@ -16,7 +16,25 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import { MapPin, Bell, Loader2, Phone } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import circleImg from '@assets/CF1B7305-B114-452D-A723-927238626E41_1772922571220.png';
+
+const WELCOME_PHRASES = [
+  { text: "Welcome, New Hopper!", lang: "English" },
+  { text: "¡Bienvenido, Nuevo Hopper!", lang: "Español" },
+  { text: "Bienvenue, Nouveau Hopper!", lang: "Français" },
+  { text: "欢迎，新 Hopper！", lang: "中文" },
+  { text: "مرحبًا، هوبر جديد!", lang: "العربية" },
+  { text: "स्वागत है, नए Hopper!", lang: "हिन्दी" },
+  { text: "Bem-vindo, Novo Hopper!", lang: "Português" },
+  { text: "ようこそ、新しい Hopper！", lang: "日本語" },
+  { text: "환영합니다, 새 Hopper!", lang: "한국어" },
+  { text: "Willkommen, Neuer Hopper!", lang: "Deutsch" },
+  { text: "Karibu, Hopper Mpya!", lang: "Kiswahili" },
+  { text: "Maligayang Pagdating, Bagong Hopper!", lang: "Tagalog" },
+  { text: "Chào mừng, Hopper mới!", lang: "Tiếng Việt" },
+  { text: "Добро пожаловать, новый Hopper!", lang: "Русский" },
+];
 
 export default function Auth() {
   const [location] = useLocation();
@@ -33,6 +51,14 @@ export default function Auth() {
 
   const loginMutation = useLogin();
   const registerMutation = useRegister();
+
+  const [welcomeIndex, setWelcomeIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWelcomeIndex(i => (i + 1) % WELCOME_PHRASES.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -117,7 +143,20 @@ export default function Auth() {
 
         <Card className="w-full max-w-md mx-auto shadow-xl border-border/50">
           <CardHeader className="space-y-1 text-center pb-6">
-            <CardTitle className="text-3xl font-display font-bold">Welcome back</CardTitle>
+            <div className="h-14 relative overflow-hidden" data-testid="welcome-rotating">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={welcomeIndex}
+                  initial={{ y: 30, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -30, opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute inset-0 flex flex-col items-center justify-center"
+                >
+                  <CardTitle className="text-2xl font-display font-bold text-primary">{WELCOME_PHRASES[welcomeIndex].text}</CardTitle>
+                </motion.div>
+              </AnimatePresence>
+            </div>
             <CardDescription className="text-base">Login or create an account to get started</CardDescription>
           </CardHeader>
           <CardContent>

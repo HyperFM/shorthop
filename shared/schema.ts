@@ -51,6 +51,7 @@ export const users = pgTable("users", {
   driverQuestionnaireCompleted: boolean("driver_questionnaire_completed").default(false),
   bio: text("bio"),
   interests: text("interests"),
+  language: text("language").default("en"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

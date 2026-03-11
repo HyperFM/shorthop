@@ -7,10 +7,46 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { FounderChat } from "@/components/FounderChat";
+
+function AdminTranslateButton({ text, light }: { text: string; light?: boolean }) {
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const doTranslate = async () => {
+    if (translated) { setTranslated(null); return; }
+    setLoading(true);
+    try {
+      const res = await apiRequest("POST", "/api/translate", { text, from: "auto", to: "en" });
+      const data = await res.json();
+      setTranslated(data.translated);
+    } catch {
+      showFlash("❌", "Translation failed", "error");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <button
+        onClick={doTranslate}
+        className={`flex items-center gap-0.5 text-[9px] mt-1 ${light ? "text-white/60 hover:text-white/90" : "text-muted-foreground hover:text-foreground"} transition-colors`}
+        data-testid="button-admin-translate"
+      >
+        <Languages className="w-2.5 h-2.5" />
+        {loading ? "..." : translated ? "Show original" : "Translate"}
+      </button>
+      {translated && (
+        <p className={`text-xs mt-1 italic ${light ? "text-white/80" : "text-muted-foreground"}`}>
+          {translated}
+        </p>
+      )}
+    </div>
+  );
+}
 
 type AdminStats = {
   totalUsers: number;
@@ -387,6 +423,7 @@ export default function Admin() {
                 </div>
                 <p className="text-xs font-bold">{msg.subject}</p>
                 <p className="text-xs text-muted-foreground">{msg.message}</p>
+                <AdminTranslateButton text={msg.message} />
                 {msg.adminReply && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-2">
                     <p className="text-[10px] font-bold text-green-700">Your reply:</p>
@@ -855,9 +892,12 @@ export default function Admin() {
                             </span>
                           </div>
                           <p className={`text-xs leading-relaxed ${m.isAdminReply ? "text-white" : ""}`}>{m.message}</p>
-                          <p className={`text-[9px] mt-0.5 ${m.isAdminReply ? "text-white/50" : "text-muted-foreground"}`}>
-                            {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </p>
+                          <div className="flex items-center justify-between">
+                            <p className={`text-[9px] mt-0.5 ${m.isAdminReply ? "text-white/50" : "text-muted-foreground"}`}>
+                              {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                            <AdminTranslateButton text={m.message} light={m.isAdminReply} />
+                          </div>
                         </div>
                       </div>
                     ))}
