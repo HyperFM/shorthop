@@ -10,6 +10,12 @@ import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 
+function sanitizeUser(user: any) {
+  if (!user) return user;
+  const { password, ...safe } = user;
+  return safe;
+}
+
 declare module "express-session" {
   interface SessionData {
     userId: number;
@@ -178,7 +184,7 @@ export async function registerRoutes(
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json(user);
+        res.status(201).json(sanitizeUser(user));
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -202,13 +208,13 @@ export async function registerRoutes(
     }
     req.session.save((err) => {
       if (err) console.error("Session save error:", err);
-      res.status(200).json(req.user);
+      res.status(200).json(sanitizeUser(req.user));
     });
   });
 
   app.get(api.auth.me.path, (req, res) => {
     if (req.isAuthenticated()) {
-      res.status(200).json(req.user);
+      res.status(200).json(sanitizeUser(req.user));
     } else {
       res.status(401).json({ message: "Unauthorized" });
     }
