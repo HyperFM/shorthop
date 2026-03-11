@@ -1611,6 +1611,111 @@ export async function registerRoutes(
     }
   });
 
+  // Stripe Connect for driver cashouts
+  app.post('/api/stripe/connect-onboard', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const stripe = await getUncachableStripeClient();
+      const user = await storage.getUser(req.user.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      let accountId = user.stripeAccountId;
+
+      if (!accountId) {
+        const account = await stripe.accounts.create({
+          type: 'express',
+          metadata: { userId: String(user.id), username: user.username },
+          settings: { payouts: { schedule: { interval: 'manual' } } },
+        });
+        accountId = account.id;
+        await storage.updateUser(user.id, { stripeAccountId: accountId });
+      }
+
+      const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+      const accountLink = await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: `https://${domain}/rewards?stripe=refresh`,
+        return_url: `https://${domain}/rewards?stripe=success`,
+        type: 'account_onboarding',
+      });
+      res.json({ url: accountLink.url });
+    } catch (e: any) {
+      console.error('Stripe Connect onboard error:', e.message);
+      res.status(500).json({ message: "Failed to start Stripe setup" });
+    }
+  });
+
+  app.get('/api/stripe/connect-status', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !user.stripeAccountId) {
+        return res.json({ connected: false, payoutsEnabled: false });
+      }
+      const stripe = await getUncachableStripeClient();
+      const account = await stripe.accounts.retrieve(user.stripeAccountId);
+      const payoutsEnabled = account.payouts_enabled || false;
+
+      if (payoutsEnabled !== user.stripePayoutsEnabled) {
+        await storage.updateUser(user.id, { stripePayoutsEnabled: payoutsEnabled });
+      }
+
+      res.json({
+        connected: true,
+        payoutsEnabled,
+        chargesEnabled: account.charges_enabled,
+        accountId: user.stripeAccountId,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message || "Failed to check status" });
+    }
+  });
+
+  app.post('/api/stripe/driver-cashout', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const amount = Math.floor(Number(req.body.amount));
+      if (!amount || amount < 5) {
+        return res.status(400).json({ message: "Minimum cashout is 5 Wheels" });
+      }
+      const user = await storage.getUser(req.user.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (!user.stripeAccountId) return res.status(400).json({ message: "Stripe not connected" });
+      if ((user.credits || 0) < amount) {
+        return res.status(400).json({ message: `Not enough Wheels. You have ${user.credits || 0}.` });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const account = await stripe.accounts.retrieve(user.stripeAccountId);
+      if (!account.payouts_enabled) {
+        return res.status(400).json({ message: "Stripe account setup not complete. Please finish onboarding." });
+      }
+
+      const amountCents = amount * 100;
+      const transfer = await stripe.transfers.create({
+        amount: amountCents,
+        currency: 'usd',
+        destination: user.stripeAccountId,
+        metadata: { userId: String(user.id), wheels: String(amount) },
+      });
+
+      const cashout = await storage.createCashoutAtomic(user.id, amount, "stripe", `Stripe (${user.stripeAccountId})`);
+
+      await storage.createNotification({
+        userId: user.id,
+        type: "reward",
+        title: "Stripe Cashout Sent! 💰",
+        message: `$${amount}.00 has been sent to your Stripe account.`,
+        isRead: false,
+      });
+
+      res.json({ ...cashout, transferId: transfer.id });
+    } catch (e: any) {
+      console.error('Stripe driver cashout error:', e.message);
+      res.status(500).json({ message: e.message || "Failed to process Stripe cashout" });
+    }
+  });
+
   // Stripe payment routes
   app.post('/api/stripe/create-hop-payment', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });

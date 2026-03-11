@@ -42,7 +42,7 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Super Admin Role**: A single, designated super-admin account (HyperFM) with exclusive access to critical admin functions.
 
 ## External Dependencies
-- **Stripe**: Payment gateway for subscriptions and payouts. Integrated with a connected Stripe account (`acct_1T9cTFEPpyO5NSxU`). Environment variables: `STRIPE_SECRET_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`.
+- **Stripe**: Payment gateway for hop payments and driver cashouts. Connected account: `acct_1T9cTFEPpyO5NSxU`. Env vars: `STRIPE_SECRET_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`. Stripe Connect Express for driver bank payouts (stripe_account_id, stripe_payouts_enabled columns). Trust proxy enabled for production session cookies.
 - **React**: Frontend library.
 - **Vite**: Build tool for frontend.
 - **Tailwind CSS**: Utility-first CSS framework.

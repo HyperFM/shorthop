@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, DollarSign, CreditCard, Building2, Smartphone, Check, Loader2, ChevronRight, Clock, CircleDollarSign } from "lucide-react";
+import { Wallet, DollarSign, CreditCard, Building2, Smartphone, Check, Loader2, ChevronRight, Clock, CircleDollarSign, ExternalLink, Zap } from "lucide-react";
 import { showFlash } from "@/components/FlashNotification";
 
 const PAYMENT_METHODS = [
+  { id: "stripe", label: "Stripe", placeholder: "Direct bank deposit via Stripe", icon: CreditCard, color: "from-indigo-500 to-purple-600", isStripe: true },
   { id: "cashapp", label: "Cash App", placeholder: "$cashtag", icon: CircleDollarSign, color: "from-green-500 to-green-600" },
   { id: "venmo", label: "Venmo", placeholder: "@username", icon: Smartphone, color: "from-blue-500 to-blue-600" },
   { id: "paypal", label: "PayPal", placeholder: "email@example.com", icon: DollarSign, color: "from-blue-600 to-indigo-600" },
@@ -38,6 +39,53 @@ export default function RewardStore() {
   const { data: cashouts = [] } = useQuery<CashoutItem[]>({
     queryKey: ["/api/cashouts"],
   });
+
+  const { data: stripeStatus } = useQuery<{ connected: boolean; payoutsEnabled: boolean; accountId?: string }>({
+    queryKey: ["/api/stripe/connect-status"],
+  });
+
+  const stripeOnboard = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/stripe/connect-onboard");
+      return res.json();
+    },
+    onSuccess: (data: { url: string }) => {
+      window.location.href = data.url;
+    },
+    onError: () => {
+      showFlash("❌", "Failed to start Stripe setup", "error");
+    },
+  });
+
+  const stripeCashout = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/stripe/driver-cashout", { amount: Number(cashoutAmount) });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cashouts"] });
+      setCashoutAmount("");
+      showFlash("💰", `$${cashoutAmount} sent to your bank via Stripe!`, "success");
+    },
+    onError: (e: any) => {
+      showFlash("❌", e.message || "Stripe cashout failed", "error");
+    },
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stripeParam = params.get("stripe");
+    if (stripeParam === "success") {
+      queryClient.invalidateQueries({ queryKey: ["/api/stripe/connect-status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      showFlash("✅", "Stripe account connected!", "success");
+      window.history.replaceState({}, "", "/rewards");
+    } else if (stripeParam === "refresh") {
+      showFlash("⚠️", "Stripe setup needs to be completed", "info");
+      window.history.replaceState({}, "", "/rewards");
+    }
+  }, []);
 
   const savePayment = useMutation({
     mutationFn: async () => {
@@ -199,7 +247,64 @@ export default function RewardStore() {
                   ))}
                 </div>
 
-                {selectedMethod && showPaymentSetup && (
+                {selectedMethod && showPaymentSetup && selectedMethod === "stripe" && (
+                  <div className="space-y-2 pt-2">
+                    {stripeStatus?.connected && stripeStatus?.payoutsEnabled ? (
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                        <Check className="w-5 h-5 text-green-500" />
+                        <div className="flex-1">
+                          <p className="text-sm font-bold text-green-700">Stripe Connected</p>
+                          <p className="text-[10px] text-muted-foreground">Your bank account is linked and ready for payouts.</p>
+                        </div>
+                      </div>
+                    ) : stripeStatus?.connected ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-amber-600 font-medium">Stripe setup incomplete. Finish connecting your bank account.</p>
+                        <Button
+                          className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold"
+                          disabled={stripeOnboard.isPending}
+                          onClick={() => stripeOnboard.mutate()}
+                          data-testid="button-stripe-continue"
+                        >
+                          {stripeOnboard.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                            <><ExternalLink className="w-4 h-4 mr-2" /> Continue Stripe Setup</>
+                          )}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">Connect your bank account through Stripe for direct deposits. Fast, secure, and automatic.</p>
+                        <Button
+                          className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold"
+                          disabled={stripeOnboard.isPending}
+                          onClick={() => stripeOnboard.mutate()}
+                          data-testid="button-stripe-connect"
+                        >
+                          {stripeOnboard.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                            <><Zap className="w-4 h-4 mr-2" /> Connect with Stripe</>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1 bg-secondary hover:bg-secondary/90 text-white font-bold"
+                        disabled={!stripeStatus?.payoutsEnabled || savePayment.isPending}
+                        onClick={() => { setHandle("Stripe Direct Deposit"); savePayment.mutate(); }}
+                        data-testid="button-save-stripe"
+                      >
+                        {savePayment.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : stripeStatus?.payoutsEnabled ? "Use Stripe for Cashouts" : "Complete Setup First"}
+                      </Button>
+                      {hasPayment && (
+                        <Button variant="outline" onClick={() => setShowPaymentSetup(false)} data-testid="button-cancel-payment">
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedMethod && showPaymentSetup && selectedMethod !== "stripe" && (
                   <div className="space-y-2 pt-2">
                     <Input
                       placeholder={PAYMENT_METHODS.find(m => m.id === selectedMethod)?.placeholder || "Enter details"}
@@ -294,24 +399,49 @@ export default function RewardStore() {
                     Max
                   </Button>
                 </div>
-                <Button
-                  className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-base"
-                  disabled={!canCashout || requestCashout.isPending}
-                  onClick={() => requestCashout.mutate()}
-                  data-testid="button-cashout"
-                >
-                  {requestCashout.isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <DollarSign className="w-5 h-5 mr-1" />
-                      Cash Out {cashoutAmount ? `$${Number(cashoutAmount).toFixed(2)}` : ""}
-                    </>
-                  )}
-                </Button>
-                <p className="text-[10px] text-center text-muted-foreground">
-                  Sent to your {currentMethod?.label || "payment method"}. Processing may take 1-3 business days.
-                </p>
+                {(user as any).paymentMethod === "stripe" ? (
+                  <>
+                    <Button
+                      className="w-full h-12 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-base"
+                      disabled={!canCashout || stripeCashout.isPending}
+                      onClick={() => stripeCashout.mutate()}
+                      data-testid="button-stripe-cashout"
+                    >
+                      {stripeCashout.isPending ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5 mr-1" />
+                          Stripe Cashout {cashoutAmount ? `$${Number(cashoutAmount).toFixed(2)}` : ""}
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-[10px] text-center text-muted-foreground">
+                      Sent directly to your bank via Stripe. Usually arrives in 1-2 business days.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-base"
+                      disabled={!canCashout || requestCashout.isPending}
+                      onClick={() => requestCashout.mutate()}
+                      data-testid="button-cashout"
+                    >
+                      {requestCashout.isPending ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <DollarSign className="w-5 h-5 mr-1" />
+                          Cash Out {cashoutAmount ? `$${Number(cashoutAmount).toFixed(2)}` : ""}
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-[10px] text-center text-muted-foreground">
+                      Sent to your {currentMethod?.label || "payment method"}. Processing may take 1-3 business days.
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </CardContent>

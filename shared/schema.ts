@@ -41,6 +41,8 @@ export const users = pgTable("users", {
   notificationsEnabled: boolean("notifications_enabled").default(false),
   paymentMethod: text("payment_method"),
   paymentHandle: text("payment_handle"),
+  stripeAccountId: text("stripe_account_id"),
+  stripePayoutsEnabled: boolean("stripe_payouts_enabled").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
