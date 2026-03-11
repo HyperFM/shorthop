@@ -37,6 +37,8 @@ export const users = pgTable("users", {
   agreedToTerms: boolean("agreed_to_terms").default(false),
   isAdmin: boolean("is_admin").default(false),
   isDisabled: boolean("is_disabled").default(false),
+  paymentMethod: text("payment_method"),
+  paymentHandle: text("payment_handle"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
