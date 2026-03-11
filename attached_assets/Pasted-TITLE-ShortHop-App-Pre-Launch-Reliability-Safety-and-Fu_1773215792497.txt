@@ -1,0 +1,303 @@
+TITLE: ShortHop App – Pre-Launch Reliability, Safety, and Functionality Requirements
+
+PROJECT GOAL  
+ShortHop is a lightweight ride-hop platform designed for short local rides within a city (starting with Lexington, Kentucky). The system must be simple enough for drivers to activate routes quickly while driving around, and simple enough for riders to request a hop in under 10 seconds.
+
+The app must prioritize reliability, notifications, and a clean driver activation system so that early users do not experience confusion or dead systems.
+
+This document outlines the required functionality, safety features, and launch checklist before public flyer distribution begins.
+
+--------------------------------------------------
+
+CORE PRODUCT PRINCIPLES
+
+1. Simplicity
+Users should be able to understand how to use the app within seconds.
+
+2. Speed
+All actions must require minimal taps.
+
+3. Reliability
+Notifications and driver activation must always function.
+
+4. Safety
+Basic identity verification must exist even if full background checks are not implemented yet.
+
+5. Local Density
+The system is optimized for a single city test environment (Lexington).
+
+--------------------------------------------------
+
+DRIVER ONBOARDING FLOW
+
+Drivers must be able to join quickly while still providing basic verification.
+
+Required steps:
+
+1. Download app
+2. Create driver account
+3. Upload driver's license photo
+4. Take a selfie for identity confirmation
+5. Enter vehicle information:
+   - make
+   - model
+   - color
+   - license plate
+6. Accept driver agreement and terms
+7. Enable notifications
+8. Set preferred routes or zones
+9. Press "GO ACTIVE"
+
+Driver onboarding must take under 2 minutes.
+
+--------------------------------------------------
+
+DRIVER ACTIVE MODE
+
+Drivers must have a clear toggle:
+
+GO ACTIVE  
+GO OFFLINE
+
+When GO ACTIVE is enabled:
+
+• driver location updates automatically  
+• saved routes activate  
+• driver becomes available for hop requests  
+• push notifications begin  
+
+Drivers must be able to run the app in the background while driving.
+
+--------------------------------------------------
+
+ROUTE SYSTEM
+
+Drivers can optionally define:
+
+• common routes  
+• operating zones  
+• areas they frequently drive
+
+Examples:
+Downtown Lexington  
+University of Kentucky area  
+Campus nightlife zones
+
+Routes activate automatically when drivers go active.
+
+--------------------------------------------------
+
+RIDER FLOW
+
+Rider experience must be extremely simple.
+
+Step 1  
+Open app
+
+Step 2  
+Enter pickup location
+
+Step 3  
+Tap REQUEST HOP
+
+System then:
+
+• searches for nearby active drivers  
+• sends notifications to drivers  
+• allows the closest driver to accept
+
+Rider should see:
+
+• driver name  
+• vehicle information  
+• ETA estimate
+
+--------------------------------------------------
+
+NOTIFICATION SYSTEM (CRITICAL)
+
+Push notifications must function reliably.
+
+Driver notifications:
+
+"HOP REQUEST NEAR YOU"
+
+Driver must be able to:
+
+• accept  
+• decline
+
+If driver does not respond within time limit:
+
+system sends request to next driver.
+
+Notifications must function even when the app is in the background.
+
+--------------------------------------------------
+
+LOCATION AND MATCHING
+
+The system must track:
+
+• driver location  
+• rider pickup location
+
+Matching logic:
+
+1. find nearest available driver
+2. prioritize drivers already traveling toward route
+3. notify closest drivers first
+
+Precision does not need to match Uber-level mapping yet but must work reliably within city blocks.
+
+--------------------------------------------------
+
+BASIC SAFETY LAYER
+
+Even without full background checks, the system must implement basic verification.
+
+Driver requirements:
+
+• license upload
+• selfie verification
+• vehicle registration
+• license plate recorded
+
+Optional future feature:
+
+third-party background check integration.
+
+--------------------------------------------------
+
+RATING SYSTEM
+
+After each ride:
+
+riders rate drivers  
+drivers rate riders
+
+Low-rated users may be flagged or removed.
+
+--------------------------------------------------
+
+ACCOUNTABILITY LOGS
+
+System should log:
+
+• ride requests
+• driver acceptances
+• driver cancellations
+• user reports
+
+This protects the platform and improves safety.
+
+--------------------------------------------------
+
+TERMS OF SERVICE
+
+Drivers must agree to:
+
+• they are independent drivers
+• they must follow local driving laws
+• they must maintain insurance
+
+--------------------------------------------------
+
+LAUNCH ZONE
+
+Initial launch area should be limited to:
+
+University of Kentucky area  
+Downtown Lexington
+
+This keeps driver density high.
+
+--------------------------------------------------
+
+MINIMUM DRIVER TARGET
+
+Before wide promotion:
+
+Recruit 15–25 drivers with:
+
+• app installed
+• notifications enabled
+• routes set
+• active testing participation
+
+--------------------------------------------------
+
+TESTING PROTOCOL BEFORE FLYERS
+
+Before distributing flyers, run the following tests:
+
+Test 1  
+Driver signup test
+
+Test 2  
+Driver activation test
+
+Test 3  
+Hop request test
+
+Test 4  
+Push notification test
+
+Test 5  
+Driver accept ride test
+
+Test 6  
+Location matching test
+
+Each test must work multiple times.
+
+--------------------------------------------------
+
+MANUAL BACKUP SYSTEM
+
+If automated matching fails:
+
+Admin panel must allow manual notification to drivers.
+
+This ensures early riders are not abandoned.
+
+--------------------------------------------------
+
+ADMIN PANEL
+
+Admin should be able to:
+
+• view active drivers
+• monitor ride requests
+• disable problem accounts
+• view system logs
+
+--------------------------------------------------
+
+PERFORMANCE REQUIREMENTS
+
+The system must:
+
+• load quickly
+• send notifications instantly
+• avoid crashes
+• support multiple simultaneous requests
+
+--------------------------------------------------
+
+FINAL PRE-LAUNCH CHECKLIST
+
+Before flyer distribution confirm:
+
+✔ driver onboarding works  
+✔ driver activation works  
+✔ notifications work  
+✔ rider request works  
+✔ drivers receive requests  
+✔ location matching works  
+✔ admin dashboard works  
+✔ safety verification exists  
+
+--------------------------------------------------
+
+END OF DOCUMENT
