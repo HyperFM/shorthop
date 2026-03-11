@@ -2,18 +2,21 @@ import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, CarFront } from "lucide-react";
+import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, CarFront, X, Plus, Route, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useHops, useRequestHop } from "@/hooks/use-hops";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useHops, useRequestHop, useCancelHop } from "@/hooks/use-hops";
 import { NetworkProgress } from "@/components/NetworkProgress";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking, usePickupGuidance } from "@/hooks/use-location";
 import { PickupMapVisual } from "@/components/PickupMapVisual";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { User } from "@shared/routes";
 
 const searchSchema = z.object({
@@ -31,12 +34,20 @@ function getBadgeStyle(badge: string): { icon: typeof Flame; color: string } {
   return { icon: Award, color: "text-blue-500" };
 }
 
+type WalkerRouteData = { id: number; name: string; startLocation: string; endLocation: string };
+
 export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { user: User; canDrive?: boolean; onSwitchToDriver?: () => void }) {
   const { data: hops } = useHops();
   const requestHop = useRequestHop();
+  const cancelHop = useCancelHop();
+  const { toast } = useToast();
   const [showOptions, setShowOptions] = useState(false);
   const [locations, setLocations] = useState({ startLocation: "", endLocation: "" });
   const [subscriptionPlan, setSubscriptionPlan] = useState<"flex_hop" | "power_hop" | null>(null);
+  const [streakOpen, setStreakOpen] = useState(false);
+  const [hopsOpen, setHopsOpen] = useState(false);
+  const [savedRoutesOpen, setSavedRoutesOpen] = useState(false);
+  const [addRouteOpen, setAddRouteOpen] = useState(false);
 
   const { data: badges } = useQuery<{ id: number; badge: string; earnedAt: string | null }[]>({
     queryKey: ['/api/profile/badges'],
@@ -44,6 +55,35 @@ export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { 
 
   const { data: networkStats } = useQuery<{ totalUsers: number; totalDrivers: number; totalHoppers: number }>({
     queryKey: ['/api/network-stats'],
+  });
+
+  const { data: savedRoutes } = useQuery<WalkerRouteData[]>({
+    queryKey: ['/api/walker-routes'],
+  });
+
+  const addRoute = useMutation({
+    mutationFn: async (data: { name: string; startLocation: string; endLocation: string }) => {
+      const res = await apiRequest("POST", "/api/walker-routes", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/walker-routes'] });
+      setAddRouteOpen(false);
+      toast({ title: "Route saved!" });
+    },
+  });
+
+  const deleteRoute = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/walker-routes/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/walker-routes'] });
+    },
+  });
+
+  const routeForm = useForm({
+    defaultValues: { name: "", startLocation: "", endLocation: "" },
   });
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
@@ -170,13 +210,57 @@ export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { 
                   />
                 </div>
               </div>
-              <Button
-                type="submit"
-                className="w-full h-9 rounded-lg text-sm font-bold bg-gradient-to-r from-primary to-accent"
-                data-testid="button-find-options"
-              >
-                Find Options
-              </Button>
+
+              {savedRoutes && savedRoutes.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {savedRoutes.slice(0, 3).map((r) => (
+                    <Button
+                      key={r.id}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[10px] rounded-full px-2.5 gap-1 border-primary/20 text-primary"
+                      onClick={() => {
+                        form.setValue("startLocation", r.startLocation);
+                        form.setValue("endLocation", r.endLocation);
+                      }}
+                      data-testid={`button-saved-route-${r.id}`}
+                    >
+                      <Bookmark className="w-2.5 h-2.5" />
+                      {r.name}
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px] rounded-full px-2 text-muted-foreground"
+                    onClick={() => setSavedRoutesOpen(true)}
+                    data-testid="button-manage-routes"
+                  >
+                    {savedRoutes.length > 3 ? `+${savedRoutes.length - 3} more` : "Manage"}
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  className="flex-1 h-9 rounded-lg text-sm font-bold bg-gradient-to-r from-primary to-accent"
+                  data-testid="button-find-options"
+                >
+                  Find Options
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-lg text-sm px-3"
+                  onClick={() => setSavedRoutesOpen(true)}
+                  data-testid="button-open-saved-routes"
+                >
+                  <Route className="w-4 h-4" />
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -207,28 +291,41 @@ export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { 
               </div>
 
               {activeHop.status === 'requested' && (
-                <div className="bg-muted/50 rounded-lg p-2.5">
-                  {driversInCity > 0 ? (
-                    <div className="flex items-center gap-2 text-xs">
-                      <Car className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-muted-foreground">
-                        <strong className="text-foreground">{driversInCity}</strong> driver{driversInCity !== 1 ? 's' : ''} active in Lexington
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
+                <div className="space-y-2">
+                  <div className="bg-muted/50 rounded-lg p-2.5">
+                    {driversInCity > 0 ? (
                       <div className="flex items-center gap-2 text-xs">
-                        <Radio className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">No drivers currently heading your direction.</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Car className="w-3.5 h-3.5 text-primary" />
                         <span className="text-muted-foreground">
-                          Drivers in city: <strong className="text-foreground">{driversInCity}</strong> · Near you: <strong className="text-foreground">0</strong>
+                          <strong className="text-foreground">{driversInCity}</strong> driver{driversInCity !== 1 ? 's' : ''} active in Lexington
                         </span>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Radio className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-muted-foreground">No drivers currently heading your direction.</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-muted-foreground">
+                            Drivers in city: <strong className="text-foreground">{driversInCity}</strong> · Near you: <strong className="text-foreground">0</strong>
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-7 text-xs rounded-lg text-muted-foreground"
+                    onClick={() => cancelHop.mutate(activeHop.id)}
+                    disabled={cancelHop.isPending}
+                    data-testid="button-change-destination"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    {cancelHop.isPending ? "Cancelling..." : "Change Destination"}
+                  </Button>
                 </div>
               )}
 
@@ -462,7 +559,11 @@ export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { 
       </AnimatePresence>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <Card className="border-border/50 shadow-sm" data-testid="card-streak">
+        <Card
+          className="border-border/50 shadow-sm cursor-pointer hover:border-orange-400/40 transition-colors"
+          data-testid="card-streak"
+          onClick={() => setStreakOpen(true)}
+        >
           <CardContent className="p-3 flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white shadow-sm">
               <span className="text-base">🔥</span>
@@ -473,7 +574,11 @@ export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { 
             </div>
           </CardContent>
         </Card>
-        <Card className="border-border/50 shadow-sm" data-testid="card-total-hops">
+        <Card
+          className="border-border/50 shadow-sm cursor-pointer hover:border-primary/40 transition-colors"
+          data-testid="card-total-hops"
+          onClick={() => setHopsOpen(true)}
+        >
           <CardContent className="p-3 flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-sm">
               <span className="text-base">⭐</span>
@@ -583,6 +688,173 @@ export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { 
           onOpenChange={(open) => !open && setSubscriptionPlan(null)}
         />
       )}
+
+      <Dialog open={streakOpen} onOpenChange={setStreakOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="text-xl">🔥</span> Hop Streak
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {(user.hopStreak || 0) > 0 ? (
+              <>
+                <div className="text-center py-4">
+                  <p className="text-4xl font-black text-foreground">{user.hopStreak}</p>
+                  <p className="text-sm text-muted-foreground mt-1">day streak</p>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Keep hopping daily to build your streak! Streaks reset after 48 hours of inactivity.
+                </p>
+              </>
+            ) : (
+              <div className="text-center py-6 space-y-2" data-testid="text-no-streak">
+                <p className="text-3xl">🚶</p>
+                <p className="text-sm font-bold text-foreground">You haven't hopped anywhere yet</p>
+                <p className="text-xs text-muted-foreground">Request your first hop to start building your streak!</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={hopsOpen} onOpenChange={setHopsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="text-xl">⭐</span> Total Hops
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {(user.totalHops || 0) > 0 ? (
+              <>
+                <div className="text-center py-4">
+                  <p className="text-4xl font-black text-foreground">{user.totalHops}</p>
+                  <p className="text-sm text-muted-foreground mt-1">hops completed</p>
+                </div>
+                {hops && hops.filter(h => h.status === 'completed').length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Recent Hops</p>
+                    {hops.filter(h => h.status === 'completed').slice(0, 3).map((h) => (
+                      <div key={h.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-muted/30 text-xs">
+                        <span className="text-foreground truncate">{h.startLocation} → {h.endLocation}</span>
+                        <Badge variant="secondary" className="text-[9px] shrink-0 ml-2">{h.hopType.replace('_', ' ')}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-6 space-y-2" data-testid="text-no-hops">
+                <p className="text-3xl">🚶</p>
+                <p className="text-sm font-bold text-foreground">You haven't hopped anywhere yet</p>
+                <p className="text-xs text-muted-foreground">Enter a destination and request a hop to get started!</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={savedRoutesOpen} onOpenChange={setSavedRoutesOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Route className="w-5 h-5" /> My Routes
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {savedRoutes && savedRoutes.length > 0 ? (
+              <div className="space-y-2">
+                {savedRoutes.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30" data-testid={`saved-route-item-${r.id}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-foreground truncate">{r.name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{r.startLocation} → {r.endLocation}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-primary"
+                        onClick={() => {
+                          form.setValue("startLocation", r.startLocation);
+                          form.setValue("endLocation", r.endLocation);
+                          setSavedRoutesOpen(false);
+                        }}
+                        data-testid={`button-use-route-${r.id}`}
+                      >
+                        <Navigation className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => deleteRoute.mutate(r.id)}
+                        data-testid={`button-delete-route-${r.id}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 space-y-2">
+                <p className="text-3xl">📍</p>
+                <p className="text-xs text-muted-foreground">No saved routes yet. Add your usual destinations for quick access.</p>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full h-8 text-xs rounded-lg"
+              onClick={() => { setSavedRoutesOpen(false); setAddRouteOpen(true); }}
+              data-testid="button-add-route"
+            >
+              <Plus className="w-3 h-3 mr-1" /> Add Route
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addRouteOpen} onOpenChange={setAddRouteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Save a Route</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={routeForm.handleSubmit((data) => addRoute.mutate(data))}
+            className="space-y-3"
+          >
+            <Input
+              placeholder="Route name (e.g. Work, Grocery)"
+              className="h-9 text-sm"
+              data-testid="input-route-name"
+              {...routeForm.register("name", { required: true })}
+            />
+            <Input
+              placeholder="Start location"
+              className="h-9 text-sm"
+              data-testid="input-route-start"
+              {...routeForm.register("startLocation", { required: true })}
+            />
+            <Input
+              placeholder="End location"
+              className="h-9 text-sm"
+              data-testid="input-route-end"
+              {...routeForm.register("endLocation", { required: true })}
+            />
+            <Button
+              type="submit"
+              className="w-full h-9 rounded-lg text-sm font-bold"
+              disabled={addRoute.isPending}
+              data-testid="button-save-route"
+            >
+              {addRoute.isPending ? "Saving..." : "Save Route"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

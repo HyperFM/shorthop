@@ -364,6 +364,52 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/hops/:id/cancel', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hop = await storage.cancelHop(Number(req.params.id), req.user.id);
+      res.json(hop);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message || "Failed to cancel hop" });
+    }
+  });
+
+  app.get('/api/walker-routes', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const routes = await storage.getWalkerRoutes(req.user.id);
+      res.json(routes);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to fetch routes" });
+    }
+  });
+
+  app.post('/api/walker-routes', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const name = (req.body.name || "").trim();
+    const startLocation = (req.body.startLocation || "").trim();
+    const endLocation = (req.body.endLocation || "").trim();
+    if (!name || !startLocation || !endLocation) {
+      return res.status(400).json({ message: "Name, start and end locations required" });
+    }
+    try {
+      const route = await storage.createWalkerRoute({ userId: req.user.id, name, startLocation, endLocation });
+      res.json(route);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to save route" });
+    }
+  });
+
+  app.delete('/api/walker-routes/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.deleteWalkerRoute(Number(req.params.id), req.user.id);
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(500).json({ message: "Failed to delete route" });
+    }
+  });
+
   // Rewards
   app.get(api.rewards.list.path, async (req, res) => {
     try {

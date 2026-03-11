@@ -59,6 +59,29 @@ export function useAcceptHop() {
   });
 }
 
+export function useCancelHop() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/hops/${id}/cancel`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to cancel hop");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.hops.list.path] });
+      toast({ title: "Hop cancelled" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to cancel", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
 export function useCompleteHop() {
   const queryClient = useQueryClient();
   const { toast } = useToast();

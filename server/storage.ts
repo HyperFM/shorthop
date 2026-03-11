@@ -30,6 +30,9 @@ import {
   type InsertExpansionWaitlist,
   type ExpansionWaitlist,
   type UserBadge,
+  walkerRoutes,
+  type WalkerRoute,
+  type InsertWalkerRoute,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -63,6 +66,11 @@ export interface IStorage {
   createHop(hop: InsertShortHop): Promise<ShortHop>;
   acceptHop(hopId: number, driverId: number): Promise<ShortHop>;
   completeHop(hopId: number, distanceMiles: string): Promise<ShortHop>;
+  cancelHop(hopId: number, walkerId: number): Promise<ShortHop>;
+
+  getWalkerRoutes(userId: number): Promise<WalkerRoute[]>;
+  createWalkerRoute(route: InsertWalkerRoute): Promise<WalkerRoute>;
+  deleteWalkerRoute(id: number, userId: number): Promise<void>;
 
   getRewards(): Promise<Reward[]>;
   redeemReward(userId: number, rewardId: number): Promise<{ code: string; reward: Reward }>;
@@ -240,6 +248,30 @@ export class DatabaseStorage implements IStorage {
     }
 
     return updatedHop;
+  }
+
+  async cancelHop(hopId: number, walkerId: number): Promise<ShortHop> {
+    const [hop] = await db.select().from(shortHops).where(eq(shortHops.id, hopId));
+    if (!hop || hop.walkerId !== walkerId) throw new Error("Hop not found");
+    if (hop.status === 'completed' || hop.status === 'cancelled') throw new Error("Cannot cancel this hop");
+    const [updated] = await db.update(shortHops)
+      .set({ status: "cancelled" })
+      .where(eq(shortHops.id, hopId))
+      .returning();
+    return updated;
+  }
+
+  async getWalkerRoutes(userId: number): Promise<WalkerRoute[]> {
+    return await db.select().from(walkerRoutes).where(eq(walkerRoutes.userId, userId)).orderBy(desc(walkerRoutes.createdAt));
+  }
+
+  async createWalkerRoute(route: InsertWalkerRoute): Promise<WalkerRoute> {
+    const [newRoute] = await db.insert(walkerRoutes).values(route).returning();
+    return newRoute;
+  }
+
+  async deleteWalkerRoute(id: number, userId: number): Promise<void> {
+    await db.delete(walkerRoutes).where(and(eq(walkerRoutes.id, id), eq(walkerRoutes.userId, userId)));
   }
 
   async getRewards(): Promise<Reward[]> {

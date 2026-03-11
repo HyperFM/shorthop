@@ -126,6 +126,15 @@ export const communityPosts = pgTable("community_posts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const walkerRoutes = pgTable("walker_routes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  name: text("name").notNull(),
+  startLocation: text("start_location").notNull(),
+  endLocation: text("end_location").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   routineRoutes: many(routineRoutes),
   hopsAsWalker: many(shortHops, { relationName: "walker" }),
@@ -185,6 +194,10 @@ export type InsertExpansionWaitlist = z.infer<typeof insertExpansionWaitlistSche
 
 export type UserBadge = typeof userBadges.$inferSelect;
 export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+
+export const insertWalkerRouteSchema = createInsertSchema(walkerRoutes).omit({ id: true, createdAt: true });
+export type WalkerRoute = typeof walkerRoutes.$inferSelect;
+export type InsertWalkerRoute = z.infer<typeof insertWalkerRouteSchema>;
 
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

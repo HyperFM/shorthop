@@ -132,6 +132,8 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Ratings: POST /api/ratings
 - Profile: PUT /api/profile/preferences, POST /api/profile/dismiss-welcome
 - Driver: PUT /api/driver/flexibility, POST /api/toggle-driver-mode
+- Walker Routes: GET /api/walker-routes, POST /api/walker-routes, DELETE /api/walker-routes/:id
+- Cancel Hop: POST /api/hops/:id/cancel
 - Network: GET /api/network-stats
 
 ### Fun/Game-Like UI Theme
