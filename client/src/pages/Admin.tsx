@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { FounderChat } from "@/components/FounderChat";
@@ -100,6 +100,7 @@ export default function Admin() {
   const [replyText, setReplyText] = useState<Record<number, string>>({});
   const [resolveText, setResolveText] = useState<Record<number, string>>({});
   const [grantWheels, setGrantWheels] = useState<Record<number, string>>({});
+  const [userSearch, setUserSearch] = useState("");
 
   const { data: stats } = useQuery<AdminStats>({ queryKey: ["/api/admin/stats"] });
   const { data: allUsers } = useQuery<AdminUser[]>({ queryKey: ["/api/admin/users"], enabled: tab === "users" });
@@ -481,7 +482,20 @@ export default function Admin() {
 
       {tab === "users" && (
         <div className="space-y-2">
-          {allUsers?.map(u => (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search users by name..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="pl-9 h-9 text-sm rounded-full bg-muted/50 border-border/50"
+              data-testid="input-user-search"
+            />
+          </div>
+          {allUsers?.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase())).length === 0 && userSearch && (
+            <p className="text-xs text-muted-foreground text-center py-4" data-testid="text-no-users-found">No users matching "{userSearch}"</p>
+          )}
+          {allUsers?.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase())).map(u => (
             <Card key={u.id} className="border-border/50">
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
