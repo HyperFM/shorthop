@@ -159,9 +159,9 @@ export default function Settings() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-2xl">
-      <h1 data-testid="text-settings-title" className="text-4xl font-display font-bold mb-2">Settings</h1>
-      <p className="text-muted-foreground mb-8">Manage your preferences, ride vibe, and notifications.</p>
+    <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
+      <h1 data-testid="text-settings-title" className="text-xl font-display font-bold mb-1">Settings</h1>
+      <p className="text-xs text-muted-foreground mb-4">Manage your preferences and notifications.</p>
 
       <div className="space-y-6">
         {user && (

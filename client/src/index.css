@@ -229,4 +229,8 @@
     @apply absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out;
     background: linear-gradient(90deg, hsl(152, 65%, 42%), hsl(200, 70%, 50%), hsl(24, 90%, 60%));
   }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

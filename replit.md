@@ -1,7 +1,7 @@
 # Short Hop - Product Notes
 
-## Current Version (V4 - Community + FlexHop Update)
-Full community layer with user tiers, ride vibe preferences, hop buddy ratings, trusted hoppers, and community feed.
+## Current Version (V5 - App-Like UI Redesign)
+Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and streamlined dashboards. Drive Mode removed — anyone can register as a driver.
 
 ## Features
 
@@ -37,12 +37,14 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Shows username, content, timestamp
 
 ### Notification System
-- In-app notification center (bell icon with unread badge)
+- In-app notification center in bottom tab bar (Alerts tab)
 - Nearby hopper detection with simulated matching
 - Browser notification API integration
 - Notification settings with toggles
 
 ### Driver Features
+- Anyone can register as a driver (chosen at registration, requires background check)
+- NOT a subscription feature — Drive Mode removed
 - Routine routes (not shifts)
 - Wheels reward system (1 mile = 1 Wheel)
 - Flex Hop settings (detour distance/time)
@@ -50,71 +52,54 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 
 ### Subscription System
 - **Free tier**: Short Hop only (no subscription required)
-- **Flex Hop ($5/mo)**: Requires active subscription — allows small driver detours, dynamic pricing
-- **Power Hop ($15/mo)**: Requires active subscription — complete mobility freedom, unlimited rides
+- **Flex Hop ($5/mo)**: Allows small driver detours, dynamic pricing
+- **Power Hop ($15/mo)**: Complete mobility freedom, unlimited rides
+- First 25 founding members get Flex Hop free forever
 - Server enforces subscription check on `POST /api/hops/request` (403 if not subscribed)
 - Subscribe/cancel endpoints: `POST /api/subscription`, `DELETE /api/subscription`
 - Subscription management in Settings page (view active plan, cancel)
 - Schema fields: `subscription` (null | "flex_hop" | "power_hop"), `subscriptionStartDate` on users table
-- Session store: PostgreSQL-backed via `connect-pg-simple` (30-day persistent sessions survive server restarts)
-- Live GPS tracking: POST /api/location broadcasts user position, GET /api/hops/:id/tracking returns partner distance/direction
-- Pickup guidance: GET /api/pickup-guidance returns 3 nearest main road spots in Lexington
-- Interactive Leaflet/CartoDB dark map: blue pulsing marker (rider), green pulsing marker (driver when matched), blue dashed route line showing driver approach, green star markers for pickup spots
-- Tracking API (GET /api/hops/:id/tracking) returns partnerLat/partnerLng for real-time map positioning
-- Walker dashboard: compact widget-style layout (max-w-lg), destination input at top, driver status card with real network data, pickup corridor cards, conditional map (shows after destination entry or when matched), network growth CTA
-- WelcomeModal removed — no pop-up on dashboard load
-- "Keep me logged in" option on login form (saves username via localStorage)
+
+### App-Like UI
+- **Bottom Tab Bar**: Home / Community / Board / Settings / Alerts (fixed at bottom, only for authenticated users)
+- **NavBar**: Hidden for authenticated users (only shows for unauthenticated/landing page)
+- **Compact layouts**: All dashboard pages use `max-w-lg mx-auto` with tight padding
+- **App-style headers**: "Hey, {username}" greeting with small ShortHop label
+- **Mobile-first spacing**: Reduced padding, smaller typography, compact cards
 
 ### Growth Features & Viral Expansion
 - **Hop Streak System**: Tracks consecutive hops per user, resets after 48h inactivity
 - **Achievement Badges**: Automatically awarded at milestones (3, 10, 25, 50, 100 hops), stored in `user_badges` table
 - **Referral System**: Unique referral codes per user (generated at registration), referrer gets 5 Wheels, new user gets 3 Wheels
 - **Leaderboard**: /leaderboard page with 3 tabs: Most Hops, Top Drivers (by Wheels), Community Hoppers (by posts)
-- **Busy Route Notifications**: Simulated notifications when hoppers are active along driver routes (max 5/day)
 - **Shareable Ride Cards**: Post-ride share option via Web Share API
-- **Notification Limits**: Max 5 notifications per day per user enforced server-side
-- Schema fields added: `hopStreak`, `totalHops`, `lastHopDate`, `referralCode`, `referredBy` on users table
-
-### City Availability & Expansion System
-- City field on registration form ("What city are you in?")
-- Lexington users proceed to normal onboarding
-- Non-Lexington users see expansion modal explaining city-by-city rollout
-- "Notify Me" button collects phone number for expansion waitlist
-- Expansion waitlist stored in `expansion_waitlist` table (username, city, phone)
-- API endpoints: GET /api/expansion/check-city, POST /api/expansion/waitlist
-
-### Drive Mode (Dual-Role Accounts)
-- Walkers can activate "Drive Mode" to switch to the Driver Dashboard and accept hop requests
-- Requires Flex Hop subscription ($5/mo) OR founding member status (free forever)
-- Toggle via `POST /api/toggle-driver-mode` with `{ enable: boolean }` — server enforces subscription/founder check
-- Dashboard supports instant switching between Hopper and Driver modes
-- Drive Mode card shown in WalkerDashboard with unlock CTA or switch button
-- DriverDashboard shows "Switch to Hopper Mode" button when in dual-role mode
 
 ### Early Network & Growth System
-- Founding members: first 25 walkers = "Founding Hopper", first 25 drivers = "Founding Driver"
-- Founders get lifetime FlexHop tier + badge (auto-assigned at registration) + free Drive Mode
-- Welcome modal shown on first login with invite functionality (Web Share API)
-- Network progress card on both dashboards showing driver/hopper/total counts
+- Founding members: first 25 total (unified pool, not split by role)
+- Founders get lifetime FlexHop tier + badge (auto-assigned at registration)
+- Network progress card on dashboards showing driver/hopper/total counts
 - Milestone progress bar with founder spots remaining
-- Invite Friends button on both dashboards
-- Growth notification toggle in Settings
-- Schema fields: `isFounder`, `founderBadge`, `hasSeenWelcome` on users table
+- Invite Friends button on dashboards
+
+### Saved Routes (Walker)
+- Save/delete usual destinations with quick-select chips
+- Stored in `walker_routes` table
+- API: GET/POST /api/walker-routes, DELETE /api/walker-routes/:id
 
 ### Safety & Privacy
 - Block/report user (backend-ready)
 - Ride history logs
 - Community features fully optional
 - Profile privacy toggle in settings
-- All social interaction opt-in
 
 ### Pages
 - / - Home (landing page)
 - /auth - Login/Register
-- /dashboard - Walker or Driver dashboard (video animation while searching, timer on match, vibration + first-time tooltip)
+- /dashboard - Walker or Driver dashboard
 - /rewards - Reward Store (drivers)
 - /community - Community feed
 - /settings - Tier, ride vibe, notifications, privacy
+- /leaderboard - Leaderboard (3 tabs)
 - /privacy - Privacy policy
 - /support - Support & safety info
 - /artist - Artist page (HyperFM bio, photo, links)
@@ -122,41 +107,38 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 ## API Endpoints
 - Auth: POST /api/login, /api/register, GET /api/me, POST /api/logout
 - Routes: GET/POST /api/routes, DELETE /api/routes/:id
-- Hops: GET /api/hops, POST /api/hops/request, POST /api/hops/:id/accept, /api/hops/:id/complete
+- Hops: GET /api/hops, POST /api/hops/request, POST /api/hops/:id/accept, /api/hops/:id/complete, POST /api/hops/:id/cancel
 - Location: POST /api/location (broadcast GPS), GET /api/hops/:id/tracking (get partner distance/direction)
-- Pickup Guidance: GET /api/pickup-guidance?lat=&lng= (nearest 3 main road pickup spots in Lexington)
+- Pickup Guidance: GET /api/pickup-guidance?lat=&lng=
 - Rewards: GET /api/rewards, POST /api/rewards/:id/redeem
 - Notifications: GET /api/notifications, POST /api/notifications/:id/read, POST /api/notifications/read-all
 - Community: GET/POST /api/community
 - Follows: GET /api/follows, POST /api/follow/:id, DELETE /api/follow/:id
 - Ratings: POST /api/ratings
 - Profile: PUT /api/profile/preferences, POST /api/profile/dismiss-welcome
-- Driver: PUT /api/driver/flexibility, POST /api/toggle-driver-mode
+- Driver: PUT /api/driver/flexibility
 - Walker Routes: GET /api/walker-routes, POST /api/walker-routes, DELETE /api/walker-routes/:id
-- Cancel Hop: POST /api/hops/:id/cancel
 - Network: GET /api/network-stats
+- Subscription: POST /api/subscription, DELETE /api/subscription
 
-### Fun/Game-Like UI Theme
-- All pages use Framer Motion animations (bounce-in, float, wiggle, slide-up, shimmer)
-- Stat cards use gradient icon circles with emojis (🔥 Hop Streak, ⭐ Total Hops, 🛞 Wheels)
+### UI Theme
+- Nature-inspired greens (primary), orange (secondary), blue (accent)
+- CartoDB dark map tiles; blue=rider, green=driver
+- Framer Motion animations throughout
 - Game-card utility class with rounded-2xl, border-2, hover lift
 - XP-bar with rainbow gradient for progress indicators
-- Emoji headers throughout (🗺️ Where to?, 🚗 Driver Dashboard, 🏆 Leaderboard, etc.)
-- Floating emoji background on Home page
-- Motion hover/tap effects on buttons (scale bounce)
-- Leaderboard uses medal emojis (🥇🥈🥉) and animated trophy
-- Empty states use bouncing emoji animations
-- Gradient CTA buttons (primary-to-accent)
+- Emoji headers and floating emoji backgrounds
 
 ## Tech Stack
 - Frontend: React + Vite + Tailwind + Framer Motion + TanStack Query
 - Backend: Express + Passport.js (local strategy, session-based)
 - Database: PostgreSQL + Drizzle ORM
+- Session store: PostgreSQL-backed via `connect-pg-simple` (30-day persistent sessions)
 - Validation: Zod schemas
 - UI: Shadcn components
 
 ## Database Tables
-- users (auth, wheels/credits, tier, rideVibe, driver flexibility)
+- users (auth, wheels/credits, tier, rideVibe, driver flexibility, founder status)
 - routine_routes (driver commutes)
 - short_hops (ride requests)
 - rewards / user_redemptions (reward store)
@@ -164,10 +146,16 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - hop_buddy_ratings (post-ride ratings)
 - follows (follow system with unique constraint)
 - community_posts (community feed)
+- walker_routes (saved walker destinations)
+- user_badges (achievement badges)
+- expansion_waitlist (city expansion signups)
 
 ## Important Notes
 - DB uses `credits` column but UI shows "Wheels" — do NOT rename
 - `tier` column: "standard" (default) or "flexhop"
 - `rideVibe` column: "quiet", "friendly_chat" (default), "community"
 - Power Hop uses `hopType: "full_ride"` internally
-- Test accounts: walker/password (walker), driver/password (driver)
+- Test accounts: walker/password (walker, has flex_hop subscription), driver/password (driver)
+- Founding members: 25 total unified pool (stored in `isFounder` field)
+- Founder badges: "Founding Hopper" or "Founding Driver"
+- Drive Mode REMOVED — anyone registers as driver at signup

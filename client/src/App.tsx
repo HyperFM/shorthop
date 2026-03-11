@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { NavBar } from "@/components/NavBar";
+import { BottomTabBar } from "@/components/BottomTabBar";
 
 import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
@@ -41,9 +42,10 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <NavBar />
-        <main className="min-h-[calc(100vh-4rem)]">
+        <main className="min-h-screen pb-16">
           <Router />
         </main>
+        <BottomTabBar />
       </TooltipProvider>
     </QueryClientProvider>
   );

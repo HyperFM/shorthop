@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, CarFront, X, Plus, Route, Bookmark } from "lucide-react";
+import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, X, Plus, Route, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,7 +36,7 @@ function getBadgeStyle(badge: string): { icon: typeof Flame; color: string } {
 
 type WalkerRouteData = { id: number; name: string; startLocation: string; endLocation: string };
 
-export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { user: User; canDrive?: boolean; onSwitchToDriver?: () => void }) {
+export default function WalkerDashboard({ user }: { user: User }) {
   const { data: hops } = useHops();
   const requestHop = useRequestHop();
   const cancelHop = useCancelHop();
@@ -168,20 +168,24 @@ export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { 
   const driversInCity = networkStats?.totalDrivers ?? 0;
 
   return (
-    <div className="container mx-auto px-3 py-4 max-w-lg">
+    <div className="px-4 pt-3 pb-4 max-w-lg mx-auto">
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-display font-bold text-foreground" data-testid="text-dashboard-title">ShortHop</h1>
-          {user.isFounder && user.founderBadge && (
-            <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[9px] px-1.5 py-0.5" data-testid="badge-founder">
-              🛞 {user.founderBadge}
-            </Badge>
-          )}
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">ShortHop</p>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-base font-display font-bold text-foreground" data-testid="text-dashboard-title">
+              Hey, {user.username}
+            </h1>
+            {user.isFounder && user.founderBadge && (
+              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[8px] px-1 py-0" data-testid="badge-founder">
+                🛞
+              </Badge>
+            )}
+          </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleInvite} data-testid="button-invite-friends" className="text-xs h-8 px-2.5 rounded-full">
-          <Share2 className="w-3.5 h-3.5 mr-1" />
-          Invite
+        <Button variant="ghost" size="icon" onClick={handleInvite} data-testid="button-invite-friends" className="h-8 w-8 rounded-full">
+          <Share2 className="w-4 h-4" />
         </Button>
       </div>
 
@@ -611,55 +615,36 @@ export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { 
         </Card>
       )}
 
-      <Card className="border-border/50 shadow-sm mb-3" data-testid="card-drive-mode">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white">
-                <CarFront className="w-4 h-4" />
+      {!hasFlexSub && (
+        <Card className="border-primary/20 shadow-sm mb-3 bg-gradient-to-r from-primary/5 to-accent/5" data-testid="card-flex-promo">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white">
+                  <span className="text-sm">🚀</span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-foreground">Flex Hop</p>
+                  <p className="text-[10px] text-muted-foreground">Detour rides, priority matching</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-foreground">Drive Mode</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {canDrive
-                    ? "Switch to driver view and accept hop requests"
-                    : user.isFounder
-                      ? "Available — you're a founder!"
-                      : "Flex Hop subscribers can also drive"}
-                </p>
-              </div>
-            </div>
-            {canDrive ? (
               <Button
                 size="sm"
-                variant="outline"
-                className="h-7 text-xs rounded-lg border-blue-500/30 text-blue-600 hover:bg-blue-500/10"
-                onClick={onSwitchToDriver}
-                data-testid="button-switch-to-driver"
-              >
-                <CarFront className="w-3 h-3 mr-1" />
-                Drive
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs rounded-lg"
+                className="h-7 text-xs rounded-lg font-bold bg-gradient-to-r from-primary to-accent"
                 onClick={() => setSubscriptionPlan("flex_hop")}
-                data-testid="button-unlock-drive-mode"
+                data-testid="button-get-flex-hop"
               >
-                <Lock className="w-3 h-3 mr-1" />
                 $5/mo
               </Button>
+            </div>
+            {!user.isFounder && (
+              <p className="text-[9px] text-muted-foreground mt-2 pl-10">
+                First 25 founding members get Flex Hop free forever
+              </p>
             )}
-          </div>
-          {!canDrive && (
-            <p className="text-[9px] text-muted-foreground mt-2 pl-10">
-              First 25 founding members get Drive Mode free forever
-            </p>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-border/50 shadow-sm mb-3" data-testid="card-network">
         <CardContent className="p-3">

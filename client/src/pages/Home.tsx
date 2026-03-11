@@ -1,13 +1,22 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Leaf, ShieldCheck, MapPin, Zap, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/use-auth";
 import heroImg from '@assets/660BFE19-0B0D-4EAF-80FF-0BDCB97F3624_1772922571220.png';
 import featureImg from '@assets/75C22BDF-5452-40CB-AA2E-053855BC7702_1772922571220.png';
 
 const floatingEmojis = ["🚗", "🏃", "🛞", "⚡", "🌿", "✨"];
 
 export default function Home() {
+  const { data: user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  if (user) {
+    setLocation("/dashboard");
+    return null;
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <section className="relative pt-16 pb-28 overflow-hidden">

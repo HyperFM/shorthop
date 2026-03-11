@@ -65,14 +65,14 @@ export default function Community() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-2xl">
-      <div className="flex items-center gap-3 mb-2">
-        <Users className="w-7 h-7 text-primary" />
-        <h1 data-testid="text-community-title" className="text-3xl font-display font-bold">
-          ShortHop Community
+    <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
+      <div className="flex items-center gap-2 mb-1">
+        <Users className="w-5 h-5 text-primary" />
+        <h1 data-testid="text-community-title" className="text-xl font-display font-bold">
+          Community
         </h1>
       </div>
-      <p className="text-muted-foreground mb-8">
+      <p className="text-xs text-muted-foreground mb-4">
         Shared routes. Real connections. See what Hoppers are up to.
       </p>
 

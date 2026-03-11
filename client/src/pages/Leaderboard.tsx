@@ -123,7 +123,7 @@ export default function Leaderboard() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}

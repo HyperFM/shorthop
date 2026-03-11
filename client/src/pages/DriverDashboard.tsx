@@ -43,7 +43,7 @@ const routeSchema = z.object({
   days: z.array(z.string()).min(1, "Select at least one day"),
 });
 
-export default function DriverDashboard({ user, onSwitchToWalker }: { user: User; onSwitchToWalker?: () => void }) {
+export default function DriverDashboard({ user }: { user: User }) {
   const { data: routes } = useRoutes();
   const { data: hops } = useHops();
   const createRoute = useCreateRoute();
@@ -101,50 +101,37 @@ export default function DriverDashboard({ user, onSwitchToWalker }: { user: User
   const activeHops = hops?.filter(h => h.status === 'matched') || [];
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl space-y-12">
+    <div className="px-4 pt-3 pb-6 max-w-lg mx-auto space-y-6">
       
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+        className="flex items-start justify-between gap-3"
       >
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-display font-bold text-foreground">Driver Dashboard 🚗</h1>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">ShortHop</p>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-base font-display font-bold text-foreground" data-testid="text-driver-title">Hey, {user.username} 🚗</h1>
             {user.isFounder && user.founderBadge && (
-              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[10px] animate-bounce-in" data-testid="badge-founder">
-                🛞 {user.founderBadge}
+              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[8px] px-1 py-0" data-testid="badge-founder">
+                🛞
               </Badge>
             )}
           </div>
-          <p className="text-muted-foreground mt-1">Manage your routes and accept short hops along the way.</p>
-          {onSwitchToWalker && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSwitchToWalker}
-              className="mt-2 w-fit border-primary/30 text-primary hover:bg-primary/10"
-              data-testid="button-switch-to-hopper"
-            >
-              <MapPin className="w-4 h-4 mr-1" /> Switch to Hopper Mode
-            </Button>
-          )}
+          <p className="text-xs text-muted-foreground mt-0.5">Manage routes and accept hops.</p>
         </div>
-        <motion.div whileHover={{ scale: 1.03 }}>
-          <Card className="game-card border-secondary/30 bg-gradient-to-br from-secondary/10 via-secondary/5 to-transparent hover:border-secondary/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-secondary to-orange-600 flex items-center justify-center text-white shadow-lg shadow-secondary/30">
-                <span className="text-2xl">🛞</span>
-              </div>
-              <div>
-                <div className="text-xs font-bold text-secondary uppercase tracking-wider">Total Wheels</div>
-                <div className="text-3xl font-black text-foreground">{user.credits || 0}</div>
-                <div className="text-[10px] text-muted-foreground">Redeem for rewards!</div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <Card className="border-secondary/30 bg-gradient-to-br from-secondary/10 to-transparent shrink-0">
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-secondary to-orange-600 flex items-center justify-center text-white shadow-sm">
+              <span className="text-base">🛞</span>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-secondary uppercase tracking-wider">Wheels</div>
+              <div className="text-lg font-black text-foreground leading-none">{user.credits || 0}</div>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
