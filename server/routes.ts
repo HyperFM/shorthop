@@ -1225,6 +1225,42 @@ export async function registerRoutes(
   });
 
   // Widget data API
+  let weatherCache: { data: any; timestamp: number } | null = null;
+  const WEATHER_CACHE_MS = 15 * 60 * 1000;
+
+  app.get('/api/weather', async (_req, res) => {
+    try {
+      if (weatherCache && Date.now() - weatherCache.timestamp < WEATHER_CACHE_MS) {
+        return res.json(weatherCache.data);
+      }
+      const response = await fetch('https://wttr.in/Lexington+KY?format=j1');
+      if (!response.ok) throw new Error("Weather fetch failed");
+      const raw = await response.json();
+      const current = raw.current_condition?.[0];
+      if (!current) throw new Error("No weather data");
+      const code = parseInt(current.weatherCode || "0");
+      let condition: "clear" | "cloudy" | "rain" | "snow" | "storm" | "fog" = "clear";
+      if ([200, 201, 202, 230, 231, 232, 386, 389, 392, 395].includes(code)) condition = "storm";
+      else if ([600, 601, 602, 611, 612, 615, 616, 620, 621, 622, 179, 227, 230, 323, 326, 329, 332, 335, 338, 368, 371].includes(code)) condition = "snow";
+      else if ([300, 301, 302, 310, 311, 312, 313, 314, 321, 500, 501, 502, 503, 504, 511, 520, 521, 522, 531, 176, 263, 266, 281, 284, 293, 296, 299, 302, 305, 308, 311, 314, 353, 356, 359, 362, 365].includes(code)) condition = "rain";
+      else if ([741, 248, 260].includes(code)) condition = "fog";
+      else if ([801, 802, 803, 804, 119, 122].includes(code)) condition = "cloudy";
+      const data = {
+        temp: parseInt(current.temp_F || "0"),
+        feelsLike: parseInt(current.FeelsLikeF || "0"),
+        condition,
+        description: current.weatherDesc?.[0]?.value || "Unknown",
+        humidity: parseInt(current.humidity || "0"),
+        windMph: parseInt(current.windspeedMiles || "0"),
+        weatherCode: code,
+      };
+      weatherCache = { data, timestamp: Date.now() };
+      res.json(data);
+    } catch {
+      res.json({ temp: 70, feelsLike: 70, condition: "clear", description: "Clear", humidity: 50, windMph: 5, weatherCode: 0 });
+    }
+  });
+
   app.get('/api/widget/data', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {

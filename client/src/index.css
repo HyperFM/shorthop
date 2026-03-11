@@ -163,6 +163,30 @@
   100% { transform: scale(1); }
 }
 
+@keyframes snow-fall {
+  0% { transform: translateY(-8px) translateX(0); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(90px) translateX(var(--drift, 10px)); opacity: 0; }
+}
+
+@keyframes rain-fall {
+  0% { transform: translateY(-8px); opacity: 0.7; }
+  100% { transform: translateY(90px); opacity: 0; }
+}
+
+.weather-snow {
+  background: white;
+  border-radius: 50%;
+  animation: snow-fall linear infinite;
+  box-shadow: 0 0 2px rgba(255,255,255,0.8);
+}
+
+.weather-rain {
+  background: linear-gradient(to bottom, transparent, rgba(120, 170, 255, 0.6));
+  border-radius: 0 0 2px 2px;
+  animation: rain-fall linear infinite;
+}
+
 @layer utilities {
   .hover-elevate {
     position: relative;
