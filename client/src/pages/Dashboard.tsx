@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import WalkerDashboard from "./WalkerDashboard";
@@ -10,6 +11,9 @@ export default function Dashboard() {
   const { data: user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { currentHopper, dismiss } = useNearbyHopperSimulation(!!user?.isDriver);
+  const [activeTab, setActiveTab] = useState<"hopper" | "driver">(
+    user?.isDriver ? "driver" : "hopper"
+  );
 
   if (isLoading) {
     return (
@@ -26,10 +30,44 @@ export default function Dashboard() {
 
   return (
     <>
-      {user.isDriver && (
+      <div className="max-w-lg mx-auto px-4 pt-3">
+        <div className="flex" data-testid="role-tabs">
+          <button
+            onClick={() => setActiveTab("hopper")}
+            className={`flex-1 pb-2 text-sm font-display font-bold text-center transition-colors relative ${
+              activeTab === "hopper" ? "text-blue-500" : "text-muted-foreground"
+            }`}
+            data-testid="tab-hopper"
+          >
+            Hopper
+            {activeTab === "hopper" && (
+              <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-orange-500" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("driver")}
+            className={`flex-1 pb-2 text-sm font-display font-bold text-center transition-colors relative ${
+              activeTab === "driver" ? "text-green-500" : "text-muted-foreground"
+            }`}
+            data-testid="tab-driver"
+          >
+            Driver
+            {activeTab === "driver" && (
+              <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-orange-500" />
+            )}
+          </button>
+        </div>
+        <div className="border-b border-border/30 -mt-[1px]" />
+      </div>
+
+      {activeTab === "driver" && (
         <NearbyHopperAlert hopper={currentHopper} onDismiss={dismiss} />
       )}
-      {user.isDriver ? <DriverDashboard user={user} /> : <WalkerDashboard user={user} />}
+      {activeTab === "driver" ? (
+        <DriverDashboard user={user} />
+      ) : (
+        <WalkerDashboard user={user} />
+      )}
     </>
   );
 }

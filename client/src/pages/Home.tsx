@@ -1,20 +1,31 @@
+import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Leaf, ShieldCheck, MapPin, Zap, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
 import heroImg from '@assets/660BFE19-0B0D-4EAF-80FF-0BDCB97F3624_1772922571220.png';
 import featureImg from '@assets/75C22BDF-5452-40CB-AA2E-053855BC7702_1772922571220.png';
 
 const floatingEmojis = ["🚗", "🏃", "🛞", "⚡", "🌿", "✨"];
 
 export default function Home() {
-  const { data: user } = useAuth();
+  const { data: user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  if (user) {
-    setLocation("/dashboard");
-    return null;
+  useEffect(() => {
+    if (user) {
+      setLocation("/dashboard");
+    }
+  }, [user, setLocation]);
+
+  if (user || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
