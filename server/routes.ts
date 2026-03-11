@@ -1187,6 +1187,58 @@ export async function registerRoutes(
     }
   });
 
+  // Widget data API
+  app.get('/api/widget/data', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const data = await storage.getWidgetData(req.user.id);
+      res.json(data);
+    } catch {
+      res.status(500).json({ message: "Failed to get widget data" });
+    }
+  });
+
+  // Founder chat
+  app.get('/api/founder-chat', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    if (!req.user.isFounder && !req.user.isAdmin) return res.status(403).json({ message: "Founders only" });
+    try {
+      const messages = await storage.getFounderMessages();
+      res.json(messages);
+    } catch {
+      res.status(500).json({ message: "Failed to get messages" });
+    }
+  });
+
+  app.post('/api/founder-chat', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    if (!req.user.isFounder && !req.user.isAdmin) return res.status(403).json({ message: "Founders only" });
+    try {
+      const { message } = req.body;
+      if (!message) return res.status(400).json({ message: "Message required" });
+      const msg = await storage.createFounderMessage({
+        userId: req.user.id,
+        message,
+        isAdminReply: req.user.isAdmin || false,
+      });
+      if (!req.user.isAdmin) {
+        const admins = (await storage.getAllUsers()).filter(u => u.isAdmin);
+        for (const admin of admins) {
+          await storage.createNotification({
+            userId: admin.id,
+            type: "general",
+            title: "Founder Chat Message",
+            message: `${req.user.username}: ${message.substring(0, 100)}`,
+            isRead: false,
+          });
+        }
+      }
+      res.json(msg);
+    } catch {
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
   // Expansion
   app.get(api.expansion.checkCity.path, (req, res) => {
     const city = (req.query.city as string || "").trim().toLowerCase();

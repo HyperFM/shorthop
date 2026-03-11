@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
+import { FounderChat } from "@/components/FounderChat";
 
 type AdminStats = {
   totalUsers: number;
@@ -84,7 +85,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
@@ -189,6 +190,7 @@ export default function Admin() {
     { key: "drivers", label: "Active", icon: Car },
     { key: "logs", label: "Logs", icon: Eye },
     { key: "notify", label: "Notify", icon: Send },
+    { key: "founders", label: "Founders", icon: Crown },
   ];
 
   return (
@@ -587,6 +589,15 @@ export default function Admin() {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {tab === "founders" && (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Direct chat line with founding members. Messages from founders create notifications in your inbox.
+          </p>
+          <FounderChat isAdminView />
+        </div>
       )}
     </div>
   );

@@ -63,7 +63,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 
 ### Admin Panel (Super Admin: HyperFM only)
 - `/admin` route (restricted to isAdmin users)
-- 8 Tabs: Overview, Inbox (unread badge), Reports (open badge), Users, Apps, Active Drivers, Logs, Notify
+- 9 Tabs: Overview, Inbox (unread badge), Reports (open badge), Users, Apps, Active Drivers, Logs, Notify, Founders
 - Overview: stats cards + alert banners for unread inbox/open reports/pending apps
 - Inbox: view/reply to user contact messages, sends notification on reply
 - Reports: view/resolve user reports (safety, bugs, harassment)
@@ -72,6 +72,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Active Drivers: live list of currently active drivers
 - Logs: recent ride request/acceptance logs
 - Notify: manual notification blast to active drivers
+- Founders: direct chat with founding members (messages notify admin)
 - Dashboard button for quick role switching back to driver view
 
 ### Driver Features
@@ -98,7 +99,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - **Free tier**: Short Hop only (no subscription required)
 - **Flex Hop ($5/mo)**: Allows small driver detours, dynamic pricing
 - **Power Hop ($15/mo)**: Complete mobility freedom, unlimited rides
-- First 25 founding members get Flex Hop free forever
+- First 50 founding members get Flex Hop free forever
 - Server enforces subscription check on `POST /api/hops/request` (403 if not subscribed)
 
 ### App-Like UI
@@ -116,7 +117,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - **Shareable Ride Cards**: Post-ride share option via Web Share API
 
 ### Early Network & Growth System
-- Founding members: first 25 total (unified pool, not split by role)
+- Founding members: first 50 total (unified pool, not split by role)
 - Founders get lifetime FlexHop tier + badge
 - Network progress card on dashboards
 - Invite Friends button on dashboards
@@ -124,6 +125,24 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 ### Saved Routes (Walker)
 - Save/delete usual destinations with quick-select chips
 - Stored in `walker_routes` table
+
+### Home Screen Widget System (iOS-Ready)
+- `/widget` page — preview of Directional Flow widget in 3 sizes (Small, Medium, Large)
+- Driver accounts = green theme, Hopper accounts = blue theme, important numbers = orange
+- **Small (170x170)**: direction + demand count
+- **Medium (364x170)**: direction demand + nearby activity + drivers in area
+- **Large (364x376)**: all stats + quick action button ("Go Available" for drivers / "Request Hop" for hoppers)
+- Data served from `GET /api/widget/data` (updates every 30s)
+- Shows directional demand based on user's saved routes
+- Accessible from both Walker and Driver dashboards via "Widget Preview" card
+
+### Founder System & Chat
+- Founder cap: **50** total (first 50 users get lifetime FlexHop tier + founder badge)
+- Founder Chat: direct message channel between founders and admin (HyperFM)
+- Messages from founders automatically notify admin via notification system
+- Admin replies visible in chat with purple "admin" styling
+- `founder_messages` table stores all chat history
+- Accessible from dashboards (founder-only) and Admin panel (Founders tab)
 
 ### Contact & Report System
 - "Contact ShortHop" form in Settings (category, subject, message) → POST /api/contact
@@ -148,7 +167,8 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - /community - Community feed
 - /settings - Tier, ride vibe, notifications, privacy
 - /leaderboard - Leaderboard (3 tabs)
-- /privacy - Privacy policy
+- /widget - Widget preview (iOS home screen widget sizes)
+- /privacy - Privacy policy & Terms of Service
 - /support - Support & safety info
 - /artist - Artist page
 
@@ -168,6 +188,8 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Driver Info: GET /api/hops/:id/driver-info, POST /api/hops/:id/decline
 - Admin: GET /api/admin/stats, GET /api/admin/users, GET /api/admin/drivers, GET /api/admin/applications, POST /api/admin/applications/:id/review, POST /api/admin/users/:id/disable, POST /api/admin/users/:id/delete, GET /api/admin/logs, POST /api/admin/notify-drivers, GET /api/admin/inbox, POST /api/admin/inbox/:id/reply, GET /api/admin/reports, POST /api/admin/reports/:id/resolve
 - Contact/Report: POST /api/contact, GET /api/contact, POST /api/report
+- Widget: GET /api/widget/data
+- Founder Chat: GET /api/founder-chat, POST /api/founder-chat
 - Walker Routes: GET /api/walker-routes, POST /api/walker-routes, DELETE /api/walker-routes/:id
 - Network: GET /api/network-stats
 - Subscription: POST /api/subscription, DELETE /api/subscription
@@ -203,6 +225,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - expansion_waitlist (city expansion signups)
 - contact_messages (user contact form submissions, admin replies)
 - reports (user-submitted reports: safety, bugs, harassment)
+- founder_messages (founder-to-admin direct chat)
 
 ## Important Notes
 - DB uses `credits` column but UI shows "Wheels" — do NOT rename
@@ -211,7 +234,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Power Hop uses `hopType: "full_ride"` internally
 - Test accounts: walker/password (walker, has flex_hop subscription), driver/password (driver, NOT admin), HyperFM (super admin + driver)
 - Super Admin: HyperFM is the ONLY admin account; `driver` account has isAdmin=false
-- Founding members: 25 total unified pool (stored in `isFounder` field)
+- Founding members: 50 total unified pool (stored in `isFounder` field)
 - Founder badges: "Founding Hopper" or "Founding Driver"
 - Drive Mode REMOVED — anyone registers as driver at signup
 - Flash system: `showFlash(emoji, text, type)` — import from `@/components/FlashNotification`

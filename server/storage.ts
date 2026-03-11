@@ -41,6 +41,9 @@ import {
   reports,
   type Report,
   type InsertReport,
+  founderMessages,
+  type FounderMessage,
+  type InsertFounderMessage,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -116,6 +119,17 @@ export interface IStorage {
   createReport(report: InsertReport): Promise<Report>;
   getReports(): Promise<(Report & { username: string; reportedUsername?: string })[]>;
   resolveReport(id: number, notes: string): Promise<Report>;
+
+  getFounderMessages(): Promise<(FounderMessage & { username: string })[]>;
+  createFounderMessage(msg: InsertFounderMessage): Promise<FounderMessage>;
+  getWidgetData(userId: number): Promise<{
+    role: "driver" | "hopper";
+    directionLabel: string;
+    directionCount: number;
+    nearbyActive: number;
+    driversInArea: number;
+    isActive: boolean;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -180,7 +194,7 @@ export class DatabaseStorage implements IStorage {
     const nextMilestone = milestones.find(m => m > totalUsers) || 5000;
 
     const totalFounders = allUsers.filter(u => u.isFounder).length;
-    const foundingSpotsRemaining = Math.max(0, 25 - totalFounders);
+    const foundingSpotsRemaining = Math.max(0, 50 - totalFounders);
 
     return {
       totalUsers,
@@ -197,7 +211,7 @@ export class DatabaseStorage implements IStorage {
     const allUsers = await db.select().from(users);
     const totalFounders = allUsers.filter(u => u.isFounder).length;
 
-    if (totalFounders < 25) {
+    if (totalFounders < 50) {
       const badge = isDriver ? "Founding Driver" : "Founding Hopper";
       const tier = "flexhop";
       const [updated] = await db.update(users)
@@ -636,6 +650,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(driverApplications).where(eq(driverApplications.userId, id));
     await db.delete(userBadges).where(eq(userBadges.userId, id));
     await db.delete(reports).where(or(eq(reports.userId, id), eq(reports.reportedUserId, id)));
+    await db.delete(founderMessages).where(eq(founderMessages.userId, id));
     await db.delete(hopBuddyRatings).where(or(eq(hopBuddyRatings.raterId, id), eq(hopBuddyRatings.ratedUserId, id)));
     await db.delete(userRedemptions).where(eq(userRedemptions.userId, id));
     await db.delete(walkerRoutes).where(eq(walkerRoutes.userId, id));
@@ -695,6 +710,65 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!report) throw new Error("Report not found");
     return report;
+  }
+
+  async getFounderMessages(): Promise<(FounderMessage & { username: string })[]> {
+    const msgs = await db.select().from(founderMessages).orderBy(desc(founderMessages.createdAt));
+    const result = [];
+    for (const msg of msgs) {
+      const user = await this.getUser(msg.userId);
+      result.push({ ...msg, username: user?.username || "unknown" });
+    }
+    return result;
+  }
+
+  async createFounderMessage(msg: InsertFounderMessage): Promise<FounderMessage> {
+    const [created] = await db.insert(founderMessages).values(msg).returning();
+    return created;
+  }
+
+  async getWidgetData(userId: number): Promise<{
+    role: "driver" | "hopper";
+    directionLabel: string;
+    directionCount: number;
+    nearbyActive: number;
+    driversInArea: number;
+    isActive: boolean;
+  }> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+
+    const role = user.isDriver ? "driver" as const : "hopper" as const;
+    const activeDrivers = await this.getActiveDrivers();
+    const allUsers = await db.select().from(users);
+    const realUsers = allUsers.filter(u => !["walker", "driver"].includes(u.username));
+
+    const routes = user.isDriver
+      ? await db.select().from(routineRoutes).where(eq(routineRoutes.driverId, userId))
+      : await db.select().from(walkerRoutes).where(eq(walkerRoutes.userId, userId));
+
+    let directionLabel = "Downtown Lexington";
+    if (routes.length > 0) {
+      const route = routes[0];
+      directionLabel = "endLocation" in route ? (route as any).endLocation || "Downtown" : (route as any).destination || "Downtown";
+    }
+
+    const availableHops = await db.select().from(shortHops).where(eq(shortHops.status, "requested"));
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayHops = availableHops.filter(h => h.createdAt && new Date(h.createdAt) >= todayStart);
+
+    const directionCount = Math.max(todayHops.length, Math.floor(realUsers.length * 0.3));
+    const nearbyActive = realUsers.filter(u => u.isActive || u.isDriver).length;
+
+    return {
+      role,
+      directionLabel,
+      directionCount,
+      nearbyActive,
+      driversInArea: activeDrivers.length,
+      isActive: user.isActive ?? false,
+    };
   }
 }
 

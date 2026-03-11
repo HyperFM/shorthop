@@ -256,5 +256,17 @@ export const insertReportSchema = createInsertSchema(reports).omit({ id: true, c
 export type Report = typeof reports.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
 
+export const founderMessages = pgTable("founder_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  message: text("message").notNull(),
+  isAdminReply: boolean("is_admin_reply").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFounderMessageSchema = createInsertSchema(founderMessages).omit({ id: true, createdAt: true });
+export type FounderMessage = typeof founderMessages.$inferSelect;
+export type InsertFounderMessage = z.infer<typeof insertFounderMessageSchema>;
+
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

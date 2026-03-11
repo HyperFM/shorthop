@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, X, Plus, Route, Bookmark } from "lucide-react";
+import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, X, Plus, Route, Bookmark, Smartphone, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useHops, useRequestHop, useCancelHop } from "@/hooks/use-hops";
 import { NetworkProgress } from "@/components/NetworkProgress";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
+import { FounderChat } from "@/components/FounderChat";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking, usePickupGuidance } from "@/hooks/use-location";
 import { PickupMapVisual } from "@/components/PickupMapVisual";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -45,6 +47,7 @@ function getBadgeStyle(badge: string): { icon: typeof Flame; color: string } {
 type WalkerRouteData = { id: number; name: string; startLocation: string; endLocation: string };
 
 export default function WalkerDashboard({ user }: { user: User }) {
+  const [, setLocation] = useLocation();
   const { data: hops } = useHops();
   const requestHop = useRequestHop();
   const cancelHop = useCancelHop();
@@ -667,7 +670,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
             </div>
             {!user.isFounder && (
               <p className="text-[9px] text-muted-foreground mt-2 pl-10">
-                First 25 founding members get Flex Hop free forever
+                First 50 founding members get Flex Hop free forever
               </p>
             )}
           </CardContent>
@@ -679,6 +682,36 @@ export default function WalkerDashboard({ user }: { user: User }) {
           <NetworkProgress />
         </CardContent>
       </Card>
+
+      <div className="flex gap-2 mb-3">
+        <Card className="flex-1 border-border/50 shadow-sm cursor-pointer hover:border-blue-200 transition-colors" onClick={() => setLocation("/widget")} data-testid="card-widget-preview">
+          <CardContent className="p-3 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Smartphone className="w-4 h-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold">Widget</p>
+              <p className="text-[9px] text-muted-foreground">Preview</p>
+            </div>
+          </CardContent>
+        </Card>
+        {user.isFounder && (
+          <Card className="flex-1 border-orange-200/50 shadow-sm cursor-pointer hover:border-orange-300 transition-colors" onClick={() => {
+            const el = document.getElementById("founder-chat-section");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          }} data-testid="card-founder-chat-link">
+            <CardContent className="p-3 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                <Crown className="w-4 h-4 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold">Founder Chat</p>
+                <p className="text-[9px] text-muted-foreground">Direct line</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {networkLoaded && driversInCity === 0 && !activeHop && (
         <Card className="border-dashed border-primary/30 bg-primary/5 mb-3" data-testid="card-invite-drivers">
@@ -700,6 +733,12 @@ export default function WalkerDashboard({ user }: { user: User }) {
           open={true}
           onOpenChange={(open) => !open && setSubscriptionPlan(null)}
         />
+      )}
+
+      {user.isFounder && (
+        <div id="founder-chat-section" className="mb-3">
+          <FounderChat />
+        </div>
       )}
 
       <Dialog open={streakOpen} onOpenChange={setStreakOpen}>

@@ -20,6 +20,7 @@ import Leaderboard from "@/pages/Leaderboard";
 import Artist from "@/pages/Artist";
 import DriverOnboarding from "@/pages/DriverOnboarding";
 import Admin from "@/pages/Admin";
+import Widget from "@/pages/Widget";
 
 function Router() {
   return (
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/artist" component={Artist} />
       <Route path="/driver-onboarding" component={DriverOnboarding} />
       <Route path="/admin" component={Admin} />
+      <Route path="/widget" component={Widget} />
       <Route component={NotFound} />
     </Switch>
   );
