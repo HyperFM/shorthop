@@ -1189,6 +1189,28 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/admin/users/:id/grant-wheels', requireAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      const amount = Number(req.body.amount);
+      if (!amount || amount < 1 || amount > 1000) {
+        return res.status(400).json({ message: "Amount must be between 1 and 1000" });
+      }
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) return res.status(404).json({ message: "User not found" });
+      await storage.addCredits(userId, amount);
+      await storage.createNotification({
+        userId,
+        type: "reward",
+        title: "You received Wheels! 🛞",
+        message: `The ShortHop team gifted you ${amount} Wheel${amount !== 1 ? 's' : ''}. Check your Rewards page!`,
+      });
+      res.json({ message: `Granted ${amount} Wheels to ${targetUser.username}`, newBalance: (targetUser.credits || 0) + amount });
+    } catch {
+      res.status(500).json({ message: "Failed to grant wheels" });
+    }
+  });
+
   app.get('/api/admin/inbox', requireAdmin, async (_req, res) => {
     try {
       const messages = await storage.getContactMessages();
@@ -1331,6 +1353,8 @@ export async function registerRoutes(
   // Founder chat
   app.get('/api/founder-chat', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    if (!user?.isFounder && !user?.isAdmin) return res.status(403).json({ message: "Founders only" });
     try {
       const messages = await storage.getFounderMessages();
       res.json(messages);
@@ -1341,6 +1365,8 @@ export async function registerRoutes(
 
   app.post('/api/founder-chat', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    if (!user?.isFounder && !user?.isAdmin) return res.status(403).json({ message: "Founders only" });
     try {
       const { message } = req.body;
       if (!message) return res.status(400).json({ message: "Message required" });
@@ -1364,6 +1390,88 @@ export async function registerRoutes(
       res.json(msg);
     } catch {
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // VIP Hyper Chat (DMs between founders and HyperFM)
+  app.get('/api/vip-chat', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    if (!user?.isFounder) return res.status(403).json({ message: "Founders only" });
+    try {
+      const messages = await storage.getVipMessages(req.user.id);
+      res.json(messages);
+    } catch {
+      res.status(500).json({ message: "Failed to get messages" });
+    }
+  });
+
+  app.post('/api/vip-chat', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    if (!user?.isFounder) return res.status(403).json({ message: "Founders only" });
+    try {
+      const { message } = req.body;
+      if (!message) return res.status(400).json({ message: "Message required" });
+      const msg = await storage.createVipMessage({
+        userId: req.user.id,
+        message,
+        isAdminReply: false,
+      });
+      const admins = (await storage.getAllUsers()).filter(u => u.isAdmin);
+      for (const admin of admins) {
+        await storage.createNotification({
+          userId: admin.id,
+          type: "general",
+          title: "VIP DM from " + user.username,
+          message: message.substring(0, 100),
+          isRead: false,
+        });
+      }
+      res.json(msg);
+    } catch {
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  app.get('/api/admin/vip-conversations', requireAdmin, async (_req, res) => {
+    try {
+      const convos = await storage.getVipConversations();
+      res.json(convos);
+    } catch {
+      res.status(500).json({ message: "Failed to get conversations" });
+    }
+  });
+
+  app.get('/api/admin/vip-chat/:userId', requireAdmin, async (req, res) => {
+    try {
+      const messages = await storage.getVipMessages(Number(req.params.userId));
+      res.json(messages);
+    } catch {
+      res.status(500).json({ message: "Failed to get messages" });
+    }
+  });
+
+  app.post('/api/admin/vip-chat/:userId', requireAdmin, async (req, res) => {
+    try {
+      const targetUserId = Number(req.params.userId);
+      const { message } = req.body;
+      if (!message) return res.status(400).json({ message: "Message required" });
+      const msg = await storage.createVipMessage({
+        userId: targetUserId,
+        message,
+        isAdminReply: true,
+      });
+      await storage.createNotification({
+        userId: targetUserId,
+        type: "general",
+        title: "Message from Hyper",
+        message: message.substring(0, 100),
+        isRead: false,
+      });
+      res.json(msg);
+    } catch {
+      res.status(500).json({ message: "Failed to send reply" });
     }
   });
 

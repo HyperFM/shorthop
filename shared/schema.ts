@@ -277,5 +277,17 @@ export const insertFounderMessageSchema = createInsertSchema(founderMessages).om
 export type FounderMessage = typeof founderMessages.$inferSelect;
 export type InsertFounderMessage = z.infer<typeof insertFounderMessageSchema>;
 
+export const vipMessages = pgTable("vip_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  message: text("message").notNull(),
+  isAdminReply: boolean("is_admin_reply").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertVipMessageSchema = createInsertSchema(vipMessages).omit({ id: true, createdAt: true });
+export type VipMessage = typeof vipMessages.$inferSelect;
+export type InsertVipMessage = z.infer<typeof insertVipMessageSchema>;
+
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

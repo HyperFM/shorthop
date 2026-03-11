@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield, Heart, DollarSign } from "lucide-react";
+import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield, Heart, DollarSign, Crown, Star } from "lucide-react";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -31,14 +31,135 @@ type ChatMsg = {
   createdAt: string;
 };
 
-function DirectChat({ user, onClose }: { user: any; onClose: () => void }) {
+function VipHyperChat({ user, onClose }: { user: any; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [msg, setMsg] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const { data: messages, isLoading } = useQuery<ChatMsg[]>({
+    queryKey: ["/api/vip-chat"],
+    refetchInterval: 8000,
+  });
+
+  const sendMsg = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/vip-chat", { message: msg });
+    },
+    onSuccess: () => {
+      setMsg("");
+      queryClient.invalidateQueries({ queryKey: ["/api/vip-chat"] });
+    },
+    onError: () => {
+      showFlash("❌", "Failed to send", "error");
+    },
+  });
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const sorted = messages ? [...messages].sort((a, b) =>
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  ) : [];
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col bg-background" data-testid="vip-chat-panel">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-sm font-bold shadow-md">
+            <Star className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-extrabold">VIP Hyper Line</p>
+              <Badge className="text-[8px] bg-amber-100 text-amber-700 border-0 px-1.5 py-0">VIP</Badge>
+            </div>
+            <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">First 50 Founders Direct Message</p>
+          </div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0" data-testid="button-close-vip-chat">
+          <X className="w-5 h-5" />
+        </Button>
+      </div>
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+        {isLoading && (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {!isLoading && sorted.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center px-8">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center mb-3">
+              <Star className="w-8 h-8 text-amber-500" />
+            </div>
+            <p className="text-sm font-bold">VIP Hyper Line</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              As one of the first 50 founders, you have a direct private line to Hyper. Send feedback, ideas, or just say hey.
+            </p>
+          </div>
+        )}
+
+        {sorted.map(m => {
+          const isAdmin = m.isAdminReply;
+          return (
+            <div key={m.id} className={`flex ${isAdmin ? "justify-start" : "justify-end"}`}>
+              <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 ${
+                isAdmin
+                  ? "bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-200 dark:border-amber-800"
+                  : "bg-primary text-white"
+              }`}>
+                {isAdmin && (
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">Hyper</span>
+                    <Shield className="w-2.5 h-2.5 text-amber-600" />
+                  </div>
+                )}
+                <p className={`text-sm leading-relaxed ${!isAdmin ? "text-white" : ""}`}>{m.message}</p>
+                <p className={`text-[9px] mt-1 ${!isAdmin ? "text-white/50" : "text-muted-foreground"}`}>
+                  {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="px-4 py-3 border-t border-border/50 bg-background/95 backdrop-blur-lg safe-area-bottom">
+        <div className="flex gap-2">
+          <Input
+            placeholder="Message Hyper directly..."
+            value={msg}
+            onChange={e => setMsg(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && msg.trim()) sendMsg.mutate(); }}
+            className="text-sm"
+            data-testid="input-vip-chat"
+          />
+          <Button
+            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 px-3"
+            disabled={!msg.trim() || sendMsg.isPending}
+            onClick={() => sendMsg.mutate()}
+            data-testid="button-send-vip-chat"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FoundersGroupChat({ user }: { user: any }) {
   const queryClient = useQueryClient();
   const [msg, setMsg] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: messages, isLoading } = useQuery<ChatMsg[]>({
     queryKey: ["/api/founder-chat"],
-    refetchInterval: 8000,
+    refetchInterval: 10000,
   });
 
   const sendMsg = useMutation({
@@ -65,93 +186,83 @@ function DirectChat({ user, onClose }: { user: any; onClose: () => void }) {
   ) : [];
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-background" data-testid="direct-chat-panel">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-background/95 backdrop-blur-lg">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-bold">H</div>
-          <div>
-            <p className="text-sm font-bold">Hyper</p>
-            <p className="text-[10px] text-green-600 font-medium">ShortHop Creator</p>
-          </div>
+    <Card className="border-orange-200/50 dark:border-orange-800/50 bg-gradient-to-br from-orange-50/30 to-amber-50/30 dark:from-orange-950/10 dark:to-amber-950/10" data-testid="founders-group-chat">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Crown className="w-4 h-4 text-orange-500" />
+          <p className="text-sm font-extrabold">Founders Lounge</p>
+          <Badge className="text-[8px] bg-orange-100 text-orange-700 border-0 ml-auto">First 50</Badge>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0" data-testid="button-close-chat">
-          <X className="w-5 h-5" />
-        </Button>
-      </div>
+        <p className="text-[10px] text-muted-foreground mb-3">
+          Exclusive group chat for founding members. @ mention each other, share ideas, and shape ShortHop together.
+        </p>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-        {isLoading && (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {!isLoading && sorted.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center px-8">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-3">
-              <MessageCircle className="w-8 h-8 text-green-600" />
+        <div
+          ref={scrollRef}
+          className="h-[240px] overflow-y-auto space-y-2 mb-3 pr-1 scrollbar-thin"
+          data-testid="founders-chat-messages"
+        >
+          {isLoading && (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
-            <p className="text-sm font-bold">Chat with Hyper</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Got feedback, questions, or ideas? Send a message directly to the creator of ShortHop.
-            </p>
-          </div>
-        )}
-
-        {sorted.map(m => {
-          const isMe = m.userId === user.id;
-          const isAdmin = m.isAdminReply;
-          return (
-            <div key={m.id} className={`flex ${isMe && !isAdmin ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 ${
-                isAdmin
-                  ? "bg-green-100 dark:bg-green-900/30 border border-green-200"
-                  : isMe
-                  ? "bg-primary text-white"
-                  : "bg-muted"
-              }`}>
-                {isAdmin && (
-                  <div className="flex items-center gap-1 mb-0.5">
-                    <span className="text-[10px] font-bold text-green-700 dark:text-green-300">Hyper</span>
-                    <Shield className="w-2.5 h-2.5 text-green-600" />
-                  </div>
-                )}
-                {!isAdmin && !isMe && (
-                  <p className="text-[10px] font-bold text-foreground/70 mb-0.5">{m.username}</p>
-                )}
-                <p className={`text-sm leading-relaxed ${isMe && !isAdmin ? "text-white" : ""}`}>{m.message}</p>
-                <p className={`text-[9px] mt-1 ${
-                  isMe && !isAdmin ? "text-white/50" : "text-muted-foreground"
+          )}
+          {!isLoading && sorted.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <Crown className="w-8 h-8 mb-2 text-orange-300" />
+              <p className="text-xs">No messages yet. Say hello to the team!</p>
+            </div>
+          )}
+          {sorted.map(m => {
+            const isMe = m.userId === user.id;
+            const isAdmin = m.isAdminReply;
+            return (
+              <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${
+                  isAdmin
+                    ? "bg-purple-100 dark:bg-purple-900/30 border border-purple-200"
+                    : isMe
+                    ? "bg-orange-500 text-white"
+                    : "bg-muted"
                 }`}>
-                  {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </p>
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <span className={`text-[10px] font-bold ${
+                      isAdmin ? "text-purple-700 dark:text-purple-300" : isMe ? "text-white/80" : "text-foreground/70"
+                    }`}>
+                      {m.username}
+                    </span>
+                    {isAdmin && <Shield className="w-2.5 h-2.5 text-purple-500" />}
+                  </div>
+                  <p className={`text-xs leading-relaxed ${isMe && !isAdmin ? "text-white" : ""}`}>{m.message}</p>
+                  <p className={`text-[9px] mt-0.5 ${isMe && !isAdmin ? "text-white/50" : "text-muted-foreground"}`}>
+                    {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="px-4 py-3 border-t border-border/50 bg-background/95 backdrop-blur-lg safe-area-bottom">
-        <div className="flex gap-2">
+            );
+          })}
+        </div>
+        <div className="flex gap-1.5">
           <Input
-            placeholder="Message Hyper..."
+            placeholder="Message founders..."
             value={msg}
             onChange={e => setMsg(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && msg.trim()) sendMsg.mutate(); }}
-            className="text-sm"
-            data-testid="input-direct-chat"
+            className="text-sm h-9"
+            data-testid="input-founders-group-chat"
           />
           <Button
-            className="bg-green-500 hover:bg-green-600 px-3"
+            size="sm"
+            className="h-9 px-3 bg-orange-500 hover:bg-orange-600"
             disabled={!msg.trim() || sendMsg.isPending}
             onClick={() => sendMsg.mutate()}
-            data-testid="button-send-direct-chat"
+            data-testid="button-send-founders-group"
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -165,7 +276,7 @@ export default function Community() {
   const { data: user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [newPost, setNewPost] = useState("");
-  const [chatOpen, setChatOpen] = useState(false);
+  const [vipOpen, setVipOpen] = useState(false);
   const [donateAmount, setDonateAmount] = useState<number | null>(null);
   const [donateMsg, setDonateMsg] = useState("");
   const [customDonate, setCustomDonate] = useState("");
@@ -221,6 +332,7 @@ export default function Community() {
   });
 
   const isFlexHop = user?.tier === "flexhop";
+  const isFounder = !!(user as any)?.isFounder;
 
   if (authLoading) {
     return (
@@ -241,6 +353,30 @@ export default function Community() {
       <p className="text-xs text-muted-foreground mb-4">
         Shared routes. Real connections. See what Hoppers are up to.
       </p>
+
+      {isFounder && user && (
+        <div className="space-y-4 mb-6">
+          <FoundersGroupChat user={user} />
+
+          <button
+            onClick={() => setVipOpen(true)}
+            className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-200 dark:border-amber-800 hover:shadow-md transition-all"
+            data-testid="button-open-vip-chat"
+          >
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-md shrink-0">
+              <Star className="w-5 h-5" />
+            </div>
+            <div className="text-left flex-1">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-extrabold">VIP Hyper Line</p>
+                <Badge className="text-[7px] bg-amber-100 text-amber-700 border-0 px-1 py-0">FOUNDER DM</Badge>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Private direct message to Hyper — founders only</p>
+            </div>
+            <MessageCircle className="w-5 h-5 text-amber-500 shrink-0" />
+          </button>
+        </div>
+      )}
 
       {user && isFlexHop ? (
         <Card className="mb-8 border-primary/20">
@@ -427,18 +563,8 @@ export default function Community() {
         </Card>
       )}
 
-      {user && (
-        <button
-          onClick={() => setChatOpen(true)}
-          className="fixed bottom-20 right-4 w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/30 flex items-center justify-center transition-all hover:scale-105 z-50"
-          data-testid="button-open-direct-chat"
-        >
-          <MessageCircle className="w-6 h-6" />
-        </button>
-      )}
-
-      {chatOpen && user && (
-        <DirectChat user={user} onClose={() => setChatOpen(false)} />
+      {vipOpen && user && isFounder && (
+        <VipHyperChat user={user} onClose={() => setVipOpen(false)} />
       )}
     </div>
   );

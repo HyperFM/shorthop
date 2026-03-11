@@ -44,6 +44,9 @@ import {
   founderMessages,
   type FounderMessage,
   type InsertFounderMessage,
+  vipMessages,
+  type VipMessage,
+  type InsertVipMessage,
   donations,
 } from "@shared/schema";
 
@@ -87,6 +90,7 @@ export interface IStorage {
   getRewards(): Promise<Reward[]>;
   redeemReward(userId: number, rewardId: number): Promise<{ code: string; reward: Reward }>;
   deductCredits(userId: number, amount: number): Promise<void>;
+  addCredits(userId: number, amount: number): Promise<void>;
   setAdmin(userId: number, isAdmin: boolean): Promise<void>;
   getUserRedemptions(userId: number): Promise<UserRedemption[]>;
 
@@ -128,6 +132,9 @@ export interface IStorage {
 
   getFounderMessages(): Promise<(FounderMessage & { username: string })[]>;
   createFounderMessage(msg: InsertFounderMessage): Promise<FounderMessage>;
+  getVipMessages(userId: number): Promise<(VipMessage & { username: string })[]>;
+  createVipMessage(msg: InsertVipMessage): Promise<VipMessage>;
+  getVipConversations(): Promise<{ userId: number; username: string; lastMessage: string; lastAt: string; unread: number }[]>;
   getWidgetData(userId: number): Promise<{
     role: "driver" | "hopper";
     directionLabel: string;
@@ -364,6 +371,14 @@ export class DatabaseStorage implements IStorage {
 
   async setAdmin(userId: number, isAdmin: boolean): Promise<void> {
     await db.update(users).set({ isAdmin }).where(eq(users.id, userId));
+  }
+
+  async addCredits(userId: number, amount: number): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+    await db.update(users)
+      .set({ credits: (user.credits || 0) + amount })
+      .where(eq(users.id, userId));
   }
 
   async deductCredits(userId: number, amount: number): Promise<void> {
@@ -768,6 +783,47 @@ export class DatabaseStorage implements IStorage {
   async createFounderMessage(msg: InsertFounderMessage): Promise<FounderMessage> {
     const [created] = await db.insert(founderMessages).values(msg).returning();
     return created;
+  }
+
+  async getVipMessages(userId: number): Promise<(VipMessage & { username: string })[]> {
+    const msgs = await db.select().from(vipMessages)
+      .where(eq(vipMessages.userId, userId))
+      .orderBy(desc(vipMessages.createdAt));
+    const result = [];
+    for (const msg of msgs) {
+      const user = await this.getUser(msg.userId);
+      result.push({ ...msg, username: user?.username || "unknown" });
+    }
+    return result;
+  }
+
+  async createVipMessage(msg: InsertVipMessage): Promise<VipMessage> {
+    const [created] = await db.insert(vipMessages).values(msg).returning();
+    return created;
+  }
+
+  async getVipConversations(): Promise<{ userId: number; username: string; lastMessage: string; lastAt: string; unread: number }[]> {
+    const allMsgs = await db.select().from(vipMessages).orderBy(desc(vipMessages.createdAt));
+    const convos = new Map<number, { userId: number; lastMessage: string; lastAt: string; unread: number }>();
+    for (const msg of allMsgs) {
+      if (!convos.has(msg.userId)) {
+        const userMsgs = allMsgs.filter(m => m.userId === msg.userId);
+        const lastAdminIdx = userMsgs.findIndex(m => m.isAdminReply);
+        const unread = lastAdminIdx === -1 ? userMsgs.filter(m => !m.isAdminReply).length : userMsgs.slice(0, lastAdminIdx).filter(m => !m.isAdminReply).length;
+        convos.set(msg.userId, {
+          userId: msg.userId,
+          lastMessage: msg.message.substring(0, 80),
+          lastAt: msg.createdAt?.toISOString() || new Date().toISOString(),
+          unread,
+        });
+      }
+    }
+    const result = [];
+    for (const [userId, c] of convos) {
+      const user = await this.getUser(userId);
+      result.push({ ...c, username: user?.username || "unknown" });
+    }
+    return result;
   }
 
   async getWidgetData(userId: number): Promise<{

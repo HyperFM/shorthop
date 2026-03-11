@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { FounderChat } from "@/components/FounderChat";
@@ -85,7 +85,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
@@ -97,6 +97,7 @@ export default function Admin() {
   const [notifyAllMsg, setNotifyAllMsg] = useState("");
   const [replyText, setReplyText] = useState<Record<number, string>>({});
   const [resolveText, setResolveText] = useState<Record<number, string>>({});
+  const [grantWheels, setGrantWheels] = useState<Record<number, string>>({});
 
   const { data: stats } = useQuery<AdminStats>({ queryKey: ["/api/admin/stats"] });
   const { data: allUsers } = useQuery<AdminUser[]>({ queryKey: ["/api/admin/users"], enabled: tab === "users" });
@@ -105,6 +106,34 @@ export default function Admin() {
   const { data: logs } = useQuery<RideLog[]>({ queryKey: ["/api/admin/logs"], enabled: tab === "logs" });
   const { data: inbox } = useQuery<ContactMsg[]>({ queryKey: ["/api/admin/inbox"], enabled: tab === "inbox" || tab === "overview" });
   const { data: reportsList } = useQuery<ReportItem[]>({ queryKey: ["/api/admin/reports"], enabled: tab === "reports" || tab === "overview" });
+  const { data: vipConvos } = useQuery<{ userId: number; username: string; lastMessage: string; lastAt: string; unread: number }[]>({
+    queryKey: ["/api/admin/vip-conversations"],
+    enabled: tab === "dms" || tab === "overview",
+  });
+
+  const [dmUserId, setDmUserId] = useState<number | null>(null);
+  const [dmReply, setDmReply] = useState("");
+  const { data: dmMessages } = useQuery<{ id: number; userId: number; username: string; message: string; isAdminReply: boolean; createdAt: string }[]>({
+    queryKey: ["/api/admin/vip-chat", dmUserId],
+    enabled: !!dmUserId,
+    refetchInterval: 8000,
+  });
+
+  const sendDmReply = useMutation({
+    mutationFn: async () => {
+      if (!dmUserId) return;
+      await apiRequest("POST", `/api/admin/vip-chat/${dmUserId}`, { message: dmReply });
+    },
+    onSuccess: () => {
+      setDmReply("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/vip-chat", dmUserId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/vip-conversations"] });
+      showFlash("✅", "Reply sent", "success");
+    },
+    onError: () => {
+      showFlash("❌", "Failed to send", "error");
+    },
+  });
 
   const reviewApp = useMutation({
     mutationFn: async ({ id, status, notes }: { id: number; status: string; notes?: string }) => {
@@ -188,6 +217,21 @@ export default function Admin() {
     },
   });
 
+  const grantWheelsMut = useMutation({
+    mutationFn: async ({ id, amount }: { id: number; amount: number }) => {
+      const res = await apiRequest("POST", `/api/admin/users/${id}/grant-wheels`, { amount });
+      return res.json();
+    },
+    onSuccess: (data: { message: string }, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setGrantWheels(prev => ({ ...prev, [vars.id]: "" }));
+      showFlash("🛞", data.message, "success");
+    },
+    onError: () => {
+      showFlash("❌", "Failed to grant Wheels", "error");
+    },
+  });
+
   const resolveReport = useMutation({
     mutationFn: async ({ id, notes }: { id: number; notes: string }) => {
       await apiRequest("POST", `/api/admin/reports/${id}/resolve`, { notes });
@@ -221,6 +265,7 @@ export default function Admin() {
     { key: "logs", label: "Logs", icon: Eye },
     { key: "notify", label: "Notify", icon: Send },
     { key: "founders", label: "Founders", icon: Crown },
+    { key: "dms", label: "DMs", icon: Star, badge: vipConvos?.reduce((sum, c) => sum + c.unread, 0) || 0 },
   ];
 
   return (
@@ -495,6 +540,30 @@ export default function Admin() {
                     </div>
                   )}
                 </div>
+                <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-border/30">
+                  <div className="flex items-center gap-1 text-[10px] text-secondary font-bold">
+                    <span>🛞</span> Grant Wheels
+                  </div>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    placeholder="Amount"
+                    value={grantWheels[u.id] || ""}
+                    onChange={e => setGrantWheels(prev => ({ ...prev, [u.id]: e.target.value }))}
+                    className="h-6 text-xs w-20"
+                    data-testid={`input-grant-wheels-${u.id}`}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-6 text-[10px] px-2 bg-secondary hover:bg-secondary/90 text-white"
+                    disabled={!grantWheels[u.id] || Number(grantWheels[u.id]) < 1 || grantWheelsMut.isPending}
+                    onClick={() => grantWheelsMut.mutate({ id: u.id, amount: Number(grantWheels[u.id]) })}
+                    data-testid={`button-grant-wheels-${u.id}`}
+                  >
+                    Give
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -672,9 +741,126 @@ export default function Admin() {
       {tab === "founders" && (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Direct chat line with founding members. Messages from founders create notifications in your inbox.
+            Group chat with founding members. Messages from founders create notifications in your inbox.
           </p>
           <FounderChat isAdminView />
+        </div>
+      )}
+
+      {tab === "dms" && (
+        <div className="space-y-3">
+          {!dmUserId ? (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Private VIP messages from founding members. Only they can see their own conversation with you.
+              </p>
+              {(!vipConvos || vipConvos.length === 0) ? (
+                <div className="text-center py-12">
+                  <Star className="w-10 h-10 text-amber-200 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground font-medium">No VIP messages yet</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">When founders DM you, they'll appear here.</p>
+                </div>
+              ) : (
+                vipConvos.map(c => (
+                  <Card
+                    key={c.userId}
+                    className="cursor-pointer hover:shadow-md transition-all border-amber-200/50 dark:border-amber-800/50"
+                    onClick={() => setDmUserId(c.userId)}
+                    data-testid={`dm-convo-${c.userId}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold shrink-0">
+                          {c.username[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-bold">{c.username}</p>
+                            {c.unread > 0 && (
+                              <Badge className="text-[9px] bg-amber-500 text-white border-0 px-1.5">
+                                {c.unread} new
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{c.lastMessage}</p>
+                          <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                            {new Date(c.lastAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </>
+          ) : (
+            <div className="space-y-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setDmUserId(null); setDmReply(""); }}
+                className="text-xs h-7 px-2 -ml-2"
+                data-testid="button-back-dms"
+              >
+                <ArrowLeft className="w-3 h-3 mr-1" /> Back to conversations
+              </Button>
+              <Card className="border-amber-200/50 dark:border-amber-800/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Star className="w-4 h-4 text-amber-500" />
+                    <p className="text-sm font-bold">
+                      VIP Chat — {vipConvos?.find(c => c.userId === dmUserId)?.username || "User"}
+                    </p>
+                    <Badge className="text-[8px] bg-amber-100 text-amber-700 border-0 ml-auto">Private</Badge>
+                  </div>
+                  <div className="h-[320px] overflow-y-auto space-y-2 mb-3 pr-1 scrollbar-thin" data-testid="dm-messages">
+                    {dmMessages && [...dmMessages].sort((a, b) =>
+                      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    ).map(m => (
+                      <div key={m.id} className={`flex ${m.isAdminReply ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${
+                          m.isAdminReply
+                            ? "bg-amber-500 text-white"
+                            : "bg-muted"
+                        }`}>
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <span className={`text-[10px] font-bold ${
+                              m.isAdminReply ? "text-white/80" : "text-foreground/70"
+                            }`}>
+                              {m.isAdminReply ? "You (Hyper)" : m.username}
+                            </span>
+                          </div>
+                          <p className={`text-xs leading-relaxed ${m.isAdminReply ? "text-white" : ""}`}>{m.message}</p>
+                          <p className={`text-[9px] mt-0.5 ${m.isAdminReply ? "text-white/50" : "text-muted-foreground"}`}>
+                            {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <Input
+                      placeholder="Reply as Hyper..."
+                      value={dmReply}
+                      onChange={e => setDmReply(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter" && dmReply.trim()) sendDmReply.mutate(); }}
+                      className="text-sm h-9"
+                      data-testid="input-dm-reply"
+                    />
+                    <Button
+                      size="sm"
+                      className="h-9 px-3 bg-amber-500 hover:bg-amber-600"
+                      disabled={!dmReply.trim() || sendDmReply.isPending}
+                      onClick={() => sendDmReply.mutate()}
+                      data-testid="button-send-dm-reply"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       )}
     </div>
