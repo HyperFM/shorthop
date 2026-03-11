@@ -16,6 +16,25 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/app-icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#2a9d5c" />
+    <style>
+      [class*="share-your-feedback"],
+      [class*="feedback"],
+      iframe[src*="feedback"],
+      #replit-feedback-button,
+      .replit-ui-theme-root,
+      div[id*="feedback"],
+      button[class*="feedback"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        left: -9999px !important;
+      }
+    </style>
     <meta property="og:title" content="ShortHop" />
     <meta property="og:description" content="Shared routes. Real connections. A micro-rideshare for Lexington, KY." />
     <meta property="og:image" content="/app-icon.png" />
