@@ -382,6 +382,49 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/hops/:id/tip', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const tipCents = Number(req.body.tipCents);
+      if (!tipCents || tipCents < 50 || tipCents > 5000) {
+        return res.status(400).json({ message: "Tip must be between $0.50 and $50" });
+      }
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.walkerId !== req.user.id) return res.status(403).json({ message: "Not your hop" });
+      if (hop.status !== "completed") return res.status(400).json({ message: "Hop not completed" });
+      await storage.tipDriver(hopId, tipCents);
+      if (hop.driverId) {
+        await storage.createNotification({
+          userId: hop.driverId,
+          type: "tip",
+          title: "You got a tip! 💰",
+          message: `${req.user.username} tipped you $${(tipCents / 100).toFixed(2)} for your hop. Thanks for driving!`,
+          isRead: false,
+        });
+      }
+      res.json({ message: "Tip sent!", tipCents });
+    } catch {
+      res.status(500).json({ message: "Failed to send tip" });
+    }
+  });
+
+  app.post('/api/donate', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const amountCents = Number(req.body.amountCents);
+      const message = (req.body.message || "").trim();
+      if (!amountCents || amountCents < 100) {
+        return res.status(400).json({ message: "Minimum donation is $1.00" });
+      }
+      await storage.createDonation(req.user.id, amountCents, message || null);
+      res.json({ message: "Thank you for supporting ShortHop!", amountCents });
+    } catch {
+      res.status(500).json({ message: "Failed to process donation" });
+    }
+  });
+
   app.get('/api/walker-routes', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {

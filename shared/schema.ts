@@ -89,7 +89,16 @@ export const shortHops = pgTable("short_hops", {
   status: text("status").notNull(),
   distanceMiles: text("distance_miles"),
   priceCents: integer("price_cents"),
+  tipCents: integer("tip_cents").default(0),
   detourDistance: text("detour_distance"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const donations = pgTable("donations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  message: text("message"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useHops, useRequestHop, useCancelHop } from "@/hooks/use-hops";
+import { HopBuddyRating } from "@/components/HopBuddyRating";
 import { NetworkProgress } from "@/components/NetworkProgress";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { FounderChat } from "@/components/FounderChat";
@@ -59,6 +60,9 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const [hopsOpen, setHopsOpen] = useState(false);
   const [savedRoutesOpen, setSavedRoutesOpen] = useState(false);
   const [addRouteOpen, setAddRouteOpen] = useState(false);
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const [ratingHop, setRatingHop] = useState<{ tripId: number; driverId: number; driverName: string } | null>(null);
+  const lastCompletedRef = useRef<number | null>(null);
 
   const { data: badges } = useQuery<{ id: number; badge: string; earnedAt: string | null }[]>({
     queryKey: ['/api/profile/badges'],
@@ -151,6 +155,23 @@ export default function WalkerDashboard({ user }: { user: User }) {
       }
     }
   }, [activeHop?.status, user.id]);
+
+  useEffect(() => {
+    if (!hops) return;
+    const completedWithDriver = hops
+      .filter(h => h.status === "completed" && h.driverId)
+      .sort((a, b) => b.id - a.id);
+    const latest = completedWithDriver[0];
+    if (latest && lastCompletedRef.current !== latest.id) {
+      lastCompletedRef.current = latest.id;
+      setRatingHop({
+        tripId: latest.id,
+        driverId: latest.driverId!,
+        driverName: "your driver",
+      });
+      setRatingOpen(true);
+    }
+  }, [hops]);
 
   const form = useForm<z.infer<typeof searchSchema>>({
     resolver: zodResolver(searchSchema),
@@ -467,22 +488,64 @@ export default function WalkerDashboard({ user }: { user: User }) {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-2 mb-3"
           >
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0 }}>
-              <Card className="border-border/50 shadow-sm cursor-default hover:border-primary/30 transition-colors" data-testid="option-walk">
-                <CardContent className="p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🚶</span>
-                    <div>
-                      <p className="text-sm font-bold text-foreground">Walk</p>
-                      <p className="text-[10px] text-muted-foreground">Healthy movement · transit routes</p>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0, type: "spring", stiffness: 200 }}>
+              <Card className="border-green-300 dark:border-green-700 shadow-md bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 relative overflow-hidden" data-testid="option-walk">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <motion.span
+                        className="text-3xl"
+                        animate={{ x: [0, 4, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        🚶
+                      </motion.span>
+                      <div>
+                        <p className="text-sm font-extrabold text-foreground">Start Walking</p>
+                        <p className="text-[10px] text-muted-foreground">Head that way — you might get picked up!</p>
+                      </div>
                     </div>
+                    <span className="text-sm font-bold text-green-600 bg-green-100 dark:bg-green-900/50 px-2.5 py-1 rounded-full">Free</span>
                   </div>
-                  <span className="text-sm font-bold text-primary">Free</span>
+                  {driversInCity > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="bg-white/80 dark:bg-background/50 rounded-lg p-2.5 flex items-center gap-2"
+                    >
+                      <div className="flex -space-x-1.5">
+                        {Array.from({ length: Math.min(driversInCity, 3) }).map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className="w-5 h-5 rounded-full bg-green-500 border-2 border-white flex items-center justify-center"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.4 + i * 0.1, type: "spring" }}
+                          >
+                            <span className="text-[8px]">🚗</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-foreground">
+                        <strong className="text-green-600">{driversInCity}</strong> driver{driversInCity !== 1 ? "s" : ""} heading your direction
+                      </p>
+                    </motion.div>
+                  )}
+                  <p className="text-[10px] text-green-700 dark:text-green-400 mt-2 font-medium">
+                    Start heading toward {locations.endLocation || "your destination"} — a driver may pick you up along the way!
+                  </p>
                 </CardContent>
               </Card>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
+            <div className="flex items-center gap-2 px-2">
+              <div className="h-px flex-1 bg-border/60" />
+              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">or get a ride</span>
+              <div className="h-px flex-1 bg-border/60" />
+            </div>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
               <Card className="border-primary/40 shadow-sm bg-primary/5 relative overflow-hidden" data-testid="option-short-hop">
                 <div className="absolute top-0 right-0 bg-primary text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-lg uppercase">Recommended</div>
                 <CardContent className="p-3 flex items-center justify-between">
@@ -509,7 +572,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
               </Card>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
               <Card className="border-border/50 shadow-sm" data-testid="option-flex-hop">
                 <CardContent className="p-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -549,7 +612,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
               </Card>
             </motion.div>
 
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
               <Card className="border-border/50 shadow-sm" data-testid="option-power-hop">
                 <CardContent className="p-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -903,6 +966,18 @@ export default function WalkerDashboard({ user }: { user: User }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {ratingHop && (
+        <HopBuddyRating
+          open={ratingOpen}
+          onOpenChange={setRatingOpen}
+          tripId={ratingHop.tripId}
+          ratedUserId={ratingHop.driverId}
+          ratedUsername={ratingHop.driverName}
+          userTier={user.tier}
+          showTip={true}
+        />
+      )}
     </div>
   );
 }

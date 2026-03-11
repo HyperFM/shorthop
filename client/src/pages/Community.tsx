@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield } from "lucide-react";
+import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield, Heart, DollarSign } from "lucide-react";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -155,11 +155,22 @@ function DirectChat({ user, onClose }: { user: any; onClose: () => void }) {
   );
 }
 
+const DONATE_AMOUNTS = [
+  { label: "$1", cents: 100 },
+  { label: "$5", cents: 500 },
+  { label: "$10", cents: 1000 },
+  { label: "$25", cents: 2500 },
+];
+
 export default function Community() {
   const { data: user, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [newPost, setNewPost] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
+  const [donateAmount, setDonateAmount] = useState<number | null>(null);
+  const [donateMsg, setDonateMsg] = useState("");
+  const [customDonate, setCustomDonate] = useState("");
+  const [showCustomDonate, setShowCustomDonate] = useState(false);
 
   const { data: posts = [], isLoading } = useQuery<
     { id: number; userId: number; content: string; createdAt: string | null; username: string }[]
@@ -185,6 +196,28 @@ export default function Community() {
     },
     onError: () => {
       showFlash("🔒", "FlexHop required to post", "error");
+    },
+  });
+
+  const submitDonation = useMutation({
+    mutationFn: async () => {
+      const finalCents = showCustomDonate ? Math.round(parseFloat(customDonate) * 100) : donateAmount;
+      if (!finalCents || finalCents < 100) throw new Error("Minimum $1");
+      await apiRequest("POST", "/api/donate", {
+        amountCents: finalCents,
+        message: donateMsg.trim() || null,
+      });
+    },
+    onSuccess: () => {
+      const finalCents = showCustomDonate ? Math.round(parseFloat(customDonate) * 100) : donateAmount;
+      showFlash("💚", `$${((finalCents || 0) / 100).toFixed(2)} donated — thank you!`, "success");
+      setDonateAmount(null);
+      setDonateMsg("");
+      setCustomDonate("");
+      setShowCustomDonate(false);
+    },
+    onError: () => {
+      showFlash("❌", "Failed to process donation", "error");
     },
   });
 
@@ -300,6 +333,100 @@ export default function Community() {
           ))
         )}
       </div>
+
+      {user && (
+        <Card className="mt-8 border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 overflow-hidden" data-testid="donation-section">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-md">
+                <Heart className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-extrabold text-foreground">Support Short Hop</p>
+                <p className="text-[10px] text-muted-foreground">Help keep community rides running in Lexington</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {DONATE_AMOUNTS.map(a => (
+                <button
+                  key={a.cents}
+                  type="button"
+                  onClick={() => { setDonateAmount(a.cents); setShowCustomDonate(false); }}
+                  className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    donateAmount === a.cents && !showCustomDonate
+                      ? "bg-orange-500 text-white shadow-md scale-[1.03]"
+                      : "bg-white dark:bg-background border border-border hover:border-orange-300"
+                  }`}
+                  data-testid={`donate-${a.cents}`}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => { setShowCustomDonate(true); setDonateAmount(null); }}
+              className={`w-full py-2 rounded-lg text-xs font-bold transition-all mb-3 ${
+                showCustomDonate
+                  ? "bg-orange-500 text-white"
+                  : "bg-white/60 dark:bg-background/60 border border-dashed border-orange-200 text-muted-foreground hover:border-orange-400"
+              }`}
+              data-testid="donate-custom-toggle"
+            >
+              Custom Amount
+            </button>
+
+            {showCustomDonate && (
+              <div className="flex items-center gap-2 mb-3">
+                <DollarSign className="w-4 h-4 text-orange-500" />
+                <Input
+                  type="number"
+                  step="1"
+                  min="1"
+                  placeholder="Enter amount"
+                  value={customDonate}
+                  onChange={e => setCustomDonate(e.target.value)}
+                  className="h-9 text-sm"
+                  data-testid="input-custom-donate"
+                />
+              </div>
+            )}
+
+            <Textarea
+              placeholder="Leave a message (optional)"
+              value={donateMsg}
+              onChange={e => setDonateMsg(e.target.value)}
+              className="resize-none min-h-[60px] mb-3 text-sm"
+              maxLength={200}
+              data-testid="input-donate-message"
+            />
+
+            <Button
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold"
+              disabled={
+                submitDonation.isPending ||
+                (!donateAmount && !showCustomDonate) ||
+                (showCustomDonate && (!customDonate || parseFloat(customDonate) < 1))
+              }
+              onClick={() => submitDonation.mutate()}
+              data-testid="button-submit-donate"
+            >
+              <Heart className="w-4 h-4 mr-2" />
+              {submitDonation.isPending
+                ? "Processing..."
+                : (donateAmount || (showCustomDonate && customDonate))
+                ? `Donate $${((showCustomDonate ? Math.round(parseFloat(customDonate || "0") * 100) : donateAmount || 0) / 100).toFixed(2)}`
+                : "Select an amount"}
+            </Button>
+
+            <p className="text-[10px] text-center text-muted-foreground mt-2">
+              Donations support app development, driver gas assistance, and community events.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {user && (
         <button

@@ -10,7 +10,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - **FlexHop (Premium)**: Post in community, follow users, message connections, save preferred drivers, trusted hoppers network
 
 ### Movement Options
-- Walk ($0) - Healthy movement, transit routes
+- Walk ($0) - Animated "Start Walking" card with driver count bubbles, green gradient, walking emoji animation
 - Short Hop ($1-3) - Advance along driver's route, free membership
 - Flex Hop ($2-5, $5/mo) - Small detours, dynamic pricing
 - Power Hop ($15/mo) - Unlimited, anywhere to anywhere, "Reach for the Sky"
@@ -23,6 +23,9 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 ### Hop Buddy Rating System
 - After ride completion: Great Hop, Good Ride, Neutral, Issue
 - Optional: "Ride again" checkbox, "Follow Hop Buddy" button
+- Tipping system: $1/$2/$5/Custom tip options (min $0.50, 100% to driver)
+- Auto-opens on completed hop for walkers (WalkerDashboard integration)
+- Driver gets notification when tipped
 - Builds trust network for better matching
 
 ### Trusted Hoppers (Follow System)
@@ -37,6 +40,8 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Shows username, content, timestamp
 - Floating green "Chat with Hyper" button (all users) opens DirectChat panel
 - DirectChat uses `/api/founder-chat` endpoint, messages go to admin Founders tab
+- **Donation section**: $1/$5/$10/$25 + custom amounts, optional message, orange/amber gradient card
+  - POST /api/donate endpoint, min $1, stored in `donations` table
 
 ### Notification System
 - In-app notification center in bottom tab bar (Alerts tab)
@@ -190,11 +195,22 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Driver Info: GET /api/hops/:id/driver-info, POST /api/hops/:id/decline
 - Admin: GET /api/admin/stats, GET /api/admin/users, GET /api/admin/drivers, GET /api/admin/applications, POST /api/admin/applications/:id/review, POST /api/admin/users/:id/disable, POST /api/admin/users/:id/delete, GET /api/admin/logs, POST /api/admin/notify-drivers, GET /api/admin/inbox, POST /api/admin/inbox/:id/reply, GET /api/admin/reports, POST /api/admin/reports/:id/resolve
 - Contact/Report: POST /api/contact, GET /api/contact, POST /api/report
+- Tipping: POST /api/hops/:id/tip (tipCents in body, min $0.50)
+- Donations: POST /api/donate (amountCents, message)
 - Widget: GET /api/widget/data
 - Founder Chat: GET /api/founder-chat, POST /api/founder-chat
 - Walker Routes: GET /api/walker-routes, POST /api/walker-routes, DELETE /api/walker-routes/:id
 - Network: GET /api/network-stats
 - Subscription: POST /api/subscription, DELETE /api/subscription
+
+### GPS/Map Visuals
+- Leaflet with CartoDB dark tiles
+- Pulsing blue dot for user location, green rounded-square for driver with car emoji
+- Animated blue route lines with glow effect + directional arrows (3 arrows along path)
+- Dashed animated overlay line (CSS keyframe dash animation)
+- Distance overlay badge (green pill, top-right corner)
+- Pickup spot markers with green pin icons + shadow
+- Map has gradient fade overlays at top/bottom edges
 
 ### UI Theme
 - Nature-inspired greens (primary), orange (secondary), blue (accent)
@@ -216,7 +232,8 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - users (auth, wheels/credits, tier, rideVibe, driver flexibility, founder status, driver verification fields, admin/disabled flags)
 - driver_applications (driver onboarding tracking: userId, status, submittedAt, reviewedAt, reviewedBy, notes)
 - routine_routes (driver commutes)
-- short_hops (ride requests)
+- short_hops (ride requests, tipCents column for driver tips)
+- donations (userId, amountCents, message, createdAt)
 - rewards / user_redemptions (reward store)
 - notifications (user alerts)
 - hop_buddy_ratings (post-ride ratings)

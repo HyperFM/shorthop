@@ -44,6 +44,7 @@ import {
   founderMessages,
   type FounderMessage,
   type InsertFounderMessage,
+  donations,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -110,6 +111,9 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   disableUser(id: number, disabled: boolean): Promise<User>;
   deleteUser(id: number): Promise<void>;
+  getHop(id: number): Promise<ShortHop | undefined>;
+  tipDriver(hopId: number, tipCents: number): Promise<void>;
+  createDonation(userId: number, amountCents: number, message: string | null): Promise<void>;
   getSystemLogs(limit?: number): Promise<ShortHop[]>;
 
   createContactMessage(msg: InsertContactMessage): Promise<ContactMessage>;
@@ -655,8 +659,22 @@ export class DatabaseStorage implements IStorage {
     await db.delete(userRedemptions).where(eq(userRedemptions.userId, id));
     await db.delete(walkerRoutes).where(eq(walkerRoutes.userId, id));
     await db.delete(routineRoutes).where(eq(routineRoutes.driverId, id));
+    await db.delete(donations).where(eq(donations.userId, id));
     await db.delete(shortHops).where(or(eq(shortHops.walkerId, id), eq(shortHops.driverId, id)));
     await db.delete(users).where(eq(users.id, id));
+  }
+
+  async getHop(id: number): Promise<ShortHop | undefined> {
+    const [hop] = await db.select().from(shortHops).where(eq(shortHops.id, id));
+    return hop;
+  }
+
+  async tipDriver(hopId: number, tipCents: number): Promise<void> {
+    await db.update(shortHops).set({ tipCents }).where(eq(shortHops.id, hopId));
+  }
+
+  async createDonation(userId: number, amountCents: number, message: string | null): Promise<void> {
+    await db.insert(donations).values({ userId, amountCents, message });
   }
 
   async createContactMessage(msg: InsertContactMessage): Promise<ContactMessage> {
