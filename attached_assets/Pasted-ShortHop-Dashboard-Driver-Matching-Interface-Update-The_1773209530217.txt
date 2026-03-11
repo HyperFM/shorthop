@@ -1,0 +1,125 @@
+ShortHop Dashboard & Driver Matching Interface Update
+
+The current rider dashboard layout needs to be redesigned to feel more like a modern mobile app interface rather than a long scrolling webpage. The goal is to create a compact, high-utility dashboard that behaves more like an iPhone widget layout where users can quickly see important information at a glance without scrolling through large sections.
+
+Dashboard Layout Changes
+
+The rider home screen should be reorganized into compact cards or widgets that provide immediate information and actions. Instead of large stacked sections that require vertical scrolling, the interface should present key information in smaller modules that are visible on the screen simultaneously.
+
+Primary widget areas should include:
+
+• Destination input (top priority action)
+• Driver flow / availability status
+• Recommended pickup corridor
+• Map preview (only when needed)
+
+Each card should be compact and information-dense so users can understand the status of their ride opportunity within one glance.
+
+Remove Oversized Header Illustration
+
+The large illustration currently shown at the top of the dashboard should be removed from the main interface. This image could be repurposed for onboarding, loading states, or empty states, but it should not occupy a large portion of the primary dashboard.
+
+The dashboard should prioritize functional information over decorative visuals.
+
+Driver Search Status Card
+
+The “Looking for a Driver” section should be redesigned into a smaller dynamic status card.
+
+Instead of displaying a large banner, it should display real-time system information such as:
+
+• Drivers heading in the user’s direction
+• Driver flow frequency
+• Estimated opportunity timing
+
+Example status states:
+
+No Drivers Nearby
+If no drivers are currently traveling near the rider’s route, the system should clearly state that no drivers are available rather than displaying a fake estimate.
+
+Example message:
+“No drivers currently heading your direction.”
+
+The system may also show network information such as total drivers active in the city vs drivers nearby to reassure users that the system is functioning.
+
+Active Driver Flow
+When drivers exist nearby, the card should show:
+
+• number of drivers moving along the route
+• estimated pass frequency
+• general timing estimates based on real traffic flow
+
+Example:
+“3 drivers passing this route. Next likely opportunity in ~6 minutes.”
+
+These estimates must be calculated from real data rather than randomly generated.
+
+Map Behavior Changes
+
+The map should not appear as a large static section on the dashboard.
+
+Instead:
+
+• The map should appear after the rider enters their destination.
+• Once the destination is entered, the system identifies nearby high-traffic pickup corridors.
+• The map then shows the optimal walking point where the rider should go to intercept drivers already traveling that direction.
+
+The purpose of the map is to guide the rider to the best pickup corridor rather than simply displaying a map for browsing.
+
+Pickup Corridor Logic
+
+The system should analyze nearby roadways and identify the most effective pickup zones based on traffic flow and driver routes.
+
+The interface should present these as simplified cards such as:
+
+Best Pickup Zone
+“2 minute walk”
+
+Alternative Pickup Zone
+“5 minute walk”
+
+These zones represent intersections or corridors with the highest probability of passing drivers.
+
+Driver Flow Model
+
+ShortHop is not a traditional rideshare dispatch model.
+
+Instead of assigning drivers directly, the system matches riders with drivers already traveling along compatible routes.
+
+Because of this, the core metric displayed in the app should not be a simple ETA.
+
+Instead the system should show driver flow information such as:
+
+• drivers passing a corridor per minute
+• likelihood of catching a ride
+• next estimated pass opportunity
+
+This reflects the real behavior of the platform where riders intercept drivers already moving through the city.
+
+Early Network Stage Behavior
+
+Because the network is still growing, the system must handle low-activity conditions clearly.
+
+If there are currently no drivers near the rider’s route, the interface should communicate this honestly.
+
+Example network status display:
+
+Drivers in city: X  
+Drivers near you: 0
+
+This prevents the app from appearing broken and communicates that the network is expanding.
+
+Users should also be encouraged to invite drivers or activate their corridor.
+
+Design Goals
+
+The new dashboard should feel:
+
+• compact
+• modern
+• fast to read
+• action oriented
+• similar to iPhone widget style layouts
+
+The goal is for users to understand their ride situation within seconds of opening the app without needing to scroll through large interface sections.
+
+This change should significantly improve usability and make the platform feel more like a polished mobile product rather than a scrolling webpage interface.
