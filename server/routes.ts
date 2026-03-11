@@ -649,6 +649,39 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/toggle-driver-mode', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const { enable } = req.body;
+    if (typeof enable !== 'boolean') return res.status(400).json({ message: "Invalid request" });
+
+    const user = req.user;
+
+    if (enable) {
+      const canEnable = user.isFounder || user.subscription === 'flex_hop' || user.subscription === 'power_hop';
+      if (!canEnable) {
+        return res.status(403).json({ message: "Flex Hop subscription required to enable Drive Mode. Founding members get this free." });
+      }
+    }
+
+    try {
+      const updated = await storage.toggleDriverMode(user.id, enable);
+
+      if (enable && !user.isDriver) {
+        await storage.createNotification({
+          userId: user.id,
+          type: "driver_mode",
+          title: "Drive Mode Activated",
+          message: "You can now accept hop requests from riders along your commute. Set up your routine routes to get started!",
+          isRead: false,
+        });
+      }
+
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to toggle driver mode" });
+    }
+  });
+
   app.post('/api/location', (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const { latitude, longitude, accuracy } = req.body;

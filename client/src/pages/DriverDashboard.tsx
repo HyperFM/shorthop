@@ -43,7 +43,7 @@ const routeSchema = z.object({
   days: z.array(z.string()).min(1, "Select at least one day"),
 });
 
-export default function DriverDashboard({ user }: { user: User }) {
+export default function DriverDashboard({ user, onSwitchToWalker }: { user: User; onSwitchToWalker?: () => void }) {
   const { data: routes } = useRoutes();
   const { data: hops } = useHops();
   const createRoute = useCreateRoute();
@@ -119,6 +119,17 @@ export default function DriverDashboard({ user }: { user: User }) {
             )}
           </div>
           <p className="text-muted-foreground mt-1">Manage your routes and accept short hops along the way.</p>
+          {onSwitchToWalker && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSwitchToWalker}
+              className="mt-2 w-fit border-primary/30 text-primary hover:bg-primary/10"
+              data-testid="button-switch-to-hopper"
+            >
+              <MapPin className="w-4 h-4 mr-1" /> Switch to Hopper Mode
+            </Button>
+          )}
         </div>
         <motion.div whileHover={{ scale: 1.03 }}>
           <Card className="game-card border-secondary/30 bg-gradient-to-br from-secondary/10 via-secondary/5 to-transparent hover:border-secondary/50">

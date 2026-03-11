@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight } from "lucide-react";
+import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, CarFront } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,7 +31,7 @@ function getBadgeStyle(badge: string): { icon: typeof Flame; color: string } {
   return { icon: Award, color: "text-blue-500" };
 }
 
-export default function WalkerDashboard({ user }: { user: User }) {
+export default function WalkerDashboard({ user, canDrive, onSwitchToDriver }: { user: User; canDrive?: boolean; onSwitchToDriver?: () => void }) {
   const { data: hops } = useHops();
   const requestHop = useRequestHop();
   const [showOptions, setShowOptions] = useState(false);
@@ -505,6 +505,56 @@ export default function WalkerDashboard({ user }: { user: User }) {
           </CardContent>
         </Card>
       )}
+
+      <Card className="border-border/50 shadow-sm mb-3" data-testid="card-drive-mode">
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white">
+                <CarFront className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-foreground">Drive Mode</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {canDrive
+                    ? "Switch to driver view and accept hop requests"
+                    : user.isFounder
+                      ? "Available — you're a founder!"
+                      : "Flex Hop subscribers can also drive"}
+                </p>
+              </div>
+            </div>
+            {canDrive ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs rounded-lg border-blue-500/30 text-blue-600 hover:bg-blue-500/10"
+                onClick={onSwitchToDriver}
+                data-testid="button-switch-to-driver"
+              >
+                <CarFront className="w-3 h-3 mr-1" />
+                Drive
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs rounded-lg"
+                onClick={() => setSubscriptionPlan("flex_hop")}
+                data-testid="button-unlock-drive-mode"
+              >
+                <Lock className="w-3 h-3 mr-1" />
+                $5/mo
+              </Button>
+            )}
+          </div>
+          {!canDrive && (
+            <p className="text-[9px] text-muted-foreground mt-2 pl-10">
+              First 25 founding members get Drive Mode free forever
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="border-border/50 shadow-sm mb-3" data-testid="card-network">
         <CardContent className="p-3">

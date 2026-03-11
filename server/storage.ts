@@ -42,6 +42,7 @@ export interface IStorage {
   dismissWelcome(id: number): Promise<void>;
   getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }>;
   checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User>;
+  toggleDriverMode(userId: number, enable: boolean): Promise<User>;
 
   addToExpansionWaitlist(entry: InsertExpansionWaitlist): Promise<ExpansionWaitlist>;
 
@@ -142,28 +143,26 @@ export class DatabaseStorage implements IStorage {
     const milestones = [10, 25, 50, 100, 250, 500, 1000, 2000, 3000, 5000];
     const nextMilestone = milestones.find(m => m > totalUsers) || 5000;
 
-    const foundingDrivers = allUsers.filter(u => u.isDriver && u.isFounder).length;
-    const foundingHoppers = allUsers.filter(u => !u.isDriver && u.isFounder).length;
+    const totalFounders = allUsers.filter(u => u.isFounder).length;
+    const foundingSpotsRemaining = Math.max(0, 25 - totalFounders);
 
     return {
       totalUsers,
       totalDrivers,
       totalHoppers,
       nextMilestone,
-      foundingHoppersRemaining: Math.max(0, 20 - foundingHoppers),
-      foundingDriversRemaining: Math.max(0, 20 - foundingDrivers),
+      foundingHoppersRemaining: foundingSpotsRemaining,
+      foundingDriversRemaining: foundingSpotsRemaining,
     };
   }
 
   async checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User> {
     const allUsers = await db.select().from(users);
-    const founderCount = allUsers.filter(u =>
-      u.isFounder && (isDriver ? u.isDriver : !u.isDriver)
-    ).length;
+    const totalFounders = allUsers.filter(u => u.isFounder).length;
 
-    if (founderCount < 20) {
+    if (totalFounders < 25) {
       const badge = isDriver ? "Founding Driver" : "Founding Hopper";
-      const tier = isDriver ? "flexhop" : "flexhop";
+      const tier = "flexhop";
       const [updated] = await db.update(users)
         .set({ isFounder: true, founderBadge: badge, tier })
         .where(eq(users.id, userId))
@@ -173,6 +172,14 @@ export class DatabaseStorage implements IStorage {
 
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     return user;
+  }
+
+  async toggleDriverMode(userId: number, enable: boolean): Promise<User> {
+    const [updated] = await db.update(users)
+      .set({ isDriver: enable })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
   }
 
   async getRoutes(driverId: number): Promise<RoutineRoute[]> {

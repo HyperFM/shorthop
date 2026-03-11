@@ -83,9 +83,17 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Expansion waitlist stored in `expansion_waitlist` table (username, city, phone)
 - API endpoints: GET /api/expansion/check-city, POST /api/expansion/waitlist
 
+### Drive Mode (Dual-Role Accounts)
+- Walkers can activate "Drive Mode" to switch to the Driver Dashboard and accept hop requests
+- Requires Flex Hop subscription ($5/mo) OR founding member status (free forever)
+- Toggle via `POST /api/toggle-driver-mode` with `{ enable: boolean }` — server enforces subscription/founder check
+- Dashboard supports instant switching between Hopper and Driver modes
+- Drive Mode card shown in WalkerDashboard with unlock CTA or switch button
+- DriverDashboard shows "Switch to Hopper Mode" button when in dual-role mode
+
 ### Early Network & Growth System
-- Founding members: first 20 walkers = "Founding Hopper", first 20 drivers = "Founding Driver"
-- Founders get lifetime FlexHop tier + badge (auto-assigned at registration)
+- Founding members: first 25 walkers = "Founding Hopper", first 25 drivers = "Founding Driver"
+- Founders get lifetime FlexHop tier + badge (auto-assigned at registration) + free Drive Mode
 - Welcome modal shown on first login with invite functionality (Web Share API)
 - Network progress card on both dashboards showing driver/hopper/total counts
 - Milestone progress bar with founder spots remaining
@@ -123,7 +131,7 @@ Full community layer with user tiers, ride vibe preferences, hop buddy ratings, 
 - Follows: GET /api/follows, POST /api/follow/:id, DELETE /api/follow/:id
 - Ratings: POST /api/ratings
 - Profile: PUT /api/profile/preferences, POST /api/profile/dismiss-welcome
-- Driver: PUT /api/driver/flexibility
+- Driver: PUT /api/driver/flexibility, POST /api/toggle-driver-mode
 - Network: GET /api/network-stats
 
 ### Fun/Game-Like UI Theme

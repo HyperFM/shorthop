@@ -93,22 +93,13 @@ export function NetworkProgress() {
             </div>
           </div>
 
-          {(stats.foundingHoppersRemaining > 0 || stats.foundingDriversRemaining > 0) && (
+          {stats.foundingHoppersRemaining > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
-              {stats.foundingHoppersRemaining > 0 && (
-                <motion.div whileHover={{ scale: 1.05 }}>
-                  <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/20 gap-1" data-testid="badge-founding-hoppers">
-                    🛞 {stats.foundingHoppersRemaining} Founding Hopper spots left!
-                  </Badge>
-                </motion.div>
-              )}
-              {stats.foundingDriversRemaining > 0 && (
-                <motion.div whileHover={{ scale: 1.05 }}>
-                  <Badge variant="outline" className="text-[10px] bg-secondary/5 border-secondary/20 gap-1" data-testid="badge-founding-drivers">
-                    🛞 {stats.foundingDriversRemaining} Founding Driver spots left!
-                  </Badge>
-                </motion.div>
-              )}
+              <motion.div whileHover={{ scale: 1.05 }}>
+                <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/20 gap-1" data-testid="badge-founding-spots">
+                  🛞 {stats.foundingHoppersRemaining} Founding Member spots left!
+                </Badge>
+              </motion.div>
             </div>
           )}
         </CardContent>
