@@ -170,44 +170,6 @@ export function PickupMapVisual({ spots, hasLocation, userLat, userLng, tracking
         </motion.div>
       )}
 
-      {tracking?.available && tracking.distance !== null && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3"
-        >
-          <p className="text-sm font-bold text-foreground flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-green-500 inline-block animate-pulse" />
-            Driver is {tracking.distance < 0.1 ? 'almost here!' : `${tracking.distance} mi ${tracking.direction || 'away'}`}
-          </p>
-        </motion.div>
-      )}
-
-      <div className="space-y-2">
-        {spots.map((spot, i) => (
-          <motion.div
-            key={spot.name}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="flex items-start gap-3 p-3 rounded-lg bg-background hover:bg-muted/50 transition-colors"
-            data-testid={`pickup-spot-${i}`}
-          >
-            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-              <MapPin className="w-3.5 h-3.5 text-primary" />
-            </div>
-            <div className="text-sm min-w-0">
-              <p className="font-semibold text-foreground text-xs">{spot.name}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{spot.desc}</p>
-              {spot.distance !== undefined && (
-                <p className="text-[11px] text-primary font-medium mt-0.5">
-                  {spot.distance < 0.1 ? "You're here!" : `~${spot.distance.toFixed(1)} mi away`}
-                </p>
-              )}
-            </div>
-          </motion.div>
-        ))}
-      </div>
     </div>
   );
 }

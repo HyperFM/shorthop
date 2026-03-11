@@ -4,10 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, CarFront, Footprints, Clock, CheckCircle2, Share2, Flame, Award, Star, Lock, Compass } from "lucide-react";
+import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useHops, useRequestHop } from "@/hooks/use-hops";
@@ -41,6 +40,10 @@ export default function WalkerDashboard({ user }: { user: User }) {
 
   const { data: badges } = useQuery<{ id: number; badge: string; earnedAt: string | null }[]>({
     queryKey: ['/api/profile/badges'],
+  });
+
+  const { data: networkStats } = useQuery<{ totalUsers: number; totalDrivers: number; totalHoppers: number }>({
+    queryKey: ['/api/network-stats'],
   });
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
@@ -102,8 +105,8 @@ export default function WalkerDashboard({ user }: { user: User }) {
     setShowOptions(true);
   };
 
-  const handleRequestHop = () => {
-    requestHop.mutate(locations, {
+  const handleRequestHop = (hopType: string = 'short_hop') => {
+    requestHop.mutate({ ...locations, hopType } as any, {
       onSuccess: () => setShowOptions(false)
     });
   };
@@ -121,507 +124,413 @@ export default function WalkerDashboard({ user }: { user: User }) {
     }
   };
 
-  return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
-      >
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-display font-bold text-foreground">Where to? 🗺️</h1>
-            {user.isFounder && user.founderBadge && (
-              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[10px] animate-bounce-in" data-testid="badge-founder">
-                🛞 {user.founderBadge}
-              </Badge>
-            )}
-          </div>
-          <p className="text-muted-foreground mt-1">Find the best way to get there.</p>
-        </div>
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Button variant="outline" size="sm" onClick={handleInvite} data-testid="button-invite-friends" className="self-start sm:self-auto rounded-full">
-            <Share2 className="w-4 h-4 mr-1.5" />
-            Invite Friends
-          </Button>
-        </motion.div>
-      </motion.div>
+  const networkLoaded = !!networkStats;
+  const driversInCity = networkStats?.totalDrivers ?? 0;
 
-      <div className="mb-8 flex flex-col sm:flex-row gap-4">
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="flex-1"
-        >
-          <Card className="game-card border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent hover:border-orange-500/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/30">
-                <span className="text-2xl">🔥</span>
-              </div>
-              <div>
-                <div className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider" data-testid="text-streak-label">Hop Streak</div>
-                <div className="text-3xl font-black text-foreground" data-testid="text-streak-count">{user.hopStreak || 0}</div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="flex-1"
-        >
-          <Card className="game-card border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:border-primary/50">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-lg shadow-primary/30">
-                <span className="text-2xl">⭐</span>
-              </div>
-              <div>
-                <div className="text-xs font-bold text-primary uppercase tracking-wider" data-testid="text-total-hops-label">Total Hops</div>
-                <div className="text-3xl font-black text-foreground" data-testid="text-total-hops-count">{user.totalHops || 0}</div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+  return (
+    <div className="container mx-auto px-3 py-4 max-w-lg">
+
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-display font-bold text-foreground" data-testid="text-dashboard-title">ShortHop</h1>
+          {user.isFounder && user.founderBadge && (
+            <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[9px] px-1.5 py-0.5" data-testid="badge-founder">
+              🛞 {user.founderBadge}
+            </Badge>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" onClick={handleInvite} data-testid="button-invite-friends" className="text-xs h-8 px-2.5 rounded-full">
+          <Share2 className="w-3.5 h-3.5 mr-1" />
+          Invite
+        </Button>
       </div>
 
-      {badges && badges.length > 0 && (
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-          className="mb-8"
-        >
-          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2" data-testid="text-badges-heading">
-            🏆 Achievement Badges
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {badges.map((b, i) => {
-              const badgeInfo = getBadgeStyle(b.badge);
-              const IconComponent = badgeInfo.icon;
-              return (
-                <motion.div key={b.id} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}>
-                  <Badge variant="secondary" className="gap-1.5 py-1.5 px-3 text-sm hover:scale-105 transition-transform cursor-default" data-testid={`badge-achievement-${b.id}`}>
-                    <IconComponent className={`w-4 h-4 ${badgeInfo.color}`} />
-                    {b.badge}
-                  </Badge>
-                </motion.div>
-              );
-            })}
-          </div>
-        </motion.div>
+      {!activeHop && (
+        <Card className="mb-3 border-border/50 shadow-sm" data-testid="card-destination-input">
+          <CardContent className="p-3">
+            <form onSubmit={form.handleSubmit(onSearch)} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col items-center gap-0.5 py-1">
+                  <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-primary" />
+                  <div className="w-px h-6 bg-border" />
+                  <div className="w-2.5 h-2.5 rounded-sm bg-secondary border-2 border-secondary" />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <Input
+                    placeholder="Current location"
+                    className="h-9 text-sm rounded-lg bg-muted/40 border-transparent focus:bg-background"
+                    data-testid="input-start-location"
+                    {...form.register("startLocation")}
+                  />
+                  <Input
+                    placeholder="Where to?"
+                    className="h-9 text-sm rounded-lg bg-muted/40 border-transparent focus:bg-background font-medium"
+                    data-testid="input-end-location"
+                    {...form.register("endLocation")}
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                className="w-full h-9 rounded-lg text-sm font-bold bg-gradient-to-r from-primary to-accent"
+                data-testid="button-find-options"
+              >
+                Find Options
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
-      {activeHop ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: "spring", damping: 20 }}
-        >
-          <Card className="border-primary/30 shadow-2xl bg-gradient-to-br from-primary/10 via-accent/5 to-secondary/5 mb-8 game-card overflow-hidden">
-            <CardContent className="p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
-              <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden">
-                {activeHop.status === 'requested' ? (
-                  <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                    data-testid="video-hop-animation"
-                  >
-                    <source src="/hop-animation.mp4" type="video/mp4" />
-                  </video>
-                ) : (
-                  <motion.div
-                    className="w-full h-full relative"
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", damping: 12 }}
-                  >
-                    <video
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover"
-                      data-testid="video-hop-matched"
-                      ref={(el) => { if (el) { el.currentTime = 0; el.pause(); } }}
-                    >
-                      <source src="/hop-animation.mp4" type="video/mp4" />
-                    </video>
-                    <motion.div
-                      className="absolute inset-0 flex items-center justify-center"
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      <span className="text-5xl drop-shadow-lg">👋</span>
-                    </motion.div>
-                  </motion.div>
+      <Card className="mb-3 border-border/50 shadow-sm" data-testid="card-driver-status">
+        <CardContent className="p-3">
+          {activeHop ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-full ${activeHop.status === 'matched' ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse`} />
+                  <span className="text-sm font-bold text-foreground" data-testid="text-hop-status">
+                    {activeHop.status === 'requested' ? 'Searching for driver...' : 'Driver matched!'}
+                  </span>
+                </div>
+                {activeHop.status === 'matched' && (
+                  <span className="text-xs font-mono text-muted-foreground tabular-nums" data-testid="text-matched-timer">
+                    {Math.floor(matchedElapsed / 60)}:{String(matchedElapsed % 60).padStart(2, '0')}
+                  </span>
                 )}
-                <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{ boxShadow: "inset 8px 0 16px -4px hsl(var(--card)), inset -8px 0 16px -4px hsl(var(--card)), inset 0 8px 16px -4px hsl(var(--card)), inset 0 -8px 16px -4px hsl(var(--card))" }} />
               </div>
 
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground">
-                {activeHop.status === 'requested' ? 'Looking for a Driver...' : '🎉 Driver Matched!'}
-              </h2>
-
-              <p className="text-sm text-muted-foreground max-w-md">
-                From <strong className="text-foreground">{activeHop.startLocation}</strong> to <strong className="text-foreground">{activeHop.endLocation}</strong>
-              </p>
+              <div className="text-xs text-muted-foreground">
+                <span className="text-foreground font-medium">{activeHop.startLocation}</span>
+                <span className="mx-1.5">→</span>
+                <span className="text-foreground font-medium">{activeHop.endLocation}</span>
+              </div>
 
               {activeHop.status === 'requested' && (
-                <motion.p 
-                  className="text-xs text-primary font-medium"
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  Scanning routine routes along your path...
-                </motion.p>
+                <div className="bg-muted/50 rounded-lg p-2.5">
+                  {driversInCity > 0 ? (
+                    <div className="flex items-center gap-2 text-xs">
+                      <Car className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-muted-foreground">
+                        <strong className="text-foreground">{driversInCity}</strong> driver{driversInCity !== 1 ? 's' : ''} active in Lexington
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-xs">
+                        <Radio className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">No drivers currently heading your direction.</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          Drivers in city: <strong className="text-foreground">{driversInCity}</strong> · Near you: <strong className="text-foreground">0</strong>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
-              {activeHop.status === 'matched' && (
-                <div className="space-y-3 w-full">
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-center gap-3 bg-primary/10 rounded-full px-4 py-2 border border-primary/20 max-w-xs mx-auto"
-                  >
-                    <Clock className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-bold text-foreground tabular-nums">
-                      {Math.floor(matchedElapsed / 60)}:{String(matchedElapsed % 60).padStart(2, '0')}
-                    </span>
-                    <span className="text-xs text-muted-foreground">on their way</span>
-                  </motion.div>
-
-                  <PickupMapVisual
-                    spots={[]}
-                    hasLocation={geo.permitted && geo.latitude !== null}
-                    userLat={geo.latitude}
-                    userLng={geo.longitude}
-                    tracking={tracking}
-                    driverLat={tracking.partnerLat}
-                    driverLng={tracking.partnerLng}
+              {activeHop.status === 'matched' && tracking.available && tracking.distance !== null && (
+                <div className="flex items-center gap-2 bg-green-500/10 rounded-lg p-2.5" data-testid="tracking-distance">
+                  <Compass className="w-3.5 h-3.5 text-green-600" />
+                  <span className="text-xs font-bold text-foreground">
+                    {tracking.distance < 0.1 ? 'Almost here!' : `${tracking.distance} mi ${tracking.direction || 'away'}`}
+                  </span>
+                  <motion.span
+                    className="w-2 h-2 rounded-full bg-green-500 ml-auto"
+                    animate={{ scale: [1, 1.3, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
                   />
-
-                  {tracking.available && tracking.distance !== null && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="flex items-center justify-center gap-2 bg-accent/10 rounded-full px-4 py-2 border border-accent/20 max-w-xs mx-auto"
-                      data-testid="tracking-distance"
-                    >
-                      <Compass className="w-4 h-4 text-accent" />
-                      <span className="text-sm font-bold text-foreground">
-                        {tracking.distance < 0.1 ? 'Almost here!' : `${tracking.distance} mi ${tracking.direction || ''}`}
-                      </span>
-                      <motion.span
-                        className="w-2 h-2 rounded-full bg-green-500"
-                        animate={{ scale: [1, 1.3, 1] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                      />
-                    </motion.div>
-                  )}
                 </div>
               )}
 
               <AnimatePresence>
                 {showFirstTimeHint && (
                   <motion.div
-                    initial={{ opacity: 0, y: 15 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="bg-foreground text-background text-xs rounded-xl px-4 py-3 max-w-xs shadow-lg"
+                    exit={{ opacity: 0, y: -5 }}
+                    className="bg-foreground text-background text-xs rounded-lg px-3 py-2"
                     data-testid="tooltip-first-hop"
                   >
-                    <p className="font-bold mb-1">How it works 👋</p>
-                    <p>We're checking nearby drivers on their routine routes. Your phone will vibrate when someone is heading your way!</p>
+                    <p className="font-bold mb-0.5">How it works 👋</p>
+                    <p>We match you with drivers already on their commute. Your phone vibrates when someone's heading your way!</p>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </CardContent>
-          </Card>
-
-          <Card className="game-card bg-gradient-to-b from-accent/5 to-transparent border-accent/20 mt-4">
-            <CardContent className="p-5">
-              <h3 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider flex items-center gap-2" data-testid="text-pickup-tips-heading-active">
-                📍 Nearby Pickup Spots
-              </h3>
-              <PickupMapVisual
-                spots={pickupSpots}
-                hasLocation={geo.permitted && geo.latitude !== null}
-                userLat={geo.latitude}
-                userLng={geo.longitude}
-                tracking={tracking}
-                driverLat={tracking.partnerLat}
-                driverLng={tracking.partnerLng}
-              />
-            </CardContent>
-          </Card>
-        </motion.div>
-      ) : (
-        <div className="grid md:grid-cols-12 gap-8">
-          <div className="md:col-span-5 space-y-6">
-            <Card className="game-card bg-gradient-to-b from-accent/5 to-transparent border-accent/20">
-              <CardContent className="p-5">
-                <h3 className="text-sm font-bold text-foreground mb-3 uppercase tracking-wider flex items-center gap-2" data-testid="text-pickup-tips-heading">
-                  📍 Best Pickup Spots Nearby
-                </h3>
-                <PickupMapVisual
-                  spots={pickupSpots}
-                  hasLocation={geo.permitted && geo.latitude !== null}
-                  userLat={geo.latitude}
-                  userLng={geo.longitude}
-                  tracking={tracking}
-                  driverLat={tracking.partnerLat}
-                  driverLng={tracking.partnerLng}
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-border/50">
-              <CardContent className="p-6">
-                <form onSubmit={form.handleSubmit(onSearch)} className="space-y-6">
-                  <div className="space-y-4 relative">
-                    <div className="absolute left-[15px] top-[30px] bottom-[30px] w-0.5 bg-border z-0" />
-                    
-                    <div className="relative z-10 space-y-2">
-                      <Label htmlFor="startLocation" className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-8">Current Location</Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-                        <Input 
-                          id="startLocation" 
-                          placeholder="e.g. 4th & Main" 
-                          className="pl-10 rounded-xl py-6 bg-muted/30 border-transparent focus:bg-background"
-                          {...form.register("startLocation")} 
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="relative z-10 space-y-2">
-                      <Label htmlFor="endLocation" className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-8">Destination</Label>
-                      <div className="relative">
-                        <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" />
-                        <Input 
-                          id="endLocation" 
-                          placeholder="e.g. Central Station" 
-                          className="pl-10 rounded-xl py-6 bg-muted/30 border-transparent focus:bg-background"
-                          {...form.register("endLocation")} 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button 
-                      type="submit" 
-                      className="w-full rounded-xl py-6 text-base font-black shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all"
-                    >
-                      ⚡ Find Options
-                    </Button>
-                  </motion.div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="md:col-span-7">
-            <AnimatePresence mode="wait">
-              {showOptions && (
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-4"
-                >
-                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">⚡ Available Options</h3>
-                  
-                  {/* Option 1: Walk */}
-                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
-                    <Card className="game-card border-muted hover:border-primary/30 cursor-default group">
-                      <CardContent className="p-6 flex items-center justify-between">
-                        <div className="flex items-center gap-6">
-                          <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                            <span className="text-2xl">🚶</span>
-                          </div>
-                          <div className="space-y-1">
-                            <h4 className="font-bold text-foreground text-lg">Walk</h4>
-                            <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Encourages healthy movement. Shows transit routes.</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-primary text-xl">Free</div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-
-                  {/* Option 2: Short Hop */}
-                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                    <Card className="game-card border-primary/50 ring-2 ring-primary/20 shadow-xl relative overflow-hidden group bg-gradient-to-r from-primary/5 to-transparent">
-                      <div className="absolute top-0 right-0 bg-gradient-to-r from-primary to-accent text-white text-[11px] font-black px-3 py-1.5 rounded-bl-xl uppercase tracking-wider flex items-center gap-1">
-                        ⭐ RECOMMENDED
-                      </div>
-                      <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                        <div className="flex items-center gap-6">
-                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                            <span className="text-2xl">🏎️</span>
-                          </div>
-                          <div className="space-y-1">
-                            <h4 className="font-bold text-foreground text-lg">Short Hop</h4>
-                            <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Advance along a driver's route. Free membership.</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between w-full sm:w-auto gap-8">
-                          <div className="text-left sm:text-right">
-                            <div className="font-bold text-foreground text-xl">$1–3</div>
-                            <div className="text-[11px] text-muted-foreground uppercase font-semibold">Per ride</div>
-                          </div>
-                          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                            <Button 
-                              onClick={() => requestHop.mutate({ ...locations, hopType: "short_hop" }, { onSuccess: () => setShowOptions(false) })}
-                              disabled={requestHop.isPending}
-                              className="rounded-full shadow-lg shadow-primary/25 h-12 px-8 font-bold text-base bg-gradient-to-r from-primary to-accent hover:opacity-90"
-                            >
-                              Request 🚀
-                            </Button>
-                          </motion.div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-
-                  {/* Option 3: Flex Hop */}
-                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                  <Card className="game-card border-secondary/30 hover:border-secondary group">
-                    <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                      <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-secondary/20 to-secondary/5 flex items-center justify-center">
-                          <span className="text-2xl">🚕</span>
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="font-bold text-foreground text-lg">Flex Hop</h4>
-                          <p className="text-sm text-muted-foreground leading-snug max-w-[280px]">Allows small driver detours. Dynamic pricing.</p>
-                          {hasFlexSub && (
-                            <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">Active</Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between w-full sm:w-auto gap-8">
-                        <div className="text-left sm:text-right">
-                          <div className="font-bold text-foreground text-xl">$2–5</div>
-                          <div className="text-[11px] text-muted-foreground uppercase font-semibold">Per ride • $5/mo</div>
-                        </div>
-                        {hasFlexSub ? (
-                          <Button 
-                            variant="secondary"
-                            data-testid="button-request-flex-hop"
-                            onClick={() => requestHop.mutate({ ...locations, hopType: "flex_hop" }, { onSuccess: () => setShowOptions(false) })}
-                            disabled={requestHop.isPending}
-                            className="rounded-full h-12 px-8 font-bold text-base"
-                          >
-                            Request
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="secondary"
-                            data-testid="button-subscribe-flex-hop"
-                            onClick={() => setSubscriptionPlan("flex_hop")}
-                            className="rounded-full h-12 px-8 font-bold text-base"
-                          >
-                            <Lock className="w-4 h-4 mr-2" />
-                            Subscribe
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  </motion.div>
-
-                  {/* Option 4: Power Hop */}
-                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                  <Card className="game-card relative overflow-hidden shadow-xl hover:shadow-2xl border-2 border-transparent group"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(249,115,22,0.05) 0%, rgba(34,197,94,0.05) 100%)",
-                      borderImage: "linear-gradient(135deg, #f97316 0%, #22c55e 100%) 1",
-                      boxShadow: "0 10px 30px -10px rgba(249, 115, 22, 0.2), 0 20px 40px -15px rgba(34, 197, 94, 0.15)"
-                    }}>
-                    <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                      <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-green-500 flex items-center justify-center text-white font-bold text-xl shadow-lg group-hover:scale-105 transition-transform">
-                          ✨
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="font-bold text-foreground text-xl">Power Hop</h4>
-                          <p className="text-sm text-muted-foreground leading-snug max-w-[300px]">Complete mobility freedom. Anywhere to anywhere.</p>
-                          <p className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-2 uppercase tracking-widest">Reach for the Sky</p>
-                          {hasPowerSub && (
-                            <Badge className="text-xs bg-gradient-to-r from-orange-500/10 to-green-500/10 text-orange-600 border-orange-500/30">Active</Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between w-full sm:w-auto gap-8">
-                        <div className="text-left sm:text-right">
-                          <div className="font-bold text-foreground text-2xl">$15/mo</div>
-                          <div className="text-[11px] text-muted-foreground uppercase font-bold tracking-tight">Unlimited access</div>
-                        </div>
-                        {hasPowerSub ? (
-                          <Button
-                            data-testid="button-request-power-hop"
-                            onClick={() => requestHop.mutate({ ...locations, hopType: "full_ride" }, { onSuccess: () => setShowOptions(false) })}
-                            disabled={requestHop.isPending}
-                            className="rounded-full bg-gradient-to-r from-orange-500 to-green-500 hover:from-orange-600 hover:to-green-600 text-white shadow-xl shadow-orange-500/40 h-14 px-10 font-black text-lg"
-                          >
-                            Reach
-                          </Button>
-                        ) : (
-                          <Button
-                            data-testid="button-subscribe-power-hop"
-                            onClick={() => setSubscriptionPlan("power_hop")}
-                            className="rounded-full bg-gradient-to-r from-orange-500 to-green-500 hover:from-orange-600 hover:to-green-600 text-white shadow-xl shadow-orange-500/40 h-14 px-10 font-black text-lg"
-                          >
-                            <Lock className="w-4 h-4 mr-2" />
-                            Subscribe
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  </motion.div>
-
-                </motion.div>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {driversInCity > 0 ? (
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-muted-foreground">
+                    <strong className="text-foreground">{driversInCity}</strong> driver{driversInCity !== 1 ? 's' : ''} active in Lexington
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground" />
+                  <span className="text-muted-foreground">No drivers nearby right now</span>
+                </div>
               )}
-            </AnimatePresence>
-            {!showOptions && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-4 p-12 text-center border-2 border-dashed border-primary/20 rounded-2xl bg-gradient-to-b from-primary/5 to-transparent"
-              >
-                <motion.span 
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  className="text-4xl"
-                >
-                  📍
-                </motion.span>
-                <p className="font-medium">Enter your locations to see travel options!</p>
-              </motion.div>
-            )}
-          </div>
+              <div className="flex items-center gap-2 text-xs">
+                <Users className="w-3 h-3 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  {networkStats?.totalHoppers ?? 0} hoppers in the network
+                </span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {(activeHop?.status === 'matched' || showOptions) && (
+        <div className="mb-3">
+          <PickupMapVisual
+            spots={pickupSpots}
+            hasLocation={geo.permitted && geo.latitude !== null}
+            userLat={geo.latitude}
+            userLng={geo.longitude}
+            tracking={tracking}
+            driverLat={tracking.partnerLat}
+            driverLng={tracking.partnerLng}
+          />
         </div>
       )}
 
-      <div className="mt-8">
-        <NetworkProgress />
+      {pickupSpots.length > 0 && (
+        <Card className="mb-3 border-border/50 shadow-sm" data-testid="card-pickup-corridors">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Pickup Corridors</p>
+            <div className="space-y-1.5">
+              {pickupSpots.map((spot, i) => (
+                <div
+                  key={spot.name}
+                  className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  data-testid={`pickup-spot-${i}`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground truncate">{spot.name}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{spot.desc}</p>
+                    </div>
+                  </div>
+                  {spot.distance != null && (
+                    <span className="text-[10px] font-bold text-primary shrink-0 ml-2">
+                      {spot.distance < 0.1 ? 'Here' : `${spot.distance.toFixed(1)} mi`}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <AnimatePresence mode="wait">
+        {showOptions && !activeHop && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-2 mb-3"
+          >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0 }}>
+              <Card className="border-border/50 shadow-sm cursor-default hover:border-primary/30 transition-colors" data-testid="option-walk">
+                <CardContent className="p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🚶</span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Walk</p>
+                      <p className="text-[10px] text-muted-foreground">Healthy movement · transit routes</p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-primary">Free</span>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}>
+              <Card className="border-primary/40 shadow-sm bg-primary/5 relative overflow-hidden" data-testid="option-short-hop">
+                <div className="absolute top-0 right-0 bg-primary text-white text-[8px] font-bold px-2 py-0.5 rounded-bl-lg uppercase">Recommended</div>
+                <CardContent className="p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🏎️</span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Short Hop</p>
+                      <p className="text-[10px] text-muted-foreground">Ride along a driver's route</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">$1–3</span>
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs rounded-lg px-3 font-bold"
+                      onClick={() => handleRequestHop('short_hop')}
+                      disabled={requestHop.isPending}
+                      data-testid="button-request-short-hop"
+                    >
+                      {requestHop.isPending ? '...' : 'Request'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+              <Card className="border-border/50 shadow-sm" data-testid="option-flex-hop">
+                <CardContent className="p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🚀</span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Flex Hop</p>
+                      <p className="text-[10px] text-muted-foreground">Small detours · $5/mo</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">$2–5</span>
+                    {hasFlexSub ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs rounded-lg px-3 font-bold"
+                        onClick={() => handleRequestHop('flex_hop')}
+                        disabled={requestHop.isPending}
+                        data-testid="button-request-flex-hop"
+                      >
+                        Request
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs rounded-lg px-3 font-bold"
+                        onClick={() => setSubscriptionPlan("flex_hop")}
+                        data-testid="button-subscribe-flex"
+                      >
+                        <Lock className="w-3 h-3 mr-1" />
+                        Subscribe
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+              <Card className="border-border/50 shadow-sm" data-testid="option-power-hop">
+                <CardContent className="p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">⚡</span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Power Hop</p>
+                      <p className="text-[10px] text-muted-foreground">Unlimited · $15/mo</p>
+                    </div>
+                  </div>
+                  {hasPowerSub ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs rounded-lg px-3 font-bold"
+                      onClick={() => handleRequestHop('full_ride')}
+                      disabled={requestHop.isPending}
+                      data-testid="button-request-power-hop"
+                    >
+                      Request
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs rounded-lg px-3 font-bold"
+                      onClick={() => setSubscriptionPlan("power_hop")}
+                      data-testid="button-subscribe-power"
+                    >
+                      <Lock className="w-3 h-3 mr-1" />
+                      Subscribe
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <Card className="border-border/50 shadow-sm" data-testid="card-streak">
+          <CardContent className="p-3 flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white shadow-sm">
+              <span className="text-base">🔥</span>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Streak</p>
+              <p className="text-lg font-black text-foreground leading-none" data-testid="text-streak-count">{user.hopStreak || 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 shadow-sm" data-testid="card-total-hops">
+          <CardContent className="p-3 flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-sm">
+              <span className="text-base">⭐</span>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase">Hops</p>
+              <p className="text-lg font-black text-foreground leading-none" data-testid="text-total-hops-count">{user.totalHops || 0}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {badges && badges.length > 0 && (
+        <Card className="mb-3 border-border/50 shadow-sm" data-testid="card-badges">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Badges</p>
+            <div className="flex flex-wrap gap-1.5">
+              {badges.map((b) => {
+                const badgeInfo = getBadgeStyle(b.badge);
+                const IconComponent = badgeInfo.icon;
+                return (
+                  <Badge key={b.id} variant="secondary" className="gap-1 py-0.5 px-2 text-[10px]" data-testid={`badge-achievement-${b.id}`}>
+                    <IconComponent className={`w-3 h-3 ${badgeInfo.color}`} />
+                    {b.badge}
+                  </Badge>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="border-border/50 shadow-sm mb-3" data-testid="card-network">
+        <CardContent className="p-3">
+          <NetworkProgress />
+        </CardContent>
+      </Card>
+
+      {networkLoaded && driversInCity === 0 && !activeHop && (
+        <Card className="border-dashed border-primary/30 bg-primary/5 mb-3" data-testid="card-invite-drivers">
+          <CardContent className="p-3 text-center space-y-2">
+            <p className="text-xs font-bold text-foreground">Help grow the network</p>
+            <p className="text-[10px] text-muted-foreground">Know someone who drives through Lexington? Invite them to earn Wheels as a driver.</p>
+            <Button size="sm" variant="outline" className="h-7 text-xs rounded-lg" onClick={handleInvite} data-testid="button-invite-drivers">
+              <Share2 className="w-3 h-3 mr-1" />
+              Invite Drivers
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {subscriptionPlan && (
         <SubscriptionModal
-          open={!!subscriptionPlan}
-          onOpenChange={(open) => { if (!open) setSubscriptionPlan(null); }}
           plan={subscriptionPlan}
           user={user}
+          open={true}
+          onOpenChange={(open) => !open && setSubscriptionPlan(null)}
         />
       )}
     </div>
