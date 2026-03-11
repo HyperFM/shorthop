@@ -224,5 +224,37 @@ export const insertDriverApplicationSchema = createInsertSchema(driverApplicatio
 export type DriverApplication = typeof driverApplications.$inferSelect;
 export type InsertDriverApplication = z.infer<typeof insertDriverApplicationSchema>;
 
+export const contactMessages = pgTable("contact_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+  category: text("category").notNull().default("general"),
+  status: text("status").notNull().default("unread"),
+  adminReply: text("admin_reply"),
+  repliedAt: timestamp("replied_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const reports = pgTable("reports", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  reportedUserId: integer("reported_user_id").references(() => users.id),
+  category: text("category").notNull(),
+  description: text("description").notNull(),
+  status: text("status").notNull().default("open"),
+  adminNotes: text("admin_notes"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({ id: true, createdAt: true, status: true, adminReply: true, repliedAt: true });
+export type ContactMessage = typeof contactMessages.$inferSelect;
+export type InsertContactMessage = z.infer<typeof insertContactMessageSchema>;
+
+export const insertReportSchema = createInsertSchema(reports).omit({ id: true, createdAt: true, status: true, adminNotes: true, resolvedAt: true });
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = z.infer<typeof insertReportSchema>;
+
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

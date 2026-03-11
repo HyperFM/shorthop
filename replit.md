@@ -61,15 +61,18 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - When offline: stops broadcasting, hidden from matching
 - Shows status badges: Active (green pulse), Offline, Unverified/Pending
 
-### Admin Panel
+### Admin Panel (Super Admin: HyperFM only)
 - `/admin` route (restricted to isAdmin users)
-- Tabs: Overview, Users, Applications, Active Drivers, Logs, Notify
-- Overview: stats cards (total users, drivers, active, verified, pending apps, active hops)
-- Users: list with disable/enable toggle
+- 8 Tabs: Overview, Inbox (unread badge), Reports (open badge), Users, Apps, Active Drivers, Logs, Notify
+- Overview: stats cards + alert banners for unread inbox/open reports/pending apps
+- Inbox: view/reply to user contact messages, sends notification on reply
+- Reports: view/resolve user reports (safety, bugs, harassment)
+- Users: list with disable/enable toggle + permanent delete (with FK-safe cascade)
 - Applications: approve/reject driver applications
 - Active Drivers: live list of currently active drivers
 - Logs: recent ride request/acceptance logs
 - Notify: manual notification blast to active drivers
+- Dashboard button for quick role switching back to driver view
 
 ### Driver Features
 - Anyone can register as a driver (chosen at registration)
@@ -122,11 +125,18 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Save/delete usual destinations with quick-select chips
 - Stored in `walker_routes` table
 
+### Contact & Report System
+- "Contact ShortHop" form in Settings (category, subject, message) → POST /api/contact
+- "Report an Issue" form in Settings (category, description) → POST /api/report
+- Messages/reports appear in admin inbox/reports tabs
+- Admin can reply (sends notification back to user) and resolve reports
+
 ### Safety & Privacy
-- Block/report user (backend-ready)
+- Block/report user (backend-ready + report form)
 - Ride history logs
 - Community features fully optional
 - Profile privacy toggle in settings
+- Comprehensive Privacy Policy & Terms of Service at /privacy
 
 ### Pages
 - / - Home (landing page)
@@ -156,7 +166,8 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Profile: PUT /api/profile/preferences, POST /api/profile/dismiss-welcome
 - Driver Onboarding: POST /api/driver/profile, POST /api/driver/apply, GET /api/driver/status, POST /api/driver/active
 - Driver Info: GET /api/hops/:id/driver-info, POST /api/hops/:id/decline
-- Admin: GET /api/admin/stats, GET /api/admin/users, GET /api/admin/drivers, GET /api/admin/applications, POST /api/admin/applications/:id/review, POST /api/admin/users/:id/disable, GET /api/admin/logs, POST /api/admin/notify-drivers
+- Admin: GET /api/admin/stats, GET /api/admin/users, GET /api/admin/drivers, GET /api/admin/applications, POST /api/admin/applications/:id/review, POST /api/admin/users/:id/disable, POST /api/admin/users/:id/delete, GET /api/admin/logs, POST /api/admin/notify-drivers, GET /api/admin/inbox, POST /api/admin/inbox/:id/reply, GET /api/admin/reports, POST /api/admin/reports/:id/resolve
+- Contact/Report: POST /api/contact, GET /api/contact, POST /api/report
 - Walker Routes: GET /api/walker-routes, POST /api/walker-routes, DELETE /api/walker-routes/:id
 - Network: GET /api/network-stats
 - Subscription: POST /api/subscription, DELETE /api/subscription
@@ -190,13 +201,16 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - walker_routes (saved walker destinations)
 - user_badges (achievement badges)
 - expansion_waitlist (city expansion signups)
+- contact_messages (user contact form submissions, admin replies)
+- reports (user-submitted reports: safety, bugs, harassment)
 
 ## Important Notes
 - DB uses `credits` column but UI shows "Wheels" — do NOT rename
 - `tier` column: "standard" (default) or "flexhop"
 - `rideVibe` column: "quiet", "friendly_chat" (default), "community"
 - Power Hop uses `hopType: "full_ride"` internally
-- Test accounts: walker/password (walker, has flex_hop subscription), driver/password (driver, isAdmin)
+- Test accounts: walker/password (walker, has flex_hop subscription), driver/password (driver, NOT admin), HyperFM (super admin + driver)
+- Super Admin: HyperFM is the ONLY admin account; `driver` account has isAdmin=false
 - Founding members: 25 total unified pool (stored in `isFounder` field)
 - Founder badges: "Founding Hopper" or "Founding Driver"
 - Drive Mode REMOVED — anyone registers as driver at signup

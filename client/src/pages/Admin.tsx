@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 
@@ -58,18 +59,49 @@ type RideLog = {
   createdAt: string;
 };
 
+type ContactMsg = {
+  id: number;
+  userId: number;
+  username: string;
+  subject: string;
+  message: string;
+  category: string;
+  status: string;
+  adminReply: string | null;
+  createdAt: string;
+};
+
+type ReportItem = {
+  id: number;
+  userId: number;
+  username: string;
+  reportedUserId: number | null;
+  reportedUsername?: string;
+  category: string;
+  description: string;
+  status: string;
+  adminNotes: string | null;
+  createdAt: string;
+};
+
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify";
+
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "users" | "applications" | "drivers" | "logs" | "notify">("overview");
+  const [tab, setTab] = useState<TabKey>("overview");
   const [notifyMsg, setNotifyMsg] = useState("");
+  const [replyText, setReplyText] = useState<Record<number, string>>({});
+  const [resolveText, setResolveText] = useState<Record<number, string>>({});
 
   const { data: stats } = useQuery<AdminStats>({ queryKey: ["/api/admin/stats"] });
   const { data: allUsers } = useQuery<AdminUser[]>({ queryKey: ["/api/admin/users"], enabled: tab === "users" });
   const { data: applications } = useQuery<DriverApp[]>({ queryKey: ["/api/admin/applications"], enabled: tab === "applications" || tab === "overview" });
   const { data: activeDrivers } = useQuery<AdminUser[]>({ queryKey: ["/api/admin/drivers"], enabled: tab === "drivers" });
   const { data: logs } = useQuery<RideLog[]>({ queryKey: ["/api/admin/logs"], enabled: tab === "logs" });
+  const { data: inbox } = useQuery<ContactMsg[]>({ queryKey: ["/api/admin/inbox"], enabled: tab === "inbox" || tab === "overview" });
+  const { data: reportsList } = useQuery<ReportItem[]>({ queryKey: ["/api/admin/reports"], enabled: tab === "reports" || tab === "overview" });
 
   const reviewApp = useMutation({
     mutationFn: async ({ id, status, notes }: { id: number; status: string; notes?: string }) => {
@@ -92,6 +124,17 @@ export default function Admin() {
     },
   });
 
+  const deleteUserMut = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("POST", `/api/admin/users/${id}/delete`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      showFlash("🗑️", "User deleted", "success");
+    },
+  });
+
   const sendNotify = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/admin/notify-drivers", { message: notifyMsg });
@@ -100,6 +143,28 @@ export default function Admin() {
     onSuccess: (data: { sent: number }) => {
       setNotifyMsg("");
       showFlash("📢", `Sent to ${data.sent} drivers`, "success");
+    },
+  });
+
+  const replyToMsg = useMutation({
+    mutationFn: async ({ id, reply }: { id: number; reply: string }) => {
+      await apiRequest("POST", `/api/admin/inbox/${id}/reply`, { reply });
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/inbox"] });
+      setReplyText(prev => ({ ...prev, [vars.id]: "" }));
+      showFlash("✅", "Reply sent", "success");
+    },
+  });
+
+  const resolveReport = useMutation({
+    mutationFn: async ({ id, notes }: { id: number; notes: string }) => {
+      await apiRequest("POST", `/api/admin/reports/${id}/resolve`, { notes });
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+      setResolveText(prev => ({ ...prev, [vars.id]: "" }));
+      showFlash("✅", "Report resolved", "success");
     },
   });
 
@@ -112,20 +177,38 @@ export default function Admin() {
     return null;
   }
 
-  const tabs = [
-    { key: "overview" as const, label: "Overview", icon: Activity },
-    { key: "users" as const, label: "Users", icon: Users },
-    { key: "applications" as const, label: "Applications", icon: Shield },
-    { key: "drivers" as const, label: "Active", icon: Car },
-    { key: "logs" as const, label: "Logs", icon: Eye },
-    { key: "notify" as const, label: "Notify", icon: Send },
+  const unreadInbox = inbox?.filter(m => m.status === "unread").length || 0;
+  const openReports = reportsList?.filter(r => r.status === "open").length || 0;
+
+  const tabs: { key: TabKey; label: string; icon: typeof Activity; badge?: number }[] = [
+    { key: "overview", label: "Overview", icon: Activity },
+    { key: "inbox", label: "Inbox", icon: Mail, badge: unreadInbox },
+    { key: "reports", label: "Reports", icon: AlertTriangle, badge: openReports },
+    { key: "users", label: "Users", icon: Users },
+    { key: "applications", label: "Apps", icon: Shield },
+    { key: "drivers", label: "Active", icon: Car },
+    { key: "logs", label: "Logs", icon: Eye },
+    { key: "notify", label: "Notify", icon: Send },
   ];
 
   return (
     <div className="px-4 pt-4 pb-20 max-w-lg mx-auto">
-      <div className="mb-3">
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">ShortHop Admin</p>
-        <h1 className="text-lg font-display font-bold" data-testid="text-admin-title">Admin Panel</h1>
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">ShortHop Super Admin</p>
+          <h1 className="text-lg font-display font-bold" data-testid="text-admin-title">Control Center</h1>
+        </div>
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-[10px] h-6 px-2 rounded-full"
+            onClick={() => setLocation("/dashboard")}
+            data-testid="button-switch-driver"
+          >
+            <UserCog className="w-3 h-3 mr-0.5" /> Dashboard
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-1 overflow-x-auto pb-2 mb-4 -mx-1 px-1">
@@ -133,12 +216,17 @@ export default function Admin() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors relative ${
               tab === t.key ? "bg-primary text-white" : "bg-muted text-muted-foreground"
             }`}
             data-testid={`admin-tab-${t.key}`}
           >
             <t.icon className="w-3.5 h-3.5" /> {t.label}
+            {t.badge && t.badge > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                {t.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -147,12 +235,12 @@ export default function Admin() {
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: "Total Users", value: stats.totalUsers, color: "blue" },
-              { label: "Total Drivers", value: stats.totalDrivers, color: "green" },
-              { label: "Active Now", value: stats.activeDrivers, color: "emerald" },
-              { label: "Verified", value: stats.verifiedDrivers, color: "teal" },
-              { label: "Pending Apps", value: stats.pendingApplications, color: "orange" },
-              { label: "Active Hops", value: stats.activeHopRequests, color: "purple" },
+              { label: "Total Users", value: stats.totalUsers },
+              { label: "Total Drivers", value: stats.totalDrivers },
+              { label: "Active Now", value: stats.activeDrivers },
+              { label: "Verified", value: stats.verifiedDrivers },
+              { label: "Pending Apps", value: stats.pendingApplications },
+              { label: "Active Hops", value: stats.activeHopRequests },
             ].map(s => (
               <Card key={s.label} className="border-border/50">
                 <CardContent className="p-3">
@@ -162,6 +250,24 @@ export default function Admin() {
               </Card>
             ))}
           </div>
+
+          {unreadInbox > 0 && (
+            <Card className="border-blue-200 bg-blue-50/50 cursor-pointer" onClick={() => setTab("inbox")}>
+              <CardContent className="p-3 flex items-center gap-2">
+                <Mail className="w-4 h-4 text-blue-600" />
+                <p className="text-sm font-bold text-blue-700">{unreadInbox} new message{unreadInbox > 1 ? 's' : ''} in inbox</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {openReports > 0 && (
+            <Card className="border-red-200 bg-red-50/50 cursor-pointer" onClick={() => setTab("reports")}>
+              <CardContent className="p-3 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+                <p className="text-sm font-bold text-red-700">{openReports} open report{openReports > 1 ? 's' : ''}</p>
+              </CardContent>
+            </Card>
+          )}
 
           {applications && applications.filter(a => a.status === "pending").length > 0 && (
             <Card className="border-orange-200 bg-orange-50/50">
@@ -178,6 +284,121 @@ export default function Admin() {
         </div>
       )}
 
+      {tab === "inbox" && (
+        <div className="space-y-2">
+          {inbox?.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">No messages yet</p>
+          )}
+          {inbox?.map(msg => (
+            <Card key={msg.id} className={`border-border/50 ${msg.status === "unread" ? "border-blue-200 bg-blue-50/20" : ""}`}>
+              <CardContent className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold">{msg.username}</p>
+                    <p className="text-[10px] text-muted-foreground">{new Date(msg.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Badge className={`text-[9px] border-0 ${msg.category === "bug" ? "bg-red-100 text-red-700" : msg.category === "safety" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"}`}>
+                      {msg.category}
+                    </Badge>
+                    {msg.status === "unread" && <Badge className="text-[9px] bg-blue-500 text-white border-0">New</Badge>}
+                  </div>
+                </div>
+                <p className="text-xs font-bold">{msg.subject}</p>
+                <p className="text-xs text-muted-foreground">{msg.message}</p>
+                {msg.adminReply && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+                    <p className="text-[10px] font-bold text-green-700">Your reply:</p>
+                    <p className="text-xs text-green-800">{msg.adminReply}</p>
+                  </div>
+                )}
+                {msg.status !== "replied" && (
+                  <div className="flex gap-1">
+                    <Input
+                      placeholder="Reply..."
+                      value={replyText[msg.id] || ""}
+                      onChange={e => setReplyText(prev => ({ ...prev, [msg.id]: e.target.value }))}
+                      className="text-xs h-7"
+                      data-testid={`input-reply-${msg.id}`}
+                    />
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      disabled={!replyText[msg.id]?.trim() || replyToMsg.isPending}
+                      onClick={() => replyToMsg.mutate({ id: msg.id, reply: replyText[msg.id] })}
+                      data-testid={`button-reply-${msg.id}`}
+                    >
+                      <MessageSquare className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {tab === "reports" && (
+        <div className="space-y-2">
+          {reportsList?.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">No reports yet</p>
+          )}
+          {reportsList?.map(r => (
+            <Card key={r.id} className={`border-border/50 ${r.status === "open" ? "border-red-200" : ""}`}>
+              <CardContent className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold">From: {r.username}</p>
+                    {r.reportedUsername && <p className="text-[10px] text-red-600">Reported: {r.reportedUsername}</p>}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Badge className={`text-[9px] border-0 ${
+                      r.category === "unsafe_driver" ? "bg-red-100 text-red-700" :
+                      r.category === "harassment" ? "bg-red-100 text-red-700" :
+                      r.category === "bug" ? "bg-yellow-100 text-yellow-700" :
+                      "bg-blue-100 text-blue-700"
+                    }`}>
+                      {r.category.replace(/_/g, " ")}
+                    </Badge>
+                    <Badge className={`text-[9px] border-0 ${r.status === "open" ? "bg-red-500 text-white" : "bg-green-100 text-green-700"}`}>
+                      {r.status}
+                    </Badge>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">{r.description}</p>
+                <p className="text-[10px] text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</p>
+                {r.adminNotes && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+                    <p className="text-[10px] font-bold text-green-700">Resolution:</p>
+                    <p className="text-xs text-green-800">{r.adminNotes}</p>
+                  </div>
+                )}
+                {r.status === "open" && (
+                  <div className="flex gap-1">
+                    <Input
+                      placeholder="Resolution notes..."
+                      value={resolveText[r.id] || ""}
+                      onChange={e => setResolveText(prev => ({ ...prev, [r.id]: e.target.value }))}
+                      className="text-xs h-7"
+                      data-testid={`input-resolve-${r.id}`}
+                    />
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs px-2 bg-green-500"
+                      onClick={() => resolveReport.mutate({ id: r.id, notes: resolveText[r.id] || "Resolved" })}
+                      disabled={resolveReport.isPending}
+                      data-testid={`button-resolve-${r.id}`}
+                    >
+                      <CheckCircle className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {tab === "users" && (
         <div className="space-y-2">
           {allUsers?.map(u => (
@@ -191,7 +412,7 @@ export default function Admin() {
                       {u.isActive && <Badge className="text-[9px] bg-emerald-100 text-emerald-700 border-0">Active</Badge>}
                       {u.driverVerified && <Badge className="text-[9px] bg-blue-100 text-blue-700 border-0">Verified</Badge>}
                       {u.isFounder && <Badge className="text-[9px] bg-orange-100 text-orange-700 border-0">Founder</Badge>}
-                      {u.isAdmin && <Badge className="text-[9px] bg-purple-100 text-purple-700 border-0">Admin</Badge>}
+                      {u.isAdmin && <Badge className="text-[9px] bg-purple-100 text-purple-700 border-0">Super Admin</Badge>}
                       {u.isDisabled && <Badge className="text-[9px] bg-red-100 text-red-700 border-0">Disabled</Badge>}
                     </div>
                     {u.vehicleMake && (
@@ -199,16 +420,36 @@ export default function Admin() {
                         {u.vehicleColor} {u.vehicleMake} {u.vehicleModel} · {u.licensePlate}
                       </p>
                     )}
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      Joined {new Date(u.createdAt).toLocaleDateString()} · {u.credits} Wheels · {u.totalHops} hops
+                    </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant={u.isDisabled ? "outline" : "destructive"}
-                    className="text-xs h-7"
-                    onClick={() => toggleDisable.mutate({ id: u.id, disabled: !u.isDisabled })}
-                    data-testid={`button-toggle-disable-${u.id}`}
-                  >
-                    {u.isDisabled ? "Enable" : <><Ban className="w-3 h-3 mr-1" /> Disable</>}
-                  </Button>
+                  {!u.isAdmin && (
+                    <div className="flex flex-col gap-1">
+                      <Button
+                        size="sm"
+                        variant={u.isDisabled ? "outline" : "destructive"}
+                        className="text-xs h-6 px-2"
+                        onClick={() => toggleDisable.mutate({ id: u.id, disabled: !u.isDisabled })}
+                        data-testid={`button-toggle-disable-${u.id}`}
+                      >
+                        {u.isDisabled ? "Enable" : <><Ban className="w-3 h-3 mr-0.5" /> Suspend</>}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs h-6 px-2 text-red-500 hover:text-red-700"
+                        onClick={() => {
+                          if (confirm(`Delete user "${u.username}" permanently?`)) {
+                            deleteUserMut.mutate(u.id);
+                          }
+                        }}
+                        data-testid={`button-delete-${u.id}`}
+                      >
+                        <Trash2 className="w-3 h-3 mr-0.5" /> Delete
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -322,12 +563,11 @@ export default function Admin() {
       {tab === "notify" && (
         <Card className="border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Manual Driver Notification</CardTitle>
+            <CardTitle className="text-sm">Broadcast to Drivers</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-xs text-muted-foreground">
               Send a notification to all active drivers (or all drivers if none are active).
-              Use this as a backup when automated matching isn't reaching drivers.
             </p>
             <Textarea
               placeholder="HOP REQUEST NEAR YOU — A rider needs a pickup at..."

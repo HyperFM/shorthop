@@ -35,6 +35,12 @@ import {
   walkerRoutes,
   type WalkerRoute,
   type InsertWalkerRoute,
+  contactMessages,
+  type ContactMessage,
+  type InsertContactMessage,
+  reports,
+  type Report,
+  type InsertReport,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -100,7 +106,16 @@ export interface IStorage {
   getActiveDrivers(): Promise<User[]>;
   getAllUsers(): Promise<User[]>;
   disableUser(id: number, disabled: boolean): Promise<User>;
+  deleteUser(id: number): Promise<void>;
   getSystemLogs(limit?: number): Promise<ShortHop[]>;
+
+  createContactMessage(msg: InsertContactMessage): Promise<ContactMessage>;
+  getContactMessages(): Promise<(ContactMessage & { username: string })[]>;
+  replyToContactMessage(id: number, reply: string): Promise<ContactMessage>;
+
+  createReport(report: InsertReport): Promise<Report>;
+  getReports(): Promise<(Report & { username: string; reportedUsername?: string })[]>;
+  resolveReport(id: number, notes: string): Promise<Report>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -611,6 +626,75 @@ export class DatabaseStorage implements IStorage {
 
   async getSystemLogs(limit: number = 100): Promise<ShortHop[]> {
     return db.select().from(shortHops).orderBy(desc(shortHops.createdAt)).limit(limit);
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await db.delete(notifications).where(eq(notifications.userId, id));
+    await db.delete(follows).where(or(eq(follows.followerId, id), eq(follows.followingId, id)));
+    await db.delete(communityPosts).where(eq(communityPosts.userId, id));
+    await db.delete(contactMessages).where(eq(contactMessages.userId, id));
+    await db.delete(driverApplications).where(eq(driverApplications.userId, id));
+    await db.delete(userBadges).where(eq(userBadges.userId, id));
+    await db.delete(reports).where(or(eq(reports.userId, id), eq(reports.reportedUserId, id)));
+    await db.delete(hopBuddyRatings).where(or(eq(hopBuddyRatings.raterId, id), eq(hopBuddyRatings.ratedUserId, id)));
+    await db.delete(userRedemptions).where(eq(userRedemptions.userId, id));
+    await db.delete(walkerRoutes).where(eq(walkerRoutes.userId, id));
+    await db.delete(routineRoutes).where(eq(routineRoutes.driverId, id));
+    await db.delete(shortHops).where(or(eq(shortHops.walkerId, id), eq(shortHops.driverId, id)));
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  async createContactMessage(msg: InsertContactMessage): Promise<ContactMessage> {
+    const [created] = await db.insert(contactMessages).values(msg).returning();
+    return created;
+  }
+
+  async getContactMessages(): Promise<(ContactMessage & { username: string })[]> {
+    const msgs = await db.select().from(contactMessages).orderBy(desc(contactMessages.createdAt));
+    const result = [];
+    for (const msg of msgs) {
+      const user = await this.getUser(msg.userId);
+      result.push({ ...msg, username: user?.username || "unknown" });
+    }
+    return result;
+  }
+
+  async replyToContactMessage(id: number, reply: string): Promise<ContactMessage> {
+    const [msg] = await db.update(contactMessages)
+      .set({ adminReply: reply, status: "replied", repliedAt: new Date() })
+      .where(eq(contactMessages.id, id))
+      .returning();
+    if (!msg) throw new Error("Message not found");
+    return msg;
+  }
+
+  async createReport(report: InsertReport): Promise<Report> {
+    const [created] = await db.insert(reports).values(report).returning();
+    return created;
+  }
+
+  async getReports(): Promise<(Report & { username: string; reportedUsername?: string })[]> {
+    const allReports = await db.select().from(reports).orderBy(desc(reports.createdAt));
+    const result = [];
+    for (const r of allReports) {
+      const user = await this.getUser(r.userId);
+      let reportedUsername: string | undefined;
+      if (r.reportedUserId) {
+        const reported = await this.getUser(r.reportedUserId);
+        reportedUsername = reported?.username;
+      }
+      result.push({ ...r, username: user?.username || "unknown", reportedUsername });
+    }
+    return result;
+  }
+
+  async resolveReport(id: number, notes: string): Promise<Report> {
+    const [report] = await db.update(reports)
+      .set({ status: "resolved", adminNotes: notes, resolvedAt: new Date() })
+      .where(eq(reports.id, id))
+      .returning();
+    if (!report) throw new Error("Report not found");
+    return report;
   }
 }
 

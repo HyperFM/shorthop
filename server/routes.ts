@@ -1083,6 +1083,110 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/admin/users/:id/delete', requireAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      const targetUser = await storage.getUser(userId);
+      if (targetUser?.isAdmin) return res.status(403).json({ message: "Cannot delete admin account" });
+      await storage.deleteUser(userId);
+      res.json({ message: "User deleted" });
+    } catch {
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  app.get('/api/admin/inbox', requireAdmin, async (_req, res) => {
+    try {
+      const messages = await storage.getContactMessages();
+      res.json(messages);
+    } catch {
+      res.status(500).json({ message: "Failed to get messages" });
+    }
+  });
+
+  app.post('/api/admin/inbox/:id/reply', requireAdmin, async (req, res) => {
+    try {
+      const { reply } = req.body;
+      if (!reply) return res.status(400).json({ message: "Reply required" });
+      const msg = await storage.replyToContactMessage(Number(req.params.id), reply);
+      await storage.createNotification({
+        userId: msg.userId,
+        type: "general",
+        title: "Reply from ShortHop",
+        message: reply,
+        isRead: false,
+      });
+      res.json(msg);
+    } catch {
+      res.status(500).json({ message: "Failed to reply" });
+    }
+  });
+
+  app.get('/api/admin/reports', requireAdmin, async (_req, res) => {
+    try {
+      const allReports = await storage.getReports();
+      res.json(allReports);
+    } catch {
+      res.status(500).json({ message: "Failed to get reports" });
+    }
+  });
+
+  app.post('/api/admin/reports/:id/resolve', requireAdmin, async (req, res) => {
+    try {
+      const { notes } = req.body;
+      const report = await storage.resolveReport(Number(req.params.id), notes || "Resolved");
+      res.json(report);
+    } catch {
+      res.status(500).json({ message: "Failed to resolve report" });
+    }
+  });
+
+  // User-facing contact & report
+  app.post('/api/contact', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { subject, message, category } = req.body;
+      if (!subject || !message) return res.status(400).json({ message: "Subject and message required" });
+      const msg = await storage.createContactMessage({
+        userId: req.user.id,
+        subject,
+        message,
+        category: category || "general",
+      });
+      res.json(msg);
+    } catch {
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  app.get('/api/contact', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const allMsgs = await storage.getContactMessages();
+      const userMsgs = allMsgs.filter(m => m.userId === req.user.id);
+      res.json(userMsgs);
+    } catch {
+      res.status(500).json({ message: "Failed to get messages" });
+    }
+  });
+
+  app.post('/api/report', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { category, description, reportedUserId } = req.body;
+      if (!category || !description) return res.status(400).json({ message: "Category and description required" });
+      const report = await storage.createReport({
+        userId: req.user.id,
+        category,
+        description,
+        reportedUserId: reportedUserId || null,
+      });
+      res.json(report);
+    } catch {
+      res.status(500).json({ message: "Failed to submit report" });
+    }
+  });
+
   // Expansion
   app.get(api.expansion.checkCity.path, (req, res) => {
     const city = (req.query.city as string || "").trim().toLowerCase();

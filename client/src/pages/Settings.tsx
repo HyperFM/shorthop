@@ -4,7 +4,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check, Mail, AlertTriangle } from "lucide-react";
 import { showFlash } from "@/components/FlashNotification";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -409,7 +413,167 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        <ContactShortHop />
+        <ReportIssue />
       </div>
     </div>
+  );
+}
+
+function ContactShortHop() {
+  const [open, setOpen] = useState(false);
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [category, setCategory] = useState("general");
+
+  const sendMsg = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/contact", { subject, message, category });
+    },
+    onSuccess: () => {
+      setOpen(false);
+      setSubject("");
+      setMessage("");
+      showFlash("✅", "Message sent!", "success");
+    },
+    onError: () => {
+      showFlash("❌", "Failed to send", "error");
+    },
+  });
+
+  return (
+    <>
+      <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setOpen(true)}>
+        <CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+            <Mail className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-sm font-bold">Contact ShortHop</p>
+            <p className="text-xs text-muted-foreground">Questions, feedback, or support</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Contact ShortHop</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger className="text-sm" data-testid="select-contact-category">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="general">General Question</SelectItem>
+                <SelectItem value="support">Support</SelectItem>
+                <SelectItem value="feedback">Feedback</SelectItem>
+                <SelectItem value="bug">Bug Report</SelectItem>
+                <SelectItem value="safety">Safety Concern</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Subject"
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              className="text-sm"
+              data-testid="input-contact-subject"
+            />
+            <Textarea
+              placeholder="Your message..."
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              rows={4}
+              className="text-sm"
+              data-testid="input-contact-message"
+            />
+            <Button
+              className="w-full"
+              onClick={() => sendMsg.mutate()}
+              disabled={!subject.trim() || !message.trim() || sendMsg.isPending}
+              data-testid="button-send-contact"
+            >
+              Send Message
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function ReportIssue() {
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState("bug");
+  const [description, setDescription] = useState("");
+
+  const submitReport = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/report", { category, description });
+    },
+    onSuccess: () => {
+      setOpen(false);
+      setDescription("");
+      showFlash("✅", "Report submitted", "success");
+    },
+    onError: () => {
+      showFlash("❌", "Failed to submit", "error");
+    },
+  });
+
+  return (
+    <>
+      <Card className="cursor-pointer hover:border-red-200 transition-colors" onClick={() => setOpen(true)}>
+        <CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+          </div>
+          <div>
+            <p className="text-sm font-bold">Report an Issue</p>
+            <p className="text-xs text-muted-foreground">Safety, bugs, or concerns</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report an Issue</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger className="text-sm" data-testid="select-report-category">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unsafe_driver">Unsafe Driver</SelectItem>
+                <SelectItem value="harassment">Harassment</SelectItem>
+                <SelectItem value="bug">Bug Report</SelectItem>
+                <SelectItem value="payment">Payment Issue</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+            <Textarea
+              placeholder="Describe the issue..."
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows={4}
+              className="text-sm"
+              data-testid="input-report-description"
+            />
+            <Button
+              className="w-full bg-red-500 hover:bg-red-600"
+              onClick={() => submitReport.mutate()}
+              disabled={!description.trim() || submitReport.isPending}
+              data-testid="button-submit-report"
+            >
+              Submit Report
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

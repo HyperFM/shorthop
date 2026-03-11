@@ -1,0 +1,160 @@
+TITLE: ShortHop Super Admin Account Configuration
+
+OBJECTIVE  
+The platform must have a single Super Admin account with full system control. No other accounts should automatically receive these permissions.
+
+--------------------------------------------------
+
+SUPER ADMIN ACCOUNT
+
+The ONLY Super Admin account in the system is:
+
+Username: HyperFM
+
+This account must automatically be assigned the role:
+
+ROLE = SUPER_ADMIN
+
+No other accounts should receive this role unless manually granted by the Super Admin.
+
+--------------------------------------------------
+
+PERMISSIONS OF SUPER ADMIN
+
+The Super Admin (HyperFM) has full platform control including:
+
+• viewing all users  
+• viewing all drivers  
+• viewing all riders  
+• viewing all ride requests  
+• viewing all completed rides  
+• accessing system logs  
+• receiving all platform messages  
+• managing reports  
+• suspending accounts  
+• deleting accounts  
+• verifying drivers  
+• sending announcements  
+• accessing admin dashboard
+
+--------------------------------------------------
+
+ADMIN DASHBOARD
+
+When the Super Admin logs in, they must see a control dashboard with:
+
+• total number of users  
+• total drivers  
+• active drivers  
+• ride requests today  
+• completed rides today  
+• system alerts  
+• new signups
+
+--------------------------------------------------
+
+USER DATABASE VIEW
+
+Super Admin must be able to see:
+
+• username  
+• account type  
+• driver verification status  
+• signup date  
+• rating  
+• account status
+
+Super Admin actions:
+
+• suspend account  
+• delete account  
+• verify driver  
+• view activity history
+
+--------------------------------------------------
+
+ADMIN INBOX
+
+Users must have a "Contact ShortHop" option in the app.
+
+Messages sent must appear in the Super Admin inbox.
+
+Message details:
+
+• sender username  
+• sender account ID  
+• message text  
+• timestamp
+
+Super Admin must be able to reply.
+
+--------------------------------------------------
+
+REPORT SYSTEM
+
+Users can submit reports such as:
+
+• unsafe driver
+• bug report
+• payment issue
+• harassment report
+
+All reports must appear in the Super Admin dashboard.
+
+--------------------------------------------------
+
+ROLE SWITCHING FOR SUPER ADMIN
+
+The Super Admin account must be able to operate as:
+
+• Super Admin
+• Driver
+• Hopper (Rider)
+
+Inside the profile menu include options:
+
+Switch to Driver Mode  
+Switch to Hopper Mode  
+Return to Admin Dashboard
+
+--------------------------------------------------
+
+DRIVER MODE
+
+When the Super Admin switches to driver mode:
+
+• routes can be set
+• GO ACTIVE / GO OFFLINE toggle works
+• ride requests can be accepted
+
+--------------------------------------------------
+
+HOPPER MODE
+
+When the Super Admin switches to hopper mode:
+
+• ride requests can be made
+• driver matching can be tested
+
+This allows the Super Admin to test the system internally.
+
+--------------------------------------------------
+
+LIVE SYSTEM MAP
+
+Super Admin dashboard should include a live map showing:
+
+• active drivers
+• active ride requests
+
+--------------------------------------------------
+
+SECURITY RULE
+
+No other account should receive Super Admin privileges automatically.
+
+Only the account "HyperFM" should have full system control at launch.
+
+--------------------------------------------------
+
+END DOCUMENT
