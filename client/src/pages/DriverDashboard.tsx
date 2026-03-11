@@ -156,13 +156,17 @@ export default function DriverDashboard({ user }: { user: User }) {
               </Badge>
             )}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">Manage routes and accept hops.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Help people along your route.</p>
         </div>
-        <Card className="border-secondary/30 bg-gradient-to-br from-secondary/10 to-transparent shrink-0">
+        <Card className="border-secondary/30 bg-gradient-to-br from-secondary/10 to-transparent shrink-0 cursor-pointer hover:border-secondary/50 transition-colors" onClick={() => setLocation("/rewards")} data-testid="card-wheels-badge">
           <CardContent className="p-2.5 flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-secondary to-orange-600 flex items-center justify-center text-white shadow-sm">
+            <motion.div
+              animate={{ rotate: [0, 5, -5, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="w-9 h-9 rounded-xl bg-gradient-to-br from-secondary to-orange-600 flex items-center justify-center text-white shadow-sm"
+            >
               <span className="text-base">🛞</span>
-            </div>
+            </motion.div>
             <div>
               <div className="text-[10px] font-bold text-secondary uppercase tracking-wider">Wheels</div>
               <div className="text-lg font-black text-foreground leading-none">{user.credits || 0}</div>
@@ -272,6 +276,21 @@ export default function DriverDashboard({ user }: { user: User }) {
           </Card>
         </motion.div>
       )}
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="bg-gradient-to-r from-primary/5 to-green-500/5 border border-primary/15 rounded-xl px-4 py-3"
+        data-testid="card-driver-philosophy"
+      >
+        <p className="text-xs text-foreground font-medium leading-relaxed">
+          "You're already heading that way. Helping someone along your route earns Wheels you can redeem for rewards."
+        </p>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          ShortHop is not gig work — just community movement.
+        </p>
+      </motion.div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <motion.div 
@@ -545,8 +564,8 @@ export default function DriverDashboard({ user }: { user: User }) {
                                 onChange={(e) => setDistance(e.target.value)} 
                               />
                             </div>
-                            <Button onClick={handleComplete} className="w-full" disabled={completeHop.isPending}>
-                              Confirm & Earn Credits
+                            <Button onClick={handleComplete} className="w-full" disabled={completeHop.isPending} data-testid="button-confirm-complete">
+                              Confirm & Earn Wheels
                             </Button>
                           </div>
                         </DialogContent>
@@ -559,10 +578,9 @@ export default function DriverDashboard({ user }: { user: User }) {
             </div>
           )}
 
-          {/* Available Matches */}
           <div className="space-y-4">
             <h2 className="text-xl font-bold flex items-center gap-2">
-              🗺️ Available Matches Along Routes
+              🗺️ Hoppers Along Your Route
             </h2>
             
             {availableHops.length === 0 ? (
@@ -575,35 +593,50 @@ export default function DriverDashboard({ user }: { user: User }) {
                   >
                     🔍
                   </motion.span>
-                  <p className="text-muted-foreground font-medium">No match requests right now — check back soon!</p>
+                  <p className="text-muted-foreground font-medium">No hoppers along your route right now</p>
+                  <p className="text-xs text-muted-foreground mt-1">Keep driving — we'll let you know when someone's heading your way</p>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid sm:grid-cols-2 gap-4">
-                {availableHops.map(hop => (
-                  <Card key={hop.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-5 space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <div className="text-xs font-bold text-muted-foreground uppercase">Pick up</div>
-                          <div className="font-bold text-foreground">{hop.startLocation}</div>
+                {availableHops.map((hop, idx) => (
+                  <motion.div
+                    key={hop.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <Card className="hover:shadow-md transition-shadow border-primary/20" data-testid={`hop-request-${hop.id}`}>
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                          <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Along your path</p>
                         </div>
-                        <div className="space-y-1 text-right">
-                          <div className="text-xs font-bold text-muted-foreground uppercase">Drop off</div>
-                          <div className="font-bold text-foreground">{hop.endLocation}</div>
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-1">
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase">Pick up</div>
+                            <div className="text-sm font-bold text-foreground">{hop.startLocation}</div>
+                          </div>
+                          <div className="flex items-center text-muted-foreground mx-2">→</div>
+                          <div className="space-y-1 text-right">
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase">Drop off</div>
+                            <div className="text-sm font-bold text-foreground">{hop.endLocation}</div>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <Button 
-                        variant="secondary" 
-                        className="w-full" 
-                        onClick={() => acceptHop.mutate(hop.id)}
-                        disabled={acceptHop.isPending}
-                      >
-                        {acceptHop.isPending ? "Accepting..." : "Accept Request"}
-                      </Button>
-                    </CardContent>
-                  </Card>
+                        <p className="text-[10px] text-muted-foreground bg-muted/50 rounded-lg px-2.5 py-1.5">
+                          This hopper is heading your direction — help them move forward along your route!
+                        </p>
+                        <Button 
+                          className="w-full bg-gradient-to-r from-primary to-green-600 font-bold" 
+                          onClick={() => acceptHop.mutate(hop.id)}
+                          disabled={acceptHop.isPending}
+                          data-testid={`button-accept-${hop.id}`}
+                        >
+                          {acceptHop.isPending ? "Accepting..." : "Help This Hopper"}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 ))}
               </div>
             )}

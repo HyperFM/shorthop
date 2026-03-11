@@ -24,7 +24,7 @@ const RATINGS = [
 const TIP_OPTIONS = [
   { label: "$1", cents: 100 },
   { label: "$2", cents: 200 },
-  { label: "$5", cents: 500 },
+  { label: "$3", cents: 300 },
 ];
 
 interface HopBuddyRatingProps {

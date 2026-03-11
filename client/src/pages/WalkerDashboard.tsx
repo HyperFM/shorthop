@@ -488,7 +488,16 @@ export default function WalkerDashboard({ user }: { user: User }) {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-2 mb-3"
           >
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0, type: "spring", stiffness: 200 }}>
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0 }}
+              className="text-center mb-1"
+            >
+              <p className="text-sm font-bold text-foreground" data-testid="text-heading-prompt">Heading that way yourself?</p>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05, type: "spring", stiffness: 200 }}>
               <Card className="border-green-300 dark:border-green-700 shadow-md bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 relative overflow-hidden" data-testid="option-walk">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -502,38 +511,48 @@ export default function WalkerDashboard({ user }: { user: User }) {
                       </motion.span>
                       <div>
                         <p className="text-sm font-extrabold text-foreground">Start Walking</p>
-                        <p className="text-[10px] text-muted-foreground">Head that way — you might get picked up!</p>
+                        <p className="text-[10px] text-muted-foreground">Begin moving — a driver may pick you up along the way</p>
                       </div>
                     </div>
                     <span className="text-sm font-bold text-green-600 bg-green-100 dark:bg-green-900/50 px-2.5 py-1 rounded-full">Free</span>
                   </div>
-                  {driversInCity > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="bg-white/80 dark:bg-background/50 rounded-lg p-2.5 flex items-center gap-2"
-                    >
-                      <div className="flex -space-x-1.5">
-                        {Array.from({ length: Math.min(driversInCity, 3) }).map((_, i) => (
-                          <motion.div
-                            key={i}
-                            className="w-5 h-5 rounded-full bg-green-500 border-2 border-white flex items-center justify-center"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ delay: 0.4 + i * 0.1, type: "spring" }}
-                          >
-                            <span className="text-[8px]">🚗</span>
-                          </motion.div>
-                        ))}
+
+                  <div className="bg-white/80 dark:bg-background/50 rounded-lg p-2.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs">⏱️</span>
+                        <p className="text-[11px] text-foreground font-medium">Est. walk time</p>
                       </div>
-                      <p className="text-[11px] text-foreground">
-                        <strong className="text-green-600">{driversInCity}</strong> driver{driversInCity !== 1 ? "s" : ""} heading your direction
-                      </p>
-                    </motion.div>
-                  )}
+                      <p className="text-xs font-bold text-foreground">~15–25 min</p>
+                    </div>
+                    {driversInCity > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="flex items-center gap-2"
+                      >
+                        <div className="flex -space-x-1.5">
+                          {Array.from({ length: Math.min(driversInCity, 3) }).map((_, i) => (
+                            <motion.div
+                              key={i}
+                              className="w-5 h-5 rounded-full bg-green-500 border-2 border-white flex items-center justify-center"
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ delay: 0.4 + i * 0.1, type: "spring" }}
+                            >
+                              <span className="text-[8px]">🚗</span>
+                            </motion.div>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-foreground">
+                          <strong className="text-green-600">{driversInCity}</strong> driver{driversInCity !== 1 ? "s" : ""} heading that direction
+                        </p>
+                      </motion.div>
+                    )}
+                  </div>
                   <p className="text-[10px] text-green-700 dark:text-green-400 mt-2 font-medium">
-                    Start heading toward {locations.endLocation || "your destination"} — a driver may pick you up along the way!
+                    Start heading toward {locations.endLocation || "your destination"} — drivers will see you along their route!
                   </p>
                 </CardContent>
               </Card>

@@ -415,8 +415,8 @@ export async function registerRoutes(
     try {
       const amountCents = Number(req.body.amountCents);
       const message = (req.body.message || "").trim();
-      if (!amountCents || amountCents < 100) {
-        return res.status(400).json({ message: "Minimum donation is $1.00" });
+      if (!amountCents || amountCents < 50) {
+        return res.status(400).json({ message: "Minimum donation is $0.50" });
       }
       await storage.createDonation(req.user.id, amountCents, message || null);
       res.json({ message: "Thank you for supporting ShortHop!", amountCents });

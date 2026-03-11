@@ -1,0 +1,208 @@
+ShortHop – Rewards System, Navigation Improvements, and Community Features Update
+
+Overview  
+ShortHop is designed to be a community-based ride assistance platform. Drivers are not working jobs or performing deliveries. Instead, they are simply helping people move along their route when they are already traveling in that direction. The reward system reflects this philosophy by using in-app rewards called “Wheels.”
+
+------------------------------------------------
+
+1. Wheels Reward System
+
+Drivers earn in-app rewards called Wheels when they help someone progress toward their destination.
+
+1 Wheel = $1 in reward value.
+
+Drivers earn Wheels for helping riders advance along their existing route.
+
+Example system:
+• A short hop of about 0.5 miles earns the driver 0.5 Wheels.
+• Wheels accumulate in the driver’s profile.
+• Wheels can be redeemed later for rewards inside the app.
+
+Important philosophy to display in the app:
+
+ShortHop is not gig work.  
+Drivers are simply helping someone already along their route and receiving rewards for participating in the community.
+
+Messaging example inside the app:
+
+“You’re already heading that way.  
+Helping someone along your route earns Wheels you can redeem for rewards.”
+
+------------------------------------------------
+
+2. Using Wheels
+
+Users can use Wheels in multiple ways:
+
+• Take rides themselves
+• Redeem gift cards
+• Unlock future rewards
+• Participate in future community perks
+
+When users tap the Wheels icon in their profile:
+
+A new animated screen should slide open.
+
+At the top of the page:
+
+Display a large Wheels balance bubble.
+
+Make the bubble visually wider and more prominent than normal UI elements to emphasize collecting Wheels.
+
+Example display:
+
+[ WHEELS BALANCE ]
+
+Below that, display a section titled:
+
+REWARDS
+
+Initial rewards to include:
+
+• Starbucks gift cards
+• Gas gift cards
+• General cash gift cards
+
+Below the rewards list include the message:
+
+“More rewards coming soon.”
+
+------------------------------------------------
+
+3. Driver Tip Option
+
+After a hop is completed:
+
+Allow riders to optionally tip the driver.
+
+Tip interface should show options such as:
+
+• $1
+• $2
+• $3
+• Custom tip
+
+------------------------------------------------
+
+4. Community Donations
+
+Inside the Community tab, add a section called:
+
+“Support ShortHop”
+
+Allow users to donate to help grow the platform.
+
+Donation options:
+
+• $0.50
+• $1
+• $5
+• Custom amount
+
+This allows early supporters to contribute to platform growth.
+
+------------------------------------------------
+
+5. Walking Option
+
+After a rider enters a destination address:
+
+Do not immediately search for drivers.
+
+Instead, display a friendly prompt.
+
+Example prompt:
+
+“Heading that way yourself?”
+
+Show an option:
+
+Start Walking
+
+Display helpful information such as:
+
+• Estimated walking time
+• Number of drivers heading in that direction
+
+Encourage riders to begin moving toward their destination while waiting for a possible hop.
+
+------------------------------------------------
+
+6. Route-Based Driving (Core ShortHop Feature)
+
+Drivers should NOT be redirected off their route.
+
+Instead, the system should work like this:
+
+Drivers follow their original route.
+
+The app shows riders who are along that route.
+
+The driver simply helps the rider move forward along the same road.
+
+Example:
+
+Driver is traveling up New Circle Road.
+
+A rider wants to reach a Taco Bell that is half a mile off that road.
+
+The driver picks them up and carries them as far along the route as possible.
+
+The rider finishes the remaining short distance themselves.
+
+This keeps driving natural and prevents detours.
+
+------------------------------------------------
+
+7. GPS Interface Improvements
+
+The current GPS interface should be upgraded to look more modern and clean.
+
+Design goals:
+
+• Simple
+• High-tech
+• Similar clarity to Apple Maps or Google Maps
+
+Driver view:
+
+Show a blue route line indicating the driver’s path.
+
+Add an arrow to show the direction the driver is moving.
+
+Rider view:
+
+Show how far along the driver’s route they will be able to travel.
+
+Drivers should also see riders located along their route.
+
+Example message:
+
+“This hopper is along your path in 10 minutes.”
+
+This helps drivers naturally help people without changing direction.
+
+------------------------------------------------
+
+8. Future Rewards
+
+Inside the rewards page include the message:
+
+“More rewards coming soon.”
+
+Future examples could include:
+
+• Local business discounts
+• Free rides
+• Community perks
+• Event invitations
+
+------------------------------------------------
+
+Goal of These Updates
+
+These updates reinforce the ShortHop philosophy:
+
+Helping people already along your path.  
+Encouraging people to move, explore, and connect in the real world.  
+Rewarding participation rather than creating a gig job environment.

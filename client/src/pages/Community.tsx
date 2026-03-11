@@ -156,10 +156,9 @@ function DirectChat({ user, onClose }: { user: any; onClose: () => void }) {
 }
 
 const DONATE_AMOUNTS = [
+  { label: "$0.50", cents: 50 },
   { label: "$1", cents: 100 },
   { label: "$5", cents: 500 },
-  { label: "$10", cents: 1000 },
-  { label: "$25", cents: 2500 },
 ];
 
 export default function Community() {
@@ -202,7 +201,7 @@ export default function Community() {
   const submitDonation = useMutation({
     mutationFn: async () => {
       const finalCents = showCustomDonate ? Math.round(parseFloat(customDonate) * 100) : donateAmount;
-      if (!finalCents || finalCents < 100) throw new Error("Minimum $1");
+      if (!finalCents || finalCents < 50) throw new Error("Minimum $0.50");
       await apiRequest("POST", "/api/donate", {
         amountCents: finalCents,
         message: donateMsg.trim() || null,
@@ -347,7 +346,7 @@ export default function Community() {
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 mb-3">
+            <div className="grid grid-cols-3 gap-2 mb-3">
               {DONATE_AMOUNTS.map(a => (
                 <button
                   key={a.cents}
@@ -408,7 +407,7 @@ export default function Community() {
               disabled={
                 submitDonation.isPending ||
                 (!donateAmount && !showCustomDonate) ||
-                (showCustomDonate && (!customDonate || parseFloat(customDonate) < 1))
+                (showCustomDonate && (!customDonate || parseFloat(customDonate) < 0.5))
               }
               onClick={() => submitDonation.mutate()}
               data-testid="button-submit-donate"
