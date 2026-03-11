@@ -87,6 +87,7 @@ export interface IStorage {
   getRewards(): Promise<Reward[]>;
   redeemReward(userId: number, rewardId: number): Promise<{ code: string; reward: Reward }>;
   deductCredits(userId: number, amount: number): Promise<void>;
+  setAdmin(userId: number, isAdmin: boolean): Promise<void>;
   getUserRedemptions(userId: number): Promise<UserRedemption[]>;
 
   createNotification(notification: InsertNotification): Promise<Notification>;
@@ -359,6 +360,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
 
     return { code, reward };
+  }
+
+  async setAdmin(userId: number, isAdmin: boolean): Promise<void> {
+    await db.update(users).set({ isAdmin }).where(eq(users.id, userId));
   }
 
   async deductCredits(userId: number, amount: number): Promise<void> {
