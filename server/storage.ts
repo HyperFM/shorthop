@@ -93,6 +93,7 @@ export interface IStorage {
   addCredits(userId: number, amount: number): Promise<void>;
   setAdmin(userId: number, isAdmin: boolean): Promise<void>;
   getUserRedemptions(userId: number): Promise<UserRedemption[]>;
+  getAllRedemptions(): Promise<(UserRedemption & { username: string; rewardName: string })[]>;
 
   createNotification(notification: InsertNotification): Promise<Notification>;
   getUserNotifications(userId: number): Promise<Notification[]>;
@@ -391,6 +392,17 @@ export class DatabaseStorage implements IStorage {
 
   async getUserRedemptions(userId: number): Promise<UserRedemption[]> {
     return await db.select().from(userRedemptions).where(eq(userRedemptions.userId, userId));
+  }
+
+  async getAllRedemptions(): Promise<(UserRedemption & { username: string; rewardName: string })[]> {
+    const all = await db.select().from(userRedemptions).orderBy(desc(userRedemptions.redeemedAt));
+    const result = [];
+    for (const r of all) {
+      const user = await this.getUser(r.userId);
+      const [reward] = await db.select().from(rewards).where(eq(rewards.id, r.rewardId));
+      result.push({ ...r, username: user?.username || "unknown", rewardName: reward?.name || "Unknown Reward" });
+    }
+    return result;
   }
 
   async createNotification(notification: InsertNotification): Promise<Notification> {

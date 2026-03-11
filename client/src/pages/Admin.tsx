@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { FounderChat } from "@/components/FounderChat";
@@ -85,7 +85,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "redemptions";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
@@ -106,6 +106,10 @@ export default function Admin() {
   const { data: logs } = useQuery<RideLog[]>({ queryKey: ["/api/admin/logs"], enabled: tab === "logs" });
   const { data: inbox } = useQuery<ContactMsg[]>({ queryKey: ["/api/admin/inbox"], enabled: tab === "inbox" || tab === "overview" });
   const { data: reportsList } = useQuery<ReportItem[]>({ queryKey: ["/api/admin/reports"], enabled: tab === "reports" || tab === "overview" });
+  const { data: redemptions } = useQuery<{ id: number; userId: number; rewardId: number; code: string; redeemedAt: string; username: string; rewardName: string }[]>({
+    queryKey: ["/api/admin/redemptions"],
+    enabled: tab === "redemptions" || tab === "overview",
+  });
   const { data: vipConvos } = useQuery<{ userId: number; username: string; lastMessage: string; lastAt: string; unread: number }[]>({
     queryKey: ["/api/admin/vip-conversations"],
     enabled: tab === "dms" || tab === "overview",
@@ -265,6 +269,7 @@ export default function Admin() {
     { key: "logs", label: "Logs", icon: Eye },
     { key: "notify", label: "Notify", icon: Send },
     { key: "founders", label: "Founders", icon: Crown },
+    { key: "redemptions", label: "Rewards", icon: Gift, badge: redemptions?.length || 0 },
     { key: "dms", label: "DMs", icon: Star, badge: vipConvos?.reduce((sum, c) => sum + c.unread, 0) || 0 },
   ];
 
@@ -735,6 +740,43 @@ export default function Admin() {
               </Button>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {tab === "redemptions" && (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            All reward redemptions from users. When someone redeems Wheels for a reward, you fulfill it by sending the actual gift card.
+          </p>
+          {(!redemptions || redemptions.length === 0) ? (
+            <div className="text-center py-12">
+              <Gift className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground font-medium">No redemptions yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">When users redeem Wheels for rewards, they'll show up here.</p>
+            </div>
+          ) : (
+            redemptions.map(r => (
+              <Card key={r.id} className="border-border/50" data-testid={`redemption-${r.id}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-white shadow-md shrink-0">
+                      <Gift className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold">{r.username}</p>
+                        <Badge className="text-[9px] bg-pink-100 text-pink-700 border-0">{r.code}</Badge>
+                      </div>
+                      <p className="text-xs font-medium text-foreground mt-0.5">{r.rewardName}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Redeemed {new Date(r.redeemedAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       )}
 

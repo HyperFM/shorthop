@@ -1393,6 +1393,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/admin/redemptions', requireAdmin, async (_req, res) => {
+    try {
+      const redemptions = await storage.getAllRedemptions();
+      res.json(redemptions);
+    } catch {
+      res.status(500).json({ message: "Failed to get redemptions" });
+    }
+  });
+
   // VIP Hyper Chat (DMs between founders and HyperFM)
   app.get('/api/vip-chat', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
