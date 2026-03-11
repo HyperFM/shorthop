@@ -130,7 +130,7 @@ export default function RewardStore() {
               </motion.p>
               <p className="text-lg font-bold text-secondary mt-1">${(user.credits || 0).toFixed(2)}</p>
               <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed max-w-[240px] mx-auto">
-                1 Wheel = $1. Cash out anytime with a $5 minimum.
+                1 Wheel = $1. Cash out anytime with a 5 Wheel minimum.
               </p>
             </div>
           </CardContent>
@@ -259,7 +259,7 @@ export default function RewardStore() {
               <p className="text-xs text-muted-foreground">Add a payment method above to cash out your Wheels.</p>
             ) : user.credits < 5 ? (
               <div className="text-center py-4">
-                <p className="text-xs text-muted-foreground">You need at least 5 Wheels ($5) to cash out.</p>
+                <p className="text-xs text-muted-foreground">You need at least 5 Wheels to cash out.</p>
                 <div className="w-full bg-muted rounded-full h-2 mt-3">
                   <div
                     className="bg-gradient-to-r from-secondary to-green-500 h-2 rounded-full transition-all"

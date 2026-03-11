@@ -1415,7 +1415,7 @@ export async function registerRoutes(
     try {
       const amount = Math.floor(Number(req.body.amount));
       if (!amount || amount < 5 || !Number.isInteger(amount)) {
-        return res.status(400).json({ message: "Minimum cashout is $5 (5 Wheels)" });
+        return res.status(400).json({ message: "Minimum cashout is 5 Wheels" });
       }
       const user = await storage.getUser(req.user.id);
       if (!user) return res.status(404).json({ message: "User not found" });
