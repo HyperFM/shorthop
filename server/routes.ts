@@ -718,7 +718,7 @@ export async function registerRoutes(
   app.patch('/api/user/profile', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted'];
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests'];
       const updates: Record<string, any> = {};
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -1052,6 +1052,8 @@ export async function registerRoutes(
         driverLifestyleTags: driver.driverLifestyleTags,
         driverQuestionnaireCompleted: driver.driverQuestionnaireCompleted,
         rideVibe: driver.rideVibe,
+        bio: driver.bio,
+        interests: driver.interests,
       });
     } catch {
       res.status(500).json({ message: "Failed to get driver info" });

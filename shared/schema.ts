@@ -49,6 +49,8 @@ export const users = pgTable("users", {
   driverGroceriesOk: boolean("driver_groceries_ok"),
   driverLifestyleTags: text("driver_lifestyle_tags"),
   driverQuestionnaireCompleted: boolean("driver_questionnaire_completed").default(false),
+  bio: text("bio"),
+  interests: text("interests"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

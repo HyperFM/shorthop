@@ -20,6 +20,7 @@ import { FounderChat } from "@/components/FounderChat";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking, usePickupGuidance } from "@/hooks/use-location";
 import { PickupMapVisual } from "@/components/PickupMapVisual";
 import { MatchInsightBubble } from "@/components/MatchInsightBubble";
+import { InterestTags, SharedInterestsBadge } from "@/components/InterestBubbles";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import type { User } from "@shared/routes";
@@ -37,6 +38,8 @@ type DriverInfo = {
   driverLifestyleTags: string | null;
   driverQuestionnaireCompleted: boolean | null;
   rideVibe: string | null;
+  bio: string | null;
+  interests: string | null;
 };
 
 const searchSchema = z.object({
@@ -395,35 +398,46 @@ export default function WalkerDashboard({ user }: { user: User }) {
                         {matchedDriverInfo.licensePlate && <span className="ml-1 font-mono font-bold text-foreground"> · {matchedDriverInfo.licensePlate}</span>}
                       </p>
                     )}
-                    {matchedDriverInfo.driverQuestionnaireCompleted && (
-                      <div className="pl-6 pt-1 space-y-1 border-t border-green-100 dark:border-green-800/30 mt-1.5" data-testid="driver-profile-details">
-                        <div className="flex flex-wrap gap-1.5">
-                          {matchedDriverInfo.driverConvoComfort && (
-                            <span className="inline-flex items-center gap-1 text-[10px] bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-full px-2 py-0.5">
-                              {matchedDriverInfo.driverConvoComfort === 'quiet' ? '🤫 Quiet' : matchedDriverInfo.driverConvoComfort === 'friendly_chat' ? '😊 Chatty' : '🤝 Flexible'}
-                            </span>
+                    {(matchedDriverInfo.driverQuestionnaireCompleted || matchedDriverInfo.bio || matchedDriverInfo.interests) && (() => {
+                      const driverInterests = matchedDriverInfo.interests ? matchedDriverInfo.interests.split(',').filter(Boolean) : [];
+                      const myInterests = (user as any)?.interests ? String((user as any).interests).split(',').filter(Boolean) : [];
+                      const sharedInterests = driverInterests.filter((i: string) => myInterests.includes(i));
+                      return (
+                        <div className="pl-6 pt-1 space-y-1.5 border-t border-green-100 dark:border-green-800/30 mt-1.5" data-testid="driver-profile-details">
+                          {matchedDriverInfo.bio && (
+                            <p className="text-[11px] text-foreground/80 italic leading-snug" data-testid="text-driver-bio">"{matchedDriverInfo.bio}"</p>
                           )}
-                          {matchedDriverInfo.driverMusicPref && (
-                            <span className="inline-flex items-center gap-1 text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full px-2 py-0.5">
-                              {matchedDriverInfo.driverMusicPref === 'no_music' ? '🔇 No music' : matchedDriverInfo.driverMusicPref === 'low_bg' ? '🔉 Low BG' : matchedDriverInfo.driverMusicPref === 'rider_choice' ? "🎵 Rider's pick" : '🎶 Playlist'}
-                            </span>
-                          )}
-                          {matchedDriverInfo.driverPetsOk !== null && (
-                            <span className="inline-flex items-center gap-1 text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full px-2 py-0.5">
-                              {matchedDriverInfo.driverPetsOk ? '🐾 Pet OK' : '🚫 No pets'}
-                            </span>
-                          )}
-                          {matchedDriverInfo.driverGroceriesOk !== null && (
-                            <span className="inline-flex items-center gap-1 text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full px-2 py-0.5">
-                              {matchedDriverInfo.driverGroceriesOk ? '🛍️ Items OK' : '🙅 No items'}
-                            </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {matchedDriverInfo.driverConvoComfort && (
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-full px-2 py-0.5">
+                                {matchedDriverInfo.driverConvoComfort === 'quiet' ? '🤫 Quiet' : matchedDriverInfo.driverConvoComfort === 'friendly_chat' ? '😊 Chatty' : '🤝 Flexible'}
+                              </span>
+                            )}
+                            {matchedDriverInfo.driverMusicPref && (
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full px-2 py-0.5">
+                                {matchedDriverInfo.driverMusicPref === 'no_music' ? '🔇 No music' : matchedDriverInfo.driverMusicPref === 'low_bg' ? '🔉 Low BG' : matchedDriverInfo.driverMusicPref === 'rider_choice' ? "🎵 Rider's pick" : '🎶 Playlist'}
+                              </span>
+                            )}
+                            {matchedDriverInfo.driverPetsOk !== null && (
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full px-2 py-0.5">
+                                {matchedDriverInfo.driverPetsOk ? '🐾 Pet OK' : '🚫 No pets'}
+                              </span>
+                            )}
+                            {matchedDriverInfo.driverGroceriesOk !== null && (
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full px-2 py-0.5">
+                                {matchedDriverInfo.driverGroceriesOk ? '🛍️ Items OK' : '🙅 No items'}
+                              </span>
+                            )}
+                          </div>
+                          {driverInterests.length > 0 && (
+                            <div className="space-y-1">
+                              <InterestTags interests={driverInterests} highlight={sharedInterests} />
+                              {sharedInterests.length > 0 && <SharedInterestsBadge count={sharedInterests.length} />}
+                            </div>
                           )}
                         </div>
-                        {matchedDriverInfo.driverLifestyleTags && (
-                          <p className="text-[10px] text-muted-foreground italic">"{matchedDriverInfo.driverLifestyleTags}"</p>
-                        )}
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </>
               )}

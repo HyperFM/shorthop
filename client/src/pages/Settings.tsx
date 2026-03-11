@@ -16,6 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import { RideVibeSelector } from "@/components/RideVibeSelector";
+import { InterestBubbles } from "@/components/InterestBubbles";
 
 const STORAGE_KEY = "shorthop-notification-preferences";
 
@@ -57,6 +58,25 @@ export default function Settings() {
   const [rideVibe, setRideVibe] = useState(user?.rideVibe || "friendly_chat");
   const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
+  const [bio, setBio] = useState((user as any)?.bio || "");
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(() => {
+    const raw = (user as any)?.interests;
+    return raw ? raw.split(',').filter(Boolean) : [];
+  });
+
+  const saveProfile = useMutation({
+    mutationFn: async () => {
+      await apiRequest("PATCH", "/api/user/profile", {
+        bio: bio.trim() || null,
+        interests: selectedInterests.join(',') || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+      showFlash("✅", "Profile saved!", "success");
+    },
+    onError: () => showFlash("❌", "Failed to save", "error"),
+  });
 
   const copyReferralCode = async () => {
     if (!user?.referralCode) return;
@@ -201,6 +221,49 @@ export default function Settings() {
                 className="w-full"
               >
                 {user.tier === "flexhop" ? "Switch to Standard" : "Upgrade to FlexHop"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {user && (
+          <Card className="border-green-200/50 dark:border-green-800/40" data-testid="card-your-profile">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-green-500" />
+                Your Profile
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-xs font-bold mb-1.5 block">Bio</Label>
+                <Textarea
+                  placeholder="Tell people a little about yourself..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  maxLength={200}
+                  className="text-sm resize-none h-20"
+                  data-testid="input-bio"
+                />
+                <p className="text-[9px] text-muted-foreground text-right mt-0.5">{bio.length}/200</p>
+              </div>
+              <div>
+                <Label className="text-xs font-bold mb-1 block">Interests</Label>
+                <p className="text-[10px] text-muted-foreground mb-2">Tap to select up to 12 — riders see what you have in common</p>
+                <InterestBubbles
+                  selected={selectedInterests}
+                  onChange={setSelectedInterests}
+                  maxSelections={12}
+                />
+                <p className="text-[9px] text-muted-foreground text-right mt-1">{selectedInterests.length}/12 selected</p>
+              </div>
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => saveProfile.mutate()}
+                disabled={saveProfile.isPending}
+                data-testid="button-save-profile"
+              >
+                {saveProfile.isPending ? "Saving..." : "Save Profile"}
               </Button>
             </CardContent>
           </Card>
