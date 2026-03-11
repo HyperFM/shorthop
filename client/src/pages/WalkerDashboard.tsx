@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { SeasonalGreeting } from "@/components/SeasonalGreeting";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -187,18 +188,13 @@ export default function WalkerDashboard({ user }: { user: User }) {
     <div className="px-4 pt-3 pb-4 max-w-lg mx-auto">
 
       <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">ShortHop</p>
-          <div className="flex items-center gap-1.5">
-            <h1 className="text-base font-display font-bold text-foreground" data-testid="text-dashboard-title">
-              Hey, {user.username}
-            </h1>
-            {user.isFounder && user.founderBadge && (
-              <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[8px] px-1 py-0" data-testid="badge-founder">
-                🛞
-              </Badge>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          <SeasonalGreeting username={user.username} testId="text-dashboard-title" />
+          {user.isFounder && user.founderBadge && (
+            <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[8px] px-1 py-0 self-end mb-0.5" data-testid="badge-founder">
+              🛞
+            </Badge>
+          )}
         </div>
         <Button variant="ghost" size="icon" onClick={handleInvite} data-testid="button-invite-friends" className="h-8 w-8 rounded-full">
           <Share2 className="w-4 h-4" />
