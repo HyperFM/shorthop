@@ -66,7 +66,7 @@ export default function Auth() {
     } else {
       localStorage.removeItem("sh_remember_credentials");
     }
-    loginMutation.mutate({ username: data.username, password: data.password });
+    loginMutation.mutate({ username: data.username, password: data.password, rememberMe: data.rememberMe } as any);
   };
 
   useEffect(() => {

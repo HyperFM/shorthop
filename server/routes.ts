@@ -88,6 +88,7 @@ export async function registerRoutes(
       secret: process.env.SESSION_SECRET || 'dev_secret',
       resave: false,
       saveUninitialized: false,
+      rolling: true,
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         httpOnly: true,
@@ -187,7 +188,16 @@ export async function registerRoutes(
       await storage.setAdmin(req.user.id, true);
       req.user.isAdmin = true;
     }
-    res.status(200).json(req.user);
+    const rememberMe = req.body.rememberMe === true || req.body.rememberMe === "true";
+    if (rememberMe) {
+      req.session.cookie.maxAge = 90 * 24 * 60 * 60 * 1000;
+    } else {
+      req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
+    }
+    req.session.save((err) => {
+      if (err) console.error("Session save error:", err);
+      res.status(200).json(req.user);
+    });
   });
 
   app.get(api.auth.me.path, (req, res) => {
