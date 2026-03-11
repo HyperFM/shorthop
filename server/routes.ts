@@ -107,6 +107,9 @@ export async function registerRoutes(
         if (!user || user.password !== password) {
           return done(null, false);
         }
+        if (user.isDisabled) {
+          return done(null, false);
+        }
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -312,6 +315,11 @@ export async function registerRoutes(
   app.post(api.hops.accept.path, async (req, res) => {
     if (!req.isAuthenticated() || !req.user.isDriver) return res.status(401).json({ message: "Unauthorized" });
     try {
+       const driver = await storage.getUser(req.user.id);
+       if (!driver) return res.status(404).json({ message: "User not found" });
+       if (driver.isDisabled) return res.status(403).json({ message: "Account disabled" });
+       if (!driver.driverVerified) return res.status(403).json({ message: "Driver not verified" });
+       if (!driver.isActive) return res.status(403).json({ message: "Go active first to accept hops" });
        const hop = await storage.acceptHop(Number(req.params.id), req.user.id);
        res.json(hop);
     } catch (e) {
@@ -795,6 +803,284 @@ export async function registerRoutes(
       .slice(0, 3);
 
     res.json({ spots: spotsWithDistance });
+  });
+
+  // Driver Onboarding & Profile
+  app.post('/api/driver/profile', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { vehicleMake, vehicleModel, vehicleColor, licensePlate, driverLicenseUrl, selfieUrl, agreedToTerms } = req.body;
+      const updated = await storage.updateUser(req.user.id, {
+        vehicleMake, vehicleModel, vehicleColor, licensePlate,
+        driverLicenseUrl: driverLicenseUrl || null,
+        selfieUrl: selfieUrl || null,
+        agreedToTerms: agreedToTerms || false,
+        isDriver: true,
+      });
+      res.json(updated);
+    } catch {
+      res.status(500).json({ message: "Failed to update driver profile" });
+    }
+  });
+
+  app.post('/api/driver/apply', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.vehicleMake || !user?.licensePlate) {
+        return res.status(400).json({ message: "Complete your vehicle profile first" });
+      }
+      const application = await storage.submitDriverApplication(req.user.id);
+      await storage.createNotification({
+        userId: req.user.id,
+        type: "driver_mode",
+        title: "Application Submitted",
+        message: "Your driver application is under review. We'll notify you once approved.",
+        isRead: false,
+      });
+      res.json(application);
+    } catch {
+      res.status(500).json({ message: "Failed to submit application" });
+    }
+  });
+
+  app.get('/api/driver/status', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUser(req.user.id);
+      const application = await storage.getDriverApplication(req.user.id);
+      res.json({
+        isDriver: user?.isDriver || false,
+        isActive: user?.isActive || false,
+        driverVerified: user?.driverVerified || false,
+        vehicleMake: user?.vehicleMake || null,
+        vehicleModel: user?.vehicleModel || null,
+        vehicleColor: user?.vehicleColor || null,
+        licensePlate: user?.licensePlate || null,
+        agreedToTerms: user?.agreedToTerms || false,
+        applicationStatus: application?.status || null,
+      });
+    } catch {
+      res.status(500).json({ message: "Failed to get driver status" });
+    }
+  });
+
+  app.post('/api/driver/active', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const { active } = req.body;
+    if (typeof active !== 'boolean') return res.status(400).json({ message: "Invalid request" });
+
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user?.isDriver) return res.status(403).json({ message: "Not a registered driver" });
+      if (!user?.driverVerified && active) return res.status(403).json({ message: "Driver not verified yet" });
+      if (user?.isDisabled) return res.status(403).json({ message: "Account disabled" });
+
+      const updated = await storage.setDriverActive(req.user.id, active);
+
+      if (active) {
+        liveLocations.set(req.user.id, {
+          latitude: 38.0406,
+          longitude: -84.5037,
+          accuracy: 10,
+          updatedAt: Date.now(),
+        });
+      } else {
+        liveLocations.delete(req.user.id);
+      }
+
+      res.json(updated);
+    } catch {
+      res.status(500).json({ message: "Failed to toggle active status" });
+    }
+  });
+
+  app.get('/api/hops/:id/driver-info', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hops = await storage.getHopsForWalker(req.user.id);
+      const hop = hops.find(h => h.id === hopId && h.status === 'matched');
+      if (!hop || !hop.driverId) return res.json(null);
+      const driver = await storage.getUser(hop.driverId);
+      if (!driver) return res.json(null);
+      res.json({
+        username: driver.username,
+        vehicleMake: driver.vehicleMake,
+        vehicleModel: driver.vehicleModel,
+        vehicleColor: driver.vehicleColor,
+        licensePlate: driver.licensePlate,
+      });
+    } catch {
+      res.status(500).json({ message: "Failed to get driver info" });
+    }
+  });
+
+  // Driver decline hop
+  app.post('/api/hops/:id/decline', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      res.json({ message: "Declined", hopId });
+    } catch {
+      res.status(500).json({ message: "Failed to decline" });
+    }
+  });
+
+  // Admin Routes
+  const requireAdmin = async (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    if (!user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    next();
+  };
+
+  app.get('/api/admin/stats', requireAdmin, async (_req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const activeDrivers = await storage.getActiveDrivers();
+      const applications = await storage.getDriverApplications();
+      const pendingApps = applications.filter(a => a.status === "pending");
+      const availableHops = await storage.getAvailableHops();
+      const logs = await storage.getSystemLogs(10);
+
+      res.json({
+        totalUsers: allUsers.length,
+        totalDrivers: allUsers.filter(u => u.isDriver).length,
+        activeDrivers: activeDrivers.length,
+        verifiedDrivers: allUsers.filter(u => u.driverVerified).length,
+        pendingApplications: pendingApps.length,
+        activeHopRequests: availableHops.length,
+        recentRides: logs.length,
+      });
+    } catch {
+      res.status(500).json({ message: "Failed to get stats" });
+    }
+  });
+
+  app.get('/api/admin/users', requireAdmin, async (_req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      res.json(allUsers.map(u => ({
+        id: u.id,
+        username: u.username,
+        isDriver: u.isDriver,
+        isActive: u.isActive,
+        driverVerified: u.driverVerified,
+        isDisabled: u.isDisabled,
+        isAdmin: u.isAdmin,
+        isFounder: u.isFounder,
+        credits: u.credits,
+        totalHops: u.totalHops,
+        vehicleMake: u.vehicleMake,
+        vehicleModel: u.vehicleModel,
+        vehicleColor: u.vehicleColor,
+        licensePlate: u.licensePlate,
+        createdAt: u.createdAt,
+      })));
+    } catch {
+      res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+
+  app.get('/api/admin/drivers', requireAdmin, async (_req, res) => {
+    try {
+      const activeDrivers = await storage.getActiveDrivers();
+      res.json(activeDrivers.map(d => ({
+        id: d.id,
+        username: d.username,
+        isActive: d.isActive,
+        driverVerified: d.driverVerified,
+        vehicleMake: d.vehicleMake,
+        vehicleModel: d.vehicleModel,
+        vehicleColor: d.vehicleColor,
+        licensePlate: d.licensePlate,
+        credits: d.credits,
+      })));
+    } catch {
+      res.status(500).json({ message: "Failed to get drivers" });
+    }
+  });
+
+  app.get('/api/admin/applications', requireAdmin, async (_req, res) => {
+    try {
+      const applications = await storage.getDriverApplications();
+      res.json(applications);
+    } catch {
+      res.status(500).json({ message: "Failed to get applications" });
+    }
+  });
+
+  app.post('/api/admin/applications/:id/review', requireAdmin, async (req, res) => {
+    try {
+      const appId = Number(req.params.id);
+      const { status, notes } = req.body;
+      if (!["approved", "rejected"].includes(status)) {
+        return res.status(400).json({ message: "Status must be approved or rejected" });
+      }
+      const application = await storage.reviewDriverApplication(appId, status, req.user.id, notes);
+
+      const notifTitle = status === "approved" ? "Driver Approved! 🎉" : "Application Update";
+      const notifMsg = status === "approved"
+        ? "Your driver application has been approved! You can now go active and accept hop requests."
+        : `Your driver application was not approved. ${notes || "Please contact support for more info."}`;
+
+      await storage.createNotification({
+        userId: application.userId,
+        type: "driver_mode",
+        title: notifTitle,
+        message: notifMsg,
+        isRead: false,
+      });
+
+      res.json(application);
+    } catch {
+      res.status(500).json({ message: "Failed to review application" });
+    }
+  });
+
+  app.post('/api/admin/users/:id/disable', requireAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      const { disabled } = req.body;
+      const user = await storage.disableUser(userId, disabled);
+      res.json(user);
+    } catch {
+      res.status(500).json({ message: "Failed to disable user" });
+    }
+  });
+
+  app.get('/api/admin/logs', requireAdmin, async (req, res) => {
+    try {
+      const limit = Number(req.query.limit) || 100;
+      const logs = await storage.getSystemLogs(limit);
+      res.json(logs);
+    } catch {
+      res.status(500).json({ message: "Failed to get logs" });
+    }
+  });
+
+  app.post('/api/admin/notify-drivers', requireAdmin, async (req, res) => {
+    try {
+      const { message } = req.body;
+      if (!message) return res.status(400).json({ message: "Message required" });
+      const activeDrivers = await storage.getActiveDrivers();
+      const allDrivers = (await storage.getAllUsers()).filter(u => u.isDriver);
+      const targets = activeDrivers.length > 0 ? activeDrivers : allDrivers;
+
+      for (const driver of targets) {
+        await storage.createNotification({
+          userId: driver.id,
+          type: "hop_nearby",
+          title: "HOP REQUEST NEAR YOU",
+          message,
+          isRead: false,
+        });
+      }
+      res.json({ sent: targets.length });
+    } catch {
+      res.status(500).json({ message: "Failed to notify drivers" });
+    }
   });
 
   // Expansion

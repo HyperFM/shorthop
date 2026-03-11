@@ -12,6 +12,7 @@ import {
   communityPosts,
   expansionWaitlist,
   userBadges,
+  driverApplications,
   type User,
   type InsertUser,
   type RoutineRoute,
@@ -30,6 +31,7 @@ import {
   type InsertExpansionWaitlist,
   type ExpansionWaitlist,
   type UserBadge,
+  type DriverApplication,
   walkerRoutes,
   type WalkerRoute,
   type InsertWalkerRoute,
@@ -43,7 +45,7 @@ export interface IStorage {
   updateUserFlexibility(id: number, updates: any): Promise<User>;
   updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string }): Promise<User>;
   dismissWelcome(id: number): Promise<void>;
-  getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }>;
+  getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; activeDrivers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }>;
   checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User>;
   toggleDriverMode(userId: number, enable: boolean): Promise<User>;
 
@@ -89,6 +91,16 @@ export interface IStorage {
 
   getCommunityPosts(): Promise<{ id: number; userId: number; content: string; createdAt: Date | null; username: string }[]>;
   createCommunityPost(post: InsertCommunityPost): Promise<CommunityPost>;
+
+  submitDriverApplication(userId: number): Promise<DriverApplication>;
+  getDriverApplication(userId: number): Promise<DriverApplication | undefined>;
+  getDriverApplications(): Promise<(DriverApplication & { username: string })[]>;
+  reviewDriverApplication(appId: number, status: string, reviewerId: number, notes?: string): Promise<DriverApplication>;
+  setDriverActive(userId: number, active: boolean): Promise<User>;
+  getActiveDrivers(): Promise<User[]>;
+  getAllUsers(): Promise<User[]>;
+  disableUser(id: number, disabled: boolean): Promise<User>;
+  getSystemLogs(limit?: number): Promise<ShortHop[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -141,12 +153,13 @@ export class DatabaseStorage implements IStorage {
     await db.update(users).set({ hasSeenWelcome: true }).where(eq(users.id, id));
   }
 
-  async getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }> {
+  async getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; activeDrivers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }> {
     const TEST_ACCOUNTS = ["walker", "driver"];
     const allUsers = (await db.select().from(users)).filter(u => !TEST_ACCOUNTS.includes(u.username));
     const totalUsers = allUsers.length;
     const totalDrivers = allUsers.filter(u => u.isDriver).length;
     const totalHoppers = allUsers.filter(u => !u.isDriver).length;
+    const activeDriversResult = await this.getActiveDrivers();
 
     const milestones = [10, 25, 50, 100, 250, 500, 1000, 2000, 3000, 5000];
     const nextMilestone = milestones.find(m => m > totalUsers) || 5000;
@@ -158,6 +171,7 @@ export class DatabaseStorage implements IStorage {
       totalUsers,
       totalDrivers,
       totalHoppers,
+      activeDrivers: activeDriversResult.length,
       nextMilestone,
       foundingHoppersRemaining: foundingSpotsRemaining,
       foundingDriversRemaining: foundingSpotsRemaining,
@@ -533,6 +547,70 @@ export class DatabaseStorage implements IStorage {
         sql`${notifications.createdAt} >= ${today}`
       ));
     return Number(result[0]?.cnt || 0);
+  }
+
+  async submitDriverApplication(userId: number): Promise<DriverApplication> {
+    const existing = await db.select().from(driverApplications).where(eq(driverApplications.userId, userId));
+    if (existing.length > 0) {
+      const [updated] = await db.update(driverApplications)
+        .set({ status: "pending", submittedAt: new Date(), reviewedAt: null, reviewedBy: null, notes: null })
+        .where(eq(driverApplications.userId, userId))
+        .returning();
+      return updated;
+    }
+    const [app] = await db.insert(driverApplications).values({ userId, status: "pending" }).returning();
+    return app;
+  }
+
+  async getDriverApplication(userId: number): Promise<DriverApplication | undefined> {
+    const [app] = await db.select().from(driverApplications).where(eq(driverApplications.userId, userId));
+    return app;
+  }
+
+  async getDriverApplications(): Promise<(DriverApplication & { username: string })[]> {
+    const apps = await db.select().from(driverApplications).orderBy(desc(driverApplications.submittedAt));
+    const result = [];
+    for (const app of apps) {
+      const user = await this.getUser(app.userId);
+      result.push({ ...app, username: user?.username || "unknown" });
+    }
+    return result;
+  }
+
+  async reviewDriverApplication(appId: number, status: string, reviewerId: number, notes?: string): Promise<DriverApplication> {
+    const [app] = await db.update(driverApplications)
+      .set({ status, reviewedAt: new Date(), reviewedBy: reviewerId, notes: notes || null })
+      .where(eq(driverApplications.id, appId))
+      .returning();
+    if (!app) throw new Error("Application not found");
+    if (status === "approved") {
+      await db.update(users).set({ driverVerified: true, isDriver: true }).where(eq(users.id, app.userId));
+    }
+    return app;
+  }
+
+  async setDriverActive(userId: number, active: boolean): Promise<User> {
+    const [user] = await db.update(users).set({ isActive: active }).where(eq(users.id, userId)).returning();
+    if (!user) throw new Error("User not found");
+    return user;
+  }
+
+  async getActiveDrivers(): Promise<User[]> {
+    return db.select().from(users).where(and(eq(users.isActive, true), eq(users.isDriver, true)));
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async disableUser(id: number, disabled: boolean): Promise<User> {
+    const [user] = await db.update(users).set({ isDisabled: disabled }).where(eq(users.id, id)).returning();
+    if (!user) throw new Error("User not found");
+    return user;
+  }
+
+  async getSystemLogs(limit: number = 100): Promise<ShortHop[]> {
+    return db.select().from(shortHops).orderBy(desc(shortHops.createdAt)).limit(limit);
   }
 }
 

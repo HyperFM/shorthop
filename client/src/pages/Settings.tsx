@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { showFlash } from "@/components/FlashNotification";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -50,7 +50,6 @@ export default function Settings() {
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">("default");
   const [rideVibe, setRideVibe] = useState(user?.rideVibe || "friendly_chat");
   const [copied, setCopied] = useState(false);
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const copyReferralCode = async () => {
@@ -58,10 +57,10 @@ export default function Settings() {
     try {
       await navigator.clipboard.writeText(user.referralCode);
       setCopied(true);
-      toast({ title: "Copied!", description: "Referral code copied to clipboard." });
+      showFlash("📋", "Copied!", "success");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast({ title: "Copy failed", description: "Could not copy to clipboard.", variant: "destructive" });
+      showFlash("❌", "Copy failed", "error");
     }
   };
 
@@ -87,10 +86,10 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
-      toast({ title: "Subscription cancelled", description: "You're back on the free Short Hop plan." });
+      showFlash("✅", "Subscription cancelled", "info");
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to cancel subscription.", variant: "destructive" });
+      showFlash("❌", "Failed to cancel", "error");
     },
   });
 
@@ -116,15 +115,15 @@ export default function Settings() {
 
   async function requestBrowserPermission() {
     if (!("Notification" in window)) {
-      toast({ title: "Not Supported", description: "Browser notifications are not supported in this browser.", variant: "destructive" });
+      showFlash("🚫", "Not supported", "error");
       return;
     }
     const permission = await Notification.requestPermission();
     setBrowserPermission(permission);
     if (permission === "granted") {
-      toast({ title: "Notifications Enabled", description: "You'll now receive browser notifications from Short Hop." });
+      showFlash("🔔", "Notifications enabled!", "success");
     } else if (permission === "denied") {
-      toast({ title: "Notifications Blocked", description: "Browser notifications were blocked. You can change this in your browser settings.", variant: "destructive" });
+      showFlash("🚫", "Notifications blocked", "error");
     }
   }
 
@@ -135,7 +134,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
-      toast({ title: "Preferences updated", description: "Your profile has been saved." });
+      showFlash("✨", "Preferences saved!", "success");
     },
   });
 

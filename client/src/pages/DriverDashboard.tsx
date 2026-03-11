@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery } from "@tanstack/react-query";
-import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront, Share2, Flame, Award, Star } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront, Share2, Flame, Award, Star, Power, Shield, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,9 @@ import { HopBuddyRating } from "@/components/HopBuddyRating";
 import { NetworkProgress } from "@/components/NetworkProgress";
 import { ShareRideCard } from "@/components/ShareRideCard";
 import { useLiveLocationBroadcast } from "@/hooks/use-location";
+import { apiRequest } from "@/lib/queryClient";
+import { showFlash } from "@/components/FlashNotification";
+import { useLocation } from "wouter";
 import type { User } from "@shared/routes";
 import type { ShortHop } from "@shared/schema";
 
@@ -43,7 +46,17 @@ const routeSchema = z.object({
   days: z.array(z.string()).min(1, "Select at least one day"),
 });
 
+type DriverStatus = {
+  isDriver: boolean;
+  isActive: boolean;
+  driverVerified: boolean;
+  vehicleMake: string | null;
+  applicationStatus: string | null;
+};
+
 export default function DriverDashboard({ user }: { user: User }) {
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const { data: routes } = useRoutes();
   const { data: hops } = useHops();
   const createRoute = useCreateRoute();
@@ -51,12 +64,30 @@ export default function DriverDashboard({ user }: { user: User }) {
   const acceptHop = useAcceptHop();
   const completeHop = useCompleteHop();
 
+  const { data: driverStatus } = useQuery<DriverStatus>({
+    queryKey: ['/api/driver/status'],
+  });
+
+  const toggleActive = useMutation({
+    mutationFn: async (active: boolean) => {
+      await apiRequest("POST", "/api/driver/active", { active });
+    },
+    onSuccess: (_data, active) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/driver/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+      showFlash(active ? "🟢" : "🔴", active ? "You're active!" : "You're offline", active ? "success" : "info");
+    },
+    onError: (err: any) => {
+      showFlash("⚠️", err?.message || "Can't toggle status", "error");
+    },
+  });
+
   const { data: badges } = useQuery<{ id: number; badge: string; earnedAt: string | null }[]>({
     queryKey: ['/api/profile/badges'],
   });
   
   const hasMatchedHop = hops?.some(h => h.status === 'matched') ?? false;
-  useLiveLocationBroadcast(hasMatchedHop);
+  useLiveLocationBroadcast(hasMatchedHop || (driverStatus?.isActive ?? false));
   
   const [isRouteOpen, setIsRouteOpen] = useState(false);
   const [completeHopId, setCompleteHopId] = useState<number | null>(null);
@@ -100,8 +131,13 @@ export default function DriverDashboard({ user }: { user: User }) {
   const availableHops = hops?.filter(h => h.status === 'requested') || [];
   const activeHops = hops?.filter(h => h.status === 'matched') || [];
 
+  const isVerified = driverStatus?.driverVerified ?? false;
+  const isActiveNow = driverStatus?.isActive ?? false;
+  const appStatus = driverStatus?.applicationStatus;
+  const needsOnboarding = !driverStatus?.vehicleMake && !appStatus;
+
   return (
-    <div className="px-4 pt-3 pb-6 max-w-lg mx-auto space-y-6">
+    <div className="px-4 pt-3 pb-6 max-w-lg mx-auto space-y-4">
       
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
@@ -133,6 +169,108 @@ export default function DriverDashboard({ user }: { user: User }) {
           </CardContent>
         </Card>
       </motion.div>
+
+      {needsOnboarding && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-yellow-50" data-testid="card-onboarding-prompt">
+            <CardContent className="p-4 text-center space-y-2">
+              <Shield className="w-8 h-8 mx-auto text-orange-500" />
+              <p className="text-sm font-bold">Complete Driver Setup</p>
+              <p className="text-xs text-muted-foreground">Add your vehicle info, upload your license, and submit for verification to start accepting hops.</p>
+              <Button
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 font-bold"
+                onClick={() => setLocation("/driver-onboarding")}
+                data-testid="button-start-onboarding"
+              >
+                Get Verified
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {appStatus === "pending" && (
+        <Card className="border-yellow-200 bg-yellow-50/50" data-testid="card-pending-verification">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-yellow-700">Verification Pending</p>
+              <p className="text-[10px] text-muted-foreground">Your application is under review. We'll notify you once approved.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {appStatus === "rejected" && (
+        <Card className="border-red-200 bg-red-50/50" data-testid="card-rejected">
+          <CardContent className="p-3 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-red-700">Application Not Approved</p>
+              <p className="text-[10px] text-muted-foreground">Please update your info and reapply.</p>
+            </div>
+            <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setLocation("/driver-onboarding")} data-testid="button-reapply">
+              Reapply
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {isVerified && (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+          <Card className={`border-2 transition-colors ${isActiveNow ? 'border-green-400 bg-green-50/30' : 'border-border/50'}`} data-testid="card-active-toggle">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                    isActiveNow ? 'bg-gradient-to-br from-green-400 to-green-600' : 'bg-muted'
+                  }`}>
+                    <Power className={`w-5 h-5 ${isActiveNow ? 'text-white' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold" data-testid="text-active-status">
+                      {isActiveNow ? "You're Active" : "You're Offline"}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {isActiveNow ? "Hoppers can see you and request rides" : "Go active to start accepting hops"}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  className={`h-9 px-4 font-bold text-xs rounded-full shadow-sm ${
+                    isActiveNow
+                      ? 'bg-red-500 hover:bg-red-600 text-white'
+                      : 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                  }`}
+                  onClick={() => toggleActive.mutate(!isActiveNow)}
+                  disabled={toggleActive.isPending}
+                  data-testid="button-toggle-active"
+                >
+                  {toggleActive.isPending ? '...' : isActiveNow ? 'GO OFFLINE' : 'GO ACTIVE'}
+                </Button>
+              </div>
+              {isActiveNow && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-3 pt-3 border-t border-green-200"
+                >
+                  <div className="flex items-center gap-2">
+                    <motion.div
+                      className="w-2 h-2 rounded-full bg-green-500"
+                      animate={{ scale: [1, 1.4, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    />
+                    <span className="text-xs text-green-700 font-medium">Broadcasting your location to nearby hoppers</span>
+                  </div>
+                </motion.div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <motion.div 

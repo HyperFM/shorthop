@@ -18,6 +18,8 @@ import Settings from "@/pages/Settings";
 import Community from "@/pages/Community";
 import Leaderboard from "@/pages/Leaderboard";
 import Artist from "@/pages/Artist";
+import DriverOnboarding from "@/pages/DriverOnboarding";
+import Admin from "@/pages/Admin";
 
 function Router() {
   return (
@@ -32,6 +34,8 @@ function Router() {
       <Route path="/community" component={Community} />
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/artist" component={Artist} />
+      <Route path="/driver-onboarding" component={DriverOnboarding} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );

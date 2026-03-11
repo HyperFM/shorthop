@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Send, Users, Sparkles, Lock } from "lucide-react";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { showFlash } from "@/components/FlashNotification";
 
 function timeAgo(date: string | null): string {
   if (!date) return "";
@@ -23,7 +23,6 @@ function timeAgo(date: string | null): string {
 
 export default function Community() {
   const { data: user, isLoading: authLoading } = useAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newPost, setNewPost] = useState("");
 
@@ -47,10 +46,10 @@ export default function Community() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.community.list.path] });
       setNewPost("");
-      toast({ title: "Posted!", description: "Your story is now in the community feed." });
+      showFlash("📝", "Posted!", "success");
     },
     onError: () => {
-      toast({ title: "Could not post", description: "FlexHop membership is required to post.", variant: "destructive" });
+      showFlash("🔒", "FlexHop required to post", "error");
     },
   });
 

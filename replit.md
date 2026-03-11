@@ -1,7 +1,7 @@
 # Short Hop - Product Notes
 
-## Current Version (V5 - App-Like UI Redesign)
-Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and streamlined dashboards. Drive Mode removed — anyone can register as a driver.
+## Current Version (V6 - Pre-Launch Build)
+Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and streamlined dashboards. Full driver onboarding with verification, GO ACTIVE/OFFLINE toggle, admin panel, PWA support, and reliable notification system. Structured for future native iOS/Android conversion.
 
 ## Features
 
@@ -38,17 +38,58 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 
 ### Notification System
 - In-app notification center in bottom tab bar (Alerts tab)
-- Nearby hopper detection with simulated matching
+- Flash notifications (FlashNotification.tsx): centered animated spring popups, auto-dismiss 1.2s
 - Browser notification API integration
 - Notification settings with toggles
 
+### Driver Onboarding & Verification
+- Multi-step wizard at `/driver-onboarding`:
+  1. Vehicle info (make, model, color, plate)
+  2. License photo upload
+  3. Identity selfie
+  4. Accept driver agreement/terms
+  5. Enable notifications prompt
+  6. Confirmation - application submitted
+- Driver applications tracked in `driver_applications` table
+- Admin reviews and approves/rejects applications
+- Only verified drivers can go active
+
+### GO ACTIVE / GO OFFLINE Toggle
+- Prominent toggle on DriverDashboard (green/red)
+- Only available to verified drivers
+- When active: starts location broadcasting, visible to hoppers
+- When offline: stops broadcasting, hidden from matching
+- Shows status badges: Active (green pulse), Offline, Unverified/Pending
+
+### Admin Panel
+- `/admin` route (restricted to isAdmin users)
+- Tabs: Overview, Users, Applications, Active Drivers, Logs, Notify
+- Overview: stats cards (total users, drivers, active, verified, pending apps, active hops)
+- Users: list with disable/enable toggle
+- Applications: approve/reject driver applications
+- Active Drivers: live list of currently active drivers
+- Logs: recent ride request/acceptance logs
+- Notify: manual notification blast to active drivers
+
 ### Driver Features
-- Anyone can register as a driver (chosen at registration, requires background check)
-- NOT a subscription feature — Drive Mode removed
+- Anyone can register as a driver (chosen at registration)
+- Multi-step verification required before going active
 - Routine routes (not shifts)
 - Wheels reward system (1 mile = 1 Wheel)
 - Flex Hop settings (detour distance/time)
 - Reward Store (coffee, gas, meals, car wash)
+
+### Rider Request Flow
+- After requesting: "Searching for active drivers..." with active driver count
+- When matched: shows driver info (name, vehicle make/model/color, license plate)
+- No active drivers: "No drivers nearby right now" message
+- Vehicle info fetched from `/api/hops/:id/driver-info`
+
+### PWA Support
+- manifest.json: start_url `/dashboard`, display standalone, theme colors
+- Service worker (sw.js): offline shell caching
+- Registered in index.html with apple-mobile-web-app-capable meta tags
+- "Add to Home Screen" support on mobile browsers
 
 ### Subscription System
 - **Free tier**: Short Hop only (no subscription required)
@@ -56,9 +97,6 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - **Power Hop ($15/mo)**: Complete mobility freedom, unlimited rides
 - First 25 founding members get Flex Hop free forever
 - Server enforces subscription check on `POST /api/hops/request` (403 if not subscribed)
-- Subscribe/cancel endpoints: `POST /api/subscription`, `DELETE /api/subscription`
-- Subscription management in Settings page (view active plan, cancel)
-- Schema fields: `subscription` (null | "flex_hop" | "power_hop"), `subscriptionStartDate` on users table
 
 ### App-Like UI
 - **Bottom Tab Bar**: Home / Community / Board / Settings / Alerts (fixed at bottom, only for authenticated users)
@@ -69,22 +107,20 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 
 ### Growth Features & Viral Expansion
 - **Hop Streak System**: Tracks consecutive hops per user, resets after 48h inactivity
-- **Achievement Badges**: Automatically awarded at milestones (3, 10, 25, 50, 100 hops), stored in `user_badges` table
-- **Referral System**: Unique referral codes per user (generated at registration), referrer gets 5 Wheels, new user gets 3 Wheels
-- **Leaderboard**: /leaderboard page with 3 tabs: Most Hops, Top Drivers (by Wheels), Community Hoppers (by posts)
+- **Achievement Badges**: Automatically awarded at milestones (3, 10, 25, 50, 100 hops)
+- **Referral System**: Unique referral codes per user, referrer gets 5 Wheels, new user gets 3 Wheels
+- **Leaderboard**: /leaderboard page with 3 tabs: Most Hops, Top Drivers, Community Hoppers
 - **Shareable Ride Cards**: Post-ride share option via Web Share API
 
 ### Early Network & Growth System
 - Founding members: first 25 total (unified pool, not split by role)
-- Founders get lifetime FlexHop tier + badge (auto-assigned at registration)
-- Network progress card on dashboards showing driver/hopper/total counts
-- Milestone progress bar with founder spots remaining
+- Founders get lifetime FlexHop tier + badge
+- Network progress card on dashboards
 - Invite Friends button on dashboards
 
 ### Saved Routes (Walker)
 - Save/delete usual destinations with quick-select chips
 - Stored in `walker_routes` table
-- API: GET/POST /api/walker-routes, DELETE /api/walker-routes/:id
 
 ### Safety & Privacy
 - Block/report user (backend-ready)
@@ -96,19 +132,21 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - / - Home (landing page)
 - /auth - Login/Register
 - /dashboard - Walker or Driver dashboard
+- /driver-onboarding - Multi-step driver verification wizard
+- /admin - Admin panel (restricted)
 - /rewards - Reward Store (drivers)
 - /community - Community feed
 - /settings - Tier, ride vibe, notifications, privacy
 - /leaderboard - Leaderboard (3 tabs)
 - /privacy - Privacy policy
 - /support - Support & safety info
-- /artist - Artist page (HyperFM bio, photo, links)
+- /artist - Artist page
 
 ## API Endpoints
 - Auth: POST /api/login, /api/register, GET /api/me, POST /api/logout
 - Routes: GET/POST /api/routes, DELETE /api/routes/:id
 - Hops: GET /api/hops, POST /api/hops/request, POST /api/hops/:id/accept, /api/hops/:id/complete, POST /api/hops/:id/cancel
-- Location: POST /api/location (broadcast GPS), GET /api/hops/:id/tracking (get partner distance/direction)
+- Location: POST /api/location, GET /api/hops/:id/tracking
 - Pickup Guidance: GET /api/pickup-guidance?lat=&lng=
 - Rewards: GET /api/rewards, POST /api/rewards/:id/redeem
 - Notifications: GET /api/notifications, POST /api/notifications/:id/read, POST /api/notifications/read-all
@@ -116,7 +154,9 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Follows: GET /api/follows, POST /api/follow/:id, DELETE /api/follow/:id
 - Ratings: POST /api/ratings
 - Profile: PUT /api/profile/preferences, POST /api/profile/dismiss-welcome
-- Driver: PUT /api/driver/flexibility
+- Driver Onboarding: POST /api/driver/profile, POST /api/driver/apply, GET /api/driver/status, POST /api/driver/active
+- Driver Info: GET /api/hops/:id/driver-info, POST /api/hops/:id/decline
+- Admin: GET /api/admin/stats, GET /api/admin/users, GET /api/admin/drivers, GET /api/admin/applications, POST /api/admin/applications/:id/review, POST /api/admin/users/:id/disable, GET /api/admin/logs, POST /api/admin/notify-drivers
 - Walker Routes: GET /api/walker-routes, POST /api/walker-routes, DELETE /api/walker-routes/:id
 - Network: GET /api/network-stats
 - Subscription: POST /api/subscription, DELETE /api/subscription
@@ -126,8 +166,7 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - CartoDB dark map tiles; blue=rider, green=driver
 - Framer Motion animations throughout
 - Game-card utility class with rounded-2xl, border-2, hover lift
-- XP-bar with rainbow gradient for progress indicators
-- Emoji headers and floating emoji backgrounds
+- Flash notification system: showFlash(emoji, text, type) — types: success/error/info/welcome
 
 ## Tech Stack
 - Frontend: React + Vite + Tailwind + Framer Motion + TanStack Query
@@ -136,9 +175,11 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - Session store: PostgreSQL-backed via `connect-pg-simple` (30-day persistent sessions)
 - Validation: Zod schemas
 - UI: Shadcn components
+- PWA: manifest.json + service worker (sw.js)
 
 ## Database Tables
-- users (auth, wheels/credits, tier, rideVibe, driver flexibility, founder status)
+- users (auth, wheels/credits, tier, rideVibe, driver flexibility, founder status, driver verification fields, admin/disabled flags)
+- driver_applications (driver onboarding tracking: userId, status, submittedAt, reviewedAt, reviewedBy, notes)
 - routine_routes (driver commutes)
 - short_hops (ride requests)
 - rewards / user_redemptions (reward store)
@@ -155,7 +196,9 @@ Mobile-first native-app-like UI with bottom tab navigation, compact layouts, and
 - `tier` column: "standard" (default) or "flexhop"
 - `rideVibe` column: "quiet", "friendly_chat" (default), "community"
 - Power Hop uses `hopType: "full_ride"` internally
-- Test accounts: walker/password (walker, has flex_hop subscription), driver/password (driver)
+- Test accounts: walker/password (walker, has flex_hop subscription), driver/password (driver, isAdmin)
 - Founding members: 25 total unified pool (stored in `isFounder` field)
 - Founder badges: "Founding Hopper" or "Founding Driver"
 - Drive Mode REMOVED — anyone registers as driver at signup
+- Flash system: `showFlash(emoji, text, type)` — import from `@/components/FlashNotification`
+- Driver verification fields added via SQL (not db:push): driverVerified, isActive, agreedToTerms, isAdmin, isDisabled

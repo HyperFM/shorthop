@@ -19,6 +19,14 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import type { User } from "@shared/routes";
 
+type DriverInfo = {
+  username: string;
+  vehicleMake: string | null;
+  vehicleModel: string | null;
+  vehicleColor: string | null;
+  licensePlate: string | null;
+};
+
 const searchSchema = z.object({
   startLocation: z.string().min(2, "Required"),
   endLocation: z.string().min(2, "Required"),
@@ -52,7 +60,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
     queryKey: ['/api/profile/badges'],
   });
 
-  const { data: networkStats } = useQuery<{ totalUsers: number; totalDrivers: number; totalHoppers: number }>({
+  const { data: networkStats } = useQuery<{ totalUsers: number; totalDrivers: number; totalHoppers: number; activeDrivers: number }>({
     queryKey: ['/api/network-stats'],
   });
 
@@ -86,6 +94,12 @@ export default function WalkerDashboard({ user }: { user: User }) {
   });
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
+
+  const { data: matchedDriverInfo } = useQuery<DriverInfo | null>({
+    queryKey: ['/api/hops', activeHop?.id, 'driver-info'],
+    enabled: activeHop?.status === 'matched' && !!activeHop?.id,
+  });
+
   const prevStatusRef = useRef<string | undefined>(undefined);
   const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
   const [matchedElapsed, setMatchedElapsed] = useState(0);
@@ -164,7 +178,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
   };
 
   const networkLoaded = !!networkStats;
-  const driversInCity = networkStats?.totalDrivers ?? 0;
+  const driversInCity = networkStats?.activeDrivers ?? 0;
 
   return (
     <div className="px-4 pt-3 pb-4 max-w-lg mx-auto">
@@ -329,6 +343,21 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     <X className="w-3 h-3 mr-1" />
                     {cancelHop.isPending ? "Cancelling..." : "Change Destination"}
                   </Button>
+                </div>
+              )}
+
+              {activeHop.status === 'matched' && matchedDriverInfo && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 space-y-1.5" data-testid="card-driver-vehicle">
+                  <div className="flex items-center gap-2">
+                    <Car className="w-4 h-4 text-green-600" />
+                    <span className="text-xs font-bold text-foreground">Your Driver: {matchedDriverInfo.username}</span>
+                  </div>
+                  {matchedDriverInfo.vehicleMake && (
+                    <p className="text-xs text-muted-foreground pl-6">
+                      {matchedDriverInfo.vehicleColor} {matchedDriverInfo.vehicleMake} {matchedDriverInfo.vehicleModel}
+                      {matchedDriverInfo.licensePlate && <span className="ml-1 font-mono font-bold text-foreground"> · {matchedDriverInfo.licensePlate}</span>}
+                    </p>
+                  )}
                 </div>
               )}
 

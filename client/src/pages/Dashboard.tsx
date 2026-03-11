@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import WalkerDashboard from "./WalkerDashboard";
 import DriverDashboard from "./DriverDashboard";
 import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
+import { showFlash } from "@/components/FlashNotification";
 import { Loader2 } from "lucide-react";
 
 export default function Dashboard() {
@@ -14,6 +15,14 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<"hopper" | "driver">(
     user?.isDriver ? "driver" : "hopper"
   );
+  const welcomeShown = useRef(false);
+
+  useEffect(() => {
+    if (user && !welcomeShown.current) {
+      welcomeShown.current = true;
+      showFlash("👋", `Welcome back, ${user.username}!`, "welcome");
+    }
+  }, [user]);
 
   if (isLoading) {
     return (

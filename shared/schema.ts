@@ -26,7 +26,28 @@ export const users = pgTable("users", {
   referredBy: text("referred_by"),
   subscription: text("subscription"),
   subscriptionStartDate: timestamp("subscription_start_date"),
+  driverLicenseUrl: text("driver_license_url"),
+  selfieUrl: text("selfie_url"),
+  vehicleMake: text("vehicle_make"),
+  vehicleModel: text("vehicle_model"),
+  vehicleColor: text("vehicle_color"),
+  licensePlate: text("license_plate"),
+  driverVerified: boolean("driver_verified").default(false),
+  isActive: boolean("is_active").default(false),
+  agreedToTerms: boolean("agreed_to_terms").default(false),
+  isAdmin: boolean("is_admin").default(false),
+  isDisabled: boolean("is_disabled").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const driverApplications = pgTable("driver_applications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  status: text("status").notNull().default("pending"),
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  notes: text("notes"),
 });
 
 export const userBadges = pgTable("user_badges", {
@@ -198,6 +219,10 @@ export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
 export const insertWalkerRouteSchema = createInsertSchema(walkerRoutes).omit({ id: true, createdAt: true });
 export type WalkerRoute = typeof walkerRoutes.$inferSelect;
 export type InsertWalkerRoute = z.infer<typeof insertWalkerRouteSchema>;
+
+export const insertDriverApplicationSchema = createInsertSchema(driverApplications).omit({ id: true, submittedAt: true, reviewedAt: true });
+export type DriverApplication = typeof driverApplications.$inferSelect;
+export type InsertDriverApplication = z.infer<typeof insertDriverApplicationSchema>;
 
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;
