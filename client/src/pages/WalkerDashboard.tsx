@@ -19,6 +19,7 @@ import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { FounderChat } from "@/components/FounderChat";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking, usePickupGuidance } from "@/hooks/use-location";
 import { PickupMapVisual } from "@/components/PickupMapVisual";
+import { MatchInsightBubble } from "@/components/MatchInsightBubble";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import type { User } from "@shared/routes";
@@ -29,6 +30,13 @@ type DriverInfo = {
   vehicleModel: string | null;
   vehicleColor: string | null;
   licensePlate: string | null;
+  driverConvoComfort: string | null;
+  driverMusicPref: string | null;
+  driverPetsOk: boolean | null;
+  driverGroceriesOk: boolean | null;
+  driverLifestyleTags: string | null;
+  driverQuestionnaireCompleted: boolean | null;
+  rideVibe: string | null;
 };
 
 const searchSchema = z.object({
@@ -64,6 +72,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const [ratingHop, setRatingHop] = useState<{ tripId: number; driverId: number; driverName: string } | null>(null);
   const [payWithWheels, setPayWithWheels] = useState(false);
   const lastCompletedRef = useRef<number | null>(null);
+  const [showInsightBubble, setShowInsightBubble] = useState(false);
 
   const { data: badges } = useQuery<{ id: number; badge: string; earnedAt: string | null }[]>({
     queryKey: ['/api/profile/badges'],
@@ -128,6 +137,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
       if (navigator.vibrate) {
         navigator.vibrate([200, 100, 200, 100, 300]);
       }
+      setShowInsightBubble(true);
     }
     if (activeHop?.status === 'matched') {
       setMatchedElapsed(0);
@@ -368,18 +378,54 @@ export default function WalkerDashboard({ user }: { user: User }) {
               )}
 
               {activeHop.status === 'matched' && matchedDriverInfo && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 space-y-1.5" data-testid="card-driver-vehicle">
-                  <div className="flex items-center gap-2">
-                    <Car className="w-4 h-4 text-green-600" />
-                    <span className="text-xs font-bold text-foreground">Your Driver: {matchedDriverInfo.username}</span>
+                <>
+                  <MatchInsightBubble
+                    driverName={matchedDriverInfo.username}
+                    visible={showInsightBubble}
+                    onDismiss={() => setShowInsightBubble(false)}
+                  />
+                  <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 rounded-lg p-2.5 space-y-1.5" data-testid="card-driver-vehicle">
+                    <div className="flex items-center gap-2">
+                      <Car className="w-4 h-4 text-green-600" />
+                      <span className="text-xs font-bold text-foreground">Your Driver: {matchedDriverInfo.username}</span>
+                    </div>
+                    {matchedDriverInfo.vehicleMake && (
+                      <p className="text-xs text-muted-foreground pl-6">
+                        {matchedDriverInfo.vehicleColor} {matchedDriverInfo.vehicleMake} {matchedDriverInfo.vehicleModel}
+                        {matchedDriverInfo.licensePlate && <span className="ml-1 font-mono font-bold text-foreground"> · {matchedDriverInfo.licensePlate}</span>}
+                      </p>
+                    )}
+                    {matchedDriverInfo.driverQuestionnaireCompleted && (
+                      <div className="pl-6 pt-1 space-y-1 border-t border-green-100 dark:border-green-800/30 mt-1.5" data-testid="driver-profile-details">
+                        <div className="flex flex-wrap gap-1.5">
+                          {matchedDriverInfo.driverConvoComfort && (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-full px-2 py-0.5">
+                              {matchedDriverInfo.driverConvoComfort === 'quiet' ? '🤫 Quiet' : matchedDriverInfo.driverConvoComfort === 'friendly_chat' ? '😊 Chatty' : '🤝 Flexible'}
+                            </span>
+                          )}
+                          {matchedDriverInfo.driverMusicPref && (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full px-2 py-0.5">
+                              {matchedDriverInfo.driverMusicPref === 'no_music' ? '🔇 No music' : matchedDriverInfo.driverMusicPref === 'low_bg' ? '🔉 Low BG' : matchedDriverInfo.driverMusicPref === 'rider_choice' ? "🎵 Rider's pick" : '🎶 Playlist'}
+                            </span>
+                          )}
+                          {matchedDriverInfo.driverPetsOk !== null && (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full px-2 py-0.5">
+                              {matchedDriverInfo.driverPetsOk ? '🐾 Pet OK' : '🚫 No pets'}
+                            </span>
+                          )}
+                          {matchedDriverInfo.driverGroceriesOk !== null && (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded-full px-2 py-0.5">
+                              {matchedDriverInfo.driverGroceriesOk ? '🛍️ Items OK' : '🙅 No items'}
+                            </span>
+                          )}
+                        </div>
+                        {matchedDriverInfo.driverLifestyleTags && (
+                          <p className="text-[10px] text-muted-foreground italic">"{matchedDriverInfo.driverLifestyleTags}"</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {matchedDriverInfo.vehicleMake && (
-                    <p className="text-xs text-muted-foreground pl-6">
-                      {matchedDriverInfo.vehicleColor} {matchedDriverInfo.vehicleMake} {matchedDriverInfo.vehicleModel}
-                      {matchedDriverInfo.licensePlate && <span className="ml-1 font-mono font-bold text-foreground"> · {matchedDriverInfo.licensePlate}</span>}
-                    </p>
-                  )}
-                </div>
+                </>
               )}
 
               {activeHop.status === 'matched' && tracking.available && tracking.distance !== null && (

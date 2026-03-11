@@ -21,6 +21,7 @@ import Artist from "@/pages/Artist";
 import DriverOnboarding from "@/pages/DriverOnboarding";
 import Admin from "@/pages/Admin";
 import Widget from "@/pages/Widget";
+import InstallApp from "@/pages/InstallApp";
 
 function Router() {
   return (
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/driver-onboarding" component={DriverOnboarding} />
       <Route path="/admin" component={Admin} />
       <Route path="/widget" component={Widget} />
+      <Route path="/install" component={InstallApp} />
       <Route component={NotFound} />
     </Switch>
   );

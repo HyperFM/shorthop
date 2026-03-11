@@ -715,6 +715,22 @@ export async function registerRoutes(
     }
   });
 
+  app.patch('/api/user/profile', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted'];
+      const updates: Record<string, any> = {};
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      if (Object.keys(updates).length === 0) return res.status(400).json({ message: "No valid fields" });
+      const user = await storage.updateUser(req.user.id, updates);
+      res.json(sanitizeUser(user));
+    } catch {
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   app.post(api.profile.dismissWelcome.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     await storage.dismissWelcome(req.user.id);
@@ -1029,6 +1045,13 @@ export async function registerRoutes(
         vehicleModel: driver.vehicleModel,
         vehicleColor: driver.vehicleColor,
         licensePlate: driver.licensePlate,
+        driverConvoComfort: driver.driverConvoComfort,
+        driverMusicPref: driver.driverMusicPref,
+        driverPetsOk: driver.driverPetsOk,
+        driverGroceriesOk: driver.driverGroceriesOk,
+        driverLifestyleTags: driver.driverLifestyleTags,
+        driverQuestionnaireCompleted: driver.driverQuestionnaireCompleted,
+        rideVibe: driver.rideVibe,
       });
     } catch {
       res.status(500).json({ message: "Failed to get driver info" });

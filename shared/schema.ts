@@ -43,6 +43,12 @@ export const users = pgTable("users", {
   paymentHandle: text("payment_handle"),
   stripeAccountId: text("stripe_account_id"),
   stripePayoutsEnabled: boolean("stripe_payouts_enabled").default(false),
+  driverConvoComfort: text("driver_convo_comfort").default("friendly_chat"),
+  driverMusicPref: text("driver_music_pref"),
+  driverPetsOk: boolean("driver_pets_ok"),
+  driverGroceriesOk: boolean("driver_groceries_ok"),
+  driverLifestyleTags: text("driver_lifestyle_tags"),
+  driverQuestionnaireCompleted: boolean("driver_questionnaire_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -23,6 +23,7 @@ import { FounderChat } from "@/components/FounderChat";
 import { useLiveLocationBroadcast } from "@/hooks/use-location";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
+import { DriverQuestionnaire } from "@/components/DriverQuestionnaire";
 import { useLocation } from "wouter";
 import type { User } from "@shared/routes";
 import type { ShortHop } from "@shared/schema";
@@ -275,6 +276,19 @@ export default function DriverDashboard({ user }: { user: User }) {
             </CardContent>
           </Card>
         </motion.div>
+      )}
+
+      {isVerified && !(user as any).driverQuestionnaireCompleted && (
+        <DriverQuestionnaire
+          onComplete={() => {}}
+          initialValues={{
+            driverConvoComfort: (user as any).driverConvoComfort,
+            driverMusicPref: (user as any).driverMusicPref,
+            driverPetsOk: (user as any).driverPetsOk,
+            driverGroceriesOk: (user as any).driverGroceriesOk,
+            driverLifestyleTags: (user as any).driverLifestyleTags,
+          }}
+        />
       )}
 
       <motion.div

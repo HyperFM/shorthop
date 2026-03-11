@@ -1,0 +1,43 @@
+Update the ShortHop app with the following new features and UI improvements:
+
+1. Hopper Match Insight Bubble  
+Create a small animated orange insight bubble that appears only when a Hopper has been successfully matched with a Driver who is already traveling in the same direction.  
+
+Requirements:  
+• The bubble should appear only for the Hopper (not the Driver).  
+• It should appear immediately after a successful route match.  
+• Keep it compact and visually friendly, similar to a notification tip.  
+• The bubble should briefly explain that a compatible driver has been found who is already heading the same direction.  
+• Include a small icon or animation to make the insight feel helpful and exciting.  
+• Allow the bubble to disappear after a few seconds or when tapped.
+
+2. Driver Profile Questionnaire  
+Before Drivers can begin accepting rides, create a short optional questionnaire that allows them to share basic information about themselves with potential Hoppers.
+
+Purpose:  
+Help riders feel comfortable meeting someone new.
+
+Suggested questions:  
+• Are you comfortable with conversation during rides? (Quiet / Friendly chat / Either)  
+• Music preference during rides?  
+• Are you okay with pets?  
+• Are you comfortable helping with groceries or small items?  
+• Do you prefer quiet rides or social rides?  
+• Optional: relationship status or general lifestyle tags (optional and non-sensitive)
+
+Display:  
+This information should appear in the Driver’s mini profile card shown to Hoppers when a ride match occurs.
+
+3. Instructional Tab (Add to Home Screen Guide)  
+Create a clearly visible "Install App" or "Add to Home Screen" instructional tab.
+
+Requirements:  
+• Place this tab in a convenient location in the navigation menu or settings area.  
+• The tab should explain how users can install the web app on their phone’s home screen.  
+• Allow image placeholders so screenshots can be added later showing the installation steps for iPhone and Android.  
+• Include simple step-by-step instructions for adding the app to the home screen.
+
+Design Notes:  
+• Keep the style consistent with the ShortHop color palette (blue, green, orange).  
+• Maintain the playful, friendly design style already used in the app.  
+• Keep all UI elements simple and easy to understand for first-time users.

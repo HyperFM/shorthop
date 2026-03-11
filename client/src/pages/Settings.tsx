@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check, Mail, AlertTriangle } from "lucide-react";
+import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone } from "lucide-react";
+import { useLocation } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -50,6 +51,7 @@ function savePreferences(prefs: NotificationPreferences) {
 
 export default function Settings() {
   const { data: user } = useAuth();
+  const [, setLocation] = useLocation();
   const [prefs, setPrefs] = useState<NotificationPreferences>(loadPreferences);
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">("default");
   const [rideVibe, setRideVibe] = useState(user?.rideVibe || "friendly_chat");
@@ -378,6 +380,21 @@ export default function Settings() {
               {browserPermission === "denied" && (
                 <span data-testid="text-browser-permission-status" className="text-sm text-destructive font-medium">Blocked in browser settings</span>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-green-200/50 dark:border-green-800/40 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/install")} data-testid="card-install-app">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md shadow-green-500/20">
+                <Smartphone className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-extrabold text-foreground">Install ShortHop</p>
+                <p className="text-[10px] text-muted-foreground">Add to your home screen for the best experience</p>
+              </div>
+              <Badge className="text-[9px] bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border-0">NEW</Badge>
             </div>
           </CardContent>
         </Card>

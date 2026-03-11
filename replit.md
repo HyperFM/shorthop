@@ -31,6 +31,9 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Founder System & Chat**: First 50 users receive lifetime FlexHop and a founder badge. A direct chat channel exists between founders and admin.
 - **Contact & Report System**: Forms for "Contact ShortHop" and "Report an Issue" with admin panel integration for viewing, replying, and resolving.
 - **Safety & Privacy**: Block/report user functionality, ride history logs, optional community features, profile privacy toggles, and dedicated privacy/terms pages.
+- **Driver Profile Questionnaire**: Optional multi-step questionnaire for verified drivers (conversation comfort, music preference, pets OK, groceries/items OK, lifestyle tags). Shown on Driver Dashboard until completed. Data appears in the driver mini-profile card when matched with a hopper.
+- **Match Insight Bubble**: Animated orange bubble shown to hoppers when matched with a driver heading the same direction. Auto-dismisses after 8 seconds or on tap.
+- **Install App Page**: `/install` page with visual guide image, step-by-step instructions for iPhone (Safari), Android (Chrome), and Desktop. Linked from Settings with a "NEW" badge.
 - **GPS/Map Visuals**: Uses Leaflet with CartoDB dark tiles, pulsing blue dot for user, green rounded-square for driver. Animated blue route lines with glow effects and directional arrows, distance overlay, and pickup spot markers.
 
 ### System Design Choices
