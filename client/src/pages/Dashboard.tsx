@@ -1,10 +1,8 @@
-import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import WalkerDashboard from "./WalkerDashboard";
 import DriverDashboard from "./DriverDashboard";
 import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
-import { WelcomeModal } from "@/components/WelcomeModal";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { Loader2 } from "lucide-react";
 
@@ -12,13 +10,6 @@ export default function Dashboard() {
   const { data: user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { currentHopper, dismiss } = useNearbyHopperSimulation(!!user?.isDriver);
-  const [showWelcome, setShowWelcome] = useState(false);
-
-  useEffect(() => {
-    if (user && !user.hasSeenWelcome) {
-      setShowWelcome(true);
-    }
-  }, [user]);
 
   if (isLoading) {
     return (
@@ -37,13 +28,6 @@ export default function Dashboard() {
     <>
       {user.isDriver && (
         <NearbyHopperAlert hopper={currentHopper} onDismiss={dismiss} />
-      )}
-      {showWelcome && (
-        <WelcomeModal
-          open={showWelcome}
-          onOpenChange={setShowWelcome}
-          user={user}
-        />
       )}
       {user.isDriver ? <DriverDashboard user={user} /> : <WalkerDashboard user={user} />}
     </>

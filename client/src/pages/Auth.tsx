@@ -39,9 +39,9 @@ export default function Auth() {
     }
   }, [user, authLoading, setLocation]);
 
-  const loginForm = useForm<LoginRequest>({
-    resolver: zodResolver(insertUserSchema.omit({ isDriver: true, credits: true })),
-    defaultValues: { username: "", password: "" },
+  const loginForm = useForm<LoginRequest & { rememberMe?: boolean }>({
+    resolver: zodResolver(insertUserSchema.omit({ isDriver: true, credits: true }).extend({ rememberMe: require("zod").z.boolean().optional() })),
+    defaultValues: { username: "", password: "", rememberMe: false },
   });
 
   const registerForm = useForm<RegisterRequest & { city: string }>({
@@ -59,7 +59,25 @@ export default function Auth() {
     },
   });
 
-  const onLogin = (data: LoginRequest) => loginMutation.mutate(data);
+  const onLogin = (data: LoginRequest & { rememberMe?: boolean }) => {
+    if (data.rememberMe) {
+      localStorage.setItem("sh_remember_credentials", JSON.stringify({ username: data.username }));
+    } else {
+      localStorage.removeItem("sh_remember_credentials");
+    }
+    loginMutation.mutate({ username: data.username, password: data.password });
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem("sh_remember_credentials");
+    if (saved && activeTab === "login") {
+      try {
+        const { username } = JSON.parse(saved);
+        loginForm.setValue("username", username);
+        loginForm.setValue("rememberMe", true);
+      } catch {}
+    }
+  }, [activeTab, loginForm]);
 
   const onRegister = (data: RegisterRequest & { city: string }) => {
     const cityLower = data.city.trim().toLowerCase();
@@ -130,6 +148,13 @@ export default function Auth() {
                       data-testid="input-password"
                       {...loginForm.register("password")} 
                     />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch 
+                      id="remember-me"
+                      {...loginForm.register("rememberMe")} 
+                    />
+                    <Label htmlFor="remember-me" className="text-sm cursor-pointer">Keep me logged in</Label>
                   </div>
                   <Button 
                     type="submit" 
