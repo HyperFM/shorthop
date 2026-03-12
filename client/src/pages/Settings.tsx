@@ -12,12 +12,13 @@ import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield,
 import { useLocation } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { api } from "@shared/routes";
 import { RideVibeSelector } from "@/components/RideVibeSelector";
 import { InterestBubbles } from "@/components/InterestBubbles";
+import { SubscriptionModal } from "@/components/SubscriptionModal";
 
 const STORAGE_KEY = "shorthop-notification-preferences";
 
@@ -70,6 +71,7 @@ export default function Settings() {
   const [preferredRoutes, setPreferredRoutes] = useState((user as any)?.preferredRoutes || "");
   const [travelTime, setTravelTime] = useState((user as any)?.travelTime || "");
   const [favoritePlaces, setFavoritePlaces] = useState((user as any)?.favoritePlaces || "");
+  const [subscriptionPlan, setSubscriptionPlan] = useState<"flex_hop" | "power_hop" | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -99,6 +101,18 @@ export default function Settings() {
       showFlash("✅", "Profile saved!", "success");
     },
     onError: () => showFlash("❌", "Failed to save", "error"),
+  });
+
+  const switchTier = useMutation({
+    mutationFn: async (subscription: string | null) => {
+      await apiRequest("PATCH", "/api/admin/my-tier", { subscription });
+    },
+    onSuccess: (_data, subscription) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+      const label = subscription === "power_hop" ? "PowerHop" : subscription === "flex_hop" ? "FlexHop" : "Standard";
+      showFlash("✅", `Switched to ${label}`, "success");
+    },
+    onError: () => showFlash("❌", "Failed to switch tier", "error"),
   });
 
   const copyReferralCode = async () => {
@@ -192,11 +206,6 @@ export default function Settings() {
     updatePreferences.mutate({ rideVibe: value });
   };
 
-  const handleTierToggle = () => {
-    const newTier = user?.tier === "flexhop" ? "standard" : "flexhop";
-    updatePreferences.mutate({ tier: newTier });
-  };
-
   const toggleItems: { key: keyof NotificationPreferences; label: string; description: string; icon: typeof Bell }[] = [
     { key: "rideAlerts", label: "Ride Alerts", description: "Get notified when a ride matches your route or a driver is heading your way.", icon: Bell },
     { key: "driverApproachingSound", label: "Driver Approaching Sound", description: "Play an alert sound when your driver enters the corridor zone. Notification always stays on.", icon: Volume2 },
@@ -213,43 +222,6 @@ export default function Settings() {
       <p className="text-xs text-muted-foreground mb-4">Manage your preferences and notifications.</p>
 
       <div className="space-y-6">
-        {user && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-secondary" />
-                Membership Tier
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-foreground flex items-center gap-2">
-                    {user.tier === "flexhop" ? "FlexHop" : "Standard ShortHop"}
-                    {user.tier === "flexhop" && (
-                      <Badge className="bg-secondary text-secondary-foreground text-[10px]">Premium</Badge>
-                    )}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    {user.tier === "flexhop"
-                      ? "Full community access: post stories, follow hoppers, message connections."
-                      : "Core ride features. Upgrade to FlexHop for community access."}
-                  </p>
-                </div>
-              </div>
-              <Button
-                data-testid="button-toggle-tier"
-                variant={user.tier === "flexhop" ? "outline" : "default"}
-                onClick={handleTierToggle}
-                disabled={updatePreferences.isPending}
-                className="w-full"
-              >
-                {user.tier === "flexhop" ? "Switch to Standard" : "Upgrade to FlexHop"}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
         {user && (user as any)?.isRoutePioneer && (
           <Card className="border-amber-300/60 dark:border-amber-700/50 bg-gradient-to-br from-amber-50/50 to-yellow-50/50 dark:from-amber-950/20 dark:to-yellow-950/20" data-testid="card-route-pioneer">
             <CardContent className="py-4 flex items-center gap-3">
@@ -392,20 +364,54 @@ export default function Settings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-primary" />
-                Subscription Plan
+                Membership
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {user.subscription ? (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-foreground" data-testid="text-subscription-plan">
-                        {user.subscription === "power_hop" ? "Power Hop" : "Flex Hop"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {user.subscription === "power_hop" ? "$25/month — Premium connection" : "$10/month — Auto-Hop scheduling"}
-                      </p>
+            <CardContent className="space-y-3">
+              {user.isAdmin ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">Admin: Switch between tiers freely</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { key: null, label: "Standard", icon: "🚶", desc: "Free tier" },
+                      { key: "flex_hop", label: "FlexHop", icon: "🚀", desc: "$10/mo" },
+                      { key: "power_hop", label: "PowerHop", icon: "⚡", desc: "$25/mo" },
+                    ].map((tier) => {
+                      const isActive = (user.subscription || null) === tier.key;
+                      return (
+                        <button
+                          key={tier.label}
+                          onClick={() => switchTier.mutate(tier.key)}
+                          disabled={switchTier.isPending}
+                          className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
+                            isActive
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border/50 hover:border-primary/30'
+                          }`}
+                          data-testid={`button-admin-tier-${tier.label.toLowerCase()}`}
+                        >
+                          <span className="text-xl">{tier.icon}</span>
+                          <span className="text-xs font-bold">{tier.label}</span>
+                          <span className="text-[9px] text-muted-foreground">{tier.desc}</span>
+                          {isActive && <Badge className="text-[8px] h-4 bg-primary/20 text-primary border-0">Active</Badge>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : user.subscription ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{user.subscription === "power_hop" ? "⚡" : "🚀"}</span>
+                      <div>
+                        <p className="font-bold text-foreground text-sm" data-testid="text-subscription-plan">
+                          {user.subscription === "power_hop" ? "PowerHop" : "FlexHop"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {user.subscription === "power_hop" ? "$25/month" : "$10/month"}
+                        </p>
+                      </div>
                     </div>
                     <Badge className="bg-green-500/10 text-green-600 border-green-500/30">Active</Badge>
                   </div>
@@ -413,23 +419,42 @@ export default function Settings() {
                     variant="outline"
                     size="sm"
                     data-testid="button-cancel-subscription"
-                    onClick={() => {
-                      cancelSubscription.mutate();
-                    }}
+                    onClick={() => cancelSubscription.mutate()}
                     disabled={cancelSubscription.isPending}
-                    className="text-destructive hover:text-destructive"
+                    className="w-full text-destructive hover:text-destructive"
                   >
                     Cancel Subscription
                   </Button>
-                </>
+                </div>
               ) : (
-                <div className="text-center py-2">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    You're on the free Short Hop plan. Upgrade to Flex Hop or Power Hop for more options.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Choose a plan when requesting a ride from the dashboard.
-                  </p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/20">
+                    <span className="text-xl">🚶</span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">Standard</p>
+                      <p className="text-xs text-muted-foreground">Free plan — pay per ride</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setSubscriptionPlan("flex_hop")}
+                      className="flex flex-col items-center gap-1 p-3 rounded-xl border border-border/50 hover:border-primary/40 transition-all"
+                      data-testid="button-upgrade-flex"
+                    >
+                      <span className="text-lg">🚀</span>
+                      <span className="text-xs font-bold">FlexHop</span>
+                      <span className="text-[10px] text-muted-foreground">$10/mo</span>
+                    </button>
+                    <button
+                      onClick={() => setSubscriptionPlan("power_hop")}
+                      className="flex flex-col items-center gap-1 p-3 rounded-xl border border-border/50 hover:border-orange-400/40 transition-all"
+                      data-testid="button-upgrade-power"
+                    >
+                      <span className="text-lg">⚡</span>
+                      <span className="text-xs font-bold">PowerHop</span>
+                      <span className="text-[10px] text-muted-foreground">$25/mo</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -643,6 +668,15 @@ export default function Settings() {
         <ContactShortHop />
         <ReportIssue />
       </div>
+
+      {subscriptionPlan && user && (
+        <SubscriptionModal
+          plan={subscriptionPlan}
+          user={user}
+          open={true}
+          onOpenChange={(open) => !open && setSubscriptionPlan(null)}
+        />
+      )}
     </div>
   );
 }

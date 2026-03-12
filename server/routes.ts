@@ -1680,6 +1680,20 @@ export async function registerRoutes(
     }
   });
 
+  app.patch('/api/admin/my-tier', requireAdmin, async (req, res) => {
+    try {
+      const { subscription } = req.body;
+      const validTiers = [null, "flex_hop", "power_hop"];
+      if (!validTiers.includes(subscription)) {
+        return res.status(400).json({ message: "Invalid tier" });
+      }
+      await storage.updateUser(req.user!.id, { subscription });
+      res.json({ message: "Tier updated", subscription });
+    } catch {
+      res.status(500).json({ message: "Failed to update tier" });
+    }
+  });
+
   app.get('/api/admin/inbox', requireAdmin, async (_req, res) => {
     try {
       const messages = await storage.getContactMessages();
@@ -2127,9 +2141,9 @@ export async function registerRoutes(
       if (!distance || distance <= 0 || distance > 100) {
         return res.status(400).json({ message: "Invalid distance" });
       }
-      const RATE_PER_MILE_CENTS = 250;
+      const RATE_PER_MILE_CENTS = 300;
       const amountCents = Math.round(distance * RATE_PER_MILE_CENTS);
-      const minChargeCents = 250;
+      const minChargeCents = 150;
       const finalAmount = Math.max(amountCents, minChargeCents);
 
       const stripe = await getUncachableStripeClient();
@@ -2141,7 +2155,7 @@ export async function registerRoutes(
             currency: 'usd',
             product_data: {
               name: `ShortHop Ride (${distance.toFixed(1)} mi)`,
-              description: `$2.50/mile × ${distance.toFixed(1)} miles`,
+              description: `$1.50/half-mile × ${distance.toFixed(1)} miles`,
             },
             unit_amount: finalAmount,
           },

@@ -63,8 +63,8 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Data Validation**: Zod schemas for robust data input validation.
 - **Database**: PostgreSQL with Drizzle ORM.
 - **Session Management**: PostgreSQL-backed sessions via `connect-pg-simple` for 30-day persistence.
-- **Pricing Logic**: Server-side calculation for ride costs ($2.50/mile, minimum $2.50) to prevent client-side manipulation. Driver earns 1 Wheel/mile, platform retains $1.50/mile.
-- **Super Admin Role**: A single, designated super-admin account (HyperFM) with exclusive access to critical admin functions.
+- **Pricing Logic**: Server-side calculation for ride costs ($3.00/mile, minimum $1.50) to prevent client-side manipulation. Driver earns 1 Wheel/mile, platform retains $1.50/mile.
+- **Super Admin Role**: A single, designated super-admin account (HyperFM) with exclusive access to critical admin functions. Admin can freely switch between Standard/FlexHop/PowerHop tiers via Settings (PATCH `/api/admin/my-tier`).
 
 ### Database Tables
 - `users` — User accounts with roles, preferences, vehicle info, badges
