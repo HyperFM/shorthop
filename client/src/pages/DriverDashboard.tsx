@@ -132,7 +132,7 @@ export default function DriverDashboard({ user }: { user: User }) {
   };
 
   const availableHops = hops?.filter(h => h.status === 'requested') || [];
-  const activeHops = hops?.filter(h => h.status === 'matched') || [];
+  const activeHops = hops?.filter(h => h.status === 'matched' || h.status === 'in_ride') || [];
 
   const isVerified = driverStatus?.driverVerified ?? false;
   const isActiveNow = driverStatus?.isActive ?? false;

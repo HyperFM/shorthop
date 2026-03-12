@@ -22,6 +22,9 @@ import { PickupMapVisual } from "@/components/PickupMapVisual";
 import { CorridorNavigation } from "@/components/CorridorNavigation";
 import { MatchInsightBubble } from "@/components/MatchInsightBubble";
 import { InterestTags, SharedInterestsBadge } from "@/components/InterestBubbles";
+import { SmartMatchCard } from "@/components/SmartMatchCard";
+import { FirstHopCelebration } from "@/components/FirstHopCelebration";
+import { LiveRideOverlay } from "@/components/LiveRideOverlay";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import type { PickupSpot } from "@/hooks/use-location";
@@ -128,18 +131,47 @@ export default function WalkerDashboard({ user }: { user: User }) {
 
   const { data: matchedDriverInfo } = useQuery<DriverInfo | null>({
     queryKey: ['/api/hops', activeHop?.id, 'driver-info'],
-    enabled: activeHop?.status === 'matched' && !!activeHop?.id,
+    enabled: (activeHop?.status === 'matched' || activeHop?.status === 'in_ride') && !!activeHop?.id,
+  });
+
+  const { data: hopStats } = useQuery<{ completedHops: number }>({
+    queryKey: ['/api/hop-stats'],
   });
 
   const prevStatusRef = useRef<string | undefined>(undefined);
   const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [matchedElapsed, setMatchedElapsed] = useState(0);
   const matchedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const startRideMutation = useMutation({
+    mutationFn: async (hopId: number) => {
+      const res = await apiRequest("POST", `/api/hops/${hopId}/start-ride`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+      showFlash("🚗", "Ride started!", "success");
+    },
+  });
+
+  const autoCompleteMutation = useMutation({
+    mutationFn: async (hopId: number) => {
+      const res = await apiRequest("POST", `/api/hops/${hopId}/auto-complete`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hop-stats'] });
+      showFlash("🎉", "Ride completed!", "success");
+    },
+  });
 
   const geo = useGeolocation();
   const hasActiveHop = !!activeHop;
   useLiveLocationBroadcast(hasActiveHop);
-  const tracking = useHopTracking(activeHop?.id, activeHop?.status === 'matched');
+  const tracking = useHopTracking(activeHop?.id, activeHop?.status === 'matched' || activeHop?.status === 'in_ride');
   const { spots: pickupSpots } = usePickupGuidance(geo.latitude, geo.longitude);
 
   const hasFlexSub = user.subscription === "flex_hop" || user.subscription === "power_hop";
@@ -179,6 +211,64 @@ export default function WalkerDashboard({ user }: { user: User }) {
       }
     }
   }, [activeHop?.status, user.id]);
+
+  const autoCompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (activeHop?.status === 'matched' && tracking?.distance !== undefined) {
+      const distFeet = tracking.distance;
+      if (distFeet < 150) {
+        if (!autoStartTimerRef.current) {
+          autoStartTimerRef.current = setTimeout(() => {
+            startRideMutation.mutate(activeHop.id);
+            autoStartTimerRef.current = null;
+          }, 5000);
+        }
+      } else {
+        if (autoStartTimerRef.current) {
+          clearTimeout(autoStartTimerRef.current);
+          autoStartTimerRef.current = null;
+        }
+      }
+    }
+
+    if (activeHop?.status === 'in_ride' && tracking?.distance !== undefined) {
+      if (tracking.distance > 0.5) {
+        if (!autoCompleteTimerRef.current) {
+          autoCompleteTimerRef.current = setTimeout(() => {
+            autoCompleteMutation.mutate(activeHop.id);
+            autoCompleteTimerRef.current = null;
+          }, 10000);
+        }
+      } else {
+        if (autoCompleteTimerRef.current) {
+          clearTimeout(autoCompleteTimerRef.current);
+          autoCompleteTimerRef.current = null;
+        }
+      }
+    }
+
+    return () => {
+      if (autoStartTimerRef.current) {
+        clearTimeout(autoStartTimerRef.current);
+        autoStartTimerRef.current = null;
+      }
+      if (autoCompleteTimerRef.current) {
+        clearTimeout(autoCompleteTimerRef.current);
+        autoCompleteTimerRef.current = null;
+      }
+    };
+  }, [activeHop?.status, tracking?.distance]);
+
+  useEffect(() => {
+    if (prevStatusRef.current === 'in_ride' && activeHop === undefined) {
+      const celebrationKey = `shorthop_celebration_${user.id}`;
+      if (hopStats && hopStats.completedHops === 1 && !sessionStorage.getItem(celebrationKey)) {
+        sessionStorage.setItem(celebrationKey, '1');
+        setShowCelebration(true);
+      }
+    }
+  }, [activeHop, hopStats?.completedHops]);
 
   useEffect(() => {
     if (!hops) return;
@@ -311,6 +401,16 @@ export default function WalkerDashboard({ user }: { user: User }) {
       )}
 
       {!activeHop && (
+        <SmartMatchCard onRequestHop={(direction) => {
+          const parts = direction.split(' → ');
+          if (parts.length === 2) {
+            form.setValue("startLocation", parts[0]);
+            form.setValue("endLocation", parts[1]);
+          }
+        }} />
+      )}
+
+      {!activeHop && (
         <Card className="mb-4 border-border/50 shadow-md rounded-2xl" data-testid="card-destination-input">
           <CardContent className="p-4">
             <form onSubmit={form.handleSubmit(onSearch)} className="space-y-3">
@@ -375,6 +475,16 @@ export default function WalkerDashboard({ user }: { user: User }) {
         <CardContent className="p-3">
           {activeHop ? (
             <div className="space-y-3">
+              {activeHop.status === 'in_ride' && matchedDriverInfo ? (
+                <LiveRideOverlay
+                  driverName={matchedDriverInfo.username}
+                  destination={activeHop.endLocation}
+                  startLocation={activeHop.startLocation}
+                  rideStartedAt={(activeHop as any).rideStartedAt}
+                  distanceMiles={activeHop.distanceMiles}
+                />
+              ) : (
+              <>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className={`w-2.5 h-2.5 rounded-full ${activeHop.status === 'matched' ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse`} />
@@ -524,6 +634,8 @@ export default function WalkerDashboard({ user }: { user: User }) {
                   </motion.div>
                 )}
               </AnimatePresence>
+              </>
+              )}
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -1125,6 +1237,15 @@ export default function WalkerDashboard({ user }: { user: User }) {
           showTip={true}
         />
       )}
+
+      <FirstHopCelebration
+        show={showCelebration}
+        onDismiss={() => {
+          setShowCelebration(false);
+          queryClient.invalidateQueries({ queryKey: ['/api/hop-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/smart-matches'] });
+        }}
+      />
     </div>
   );
 }

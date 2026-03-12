@@ -121,7 +121,9 @@ export function CorridorNavigation({ spot, userLat, userLng, tracking, driverLat
   const driverEta = driverDist ? Math.max(1, Math.round(driverDist / 0.5)) : null;
 
   useEffect(() => {
-    if (hopStatus === "matched" && driverLat != null && driverLng != null) {
+    if (hopStatus === "in_ride") {
+      setRideState("ride_active");
+    } else if (hopStatus === "matched" && driverLat != null && driverLng != null) {
       setRideState("driver_approaching");
     } else if (hopStatus === "in_progress" || hopStatus === "completed") {
       setRideState("ride_active");

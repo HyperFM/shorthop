@@ -1,0 +1,127 @@
+ShortHop Product Update – Smart Route Matching, Ride Confirmation & First Hop Assist
+
+Goal  
+Improve the Schedule system so that it learns from user location patterns, automatically detects when rides begin, and actively helps new users complete their first ride. This will make the platform feel intelligent, supportive, and alive even in the early stages of network growth.
+
+---
+
+Schedule + Location Integration
+
+The Schedule feature should connect with user location data to understand common travel routes.
+
+When users create schedules, the system should:
+
+• Learn the typical direction of travel (origin → destination)  
+• Identify common travel corridors between those points  
+• Recognize when multiple users are traveling the same corridor around the same time  
+
+This allows the system to suggest matches like:
+
+“You’re already heading this way — someone else is traveling the same direction.”
+
+The goal is to make matching feel natural and automatic.
+
+---
+
+Smart Corridor Matching
+
+When two users have schedules or active trips along the same corridor:
+
+• The system recognizes overlapping route paths  
+• Suggests potential ride matches  
+• Highlights when another user is traveling nearby in the same direction
+
+This improves ride discovery without requiring users to constantly search.
+
+---
+
+Automatic Ride Start Detection
+
+Add a feature that automatically detects when a rider and driver have met.
+
+When two matched users:
+
+• Are within close location proximity  
+• Remain stopped together briefly (pickup moment)
+
+The system should assume the ride has started.
+
+At that moment:
+
+• The ride indicator changes from “matched” to “in ride”  
+• The two user icons visually connect on the map  
+• The map shows them traveling along the route together
+
+This removes friction from manually starting rides.
+
+---
+
+Live Ride Visualization
+
+Once the ride begins:
+
+• The map shows both users moving along the road together  
+• The interface visually represents the shared trip  
+• Progress toward the destination is displayed
+
+This reinforces that the ride is active and happening safely.
+
+---
+
+Automatic Ride Completion
+
+When the destination is reached and users separate locations:
+
+• The ride automatically completes  
+• The system records the successful Hop
+
+---
+
+First Ride Celebration
+
+When a user completes their first ride:
+
+Display a celebratory message:
+
+“Hooray! 🎉 You completed your first Hop.”
+
+Then introduce the Hop Streak system.
+
+Example message:
+
+“You’ve started your Hop streak. Let’s see how far you can Hop.”
+
+---
+
+First Hop Assist (New Early Network Feature)
+
+To help new users successfully complete their first ride, add a lightweight assist system.
+
+When a user joins the network and has not completed a Hop yet:
+
+• The app prioritizes matching them with nearby drivers or riders  
+• The system highlights potential matches along their scheduled corridors  
+• A small prompt appears suggesting nearby opportunities
+
+Example message:
+
+“Looks like someone nearby is heading your way. Want to Hop together?”
+
+This increases the chances of early users completing their first ride and experiencing the platform's value.
+
+Once a user completes their first Hop, this assist system becomes less prominent.
+
+---
+
+Design Goal
+
+The overall experience should feel:
+
+• automatic  
+• smooth  
+• intelligent  
+• community-driven
+
+The platform should clearly communicate that ShortHop understands where people are already going and helps them connect naturally along shared routes.
+
+End of update request.

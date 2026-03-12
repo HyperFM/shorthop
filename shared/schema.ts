@@ -111,6 +111,8 @@ export const shortHops = pgTable("short_hops", {
   priceCents: integer("price_cents"),
   tipCents: integer("tip_cents").default(0),
   detourDistance: text("detour_distance"),
+  corridor: text("corridor"),
+  rideStartedAt: timestamp("ride_started_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -334,6 +336,7 @@ export const schedules = pgTable("schedules", {
   timeEnd: text("time_end").notNull(),
   returnTrip: boolean("return_trip").default(false),
   active: boolean("active").default(true),
+  corridor: text("corridor"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

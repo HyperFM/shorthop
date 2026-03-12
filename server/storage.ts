@@ -953,6 +953,49 @@ export class DatabaseStorage implements IStorage {
   async deleteSchedule(id: number, userId: number): Promise<void> {
     await db.delete(schedules).where(and(eq(schedules.id, id), eq(schedules.userId, userId)));
   }
+
+  async getScheduleMatches(userId: number, day: string, timeStart: string, timeEnd: string): Promise<Schedule[]> {
+    const allSchedules = await db.select().from(schedules)
+      .where(and(eq(schedules.active, true)));
+    return allSchedules.filter(s => {
+      if (s.userId === userId) return false;
+      const days = s.days as string[];
+      if (!days.includes(day)) return false;
+      const sStart = parseInt(s.timeStart.replace(':', ''));
+      const sEnd = parseInt(s.timeEnd.replace(':', ''));
+      const qStart = parseInt(timeStart.replace(':', ''));
+      const qEnd = parseInt(timeEnd.replace(':', ''));
+      return sStart <= qEnd && sEnd >= qStart;
+    });
+  }
+
+  async getAllActiveSchedulesForDay(day: string): Promise<(Schedule & { username: string })[]> {
+    const allSchedules = await db.select({
+      schedule: schedules,
+      username: users.username,
+    }).from(schedules)
+      .innerJoin(users, eq(schedules.userId, users.id))
+      .where(eq(schedules.active, true));
+    return allSchedules
+      .filter(s => (s.schedule.days as string[]).includes(day))
+      .map(s => ({ ...s.schedule, username: s.username }));
+  }
+
+  async getUserCompletedHopCount(userId: number): Promise<number> {
+    const result = await db.select({ count: count() }).from(shortHops)
+      .where(and(eq(shortHops.walkerId, userId), eq(shortHops.status, "completed")));
+    return result[0]?.count || 0;
+  }
+
+  async startRide(hopId: number): Promise<ShortHop> {
+    const [updated] = await db.update(shortHops)
+      .set({ status: "in_ride", rideStartedAt: new Date() })
+      .where(eq(shortHops.id, hopId))
+      .returning();
+    if (!updated) throw new Error("Hop not found");
+    return updated;
+  }
+
 }
 
 export const storage = new DatabaseStorage();

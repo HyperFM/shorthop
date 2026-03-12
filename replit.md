@@ -24,8 +24,13 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Hop Buddy Rating System**: Post-ride rating (Great, Good, Neutral, Issue), optional "Ride again" and "Follow" buttons, and integrated tipping ($1/$2/$3/Custom).
 - **Trusted Hoppers**: A follow system where mutual follows designate "Trusted Hoppers" for improved matching.
 - **Community Feed**: A `/community` page (renamed "Network") allowing FlexHop users to post (500 char limit) and all users to read. Includes a direct chat feature with the admin ("Hyper"). Live activity feed shows drivers, riders, and new members in real time.
-- **Schedule System**: Users create recurring trip schedules with day selection (Mon-Sun), start/destination locations, time windows, and optional return trips. Schedules are editable, toggleable (active/paused), and deletable. Home screen shows orange dismissible banner encouraging schedule creation if none exist.
-- **Pickup Corridor Navigation**: Road-based corridors (not landmarks). System finds the nearest point on busy roads (Nicholasville Rd, New Circle Rd, Man o' War, etc.) to user's position. Full-screen map overlay with 3 states: walking (blue), driver approaching (green), ride active (combined). Shows traffic flow directions so users stand on correct side of road.
+- **Schedule System**: Users create recurring trip schedules with day selection (Mon-Sun), start/destination locations, time windows, and optional return trips. Schedules are editable, toggleable (active/paused), and deletable. Home screen shows orange dismissible banner encouraging schedule creation if none exist. Schedules connect to corridors for smart matching.
+- **Smart Route Matching**: `/api/smart-matches` endpoint finds schedule overlaps between users traveling same corridors at similar times. Shows "Smart Matches" cards on home screen with user name, direction, time window, and corridor info. Corridor detection maps location names to Lexington road corridors algorithmically.
+- **First Hop Assist**: New users with 0 completed hops get priority matching. SmartMatchCard shows "First Hop Assist" banner encouraging first ride. Priority badge shown on smart match cards for new users.
+- **Automatic Ride Detection**: Rides auto-transition through states: requested → matched → in_ride → completed. When matched users are within 150ft proximity for 5 seconds, ride automatically starts. When users separate by >0.5mi for 10 seconds during in_ride, ride auto-completes. Server endpoints: `/api/hops/:id/start-ride` and `/api/hops/:id/auto-complete`.
+- **Live Ride Visualization**: During in_ride state, LiveRideOverlay shows connected rider/driver icons, progress bar toward destination, elapsed time, and driver name. Replaces the matched driver card UI.
+- **First Ride Celebration**: When user completes first hop, celebratory modal appears with confetti emoji, "Hooray! You completed your first Hop" message, and Hop Streak introduction. Session-scoped to show once.
+- **Pickup Corridor Navigation**: Road-based corridors (not landmarks). System finds the nearest point on busy roads (Nicholasville Rd, New Circle Rd, Man o' War, etc.) to user's position. Full-screen map overlay with 3 states: walking (blue), driver approaching (green), ride active (combined). Shows traffic flow directions so users stand on correct side of road. Handles in_ride status for active ride visualization.
 - **Notification System**: In-app notification center (moved from bottom nav to Profile/Settings page), flash notifications, and browser notification API integration with user-configurable toggles.
 - **Driver Onboarding & Verification**: A multi-step wizard (`/driver-onboarding`) for vehicle info, license/identity uploads, agreement, and notification prompts. Admin approval is required for activation.
 - **GO ACTIVE / GO OFFLINE Toggle**: Prominent toggle for verified drivers to control availability and location broadcasting.
@@ -88,6 +93,9 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - `client/src/components/BottomTabBar.tsx` — 5-tab navigation (Home, Schedule, Hop, Network, Profile)
 - `client/src/components/CorridorNavigation.tsx` — Full-screen corridor map navigation
 - `client/src/components/NotificationCenter.tsx` — Notification inbox component
+- `client/src/components/SmartMatchCard.tsx` — Smart route match suggestions with First Hop Assist
+- `client/src/components/FirstHopCelebration.tsx` — First ride celebration modal
+- `client/src/components/LiveRideOverlay.tsx` — In-ride progress visualization
 - `server/routes.ts` — API routes including schedule CRUD, corridor guidance
 - `server/storage.ts` — Database operations
 - `shared/schema.ts` — Drizzle schema definitions

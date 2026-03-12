@@ -512,7 +512,7 @@ export async function registerRoutes(
     try {
        const input = api.hops.complete.input.parse(req.body);
        const existingHops = await storage.getHopsForDriver(req.user.id);
-       const targetHop = existingHops.find(h => h.id === Number(req.params.id) && h.status === "matched");
+       const targetHop = existingHops.find(h => h.id === Number(req.params.id) && (h.status === "matched" || h.status === "in_ride"));
        if (!targetHop) return res.status(403).json({ message: "Not authorized to complete this hop" });
        const hop = await storage.completeHop(Number(req.params.id), input.distanceMiles);
 
@@ -1162,6 +1162,159 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch {
       res.status(500).json({ message: "Failed to delete schedule" });
+    }
+  });
+
+  app.get('/api/smart-matches', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const now = new Date();
+      const today = dayNames[now.getDay()];
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      const completedHops = await storage.getUserCompletedHopCount(req.user.id);
+      const mySchedules = await storage.getUserSchedules(req.user.id);
+      const activeToday = mySchedules.filter(s =>
+        s.active && (s.days as string[]).includes(today)
+      );
+
+      if (activeToday.length === 0) {
+        return res.json({ matches: [], firstHopAssist: completedHops === 0 && mySchedules.length > 0, completedHops });
+      }
+      const allSchedulesToday = await storage.getAllActiveSchedulesForDay(today);
+
+      const matches: { scheduleId: number; username: string; corridor: string | null; direction: string; timeWindow: string; matchType: string }[] = [];
+
+      for (const mine of activeToday) {
+        for (const other of allSchedulesToday) {
+          if (other.userId === req.user.id) continue;
+          const otherStart = parseInt(other.timeStart.replace(':', ''));
+          const otherEnd = parseInt(other.timeEnd.replace(':', ''));
+          const myStart = parseInt(mine.timeStart.replace(':', ''));
+          const myEnd = parseInt(mine.timeEnd.replace(':', ''));
+          if (otherStart > myEnd || otherEnd < myStart) continue;
+
+          const startLower = mine.startLocation.toLowerCase();
+          const destLower = mine.destination.toLowerCase();
+          const otherStartLower = other.startLocation.toLowerCase();
+          const otherDestLower = other.destination.toLowerCase();
+          const sameDirection = (startLower === otherStartLower && destLower === otherDestLower) ||
+            destLower === otherDestLower ||
+            startLower === otherStartLower;
+
+          if (sameDirection) {
+            let corridor: string | null = mine.corridor || other.corridor || null;
+            let nearestCorridor = null;
+            if (!corridor) {
+              for (const c of LEXINGTON_CORRIDORS) {
+                const nameLower = c.name.toLowerCase();
+                if (destLower.includes(nameLower) || startLower.includes(nameLower) ||
+                    otherDestLower.includes(nameLower) || otherStartLower.includes(nameLower)) {
+                  nearestCorridor = c;
+                  break;
+                }
+              }
+              if (nearestCorridor) corridor = nearestCorridor.name;
+            }
+
+            matches.push({
+              scheduleId: other.id,
+              username: other.username,
+              corridor,
+              direction: `${other.startLocation} → ${other.destination}`,
+              timeWindow: `${other.timeStart} - ${other.timeEnd}`,
+              matchType: completedHops === 0 ? "first_hop_assist" : "schedule_match",
+            });
+          }
+        }
+      }
+
+      res.json({
+        matches: matches.slice(0, 5),
+        firstHopAssist: completedHops === 0,
+        completedHops,
+      });
+    } catch (err) {
+      console.error("Smart match error:", err);
+      res.status(500).json({ message: "Failed to find matches" });
+    }
+  });
+
+  app.post('/api/hops/:id/start-ride', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.status !== "matched") return res.status(400).json({ message: "Hop must be in matched state to start ride" });
+      if (hop.walkerId !== req.user.id && hop.driverId !== req.user.id) {
+        return res.status(403).json({ message: "Not your hop" });
+      }
+      const updated = await storage.startRide(hopId);
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to start ride" });
+    }
+  });
+
+  app.post('/api/hops/:id/auto-complete', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.status !== "in_ride") return res.status(400).json({ message: "Hop must be in_ride to auto-complete" });
+      if (hop.walkerId !== req.user.id && hop.driverId !== req.user.id) {
+        return res.status(403).json({ message: "Not your hop" });
+      }
+      const distanceMiles = hop.distanceMiles || "1";
+      const completed = await storage.completeHop(hopId, distanceMiles);
+
+      if (hop.walkerId) {
+        const walkerStreak = await storage.updateHopStreak(hop.walkerId);
+        for (const badge of walkerStreak.newBadges) {
+          const todayCount = await storage.getNotificationCountToday(hop.walkerId);
+          if (todayCount < 5) {
+            await storage.createNotification({
+              userId: hop.walkerId,
+              type: "badge",
+              title: "New Badge Earned!",
+              message: `You earned: ${badge}`,
+              isRead: false,
+            });
+          }
+        }
+      }
+      if (hop.driverId) {
+        const driverStreak = await storage.updateHopStreak(hop.driverId);
+        for (const badge of driverStreak.newBadges) {
+          const todayCount = await storage.getNotificationCountToday(hop.driverId);
+          if (todayCount < 5) {
+            await storage.createNotification({
+              userId: hop.driverId,
+              type: "badge",
+              title: "New Badge Earned!",
+              message: `You earned: ${badge}`,
+              isRead: false,
+            });
+          }
+        }
+      }
+
+      res.json(completed);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to auto-complete ride" });
+    }
+  });
+
+  app.get('/api/hop-stats', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const completedHops = await storage.getUserCompletedHopCount(req.user.id);
+      res.json({ completedHops });
+    } catch {
+      res.status(500).json({ message: "Failed to get hop stats" });
     }
   });
 
