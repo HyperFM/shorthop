@@ -51,10 +51,10 @@ export function MatchInsightBubble({ driverName, visible, onDismiss }: MatchInsi
 
             <div className="flex-1 min-w-0">
               <p className="text-xs font-extrabold text-orange-800 dark:text-orange-300 leading-tight">
-                Route Match Found!
+                Your driver is on the way!
               </p>
               <p className="text-[11px] text-orange-700/80 dark:text-orange-400/80 mt-0.5 leading-snug">
-                <span className="font-bold">{driverName}</span> is already heading your direction — hop in for a quick ride!
+                <span className="font-bold">{driverName}</span> is heading your way. Doors always wide open... <span className="italic">(Not literally though — that would be illegal 😂)</span>
               </p>
             </div>
 

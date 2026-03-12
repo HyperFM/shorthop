@@ -944,7 +944,7 @@ export async function registerRoutes(
     try {
       const stripe = await getUncachableStripeClient();
       const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
-      const priceMap: Record<string, number> = { flex_hop: 500, power_hop: 1500 };
+      const priceMap: Record<string, number> = { flex_hop: 1000, power_hop: 2500 };
       const nameMap: Record<string, string> = { flex_hop: "Flex Hop", power_hop: "Power Hop" };
       const amountCents = priceMap[plan];
       if (!amountCents) return res.status(400).json({ message: "Invalid plan" });

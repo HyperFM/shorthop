@@ -1,0 +1,393 @@
+ShortHop Final Pre-Submission Master Checklist (Fully Updated)
+
+Before Apple Store submission, all work should be divided into two categories:
+
+1. Needs Implementation (build or modify features)  
+2. Needs Verification (test to confirm they work)
+
+This prevents rebuilding things that are already complete.
+
+────────────────
+
+🚀 ShortHop Final Pre-Submission Checklist
+
+1️⃣ Features That Must Be Implemented
+
+Send these to Replit if not already complete.
+
+────────────────
+
+First-Time Welcome Screen (Intro Animation)
+
+ShortHop should include a first-time welcome animation that only plays the first time the user launches the app after installing.
+
+Animation sequence:
+
+• Character drives across the screen  
+• Honk beat soundtrack plays  
+• Text appears: “Jump, skipping a hop.”  
+• Animation fades into the app home screen
+
+Animation rules:
+
+• Length: approximately 9 seconds  
+• Animation should only play once per install  
+• App should load in the background while animation plays  
+• Allow tap to skip animation
+
+File:
+
+ShortHop_WelcomeIntro.mp4
+
+Audio included in the video.
+
+────────────────
+
+Quick Splash Screen (Normal Launch Screen)
+
+After the first launch animation has already been seen, the app should use a quick splash screen on future launches.
+
+Splash screen design:
+
+• White background  
+• ShortHop logo centered  
+• Optional subtle fade or small logo animation
+
+Rules:
+
+• Duration: 1–2 seconds maximum  
+• Appears every time the app opens after first launch  
+• Must be fast and lightweight
+
+File name:
+
+ShortHop_QuickSplash.png
+
+Launch logic:
+
+If user has never opened app → show Welcome Intro  
+If user has opened app before → show Quick Splash Screen
+
+Developer implementation example:
+
+hasSeenWelcomeAnimation = true
+
+────────────────
+
+Subscription System
+
+⬜ Standard Hop (Free tier)
+
+Features:
+
+• Request rides normally  
+• Basic ride matching  
+• Access to network visibility  
+
+────────────────
+
+⬜ FlexHop – $10/month
+
+Features:
+
+• Automatic scheduled hops (Auto-Hop)  
+• Schedule-based pickup coordination  
+• Expanded ride flexibility  
+
+Auto-Hop Explanation:
+
+Users can schedule regular pickups.
+
+When a driver approaches their corridor or location, the rider receives an alert and may automatically meet the driver.
+
+Auto-Hop available only for:
+
+FlexHop  
+PowerHop
+
+────────────────
+
+⬜ PowerHop – $25/month
+
+Premium connection tier.
+
+Features:
+
+• Request the same driver again  
+• Direct messaging with drivers  
+• Follow drivers and riders  
+• Receive followers  
+• Inbox messaging system  
+• Priority ride matching  
+• PowerHop ride preferences  
+• Deeper community interaction
+
+Safety rule:
+
+Drivers must always have the ability to:
+
+• decline requests  
+• block riders  
+• prevent repeated requests
+
+────────────────
+
+Messaging System (PowerHop Only)
+
+⬜ Rider can message driver  
+⬜ Driver can message rider  
+⬜ Messages stored in inbox  
+⬜ Block/report option available  
+
+Messaging unlocked only after ride connection.
+
+────────────────
+
+Social Connection System (PowerHop Only)
+
+⬜ Follow system (drivers + riders)  
+⬜ Followers displayed on profile  
+⬜ Profile interests visible  
+
+This creates the deeper connection layer of the platform.
+
+────────────────
+
+First Match Animation
+
+When a driver is on the way display:
+
+Your driver is on the way! 🚗  
+Doors always wide open…  
+(Not literally though — that would be illegal 😂)
+
+Visual elements:
+
+⬜ Driver car animation  
+⬜ Green route line animation  
+⬜ Arrival indicator  
+
+────────────────
+
+Driver Approaching Notification (Auto-Hop Alert)
+
+When a driver is approaching the rider’s corridor or pickup location the rider must be notified.
+
+This notification is essential for Auto-Hop schedules.
+
+Purpose:
+
+Alert the rider that their driver is nearby so they can step outside.
+
+Notification triggers when driver:
+
+• enters nearby corridor zone  
+• is within approximately 200–300 meters
+
+Sound file:
+
+ShortHop_DriverApproaching_Alert.wav
+
+Notification message example:
+
+“Your driver is passing nearby and heading your direction.”
+
+Notification behavior:
+
+• sound alert  
+• vibration  
+• push notification
+
+────────────────
+
+First Hop Celebration
+
+When ride completes display:
+
+“Hooray! 🎉 You completed your first Hop.”
+
+Then show:
+
+“You’ve started your Hop streak. Let’s see how far you can Hop.”
+
+────────────────
+
+Referral Wheel System
+
+⬜ Referral codes generate  
+⬜ Wheel reward triggered when referral joins  
+⬜ Wheel balance tracked  
+
+Message shown:
+
+“Wheels can be used to get ya Hoppin around town.”
+
+────────────────
+
+Global Operation
+
+App must function anywhere.
+
+⬜ No location restrictions  
+⬜ GPS works worldwide  
+⬜ Address detection worldwide  
+⬜ Matching attempts globally  
+
+────────────────
+
+2️⃣ Systems That Must Be Verified (Testing)
+
+These may already exist but must be confirmed.
+
+────────────────
+
+Account System
+
+⬜ Rider signup works  
+⬜ Driver signup works  
+⬜ Driver approval works  
+⬜ Admin account works  
+
+────────────────
+
+Ride Flow
+
+Test using two devices (driver + hopper).
+
+⬜ Rider requests ride  
+⬜ Driver receives request  
+⬜ Driver accepts ride  
+⬜ Rider receives confirmation  
+
+────────────────
+
+GPS & Matching
+
+⬜ Driver appears on map  
+⬜ Rider location updates  
+⬜ GPS tracking works  
+⬜ Corridor matching works  
+
+────────────────
+
+Automatic Ride Detection
+
+⬜ App detects when driver and rider meet  
+⬜ Ride begins automatically  
+⬜ Map shows shared ride movement  
+⬜ Ride ends when users separate  
+
+────────────────
+
+Schedule System
+
+⬜ Schedule creation works  
+⬜ Schedule connects to route detection  
+⬜ Matching improves with schedules  
+
+────────────────
+
+Notification System
+
+⬜ Update notifications work  
+⬜ Match notifications work  
+⬜ Driver arrival notifications work  
+⬜ Auto-Hop corridor alerts work  
+⬜ Notification sounds trigger correctly  
+
+────────────────
+
+User Interface Experience
+
+⬜ Navigation is simple  
+⬜ Buttons are clear and large  
+⬜ Interface feels playful and modern  
+⬜ No confusing menus  
+
+────────────────
+
+Network Display
+
+⬜ Driver count updates  
+⬜ Hopper count updates  
+⬜ Network growth visible  
+
+────────────────
+
+Referral System
+
+⬜ Referral codes generate  
+⬜ Rewards trigger correctly  
+⬜ Wheel balances update  
+
+────────────────
+
+Subscription Payments
+
+⬜ Upgrade works  
+⬜ Downgrade works  
+⬜ Cancel subscription works  
+⬜ Apple in-app purchase integration works  
+⬜ Restore Purchases button exists  
+
+────────────────
+
+🍎 Apple Store Compliance Checks
+
+Apple reviewers will check these items.
+
+⬜ Privacy Policy link  
+⬜ Terms of Service link  
+⬜ Location permission explanation  
+⬜ Account deletion option  
+⬜ Subscription terms clearly displayed  
+⬜ Restore Purchases option  
+⬜ Clear explanation of subscription benefits  
+
+────────────────
+
+🧪 Final Testing Pass
+
+Run three complete ride simulations.
+
+Driver device  
+Rider device
+
+Test flow:
+
+1. Rider requests ride  
+2. Driver accepts ride  
+3. Driver approaches rider  
+4. Ride begins automatically  
+5. Ride completes  
+6. Hop streak activates  
+
+If all steps work correctly, the core system is validated.
+
+────────────────
+
+🌌 Launch Moment Checklist
+
+Immediately before App Store submission:
+
+⬜ Send update notification  
+⬜ Confirm servers are running  
+⬜ Confirm admin dashboard works  
+⬜ Confirm maps load quickly  
+⬜ Confirm matching server is active  
+
+────────────────
+
+⭐ Final Stability Testing
+
+Replit should perform edge-case testing:
+
+• weak internet connection  
+• GPS delay  
+• app reopening after background  
+• ride cancellation mid-trip  
+• notification delivery under low signal  
+
+These issues are the most common causes of early crashes.
+
+End of checkli

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone } from "lucide-react";
+import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Volume2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
 import { useAuth } from "@/hooks/use-auth";
@@ -28,6 +28,7 @@ interface NotificationPreferences {
   busyRouteAlerts: boolean;
   communityNotifications: boolean;
   growthNotifications: boolean;
+  driverApproachingSound: boolean;
 }
 
 const defaultPreferences: NotificationPreferences = {
@@ -37,6 +38,7 @@ const defaultPreferences: NotificationPreferences = {
   busyRouteAlerts: false,
   communityNotifications: true,
   growthNotifications: true,
+  driverApproachingSound: true,
 };
 
 function loadPreferences(): NotificationPreferences {
@@ -197,6 +199,7 @@ export default function Settings() {
 
   const toggleItems: { key: keyof NotificationPreferences; label: string; description: string; icon: typeof Bell }[] = [
     { key: "rideAlerts", label: "Ride Alerts", description: "Get notified when a ride matches your route or a driver is heading your way.", icon: Bell },
+    { key: "driverApproachingSound", label: "Driver Approaching Sound", description: "Play an alert sound when your driver enters the corridor zone. Notification always stays on.", icon: Volume2 },
     { key: "routeAlerts", label: "Route Alerts", description: "Receive alerts about your saved routes and schedule changes.", icon: Route },
     { key: "hopperNearbyAlerts", label: "Hopper Nearby Alerts", description: "Know when a hopper is nearby and ready to connect.", icon: Users },
     { key: "busyRouteAlerts", label: "Busy Route Alerts", description: "Get updates when your common routes are especially active.", icon: TrendingUp },
@@ -401,7 +404,7 @@ export default function Settings() {
                         {user.subscription === "power_hop" ? "Power Hop" : "Flex Hop"}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {user.subscription === "power_hop" ? "$15/month — Unlimited rides" : "$5/month — Dynamic pricing"}
+                        {user.subscription === "power_hop" ? "$25/month — Premium connection" : "$10/month — Auto-Hop scheduling"}
                       </p>
                     </div>
                     <Badge className="bg-green-500/10 text-green-600 border-green-500/30">Active</Badge>

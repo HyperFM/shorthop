@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -7,6 +8,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { NavBar } from "@/components/NavBar";
 import { BottomTabBar } from "@/components/BottomTabBar";
+import { WelcomeIntro, useHasSeenWelcome } from "@/components/WelcomeIntro";
+import { QuickSplash } from "@/components/QuickSplash";
 
 import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
@@ -49,6 +52,29 @@ function Router() {
 }
 
 function App() {
+  const hasSeenWelcome = useHasSeenWelcome();
+  const [splashDone, setSplashDone] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(!hasSeenWelcome);
+
+  if (showWelcome) {
+    return (
+      <WelcomeIntro onComplete={() => {
+        setShowWelcome(false);
+        setSplashDone(true);
+      }} />
+    );
+  }
+
+  if (!hasSeenWelcome && !splashDone) {
+    return null;
+  }
+
+  if (hasSeenWelcome && !splashDone) {
+    return (
+      <QuickSplash onComplete={() => setSplashDone(true)} />
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

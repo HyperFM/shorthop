@@ -27,6 +27,7 @@ import { FirstHopCelebration } from "@/components/FirstHopCelebration";
 import { LiveRideOverlay } from "@/components/LiveRideOverlay";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
+import { playDriverApproachingSound } from "@/lib/sounds";
 import type { PickupSpot } from "@/hooks/use-location";
 import type { User } from "@shared/routes";
 
@@ -182,6 +183,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
       if (navigator.vibrate) {
         navigator.vibrate([200, 100, 200, 100, 300]);
       }
+      playDriverApproachingSound();
       setShowInsightBubble(true);
     }
     if (activeHop?.status === 'matched') {
@@ -846,7 +848,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     <span className="text-xl">🚀</span>
                     <div>
                       <p className="text-sm font-bold text-foreground">Flex Hop</p>
-                      <p className="text-[10px] text-muted-foreground">Small detours · $5/mo</p>
+                      <p className="text-[10px] text-muted-foreground">Auto-Hop scheduling · $10/mo</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -886,7 +888,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     <span className="text-xl">⚡</span>
                     <div>
                       <p className="text-sm font-bold text-foreground">Power Hop</p>
-                      <p className="text-[10px] text-muted-foreground">Unlimited · $15/mo</p>
+                      <p className="text-[10px] text-muted-foreground">Premium connection · $25/mo</p>
                     </div>
                   </div>
                   {hasPowerSub ? (
@@ -1018,7 +1020,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
                 onClick={() => setSubscriptionPlan("flex_hop")}
                 data-testid="button-get-flex-hop"
               >
-                $5/mo
+                $10/mo
               </Button>
             </div>
           </CardContent>

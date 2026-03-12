@@ -39,7 +39,7 @@ export class WebhookHandlers {
               userId,
               type: "subscription",
               title: "Subscription Activated! 🎉",
-              message: `Your ${plan === "flex_hop" ? "Flex Hop ($5/mo)" : "Power Hop ($15/mo)"} is now active.`,
+              message: `Your ${plan === "flex_hop" ? "FlexHop ($10/mo)" : "PowerHop ($25/mo)"} is now active.`,
               isRead: false,
             });
             console.log(`[stripe webhook] Subscription activated: user ${userId}, plan ${plan}`);
