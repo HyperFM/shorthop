@@ -317,26 +317,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
         </Button>
       </div>
 
-      <div className="flex items-center justify-around mb-5 py-3 px-2 rounded-2xl bg-muted/30 border border-border/40" data-testid="stats-bar">
-        <button className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setStreakOpen(true)} data-testid="card-streak">
-          <span className="text-2xl">🔥</span>
-          <p className="text-lg font-black text-foreground leading-none" data-testid="text-streak-count">{user.hopStreak || 0}</p>
-          <p className="text-[10px] text-muted-foreground font-medium">Streak</p>
-        </button>
-        <div className="w-px h-10 bg-border/50" />
-        <button className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setHopsOpen(true)} data-testid="card-total-hops">
-          <span className="text-2xl">⭐</span>
-          <p className="text-lg font-black text-foreground leading-none" data-testid="text-total-hops-count">{user.totalHops || 0}</p>
-          <p className="text-[10px] text-muted-foreground font-medium">Hops</p>
-        </button>
-        <div className="w-px h-10 bg-border/50" />
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-2xl">🛞</span>
-          <p className="text-lg font-black text-foreground leading-none">{user.credits || 0}</p>
-          <p className="text-[10px] text-muted-foreground font-medium">Wheels</p>
-        </div>
-      </div>
-
       {!scheduleBannerDismissed && mySchedules.length === 0 && !activeHop && (
         <Card className="mb-4 border-orange-200/50 dark:border-orange-800/30 shadow-sm rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20" data-testid="card-schedule-banner">
           <CardContent className="p-4">

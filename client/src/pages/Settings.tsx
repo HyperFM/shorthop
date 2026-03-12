@@ -223,14 +223,14 @@ export default function Settings() {
 
       <div className="space-y-6">
         {user && (user as any)?.isRoutePioneer && (
-          <Card className="border-amber-300/60 dark:border-amber-700/50 bg-gradient-to-br from-amber-50/50 to-yellow-50/50 dark:from-amber-950/20 dark:to-yellow-950/20" data-testid="card-route-pioneer">
+          <Card className="border-yellow-400/80 bg-gradient-to-br from-yellow-400/20 to-amber-300/20 dark:from-yellow-500/15 dark:to-amber-500/10" data-testid="card-route-pioneer">
             <CardContent className="py-4 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg shadow-amber-200/50">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center shadow-lg shadow-yellow-400/50">
                 <span className="text-2xl">👑</span>
               </div>
               <div>
-                <p className="text-sm font-extrabold text-amber-800 dark:text-amber-300">Route Pioneer</p>
-                <p className="text-xs text-amber-700 dark:text-amber-400">👑 Route Pioneer – Early Rider #{(user as any)?.signupNumber || '?'}</p>
+                <p className="text-sm font-extrabold text-yellow-600 dark:text-yellow-300">Route Pioneer</p>
+                <p className="text-xs text-yellow-700 dark:text-yellow-400 font-semibold">Early Rider #{(user as any)?.signupNumber || '?'}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">One of the first 5 riders to join ShortHop</p>
               </div>
             </CardContent>

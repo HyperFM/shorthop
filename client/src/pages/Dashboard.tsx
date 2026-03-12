@@ -7,6 +7,7 @@ import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
 import { Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const { data: user, isLoading } = useAuth();
@@ -35,7 +36,7 @@ export default function Dashboard() {
         showFlash("ℹ️", "Tip cancelled", "info");
         window.history.replaceState({}, "", "/dashboard");
       } else {
-        showFlash("👋", `Welcome back, ${user.username}!`, "welcome");
+        showFlash("👋", `Welcome back, ${user.username}!`, "welcome", user.username);
       }
     }
   }, [user]);
@@ -55,39 +56,44 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="max-w-lg mx-auto px-4 pt-3">
-        <div className="flex" data-testid="role-tabs">
-          <button
-            onClick={() => setActiveTab("hopper")}
-            className={`flex-1 pb-2 text-sm font-display font-bold text-center transition-colors relative ${
-              activeTab === "hopper" ? "text-blue-500" : "text-muted-foreground"
-            }`}
-            data-testid="tab-hopper"
-          >
-            Hopper
-            {activeTab === "hopper" && (
-              <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-orange-500" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("driver")}
-            className={`flex-1 pb-2 text-sm font-display font-bold text-center transition-colors relative ${
-              activeTab === "driver" ? "text-green-500" : "text-muted-foreground"
-            }`}
-            data-testid="tab-driver"
-          >
-            Driver
-            {activeTab === "driver" && (
-              <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-orange-500" />
-            )}
-          </button>
-        </div>
-        <div className="border-b border-border/30 -mt-[1px]" />
-      </div>
-
       {activeTab === "driver" && (
         <NearbyHopperAlert hopper={currentHopper} onDismiss={dismiss} />
       )}
+
+      <div className="flex justify-center pt-4 pb-1 max-w-lg mx-auto px-4" data-testid="mode-switcher">
+        <div className="relative flex items-center bg-card/95 backdrop-blur-lg rounded-full border border-orange-400/40 shadow-xl shadow-orange-500/10 p-1">
+          <motion.div
+            className="absolute top-1 bottom-1 rounded-full"
+            animate={{
+              left: activeTab === "hopper" ? 4 : "50%",
+              right: activeTab === "driver" ? 4 : "50%",
+              background: activeTab === "hopper"
+                ? "linear-gradient(135deg, #3b82f6, #1d4ed8)"
+                : "linear-gradient(135deg, #16a34a, #15803d)",
+            }}
+            transition={{ type: "spring", stiffness: 500, damping: 35 }}
+          />
+          <button
+            onClick={() => setActiveTab("hopper")}
+            className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
+              activeTab === "hopper" ? "text-white" : "text-muted-foreground hover:text-foreground"
+            }`}
+            data-testid="tab-hopper"
+          >
+            🎒 Hopper
+          </button>
+          <button
+            onClick={() => setActiveTab("driver")}
+            className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
+              activeTab === "driver" ? "text-white" : "text-muted-foreground hover:text-foreground"
+            }`}
+            data-testid="tab-driver"
+          >
+            🚗 Driver
+          </button>
+        </div>
+      </div>
+
       {activeTab === "driver" ? (
         <DriverDashboard user={user} />
       ) : (

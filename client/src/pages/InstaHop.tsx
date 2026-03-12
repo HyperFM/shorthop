@@ -5,18 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, Car } from "lucide-react";
+import { motion } from "framer-motion";
+import { Zap, Navigation, Bookmark, Car, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useHops, useRequestHop } from "@/hooks/use-hops";
-import { useGeolocation, usePickupGuidance } from "@/hooks/use-location";
+import { useGeolocation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
-import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
-import { useNearbyHopperSimulation } from "@/hooks/use-location";
-import DriverDashboard from "./DriverDashboard";
 import { Loader2 } from "lucide-react";
 import type { User } from "@shared/routes";
 
@@ -26,6 +21,14 @@ const searchSchema = z.object({
 });
 
 type WalkerRouteData = { id: number; name: string; startLocation: string; endLocation: string };
+type Corridor = { id: number; name: string; description?: string };
+
+const CORRIDORS: Corridor[] = [
+  { id: 1, name: "New Circle Rd", description: "Heavy flow · all day" },
+  { id: 2, name: "Nicholasville Rd", description: "Peak morning & evening" },
+  { id: 3, name: "Richmond Rd", description: "Steady midday flow" },
+  { id: 4, name: "Leestown Rd", description: "West Lex connector" },
+];
 
 function InstaHopView({ user }: { user: User }) {
   const [, setLocation] = useLocation();
@@ -52,9 +55,7 @@ function InstaHopView({ user }: { user: User }) {
   });
 
   useEffect(() => {
-    if (!geo.permitted) {
-      geo.requestPermission();
-    }
+    if (!geo.permitted) geo.requestPermission();
   }, []);
 
   useEffect(() => {
@@ -84,13 +85,16 @@ function InstaHopView({ user }: { user: User }) {
     return null;
   }
 
+  const nearestCorridors = CORRIDORS.slice(0, 2);
+
   return (
-    <div className="px-4 pt-6 pb-4 max-w-lg mx-auto flex flex-col items-center min-h-[calc(100vh-8rem)]">
+    <div className="px-4 pt-6 pb-4 max-w-lg mx-auto flex flex-col items-center min-h-[calc(100vh-10rem)]">
       <div className="w-full flex-1 flex flex-col justify-center max-w-sm">
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-7"
         >
           <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-500/30">
             <Zap className="w-8 h-8 text-white" />
@@ -102,16 +106,16 @@ function InstaHopView({ user }: { user: User }) {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-6"
+          transition={{ delay: 0.08 }}
+          className="mb-5"
         >
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-3">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+            <div className="space-y-2.5">
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary border-2 border-primary" />
                 <Input
                   placeholder="Current location"
-                  className="h-14 text-sm rounded-2xl bg-muted/40 border-border/50 pl-10 focus:bg-background"
+                  className="h-13 text-sm rounded-2xl bg-muted/40 border-border/50 pl-10 focus:bg-background"
                   data-testid="input-instahop-start"
                   {...form.register("startLocation")}
                 />
@@ -120,7 +124,7 @@ function InstaHopView({ user }: { user: User }) {
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 rounded-sm bg-secondary border-2 border-secondary" />
                 <Input
                   placeholder="Where to?"
-                  className="h-14 text-sm rounded-2xl bg-muted/40 border-border/50 pl-10 focus:bg-background font-semibold"
+                  className="h-13 text-sm rounded-2xl bg-muted/40 border-border/50 pl-10 focus:bg-background font-semibold"
                   data-testid="input-instahop-destination"
                   {...form.register("endLocation")}
                 />
@@ -179,16 +183,48 @@ function InstaHopView({ user }: { user: User }) {
         </motion.div>
 
         <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="mb-4"
+        >
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 text-center">Nearby Corridors</p>
+          <div className="grid grid-cols-2 gap-2">
+            {nearestCorridors.map((corridor, i) => (
+              <motion.button
+                key={corridor.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 + i * 0.06 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => {
+                  form.setValue("startLocation", corridor.name);
+                  showFlash("📍", `${corridor.name} selected`, "info");
+                }}
+                className="flex flex-col items-start gap-1 p-3 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border border-orange-200/60 dark:border-orange-700/30 hover:border-orange-400/60 transition-all text-left shadow-sm"
+                data-testid={`button-corridor-${corridor.id}`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-orange-500" />
+                  <span className="text-xs font-black text-foreground leading-none">{corridor.name}</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground leading-snug">{corridor.description}</span>
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
           className="text-center"
         >
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <Car className="w-3.5 h-3.5" />
             <span>{driversInCity > 0 ? `${driversInCity} driver${driversInCity !== 1 ? 's' : ''} active nearby` : 'Drivers coming soon'}</span>
           </div>
-          <p className="text-[10px] text-muted-foreground/60 mt-2">$1–5 per hop</p>
+          <p className="text-[10px] text-muted-foreground/60 mt-1">$1–5 per hop</p>
         </motion.div>
       </div>
     </div>
@@ -198,14 +234,6 @@ function InstaHopView({ user }: { user: User }) {
 export default function InstaHop() {
   const { data: user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
-  const [mode, setMode] = useState<"hopper" | "driver">("hopper");
-  const { currentHopper, dismiss } = useNearbyHopperSimulation(!!user?.isDriver);
-
-  useEffect(() => {
-    if (user?.isDriver) {
-      setMode("driver");
-    }
-  }, [user?.isDriver]);
 
   if (isLoading) {
     return (
@@ -220,43 +248,5 @@ export default function InstaHop() {
     return null;
   }
 
-  return (
-    <>
-      {mode === "hopper" ? (
-        <InstaHopView user={user} />
-      ) : (
-        <>
-          <NearbyHopperAlert hopper={currentHopper} onDismiss={dismiss} />
-          <DriverDashboard user={user} />
-        </>
-      )}
-
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40" data-testid="mode-switcher">
-        <div className="flex items-center bg-background/95 backdrop-blur-lg rounded-full border border-border/60 shadow-lg p-1">
-          <button
-            onClick={() => setMode("hopper")}
-            className={`px-5 py-2 rounded-full text-xs font-bold transition-all ${
-              mode === "hopper"
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-            data-testid="button-mode-hopper"
-          >
-            Hopper
-          </button>
-          <button
-            onClick={() => setMode("driver")}
-            className={`px-5 py-2 rounded-full text-xs font-bold transition-all ${
-              mode === "driver"
-                ? 'bg-green-600 text-white shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-            data-testid="button-mode-driver"
-          >
-            Driver
-          </button>
-        </div>
-      </div>
-    </>
-  );
+  return <InstaHopView user={user} />;
 }
