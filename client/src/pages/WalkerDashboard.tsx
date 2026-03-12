@@ -228,12 +228,14 @@ export default function WalkerDashboard({ user }: { user: User }) {
     }
   }, [activeHop?.status, pickupSpots]);
 
-  if (selectedCorridor && geo.latitude != null && geo.longitude != null) {
+  if (selectedCorridor) {
+    const navLat = geo.latitude ?? selectedCorridor.lat;
+    const navLng = geo.longitude ?? selectedCorridor.lng;
     return (
       <CorridorNavigation
         spot={selectedCorridor}
-        userLat={geo.latitude}
-        userLng={geo.longitude}
+        userLat={navLat}
+        userLng={navLng}
         tracking={tracking}
         driverLat={tracking.partnerLat}
         driverLng={tracking.partnerLng}
@@ -520,27 +522,27 @@ export default function WalkerDashboard({ user }: { user: User }) {
       {pickupSpots.length > 0 && (
         <Card className="mb-3 border-border/50 shadow-sm rounded-2xl" data-testid="card-pickup-corridors">
           <CardContent className="p-3">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Pickup Corridors</p>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Nearest Roads</p>
             <div className="space-y-1.5">
               {pickupSpots.map((spot, i) => (
                 <button
-                  key={spot.name}
+                  key={`${spot.name}-${i}`}
                   type="button"
                   className="w-full flex items-center justify-between py-2 px-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted/60 transition-colors text-left"
                   onClick={() => setSelectedCorridor(spot)}
                   data-testid={`pickup-spot-${i}`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <Navigation className="w-3.5 h-3.5 text-primary shrink-0" />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-foreground truncate">{spot.name}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{spot.desc}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{spot.corridorType || 'busy road'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 ml-2">
                     {spot.distance != null && (
                       <span className="text-[10px] font-bold text-primary">
-                        {spot.distance < 0.1 ? 'Here' : `${spot.distance.toFixed(1)} mi`}
+                        {spot.distance < 0.1 ? 'Right here' : `${spot.distance.toFixed(1)} mi`}
                       </span>
                     )}
                     <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
@@ -762,36 +764,36 @@ export default function WalkerDashboard({ user }: { user: User }) {
       {pickupSpots.length > 0 && !activeHop && (
         <Card className="mb-4 border-border/50 shadow-sm rounded-2xl" data-testid="card-pickup-corridors-section">
           <CardContent className="p-4">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Suggested Pickup Areas</p>
-            <div className="space-y-2 max-h-[240px] overflow-y-auto">
-              {pickupSpots.slice(0, 3).map((spot, i) => (
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Nearest Roads</p>
+            <p className="text-[10px] text-muted-foreground mb-3">Walk to the closest busy road. Stand on the side where traffic flows your direction.</p>
+            <div className="space-y-2 max-h-[260px] overflow-y-auto">
+              {pickupSpots.slice(0, 5).map((spot, i) => (
                 <button
-                  key={spot.name}
+                  key={`${spot.name}-${i}`}
                   type="button"
                   className="w-full flex items-center justify-between py-3 px-3 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted/60 transition-colors text-left"
                   onClick={() => setSelectedCorridor(spot)}
                   data-testid={`pickup-area-${i}`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <MapPin className="w-4 h-4 text-primary shrink-0" />
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Navigation className="w-4 h-4 text-primary" />
+                    </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{spot.name}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{spot.desc}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{spot.corridorType || 'busy road'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
                     {spot.distance != null && (
                       <span className="text-xs font-bold text-primary">
-                        {spot.distance < 0.1 ? 'Here' : `${spot.distance.toFixed(1)} mi`}
+                        {spot.distance < 0.1 ? 'Right here' : `${spot.distance.toFixed(1)} mi`}
                       </span>
                     )}
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </button>
               ))}
-              {pickupSpots.length > 3 && (
-                <p className="text-[10px] text-center text-muted-foreground pt-1">Scroll for more areas</p>
-              )}
             </div>
           </CardContent>
         </Card>

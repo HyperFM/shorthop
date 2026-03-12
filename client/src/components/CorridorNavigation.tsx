@@ -248,22 +248,24 @@ export function CorridorNavigation({ spot, userLat, userLng, tracking, driverLat
   const stateConfig = {
     walking: {
       color: "bg-blue-500",
-      label: "Walking to Pickup",
+      label: "Walk to Road",
       icon: hopperIconPath,
     },
     driver_approaching: {
       color: "bg-green-500",
-      label: "Driver Approaching",
+      label: "Driver Coming",
       icon: driverCarIconPath,
     },
     ride_active: {
       color: "bg-green-600",
-      label: "Ride in Progress",
+      label: "Riding",
       icon: rideActiveIconPath,
     },
   };
 
   const config = stateConfig[rideState];
+  const trafficInfo = spot.trafficFlow || '';
+  const corridorLabel = spot.corridorType ? `${spot.corridorType}` : 'busy road';
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col" data-testid="corridor-navigation">
@@ -273,7 +275,7 @@ export function CorridorNavigation({ spot, userLat, userLng, tracking, driverLat
         </Button>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-foreground truncate" data-testid="text-corridor-name">{spot.name}</p>
-          <p className="text-xs text-muted-foreground">{spot.desc}</p>
+          <p className="text-xs text-muted-foreground truncate">{corridorLabel}</p>
         </div>
         <div className={`px-3 py-1.5 rounded-full ${config.color} text-white text-xs font-bold`} data-testid="badge-ride-state">
           {config.label}
@@ -299,15 +301,25 @@ export function CorridorNavigation({ spot, userLat, userLng, tracking, driverLat
             >
               <Card className="border-blue-200/50 bg-background/95 backdrop-blur-md shadow-xl rounded-2xl" data-testid="card-walking-guidance">
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-3 mb-2">
                     <div className="w-12 h-12 rounded-2xl bg-blue-50 border-2 border-blue-200 flex items-center justify-center overflow-hidden">
                       <img src={hopperIconPath} alt="Hopper" className="w-9 h-9 object-contain" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold text-foreground" data-testid="text-walk-instruction">Walk toward the pickup corridor</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{spot.name}</p>
+                      <p className="text-sm font-bold text-foreground" data-testid="text-walk-instruction">Walk to {spot.name}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Head to the nearest busy road — that's your corridor</p>
                     </div>
                   </div>
+
+                  {trafficInfo && (
+                    <div className="bg-orange-50 dark:bg-orange-950/30 rounded-xl px-3 py-2 mb-2 flex items-start gap-2">
+                      <ArrowLeft className="w-4 h-4 text-orange-500 mt-0.5 shrink-0 rotate-180" />
+                      <p className="text-[11px] text-foreground leading-snug">
+                        <span className="font-bold">Stand on the side</span> where traffic flows toward your destination: {trafficInfo}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-950/30 rounded-xl px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <Footprints className="w-4 h-4 text-blue-500" />
@@ -339,7 +351,7 @@ export function CorridorNavigation({ spot, userLat, userLng, tracking, driverLat
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-bold text-foreground">Driver on the way</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Stay at the pickup corridor</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Stay at the corridor — they'll pull over for you</p>
                     </div>
                     <motion.div
                       className="w-3 h-3 rounded-full bg-green-500"
@@ -381,7 +393,7 @@ export function CorridorNavigation({ spot, userLat, userLng, tracking, driverLat
                       <img src={rideActiveIconPath} alt="Ride active" className="w-11 h-11 object-contain" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold text-green-700 dark:text-green-400">Ride in progress</p>
+                      <p className="text-sm font-bold text-green-700 dark:text-green-400">Riding</p>
                       <p className="text-xs text-muted-foreground mt-0.5">Live GPS tracking active</p>
                       {tracking?.distance != null && (
                         <p className="text-xs font-medium text-foreground mt-1">

@@ -43,18 +43,140 @@ interface UserLocation {
 
 const liveLocations = new Map<number, UserLocation>();
 
-const LEXINGTON_PICKUP_SPOTS = [
-  { name: "Nicholasville Rd & Reynolds Rd", lat: 38.0126, lng: -84.5078, desc: "High traffic corridor — drivers pass every few minutes" },
-  { name: "Richmond Rd near Kroger", lat: 38.0280, lng: -84.4752, desc: "Busy shopping area with steady driver flow" },
-  { name: "New Circle Rd & Tates Creek", lat: 38.0092, lng: -84.4926, desc: "Major intersection — great for catching commuters" },
-  { name: "Main St & Broadway", lat: 38.0496, lng: -84.4983, desc: "Downtown hub — lots of drivers during rush hours" },
-  { name: "Limestone & Euclid (UK Campus)", lat: 38.0382, lng: -84.5040, desc: "Campus area — frequent short trips available" },
-  { name: "Man o' War Blvd & Nicholasville", lat: 37.9890, lng: -84.5264, desc: "Busy retail corridor — consistent traffic" },
-  { name: "Versailles Rd near Keeneland", lat: 38.0504, lng: -84.5336, desc: "West side commuter route" },
-  { name: "Harrodsburg Rd & Lane Allen", lat: 38.0178, lng: -84.5300, desc: "Popular commuter path through south Lexington" },
-  { name: "Leestown Rd & Georgetown", lat: 38.0640, lng: -84.5150, desc: "North side connector — steady morning traffic" },
-  { name: "Winchester Rd near I-75", lat: 38.0550, lng: -84.4650, desc: "East side highway access — lots of commuters" },
+interface CorridorSegment {
+  name: string;
+  corridorType: string;
+  points: [number, number][];
+  trafficFlows: string[];
+}
+
+const LEXINGTON_CORRIDORS: CorridorSegment[] = [
+  {
+    name: "Nicholasville Rd",
+    corridorType: "4-lane highway",
+    points: [[38.0496, -84.5044], [38.0350, -84.5060], [38.0200, -84.5070], [38.0050, -84.5090], [37.9900, -84.5150]],
+    trafficFlows: ["north toward downtown", "south toward Jessamine Co"],
+  },
+  {
+    name: "Richmond Rd (US-25)",
+    corridorType: "busy highway",
+    points: [[38.0450, -84.4880], [38.0350, -84.4800], [38.0250, -84.4730], [38.0150, -84.4660]],
+    trafficFlows: ["northwest toward downtown", "southeast toward Richmond"],
+  },
+  {
+    name: "New Circle Rd (KY-4)",
+    corridorType: "highway loop",
+    points: [[38.0700, -84.5300], [38.0700, -84.5100], [38.0650, -84.4900], [38.0500, -84.4700], [38.0300, -84.4650], [38.0100, -84.4800], [38.0000, -84.4950], [37.9950, -84.5150], [38.0050, -84.5350], [38.0250, -84.5450], [38.0450, -84.5400], [38.0600, -84.5350]],
+    trafficFlows: ["clockwise (outer lanes)", "counter-clockwise (inner lanes)"],
+  },
+  {
+    name: "Man o' War Blvd (KY-922)",
+    corridorType: "6-lane boulevard",
+    points: [[37.9880, -84.5500], [37.9870, -84.5300], [37.9850, -84.5100], [37.9840, -84.4900], [37.9830, -84.4700], [37.9820, -84.4500]],
+    trafficFlows: ["east toward I-75", "west toward Versailles Rd"],
+  },
+  {
+    name: "Tates Creek Rd",
+    corridorType: "4-lane road",
+    points: [[38.0380, -84.4960], [38.0280, -84.4930], [38.0180, -84.4920], [38.0050, -84.4930]],
+    trafficFlows: ["north toward campus", "south toward Man o' War"],
+  },
+  {
+    name: "Versailles Rd (US-60)",
+    corridorType: "4-lane highway",
+    points: [[38.0500, -84.5050], [38.0510, -84.5200], [38.0520, -84.5350], [38.0530, -84.5500]],
+    trafficFlows: ["east toward downtown", "west toward Versailles"],
+  },
+  {
+    name: "Harrodsburg Rd (US-68)",
+    corridorType: "4-lane road",
+    points: [[38.0480, -84.5050], [38.0350, -84.5150], [38.0220, -84.5250], [38.0100, -84.5350]],
+    trafficFlows: ["northeast toward downtown", "southwest toward Harrodsburg"],
+  },
+  {
+    name: "Winchester Rd (US-60)",
+    corridorType: "4-lane highway",
+    points: [[38.0500, -84.4900], [38.0550, -84.4750], [38.0580, -84.4600], [38.0600, -84.4500]],
+    trafficFlows: ["west toward downtown", "east toward Winchester / I-64"],
+  },
+  {
+    name: "Leestown Rd (US-421)",
+    corridorType: "4-lane road",
+    points: [[38.0500, -84.5080], [38.0580, -84.5120], [38.0660, -84.5170], [38.0750, -84.5200]],
+    trafficFlows: ["south toward downtown", "north toward Georgetown"],
+  },
+  {
+    name: "Broadway (US-68)",
+    corridorType: "2-lane urban road",
+    points: [[38.0496, -84.5000], [38.0496, -84.5100], [38.0496, -84.5200]],
+    trafficFlows: ["east toward downtown", "west toward Leestown"],
+  },
+  {
+    name: "Main St",
+    corridorType: "one-way downtown",
+    points: [[38.0500, -84.4950], [38.0500, -84.5000], [38.0500, -84.5050]],
+    trafficFlows: ["westbound through downtown"],
+  },
+  {
+    name: "Limestone (US-27)",
+    corridorType: "4-lane road",
+    points: [[38.0500, -84.5030], [38.0420, -84.5040], [38.0350, -84.5050], [38.0280, -84.5060]],
+    trafficFlows: ["north toward downtown", "south toward Southland Dr"],
+  },
+  {
+    name: "Alumni Dr / Cooper Dr",
+    corridorType: "campus road",
+    points: [[38.0320, -84.5060], [38.0330, -84.5000], [38.0340, -84.4950]],
+    trafficFlows: ["east toward Rose St", "west toward Nicholasville"],
+  },
+  {
+    name: "Clays Mill Rd",
+    corridorType: "2-lane collector",
+    points: [[38.0200, -84.5400], [38.0100, -84.5380], [38.0000, -84.5350]],
+    trafficFlows: ["north toward Harrodsburg Rd", "south toward Man o' War"],
+  },
+  {
+    name: "Liberty Rd / Athens-Boonesboro",
+    corridorType: "2-lane highway",
+    points: [[38.0300, -84.4650], [38.0200, -84.4550], [38.0100, -84.4450]],
+    trafficFlows: ["northwest toward town", "southeast toward I-75"],
+  },
 ];
+
+function closestPointOnSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): [number, number] {
+  const dx = bx - ax, dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return [ax, ay];
+  let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return [ax + t * dx, ay + t * dy];
+}
+
+function findNearestCorridorPoint(lat: number, lng: number): { corridor: CorridorSegment; nearLat: number; nearLng: number; dist: number }[] {
+  const results: { corridor: CorridorSegment; nearLat: number; nearLng: number; dist: number }[] = [];
+
+  for (const corridor of LEXINGTON_CORRIDORS) {
+    let bestDist = Infinity;
+    let bestLat = corridor.points[0][0];
+    let bestLng = corridor.points[0][1];
+
+    for (let i = 0; i < corridor.points.length - 1; i++) {
+      const [a0, a1] = corridor.points[i];
+      const [b0, b1] = corridor.points[i + 1];
+      const [cLat, cLng] = closestPointOnSegment(lat, lng, a0, a1, b0, b1);
+      const d = getDistance(lat, lng, cLat, cLng);
+      if (d < bestDist) {
+        bestDist = d;
+        bestLat = cLat;
+        bestLng = cLng;
+      }
+    }
+
+    results.push({ corridor, nearLat: bestLat, nearLng: bestLng, dist: bestDist });
+  }
+
+  return results.sort((a, b) => a.dist - b.dist);
+}
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 3959;
@@ -954,15 +1076,30 @@ export async function registerRoutes(
     const lng = parseFloat(req.query.lng as string);
 
     if (isNaN(lat) || isNaN(lng)) {
-      return res.json({ spots: LEXINGTON_PICKUP_SPOTS.slice(0, 3) });
+      const fallback = LEXINGTON_CORRIDORS.slice(0, 3).map(c => ({
+        name: c.name,
+        desc: `${c.corridorType} — traffic flows ${c.trafficFlows.join(' / ')}`,
+        lat: c.points[0][0],
+        lng: c.points[0][1],
+        trafficFlow: c.trafficFlows.join(' or '),
+        corridorType: c.corridorType,
+      }));
+      return res.json({ spots: fallback });
     }
 
-    const spotsWithDistance = LEXINGTON_PICKUP_SPOTS
-      .map(s => ({ ...s, distance: getDistance(lat, lng, s.lat, s.lng) }))
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, 3);
+    const nearest = findNearestCorridorPoint(lat, lng).slice(0, 5);
 
-    res.json({ spots: spotsWithDistance });
+    const spots = nearest.map(n => ({
+      name: n.corridor.name,
+      desc: `${n.corridor.corridorType} — walk to the road, stand on the side heading your direction`,
+      lat: n.nearLat,
+      lng: n.nearLng,
+      distance: n.dist,
+      trafficFlow: n.corridor.trafficFlows.join(' or '),
+      corridorType: n.corridor.corridorType,
+    }));
+
+    res.json({ spots });
   });
 
   // Driver Onboarding & Profile

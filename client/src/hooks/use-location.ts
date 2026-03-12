@@ -227,6 +227,8 @@ export interface PickupSpot {
   distance?: number;
   lat: number;
   lng: number;
+  trafficFlow?: string;
+  corridorType?: string;
 }
 
 export function usePickupGuidance(latitude: number | null, longitude: number | null) {
