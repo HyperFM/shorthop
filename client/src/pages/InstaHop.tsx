@@ -92,15 +92,12 @@ function InstaHopView({ user }: { user: User }) {
       <div className="w-full flex-1 flex flex-col justify-center max-w-sm">
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-7"
+          className="text-center mb-5"
         >
-          <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-500/30">
-            <Zap className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-black text-foreground" data-testid="text-instahop-title">InstaHop</h1>
-          <p className="text-xs text-muted-foreground mt-1">Find a ride instantly</p>
+          <h1 className="text-3xl font-black text-foreground tracking-tight" data-testid="text-instahop-title">⚡ InstaHop</h1>
+          <p className="text-xs text-muted-foreground mt-1 font-medium">Find a ride instantly in Lexington</p>
         </motion.div>
 
         <motion.div

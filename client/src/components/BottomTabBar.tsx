@@ -2,32 +2,65 @@ import { useLocation } from "wouter";
 import { Calendar, Zap, Activity, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function BowTieIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M2 8 L10 12 L2 16 Z" />
       <path d="M22 8 L14 12 L22 16 Z" />
-      <rect x="10" y="11" width="4" height="2" rx="1" />
+      <rect x="10" y="10.5" width="4" height="3" rx="1.5" />
     </svg>
   );
 }
 
+const PROFILE_TAB_COLORS = [
+  { label: "Orange", value: "text-orange-500" },
+  { label: "Violet", value: "text-violet-500" },
+  { label: "Cyan", value: "text-cyan-500" },
+  { label: "Rose", value: "text-rose-500" },
+  { label: "Lime", value: "text-lime-500" },
+  { label: "Amber", value: "text-amber-400" },
+  { label: "Sky", value: "text-sky-500" },
+  { label: "Fuchsia", value: "text-fuchsia-500" },
+];
+
+export { PROFILE_TAB_COLORS };
+
+function getProfileTabColor(): string {
+  try {
+    return localStorage.getItem("sh-profile-tab-color") || "text-orange-500";
+  } catch {
+    return "text-orange-500";
+  }
+}
+
 const tabs = [
-  { path: "/settings", icon: User, label: "Profile" },
+  { path: "/community", icon: Activity, label: "Network" },
   { path: "/schedule", icon: Calendar, label: "Schedule" },
   { path: "/instahop", icon: Zap, label: "InstaHop", isHop: true },
-  { path: "/community", icon: Activity, label: "Network" },
   { path: "/dashboard", customIcon: BowTieIcon, label: "Tailor" },
+  { path: "/settings", icon: User, label: "Profile", isProfile: true },
 ];
 
 export function BottomTabBar() {
   const [location, setLocation] = useLocation();
   const { data: user } = useAuth();
   const [hopBounce, setHopBounce] = useState(false);
+  const [profileColor, setProfileColor] = useState(getProfileTabColor);
+
+  useEffect(() => {
+    function onColorChange(e: Event) {
+      const color = (e as CustomEvent).detail;
+      if (color) setProfileColor(color);
+    }
+    window.addEventListener("sh-profile-color-change", onColorChange);
+    return () => window.removeEventListener("sh-profile-color-change", onColorChange);
+  }, []);
 
   if (!user) return null;
+
+  const isFlexPlus = user.subscription === "flex_hop" || user.subscription === "power_hop";
 
   return (
     <nav
@@ -41,10 +74,12 @@ export function BottomTabBar() {
             location === tab.path ||
             (tab.path === "/instahop" && location === "/hop") ||
             (tab.path === "/settings" && location === "/profile");
-          const isProfile = tab.label === "Profile";
-          const showAdminDot = isProfile && user.isAdmin;
+          const showAdminDot = (tab as any).isProfile && user.isAdmin;
           const Icon = (tab as any).icon as typeof User | undefined;
           const CustomIcon = (tab as any).customIcon as typeof BowTieIcon | undefined;
+          const isProfileTab = (tab as any).isProfile;
+          const activeColor = isProfileTab && isFlexPlus && isActive ? profileColor : isActive ? "text-orange-500" : "text-muted-foreground";
+          const inactiveColor = isProfileTab && isFlexPlus ? profileColor.replace("-500", "-400").replace("-400", "-300") : "";
 
           if ((tab as any).isHop) {
             return (
@@ -73,7 +108,7 @@ export function BottomTabBar() {
               key={tab.path}
               onClick={() => setLocation(tab.path)}
               className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors relative ${
-                isActive ? "text-orange-500" : "text-muted-foreground"
+                isActive ? activeColor : inactiveColor || "text-muted-foreground"
               }`}
               data-testid={`tab-${tab.label.toLowerCase()}`}
             >
@@ -82,11 +117,13 @@ export function BottomTabBar() {
               ) : Icon ? (
                 <Icon className={`w-5 h-5 ${isActive ? "stroke-[2.5]" : ""}`} />
               ) : null}
-              <span className={`text-[10px] font-medium leading-none ${isActive ? "font-bold" : ""}`}>{tab.label}</span>
+              <span className={`text-[10px] leading-none ${isActive ? "font-bold" : "font-medium"}`}>{tab.label}</span>
               {isActive && (
                 <motion.div
                   layoutId="tabIndicator"
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-orange-500"
+                  className={`absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full ${
+                    isProfileTab && isFlexPlus ? profileColor.replace("text-", "bg-") : "bg-orange-500"
+                  }`}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}

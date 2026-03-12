@@ -34,25 +34,28 @@ function FloatingStats() {
   return (
     <div
       className="fixed left-0 right-0 z-40 flex items-center justify-center pointer-events-none"
-      style={{ bottom: "4rem" }}
+      style={{ bottom: "5.25rem" }}
     >
-      <div className="flex items-center gap-0 bg-background/95 backdrop-blur-lg border border-orange-400/30 rounded-full shadow-lg shadow-orange-500/10 px-1 py-0.5 pointer-events-auto">
-        <div className="flex items-center gap-1 px-3 py-1">
-          <span className="text-sm leading-none">🔥</span>
-          <span className="text-xs font-black text-foreground leading-none" data-testid="text-streak-count">{user.hopStreak || 0}</span>
-          <span className="text-[9px] text-muted-foreground font-semibold ml-0.5">streak</span>
-        </div>
-        <div className="w-px h-4 bg-border/60" />
-        <div className="flex items-center gap-1 px-3 py-1">
-          <span className="text-sm leading-none">⭐</span>
-          <span className="text-xs font-black text-foreground leading-none" data-testid="text-total-hops-count">{user.totalHops || 0}</span>
-          <span className="text-[9px] text-muted-foreground font-semibold ml-0.5">hops</span>
-        </div>
-        <div className="w-px h-4 bg-border/60" />
-        <div className="flex items-center gap-1 px-3 py-1">
-          <span className="text-sm leading-none">🛞</span>
-          <span className="text-xs font-black text-foreground leading-none">{user.credits || 0}</span>
-          <span className="text-[9px] text-muted-foreground font-semibold ml-0.5">wheels</span>
+      <div className="relative pointer-events-auto">
+        <div className="absolute inset-0 rounded-full blur-md bg-orange-400/20 scale-110" />
+        <div className="relative flex items-center gap-0 bg-background/97 backdrop-blur-lg border border-orange-400/35 rounded-full shadow-lg px-1 py-0.5">
+          <div className="flex items-center gap-1 px-3 py-1.5">
+            <span className="text-sm leading-none">🔥</span>
+            <span className="text-[11px] font-black text-foreground leading-none" data-testid="text-streak-count">{user.hopStreak || 0}</span>
+            <span className="text-[9px] text-muted-foreground font-semibold ml-0.5">streak</span>
+          </div>
+          <div className="w-px h-4 bg-border/60" />
+          <div className="flex items-center gap-1 px-3 py-1.5">
+            <span className="text-sm leading-none">⭐</span>
+            <span className="text-[11px] font-black text-foreground leading-none" data-testid="text-total-hops-count">{user.totalHops || 0}</span>
+            <span className="text-[9px] text-muted-foreground font-semibold ml-0.5">hops</span>
+          </div>
+          <div className="w-px h-4 bg-border/60" />
+          <div className="flex items-center gap-1 px-3 py-1.5">
+            <span className="text-sm leading-none">🛞</span>
+            <span className="text-[11px] font-black text-foreground leading-none">{user.credits || 0}</span>
+            <span className="text-[9px] text-muted-foreground font-semibold ml-0.5">wheels</span>
+          </div>
         </div>
       </div>
     </div>
@@ -65,7 +68,6 @@ function OrangeGlow() {
       className="fixed inset-0 pointer-events-none z-[200]"
       style={{
         boxShadow: "inset 0 0 0 2.5px rgba(249,115,22,0.55), inset 0 0 28px rgba(249,115,22,0.12)",
-        borderRadius: 0,
       }}
     />
   );
@@ -110,7 +112,7 @@ function App() {
         <Toaster />
         <FlashNotificationContainer />
         <NavBar />
-        <main className="min-h-screen pb-28">
+        <main className="min-h-screen pb-32">
           <Router />
         </main>
         <FloatingStats />

@@ -136,7 +136,7 @@ export default function Home() {
 
   useEffect(() => {
     if (user) {
-      setLocation("/dashboard");
+      setLocation("/instahop");
     }
   }, [user, setLocation]);
 

@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Volume2 } from "lucide-react";
+import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Volume2, Palette } from "lucide-react";
+import { PROFILE_TAB_COLORS } from "@/components/BottomTabBar";
 import { useLocation } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
 import { useAuth } from "@/hooks/use-auth";
@@ -71,6 +72,16 @@ export default function Settings() {
   const [preferredRoutes, setPreferredRoutes] = useState((user as any)?.preferredRoutes || "");
   const [travelTime, setTravelTime] = useState((user as any)?.travelTime || "");
   const [favoritePlaces, setFavoritePlaces] = useState((user as any)?.favoritePlaces || "");
+  const [profileTabColor, setProfileTabColor] = useState(() => {
+    try { return localStorage.getItem("sh-profile-tab-color") || "text-orange-500"; } catch { return "text-orange-500"; }
+  });
+
+  function applyProfileTabColor(color: string) {
+    setProfileTabColor(color);
+    try { localStorage.setItem("sh-profile-tab-color", color); } catch {}
+    window.dispatchEvent(new CustomEvent("sh-profile-color-change", { detail: color }));
+    showFlash("🎨", "Profile tab color updated!", "success");
+  }
   const [subscriptionPlan, setSubscriptionPlan] = useState<"flex_hop" | "power_hop" | null>(null);
 
   useEffect(() => {
@@ -232,6 +243,47 @@ export default function Settings() {
                 <p className="text-sm font-extrabold text-yellow-600 dark:text-yellow-300">Route Pioneer</p>
                 <p className="text-xs text-yellow-700 dark:text-yellow-400 font-semibold">Early Rider #{(user as any)?.signupNumber || '?'}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">One of the first 5 riders to join ShortHop</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {user && (user.subscription === "flex_hop" || user.subscription === "power_hop") && (
+          <Card className="border-violet-300/40 bg-gradient-to-br from-violet-50/50 to-fuchsia-50/40 dark:from-violet-950/20 dark:to-fuchsia-950/10" data-testid="card-profile-color">
+            <CardContent className="py-4 px-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Palette className="w-4 h-4 text-violet-500" />
+                <p className="text-xs font-black text-foreground">Profile Tab Color</p>
+                <Badge className="text-[9px] h-4 ml-auto bg-violet-500/10 text-violet-600 border-violet-400/30">
+                  {user.subscription === "power_hop" ? "PowerHop" : "FlexHop"} Perk
+                </Badge>
+              </div>
+              <p className="text-[10px] text-muted-foreground mb-3">Customize the color of your Profile tab in the navigation bar.</p>
+              <div className="flex flex-wrap gap-2">
+                {PROFILE_TAB_COLORS.map((color) => {
+                  const isSelected = profileTabColor === color.value;
+                  const bgMap: Record<string, string> = {
+                    "text-orange-500": "bg-orange-500",
+                    "text-violet-500": "bg-violet-500",
+                    "text-cyan-500": "bg-cyan-500",
+                    "text-rose-500": "bg-rose-500",
+                    "text-lime-500": "bg-lime-500",
+                    "text-amber-400": "bg-amber-400",
+                    "text-sky-500": "bg-sky-500",
+                    "text-fuchsia-500": "bg-fuchsia-500",
+                  };
+                  return (
+                    <button
+                      key={color.value}
+                      onClick={() => applyProfileTabColor(color.value)}
+                      className={`w-8 h-8 rounded-full ${bgMap[color.value] || "bg-gray-500"} transition-all ${
+                        isSelected ? "ring-2 ring-offset-2 ring-foreground scale-110" : "opacity-70 hover:opacity-100"
+                      }`}
+                      title={color.label}
+                      data-testid={`button-profile-color-${color.label.toLowerCase()}`}
+                    />
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
