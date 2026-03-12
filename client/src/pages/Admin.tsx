@@ -537,8 +537,15 @@ export default function Admin() {
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold">{u.username}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold">{u.username}</p>
+                      {(u as any).signupNumber && (
+                        <span className="text-[9px] text-muted-foreground font-mono">#{(u as any).signupNumber}</span>
+                      )}
+                      {(u as any).isRoutePioneer && <span className="text-sm" title="Route Pioneer">👑</span>}
+                    </div>
                     <div className="flex gap-1 mt-1 flex-wrap">
+                      {(u as any).isRoutePioneer && <Badge className="text-[9px] bg-amber-100 text-amber-700 border-0">👑 Route Pioneer – Early Rider #{(u as any).signupNumber}</Badge>}
                       {u.isDriver && <Badge className="text-[9px] bg-green-100 text-green-700 border-0">Driver</Badge>}
                       {u.isActive && <Badge className="text-[9px] bg-emerald-100 text-emerald-700 border-0">Active</Badge>}
                       {u.driverVerified && <Badge className="text-[9px] bg-blue-100 text-blue-700 border-0">Verified</Badge>}

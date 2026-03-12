@@ -1,0 +1,133 @@
+Add an Early Adopter recognition system and enhanced profile features to the ShortHop app.
+
+GOAL  
+Honor the first users of ShortHop and allow users to personalize their profiles.
+
+--------------------------------------------------
+
+FEATURE 1: Sequential User Number
+
+When a new user account is created, automatically assign a sequential "User Number" based on the order they signed up.
+
+Example:
+First account = User #1  
+Second account = User #2  
+Third account = User #3  
+etc.
+
+Store this number in the user database as:
+signup_number
+
+--------------------------------------------------
+
+FEATURE 2: Route Pioneer Status (First 5 Users)
+
+If a user’s signup_number is between 1 and 5:
+
+Assign them a special status:
+Route Pioneer
+
+Give them the following:
+
+• A golden crown icon displayed on their profile  
+• A special badge that reads:
+
+👑 Route Pioneer – Early Rider #X
+
+(X should automatically show their signup number.)
+
+Example:
+👑 Route Pioneer – Early Rider #1
+
+These first five users should permanently keep this badge.
+
+Only the first 5 accounts should ever receive this status.
+
+--------------------------------------------------
+
+FEATURE 3: Welcome Notification
+
+When a Route Pioneer user signs up, send them an in-app notification that says:
+
+👑 Welcome, Pioneer!
+
+You are one of the first riders to join ShortHop.
+It takes intuition and courage to try something new, and your early belief helps shape the future of shared rides.
+
+To honor the trust of our first riders, I’ll be out every morning promoting ShortHop and growing the community one rider at a time.
+
+Thank you for being part of the beginning.
+
+— Hyper ❤️
+
+--------------------------------------------------
+
+FEATURE 4: Profile Personalization
+
+Allow users to add more personal information to their profile.
+
+Add these optional fields:
+
+• About Me (short bio)  
+• Preferred Routes  
+• Travel Time  
+  Options: Morning / Afternoon / Evening / Anytime  
+• Car Vibe  
+  Options: Quiet / Music / Chatty  
+• Favorite Places in the City
+
+These fields should be editable in the profile settings.
+
+--------------------------------------------------
+
+FEATURE 5: Profile Panel Display
+
+On the user profile panel (right side panel), display:
+
+Profile Photo  
+Username  
+Golden Crown Icon (if Route Pioneer)  
+Badge: "Route Pioneer – Early Rider #X"
+
+Then show:
+
+About Me  
+Preferred Routes  
+Travel Time  
+Car Vibe  
+Favorite Places
+
+Keep the layout clean and visually friendly.
+
+--------------------------------------------------
+
+FEATURE 6: Admin Dashboard Update
+
+In the Admin Control Center Users tab:
+
+Display each user's:
+• signup_number
+• badges/status
+
+This allows admins to see the order users joined.
+
+--------------------------------------------------
+
+IMPORTANT RULE
+
+Only the first 5 users in the system should ever receive:
+
+Route Pioneer status  
+Golden crown icon  
+Route Pioneer badge
+
+All future users should simply receive their signup_number but no crown.
+
+--------------------------------------------------
+
+Design Notes
+
+The crown should appear gold and celebratory.
+The badge should feel special and highlight that these users helped start the ShortHop community.
+
+The goal is to create a sense of pride and recognition for early adopters.

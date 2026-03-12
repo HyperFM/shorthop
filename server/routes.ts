@@ -169,10 +169,30 @@ export async function registerRoutes(
         referralCode: userReferralCode,
         referredBy: referralInput || null,
       });
+
+      const allUsers = await storage.getAllUsers();
+      const maxNum = allUsers.reduce((max, u) => Math.max(max, u.signupNumber || 0), 0);
+      const nextSignupNumber = maxNum + 1;
+      const isPioneer = nextSignupNumber <= 5;
+      user = await storage.updateUser(user.id, {
+        signupNumber: nextSignupNumber,
+        isRoutePioneer: isPioneer,
+      });
+
       user = await storage.checkAndAssignFounderStatus(user.id, !!user.isDriver);
 
       if (referralInput) {
         await storage.processReferral(user.id, referralInput);
+      }
+
+      if (isPioneer) {
+        await storage.createNotification({
+          userId: user.id,
+          type: "welcome",
+          title: "👑 Welcome, Pioneer!",
+          message: `You are one of the first riders to join ShortHop.\nIt takes intuition and courage to try something new, and your early belief helps shape the future of shared rides.\n\nTo honor the trust of our first riders, I'll be out every morning promoting ShortHop and growing the community one rider at a time.\n\nThank you for being part of the beginning.\n\n— Hyper ❤️`,
+          isRead: false,
+        });
       }
 
       await storage.createNotification({
@@ -720,7 +740,7 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const SUPPORTED_LANGUAGES = Object.keys(getLanguages());
-      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language'];
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces'];
       const updates: Record<string, any> = {};
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -1125,6 +1145,10 @@ export async function registerRoutes(
         vehicleModel: u.vehicleModel,
         vehicleColor: u.vehicleColor,
         licensePlate: u.licensePlate,
+        phone: u.phone,
+        notificationsEnabled: u.notificationsEnabled,
+        signupNumber: u.signupNumber,
+        isRoutePioneer: u.isRoutePioneer,
         createdAt: u.createdAt,
       })));
     } catch {

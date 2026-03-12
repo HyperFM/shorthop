@@ -52,6 +52,11 @@ export const users = pgTable("users", {
   bio: text("bio"),
   interests: text("interests"),
   language: text("language").default("en"),
+  signupNumber: integer("signup_number"),
+  isRoutePioneer: boolean("is_route_pioneer").default(false),
+  preferredRoutes: text("preferred_routes"),
+  travelTime: text("travel_time"),
+  favoritePlaces: text("favorite_places"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

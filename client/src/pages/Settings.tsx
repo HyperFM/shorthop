@@ -64,11 +64,17 @@ export default function Settings() {
     return raw ? raw.split(',').filter(Boolean) : [];
   });
   const [language, setLanguage] = useState((user as any)?.language || "en");
+  const [preferredRoutes, setPreferredRoutes] = useState((user as any)?.preferredRoutes || "");
+  const [travelTime, setTravelTime] = useState((user as any)?.travelTime || "");
+  const [favoritePlaces, setFavoritePlaces] = useState((user as any)?.favoritePlaces || "");
 
   useEffect(() => {
     if (user) {
       setBio((user as any)?.bio || "");
       setLanguage((user as any)?.language || "en");
+      setPreferredRoutes((user as any)?.preferredRoutes || "");
+      setTravelTime((user as any)?.travelTime || "");
+      setFavoritePlaces((user as any)?.favoritePlaces || "");
       const raw = (user as any)?.interests;
       setSelectedInterests(raw ? raw.split(',').filter(Boolean) : []);
     }
@@ -80,6 +86,9 @@ export default function Settings() {
         bio: bio.trim() || null,
         interests: selectedInterests.join(',') || null,
         language,
+        preferredRoutes: preferredRoutes.trim() || null,
+        travelTime: travelTime || null,
+        favoritePlaces: favoritePlaces.trim() || null,
       });
     },
     onSuccess: () => {
@@ -237,6 +246,35 @@ export default function Settings() {
           </Card>
         )}
 
+        {user && (user as any)?.isRoutePioneer && (
+          <Card className="border-amber-300/60 dark:border-amber-700/50 bg-gradient-to-br from-amber-50/50 to-yellow-50/50 dark:from-amber-950/20 dark:to-yellow-950/20" data-testid="card-route-pioneer">
+            <CardContent className="py-4 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg shadow-amber-200/50">
+                <span className="text-2xl">👑</span>
+              </div>
+              <div>
+                <p className="text-sm font-extrabold text-amber-800 dark:text-amber-300">Route Pioneer</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400">👑 Route Pioneer – Early Rider #{(user as any)?.signupNumber || '?'}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">One of the first 5 riders to join ShortHop</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {user && (user as any)?.signupNumber && !(user as any)?.isRoutePioneer && (
+          <Card className="border-border/50" data-testid="card-signup-number">
+            <CardContent className="py-3 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+                <span className="text-sm font-bold text-muted-foreground">#{(user as any)?.signupNumber}</span>
+              </div>
+              <div>
+                <p className="text-xs font-bold">ShortHop Member #{(user as any)?.signupNumber}</p>
+                <p className="text-[10px] text-muted-foreground">Thank you for being an early adopter</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {user && (
           <Card className="border-green-200/50 dark:border-green-800/40" data-testid="card-your-profile">
             <CardHeader>
@@ -295,6 +333,43 @@ export default function Settings() {
                   maxSelections={12}
                 />
                 <p className="text-[9px] text-muted-foreground text-right mt-1">{selectedInterests.length}/12 selected</p>
+              </div>
+              <div>
+                <Label className="text-xs font-bold mb-1.5 block flex items-center gap-1.5">
+                  <Route className="w-3.5 h-3.5 text-green-500" />
+                  Preferred Routes
+                </Label>
+                <Input
+                  placeholder="e.g. UK Campus to Hamburg, Tates Creek to Downtown..."
+                  value={preferredRoutes}
+                  onChange={(e) => setPreferredRoutes(e.target.value)}
+                  className="text-sm"
+                  data-testid="input-preferred-routes"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-bold mb-1.5 block">Travel Time</Label>
+                <Select value={travelTime} onValueChange={setTravelTime}>
+                  <SelectTrigger className="text-sm" data-testid="select-travel-time">
+                    <SelectValue placeholder="When do you usually ride?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="morning">Morning</SelectItem>
+                    <SelectItem value="afternoon">Afternoon</SelectItem>
+                    <SelectItem value="evening">Evening</SelectItem>
+                    <SelectItem value="anytime">Anytime</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-bold mb-1.5 block">Favorite Places in the City</Label>
+                <Input
+                  placeholder="e.g. Rupp Arena, Summit, The Burl, Keeneland..."
+                  value={favoritePlaces}
+                  onChange={(e) => setFavoritePlaces(e.target.value)}
+                  className="text-sm"
+                  data-testid="input-favorite-places"
+                />
               </div>
               <Button
                 className="w-full bg-green-600 hover:bg-green-700 text-white"
