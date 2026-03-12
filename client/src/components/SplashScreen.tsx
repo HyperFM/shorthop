@@ -41,8 +41,8 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         onError={handleFinish}
         data-testid="splash-video"
       >
+        <source src="/splash-screen.mp4" type="video/mp4" />
         <source src="/splash-screen.mov" type="video/quicktime" />
-        <source src="/splash-screen.mov" type="video/mp4" />
       </video>
     </motion.div>
   );
