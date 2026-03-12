@@ -178,18 +178,31 @@ export default function DriverDashboard({ user }: { user: User }) {
 
       {needsOnboarding && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="border-orange-200 bg-gradient-to-br from-orange-50 to-yellow-50" data-testid="card-onboarding-prompt">
-            <CardContent className="p-4 text-center space-y-2">
-              <Shield className="w-8 h-8 mx-auto text-orange-500" />
-              <p className="text-sm font-bold">Complete Driver Setup</p>
-              <p className="text-xs text-muted-foreground">Add your vehicle info, upload your license, and submit for verification to start accepting hops.</p>
-              <Button
-                className="w-full bg-gradient-to-r from-green-500 to-green-600 font-bold"
+          <Card className="border-border/50 shadow-md rounded-2xl" data-testid="card-onboarding-prompt">
+            <CardContent className="p-5 space-y-4">
+              <h2 className="text-lg font-bold text-foreground">Become a Driver</h2>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">1</div>
+                  <p className="text-sm text-foreground">Verify your license</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">2</div>
+                  <p className="text-sm text-foreground">Add your vehicle</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">3</div>
+                  <p className="text-sm text-foreground">Start accepting hops</p>
+                </div>
+              </div>
+              <button
+                className="w-full primary-action-btn flex items-center justify-center gap-2"
                 onClick={() => setLocation("/driver-onboarding")}
                 data-testid="button-start-onboarding"
               >
-                Get Verified
-              </Button>
+                <Shield className="w-5 h-5" />
+                Start Driver Setup
+              </button>
             </CardContent>
           </Card>
         </motion.div>
@@ -245,7 +258,7 @@ export default function DriverDashboard({ user }: { user: User }) {
                   </div>
                 </div>
                 <Button
-                  className={`h-9 px-4 font-bold text-xs rounded-full shadow-sm ${
+                  className={`h-11 px-5 font-bold text-sm rounded-xl shadow-sm ${
                     isActiveNow
                       ? 'bg-red-500 hover:bg-red-600 text-white'
                       : 'bg-gradient-to-r from-green-500 to-green-600 text-white'
@@ -291,20 +304,13 @@ export default function DriverDashboard({ user }: { user: User }) {
         />
       )}
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="bg-gradient-to-r from-primary/5 to-green-500/5 border border-primary/15 rounded-xl px-4 py-3"
+      <div
+        className="bg-gradient-to-r from-primary/5 to-green-500/5 border border-primary/15 rounded-2xl px-4 py-3"
         data-testid="card-driver-philosophy"
       >
-        <p className="text-xs text-foreground font-medium leading-relaxed">
-          "You're already heading that way. Helping someone along your route earns Wheels you can cash out anytime."
-        </p>
-        <p className="text-[10px] text-muted-foreground mt-1">
-          ShortHop is not gig work — just community movement.
-        </p>
-      </motion.div>
+        <p className="text-sm text-foreground font-medium">Help people along your route.</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Earn Wheels you can cash out anytime.</p>
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <motion.div 
@@ -607,8 +613,8 @@ export default function DriverDashboard({ user }: { user: User }) {
                   >
                     🔍
                   </motion.span>
-                  <p className="text-muted-foreground font-medium">No hoppers along your route right now</p>
-                  <p className="text-xs text-muted-foreground mt-1">Keep driving — we'll let you know when someone's heading your way</p>
+                  <p className="text-muted-foreground font-medium">No hops nearby yet.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Be the first to start one.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -637,16 +643,13 @@ export default function DriverDashboard({ user }: { user: User }) {
                             <div className="text-sm font-bold text-foreground">{hop.endLocation}</div>
                           </div>
                         </div>
-                        <p className="text-[10px] text-muted-foreground bg-muted/50 rounded-lg px-2.5 py-1.5">
-                          This hopper is heading your direction — help them move forward along your route!
-                        </p>
                         <Button 
-                          className="w-full bg-gradient-to-r from-primary to-green-600 font-bold" 
+                          className="w-full h-12 text-sm rounded-xl bg-gradient-to-r from-primary to-green-600 font-bold" 
                           onClick={() => acceptHop.mutate(hop.id)}
                           disabled={acceptHop.isPending}
                           data-testid={`button-accept-${hop.id}`}
                         >
-                          {acceptHop.isPending ? "Accepting..." : "Help This Hopper"}
+                          {acceptHop.isPending ? "Accepting..." : "Accept Hop"}
                         </Button>
                       </CardContent>
                     </Card>

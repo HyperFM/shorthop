@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { FounderChat } from "@/components/FounderChat";
@@ -569,42 +570,46 @@ export default function Admin() {
                     </p>
                   </div>
                   {!u.isAdmin && (
-                    <div className="flex flex-col gap-1">
-                      <Button
-                        size="sm"
-                        variant={u.isDisabled ? "outline" : "destructive"}
-                        className="text-xs h-6 px-2"
-                        onClick={() => toggleDisable.mutate({ id: u.id, disabled: !u.isDisabled })}
-                        data-testid={`button-toggle-disable-${u.id}`}
-                      >
-                        {u.isDisabled ? "Enable" : <><Ban className="w-3 h-3 mr-0.5" /> Suspend</>}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs h-6 px-2 text-orange-500 hover:text-orange-700"
-                        onClick={() => {
-                          const reason = prompt(`Block "${u.username}" — reason (optional):`);
-                          if (reason !== null) blockUser.mutate({ id: u.id, reason: reason || "Blocked by admin" });
-                        }}
-                        data-testid={`button-block-${u.id}`}
-                      >
-                        <Shield className="w-3 h-3 mr-0.5" /> Block
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs h-6 px-2 text-red-500 hover:text-red-700"
-                        onClick={() => {
-                          if (confirm(`Delete user "${u.username}" permanently?`)) {
-                            deleteUserMut.mutate(u.id);
-                          }
-                        }}
-                        data-testid={`button-delete-${u.id}`}
-                      >
-                        <Trash2 className="w-3 h-3 mr-0.5" /> Delete
-                      </Button>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" data-testid={`button-actions-${u.id}`}>
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem
+                          onClick={() => toggleDisable.mutate({ id: u.id, disabled: !u.isDisabled })}
+                          data-testid={`button-toggle-disable-${u.id}`}
+                        >
+                          <Ban className="w-3.5 h-3.5 mr-2" />
+                          {u.isDisabled ? "Enable User" : "Suspend User"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const reason = prompt(`Block "${u.username}" — reason (optional):`);
+                            if (reason !== null) blockUser.mutate({ id: u.id, reason: reason || "Blocked by admin" });
+                          }}
+                          className="text-orange-600"
+                          data-testid={`button-block-${u.id}`}
+                        >
+                          <Shield className="w-3.5 h-3.5 mr-2" />
+                          Block User
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => {
+                            if (confirm(`Delete user "${u.username}" permanently?`)) {
+                              deleteUserMut.mutate(u.id);
+                            }
+                          }}
+                          className="text-red-600"
+                          data-testid={`button-delete-${u.id}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-2" />
+                          Delete Account
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-border/30">

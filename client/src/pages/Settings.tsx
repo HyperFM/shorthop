@@ -576,6 +576,22 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {user?.isAdmin && (
+          <Card className="border-red-200/50 dark:border-red-800/40 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/admin")} data-testid="card-admin-link">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md shadow-red-500/20">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-extrabold text-foreground">Admin Dashboard</p>
+                  <p className="text-[10px] text-muted-foreground">Manage users, reports, and settings</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

@@ -1,0 +1,206 @@
+SHORTHOP – UI POLISH UPDATE (v1.0)
+
+GOAL  
+Simplify interface to match the ease-of-use of apps like Uber, Lyft, and DoorDash.  
+Focus on one main action per screen and reduce visual clutter.
+
+------------------------------------------------------------
+
+GLOBAL UI RULES
+
+1. Every screen should have ONE primary action.
+2. Limit color palette:
+   - Primary: #22C55E (green)
+   - Accent: #F97316 (orange)
+   - Neutral: #F3F4F6 / #6B7280
+3. Reduce text explanations everywhere.
+4. Use rounded cards (16px radius).
+5. Increase button size (minimum height: 56px).
+6. Reduce icon colors to match palette.
+7. Increase whitespace between sections.
+
+------------------------------------------------------------
+
+HOPPER SCREEN (RIDER HOME)
+
+NEW STRUCTURE
+
+HEADER
+Happy Hopping, {User}
+
+SEARCH CARD
+[ Current Location ]
+[ Where to? ]
+
+PRIMARY ACTION
+[ Find Hop ]
+
+SECONDARY SECTION
+Nearby Hops
+
+If none available:
+"No hops nearby yet. Start a route or invite a driver."
+
+PICKUP CORRIDORS
+Suggested Pickup Areas
+
+• Winchester Rd near I-75  
+• Richmond Rd near Kroger  
+• Main St & Broadway  
+
+STATS (compact row)
+
+🔥 Streak: 0  
+⭐ Hops: 0  
+🛞 Wheels: 10  
+
+Move stats BELOW main functionality.
+
+------------------------------------------------------------
+
+DRIVER SCREEN
+
+Replace driver setup card with:
+
+Become a Driver
+
+Step 1 — Verify license  
+Step 2 — Add vehicle  
+Step 3 — Start accepting hops  
+
+Primary button:
+
+[ Start Driver Setup ]
+
+After verification:
+
+[ Start Route ]
+
+------------------------------------------------------------
+
+ADMIN DASHBOARD
+
+Replace visible buttons:
+
+Suspend  
+Block  
+Delete  
+
+With single menu:
+
+⋯ Actions
+
+Menu options:
+
+Suspend User  
+Block User  
+Delete Account  
+Grant Wheels
+
+This keeps UI cleaner.
+
+------------------------------------------------------------
+
+NAVIGATION BAR
+
+Simplify to:
+
+Home  
+Community  
+Routes  
+Alerts  
+Profile  
+
+Move Admin section inside Profile when possible.
+
+------------------------------------------------------------
+
+PRIMARY BUTTON STYLE
+
+.primary-button {
+height: 56px;
+border-radius: 14px;
+background: linear-gradient(90deg,#22C55E,#10B981);
+font-weight: 600;
+font-size: 18px;
+}
+
+------------------------------------------------------------
+
+CARD STYLE
+
+.card {
+background: white;
+border-radius: 16px;
+padding: 16px;
+box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+margin-bottom: 16px;
+}
+
+------------------------------------------------------------
+
+TEXT SIMPLIFICATION
+
+Replace long text:
+
+"You're already heading that way. Helping someone along your route earns Wheels you can cash out anytime."
+
+With:
+
+Help people along your route.  
+Earn Wheels you can cash out anytime.
+
+------------------------------------------------------------
+
+EMPTY STATE MESSAGES
+
+Replace:
+
+"No drivers nearby right now"
+
+With:
+
+"No hops nearby yet.  
+Be the first to start one."
+
+------------------------------------------------------------
+
+USER FLOW GOAL
+
+Open App  
+↓  
+Enter Destination  
+↓  
+Tap Find Hop  
+↓  
+See Route Options
+
+Total taps: 3
+
+------------------------------------------------------------
+
+OPTIONAL QUICK FEATURE
+
+Floating button:
+
++ Start Route
+
+Encourages early drivers to create routes.
+
+------------------------------------------------------------
+
+VISUAL POLISH PRINCIPLES
+
+Less text  
+Bigger buttons  
+More whitespace  
+Simpler color palette
+
+------------------------------------------------------------
+
+TARGET RESULT
+
+Current UI: ~7/10  
+After update: 9–10/10 startup-level polish.
+
+------------------------------------------------------------

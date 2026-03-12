@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, X, Plus, Route, Bookmark, Smartphone, Crown } from "lucide-react";
+import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, X, Plus, Route, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -222,40 +222,42 @@ export default function WalkerDashboard({ user }: { user: User }) {
   return (
     <div className="px-4 pt-3 pb-4 max-w-lg mx-auto">
 
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <SeasonalGreeting username={user.username} testId="text-dashboard-title" role="rider" />
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-xl font-bold text-foreground" data-testid="text-dashboard-title">
+            Happy Hopping, {user.username}
+          </h1>
           {user.isFounder && user.founderBadge && (
-            <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[8px] px-1 py-0 self-end mb-0.5" data-testid="badge-founder">
-              🛞
+            <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[9px] px-1.5 py-0 mt-1" data-testid="badge-founder">
+              🛞 Founder
             </Badge>
           )}
         </div>
-        <Button variant="ghost" size="icon" onClick={handleInvite} data-testid="button-invite-friends" className="h-8 w-8 rounded-full">
-          <Share2 className="w-4 h-4" />
+        <Button variant="ghost" size="icon" onClick={handleInvite} data-testid="button-invite-friends" className="h-10 w-10 rounded-full">
+          <Share2 className="w-5 h-5" />
         </Button>
       </div>
 
       {!activeHop && (
-        <Card className="mb-3 border-border/50 shadow-sm" data-testid="card-destination-input">
-          <CardContent className="p-3">
-            <form onSubmit={form.handleSubmit(onSearch)} className="space-y-2">
-              <div className="flex items-center gap-2">
+        <Card className="mb-4 border-border/50 shadow-md rounded-2xl" data-testid="card-destination-input">
+          <CardContent className="p-4">
+            <form onSubmit={form.handleSubmit(onSearch)} className="space-y-3">
+              <div className="flex items-center gap-3">
                 <div className="flex flex-col items-center gap-0.5 py-1">
-                  <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-primary" />
-                  <div className="w-px h-6 bg-border" />
-                  <div className="w-2.5 h-2.5 rounded-sm bg-secondary border-2 border-secondary" />
+                  <div className="w-3 h-3 rounded-full bg-primary border-2 border-primary" />
+                  <div className="w-px h-8 bg-border" />
+                  <div className="w-3 h-3 rounded-sm bg-secondary border-2 border-secondary" />
                 </div>
                 <div className="flex-1 space-y-2">
                   <Input
                     placeholder="Current location"
-                    className="h-9 text-sm rounded-lg bg-muted/40 border-transparent focus:bg-background"
+                    className="h-11 text-sm rounded-xl bg-muted/40 border-transparent focus:bg-background"
                     data-testid="input-start-location"
                     {...form.register("startLocation")}
                   />
                   <Input
                     placeholder="Where to?"
-                    className="h-9 text-sm rounded-lg bg-muted/40 border-transparent focus:bg-background font-medium"
+                    className="h-11 text-sm rounded-xl bg-muted/40 border-transparent focus:bg-background font-semibold"
                     data-testid="input-end-location"
                     {...form.register("endLocation")}
                   />
@@ -263,55 +265,35 @@ export default function WalkerDashboard({ user }: { user: User }) {
               </div>
 
               {savedRoutes && savedRoutes.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                <div className="flex flex-wrap gap-1.5">
                   {savedRoutes.slice(0, 3).map((r) => (
                     <Button
                       key={r.id}
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-6 text-[10px] rounded-full px-2.5 gap-1 border-primary/20 text-primary"
+                      className="h-7 text-xs rounded-full px-3 gap-1 border-primary/20 text-primary"
                       onClick={() => {
                         form.setValue("startLocation", r.startLocation);
                         form.setValue("endLocation", r.endLocation);
                       }}
                       data-testid={`button-saved-route-${r.id}`}
                     >
-                      <Bookmark className="w-2.5 h-2.5" />
+                      <Bookmark className="w-3 h-3" />
                       {r.name}
                     </Button>
                   ))}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-[10px] rounded-full px-2 text-muted-foreground"
-                    onClick={() => setSavedRoutesOpen(true)}
-                    data-testid="button-manage-routes"
-                  >
-                    {savedRoutes.length > 3 ? `+${savedRoutes.length - 3} more` : "Manage"}
-                  </Button>
                 </div>
               )}
 
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 h-9 rounded-lg text-sm font-bold bg-gradient-to-r from-primary to-accent"
-                  data-testid="button-find-options"
-                >
-                  Find Options
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9 rounded-lg text-sm px-3"
-                  onClick={() => setSavedRoutesOpen(true)}
-                  data-testid="button-open-saved-routes"
-                >
-                  <Route className="w-4 h-4" />
-                </Button>
-              </div>
+              <button
+                type="submit"
+                className="w-full primary-action-btn flex items-center justify-center gap-2"
+                data-testid="button-find-options"
+              >
+                <Navigation className="w-5 h-5" />
+                Find Hop
+              </button>
             </form>
           </CardContent>
         </Card>
@@ -483,7 +465,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
               ) : (
                 <div className="flex items-center gap-2 text-xs">
                   <div className="w-2 h-2 rounded-full bg-muted-foreground" />
-                  <span className="text-muted-foreground">No drivers nearby right now</span>
+                  <span className="text-muted-foreground">No hops nearby yet. Be the first to start one.</span>
                 </div>
               )}
               <div className="flex items-center gap-2 text-xs">
@@ -555,7 +537,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
               transition={{ delay: 0 }}
               className="text-center mb-1"
             >
-              <p className="text-sm font-bold text-foreground" data-testid="text-heading-prompt">Heading that way yourself?</p>
+              <p className="text-sm font-bold text-foreground" data-testid="text-heading-prompt">Choose your ride</p>
             </motion.div>
 
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05, type: "spring", stiffness: 200 }}>
@@ -572,7 +554,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
                       </motion.span>
                       <div>
                         <p className="text-sm font-extrabold text-foreground">Start Walking</p>
-                        <p className="text-[10px] text-muted-foreground">Begin moving — a driver may pick you up along the way</p>
+                        <p className="text-[10px] text-muted-foreground">Start moving — drivers may spot you along the way</p>
                       </div>
                     </div>
                     <span className="text-sm font-bold text-green-600 bg-green-100 dark:bg-green-900/50 px-2.5 py-1 rounded-full">Free</span>
@@ -613,7 +595,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     )}
                   </div>
                   <p className="text-[10px] text-green-700 dark:text-green-400 mt-2 font-medium">
-                    Start heading toward {locations.endLocation || "your destination"} — drivers will see you along their route!
+                    Drivers heading toward {locations.endLocation || "your destination"} will spot you!
                   </p>
                 </CardContent>
               </Card>
@@ -640,8 +622,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">{payWithWheels ? `${Math.max(1, Math.ceil(1.5))} 🛞` : '$1–3'}</span>
                       <Button
-                        size="sm"
-                        className="h-7 text-xs rounded-lg px-3 font-bold"
+                        className="h-10 text-sm rounded-xl px-5 font-bold"
                         onClick={() => handleRequestHop('short_hop')}
                         disabled={requestHop.isPending}
                         data-testid="button-request-short-hop"
@@ -749,42 +730,60 @@ export default function WalkerDashboard({ user }: { user: User }) {
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <Card
-          className="border-border/50 shadow-sm cursor-pointer hover:border-orange-400/40 transition-colors"
-          data-testid="card-streak"
-          onClick={() => setStreakOpen(true)}
-        >
-          <CardContent className="p-3 flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white shadow-sm">
-              <span className="text-base">🔥</span>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase">Streak</p>
-              <p className="text-lg font-black text-foreground leading-none" data-testid="text-streak-count">{user.hopStreak || 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card
-          className="border-border/50 shadow-sm cursor-pointer hover:border-primary/40 transition-colors"
-          data-testid="card-total-hops"
-          onClick={() => setHopsOpen(true)}
-        >
-          <CardContent className="p-3 flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-sm">
-              <span className="text-base">⭐</span>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase">Hops</p>
-              <p className="text-lg font-black text-foreground leading-none" data-testid="text-total-hops-count">{user.totalHops || 0}</p>
+      {pickupSpots.length > 0 && !activeHop && (
+        <Card className="mb-4 border-border/50 shadow-sm rounded-2xl" data-testid="card-pickup-corridors-section">
+          <CardContent className="p-4">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Suggested Pickup Areas</p>
+            <div className="space-y-2">
+              {pickupSpots.slice(0, 3).map((spot, i) => (
+                <div
+                  key={spot.name}
+                  className="flex items-center justify-between py-2 px-3 rounded-xl bg-muted/30"
+                  data-testid={`pickup-area-${i}`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <MapPin className="w-4 h-4 text-primary shrink-0" />
+                    <p className="text-sm font-medium text-foreground truncate">{spot.name}</p>
+                  </div>
+                  {spot.distance != null && (
+                    <span className="text-xs font-bold text-primary shrink-0 ml-2">
+                      {spot.distance < 0.1 ? 'Here' : `${spot.distance.toFixed(1)} mi`}
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
+      )}
+
+      <div className="flex items-center justify-between gap-3 mb-4 px-1">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setStreakOpen(true)} data-testid="card-streak">
+          <span className="text-lg">🔥</span>
+          <div>
+            <p className="text-[10px] text-muted-foreground font-medium">Streak</p>
+            <p className="text-sm font-black text-foreground leading-none" data-testid="text-streak-count">{user.hopStreak || 0}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setHopsOpen(true)} data-testid="card-total-hops">
+          <span className="text-lg">⭐</span>
+          <div>
+            <p className="text-[10px] text-muted-foreground font-medium">Hops</p>
+            <p className="text-sm font-black text-foreground leading-none" data-testid="text-total-hops-count">{user.totalHops || 0}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-lg">🛞</span>
+          <div>
+            <p className="text-[10px] text-muted-foreground font-medium">Wheels</p>
+            <p className="text-sm font-black text-foreground leading-none">{user.credits || 0}</p>
+          </div>
+        </div>
       </div>
 
       {badges && badges.length > 0 && (
-        <Card className="mb-3 border-border/50 shadow-sm" data-testid="card-badges">
-          <CardContent className="p-3">
+        <Card className="mb-4 border-border/50 shadow-sm rounded-2xl" data-testid="card-badges">
+          <CardContent className="p-4">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Badges</p>
             <div className="flex flex-wrap gap-1.5">
               {badges.map((b) => {
@@ -803,80 +802,43 @@ export default function WalkerDashboard({ user }: { user: User }) {
       )}
 
       {!hasFlexSub && (
-        <Card className="border-primary/20 shadow-sm mb-3 bg-gradient-to-r from-primary/5 to-accent/5" data-testid="card-flex-promo">
-          <CardContent className="p-3">
+        <Card className="border-primary/20 shadow-sm mb-4 bg-gradient-to-r from-primary/5 to-accent/5 rounded-2xl" data-testid="card-flex-promo">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white">
-                  <span className="text-sm">🚀</span>
-                </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🚀</span>
                 <div>
-                  <p className="text-xs font-bold text-foreground">Flex Hop</p>
-                  <p className="text-[10px] text-muted-foreground">Detour rides, priority matching</p>
+                  <p className="text-sm font-bold text-foreground">Flex Hop</p>
+                  <p className="text-xs text-muted-foreground">Priority matching · Detour rides</p>
                 </div>
               </div>
               <Button
                 size="sm"
-                className="h-7 text-xs rounded-lg font-bold bg-gradient-to-r from-primary to-accent"
+                className="h-9 text-sm rounded-xl font-bold bg-gradient-to-r from-primary to-accent px-4"
                 onClick={() => setSubscriptionPlan("flex_hop")}
                 data-testid="button-get-flex-hop"
               >
                 $5/mo
               </Button>
             </div>
-            {!user.isFounder && (
-              <p className="text-[9px] text-muted-foreground mt-2 pl-10">
-                First 50 founding members get Flex Hop free forever
-              </p>
-            )}
           </CardContent>
         </Card>
       )}
 
-      <Card className="border-border/50 shadow-sm mb-3" data-testid="card-network">
-        <CardContent className="p-3">
+      <Card className="border-border/50 shadow-sm mb-4 rounded-2xl" data-testid="card-network">
+        <CardContent className="p-4">
           <NetworkProgress />
         </CardContent>
       </Card>
 
-      <div className="flex gap-2 mb-3">
-        <Card className="flex-1 border-border/50 shadow-sm cursor-pointer hover:border-blue-200 transition-colors" onClick={() => setLocation("/widget")} data-testid="card-widget-preview">
-          <CardContent className="p-3 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Smartphone className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold">Widget</p>
-              <p className="text-[9px] text-muted-foreground">Preview</p>
-            </div>
-          </CardContent>
-        </Card>
-        {user.isFounder && (
-          <Card className="flex-1 border-orange-200/50 shadow-sm cursor-pointer hover:border-orange-300 transition-colors" onClick={() => {
-            const el = document.getElementById("founder-chat-section");
-            if (el) el.scrollIntoView({ behavior: "smooth" });
-          }} data-testid="card-founder-chat-link">
-            <CardContent className="p-3 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                <Crown className="w-4 h-4 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold">Founder Chat</p>
-                <p className="text-[9px] text-muted-foreground">Direct line</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
       {networkLoaded && driversInCity === 0 && !activeHop && (
-        <Card className="border-dashed border-primary/30 bg-primary/5 mb-3" data-testid="card-invite-drivers">
-          <CardContent className="p-3 text-center space-y-2">
-            <p className="text-xs font-bold text-foreground">Help grow the network</p>
-            <p className="text-[10px] text-muted-foreground">Know someone who drives through Lexington? Invite them to earn Wheels as a driver.</p>
-            <Button size="sm" variant="outline" className="h-7 text-xs rounded-lg" onClick={handleInvite} data-testid="button-invite-drivers">
-              <Share2 className="w-3 h-3 mr-1" />
-              Invite Drivers
+        <Card className="border-dashed border-primary/30 bg-primary/5 mb-4 rounded-2xl" data-testid="card-invite-drivers">
+          <CardContent className="p-4 text-center space-y-3">
+            <p className="text-sm font-bold text-foreground">No hops nearby yet.</p>
+            <p className="text-xs text-muted-foreground">Be the first to start one.</p>
+            <Button className="h-11 text-sm rounded-xl font-semibold px-6" onClick={handleInvite} data-testid="button-invite-drivers">
+              <Share2 className="w-4 h-4 mr-2" />
+              Invite Friends
             </Button>
           </CardContent>
         </Card>
