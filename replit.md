@@ -12,11 +12,11 @@ I prefer iterative development with a focus on delivering core features first. I
 The application features a mobile-first, app-like UI with a bottom tab navigation bar for authenticated users, compact layouts (`max-w-lg mx-auto`), and app-style headers. Design incorporates nature-inspired greens (primary), orange (secondary), and blue (accent) themes, with CartoDB dark map tiles. Framer Motion is used for animations, and Shadcn components provide a consistent UI toolkit. A custom Flash Notification system (`showFlash(emoji, text, type)`) offers animated pop-up alerts.
 
 ### Bottom Navigation (Updated)
-- **Home** (`/dashboard`) — Main dashboard with ride search, corridors, stats
+- **Home** (`/dashboard`) — Stats bar (Streak/Hops/Wheels at top), smart matches, active ride status, schedule banner, founder chat
 - **Schedule** (`/schedule`) — Recurring trip scheduler (days, locations, time windows, return trips)
-- **Hop** (green elevated button) — Primary ride action, navigates to dashboard with bounce animation
+- **InstaHop** (`/instahop`) — (green elevated ⚡ button) Minimal instant ride page: destination, location, InstaHop button, Hopper/Driver mode switcher
 - **Network** (`/community`) — Platform growth stats, live activity feed, community posts
-- **Profile** (`/settings`) — User settings, notifications inbox, preferences
+- **Profile** (`/settings`) — User settings, membership, notifications inbox, preferences
 
 ### Technical Implementations
 - **User Tiers & Movement Options**: Implemented with "Standard ShortHop" (free), "FlexHop" (premium subscription for detours), and "Power Hop" (unlimited rides).

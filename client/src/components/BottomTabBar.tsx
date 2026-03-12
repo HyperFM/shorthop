@@ -7,7 +7,7 @@ import { useState } from "react";
 const tabs = [
   { path: "/dashboard", icon: Home, label: "Home" },
   { path: "/schedule", icon: Calendar, label: "Schedule" },
-  { path: "/hop", icon: Zap, label: "Hop", isHop: true },
+  { path: "/instahop", icon: Zap, label: "InstaHop", isHop: true },
   { path: "/community", icon: Activity, label: "Network" },
   { path: "/settings", icon: User, label: "Profile" },
 ];
@@ -27,7 +27,7 @@ export function BottomTabBar() {
       <div className="h-px bg-gradient-to-r from-blue-500/20 via-green-500/30 to-orange-500/20" />
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {tabs.map((tab) => {
-          const isActive = location === tab.path || (tab.path === "/dashboard" && location === "/") || (tab.path === "/hop" && location === "/dashboard" && false);
+          const isActive = location === tab.path || (tab.path === "/dashboard" && location === "/") || (tab.path === "/instahop" && location === "/hop");
           const isProfile = tab.label === "Profile";
           const showAdminDot = isProfile && user.isAdmin;
           const Icon = tab.icon;
@@ -39,7 +39,7 @@ export function BottomTabBar() {
                 onClick={() => {
                   setHopBounce(true);
                   setTimeout(() => setHopBounce(false), 400);
-                  setLocation("/dashboard");
+                  setLocation("/instahop");
                 }}
                 animate={hopBounce ? { scale: [1, 1.2, 0.95, 1.05, 1] } : {}}
                 transition={{ duration: 0.4 }}
@@ -49,7 +49,7 @@ export function BottomTabBar() {
                 <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/25 -mt-3">
                   <Icon className="w-5 h-5 text-white stroke-[2.5]" />
                 </div>
-                <span className="text-[10px] font-bold leading-none text-green-600 dark:text-green-400">Hop</span>
+                <span className="text-[10px] font-bold leading-none text-green-600 dark:text-green-400">InstaHop</span>
               </motion.button>
             );
           }

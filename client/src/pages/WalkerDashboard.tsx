@@ -2,17 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { SeasonalGreeting } from "@/components/SeasonalGreeting";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Navigation, Share2, Compass, Users, Car, Radio, ChevronRight, X, Plus, Route, Bookmark, Calendar } from "lucide-react";
+import { Navigation, Share2, Compass, Users, Car, Radio, ChevronRight, X, Plus, Route, Calendar, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useHops, useRequestHop, useCancelHop } from "@/hooks/use-hops";
+import { useHops, useCancelHop } from "@/hooks/use-hops";
 import { HopBuddyRating } from "@/components/HopBuddyRating";
 import { FounderChat } from "@/components/FounderChat";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking, usePickupGuidance } from "@/hooks/use-location";
@@ -46,27 +44,18 @@ type DriverInfo = {
   interests: string | null;
 };
 
-const searchSchema = z.object({
-  startLocation: z.string().min(2, "Required"),
-  endLocation: z.string().min(2, "Required"),
-});
-
 type WalkerRouteData = { id: number; name: string; startLocation: string; endLocation: string };
 
 export default function WalkerDashboard({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const { data: hops } = useHops();
-  const requestHop = useRequestHop();
   const cancelHop = useCancelHop();
-  const [showOptions, setShowOptions] = useState(false);
-  const [locations, setLocations] = useState({ startLocation: "", endLocation: "" });
   const [streakOpen, setStreakOpen] = useState(false);
   const [hopsOpen, setHopsOpen] = useState(false);
   const [savedRoutesOpen, setSavedRoutesOpen] = useState(false);
   const [addRouteOpen, setAddRouteOpen] = useState(false);
   const [ratingOpen, setRatingOpen] = useState(false);
   const [ratingHop, setRatingHop] = useState<{ tripId: number; driverId: number; driverName: string } | null>(null);
-  const [payWithWheels, setPayWithWheels] = useState(false);
   const lastCompletedRef = useRef<number | null>(null);
   const [showInsightBubble, setShowInsightBubble] = useState(false);
   const [selectedCorridor, setSelectedCorridor] = useState<PickupSpot | null>(null);
@@ -158,8 +147,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const tracking = useHopTracking(activeHop?.id, activeHop?.status === 'matched' || activeHop?.status === 'in_ride');
   const { spots: pickupSpots } = usePickupGuidance(geo.latitude, geo.longitude);
 
-  const hasFlexSub = user.subscription === "flex_hop" || user.subscription === "power_hop";
-  const hasPowerSub = user.subscription === "power_hop";
 
   useEffect(() => {
     if (activeHop?.status === 'matched' && prevStatusRef.current === 'requested') {
@@ -272,22 +259,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
     }
   }, [hops]);
 
-  const form = useForm<z.infer<typeof searchSchema>>({
-    resolver: zodResolver(searchSchema),
-    defaultValues: { startLocation: "", endLocation: "" }
-  });
-
-  const onSearch = (data: z.infer<typeof searchSchema>) => {
-    setLocations(data);
-    setShowOptions(true);
-  };
-
-  const handleRequestHop = (hopType: string = 'short_hop') => {
-    requestHop.mutate({ ...locations, hopType, payWithWheels } as any, {
-      onSuccess: () => { setShowOptions(false); setPayWithWheels(false); }
-    });
-  };
-
   const handleInvite = async () => {
     const shareData = {
       title: "Join ShortHop",
@@ -330,7 +301,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
   return (
     <div className="px-4 pt-3 pb-4 max-w-lg mx-auto">
 
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-3">
         <div>
           <h1 className="text-xl font-bold text-foreground" data-testid="text-dashboard-title">
             Happy Hopping, {user.username}
@@ -344,6 +315,26 @@ export default function WalkerDashboard({ user }: { user: User }) {
         <Button variant="ghost" size="icon" onClick={handleInvite} data-testid="button-invite-friends" className="h-10 w-10 rounded-full">
           <Share2 className="w-5 h-5" />
         </Button>
+      </div>
+
+      <div className="flex items-center justify-around mb-5 py-3 px-2 rounded-2xl bg-muted/30 border border-border/40" data-testid="stats-bar">
+        <button className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setStreakOpen(true)} data-testid="card-streak">
+          <span className="text-2xl">🔥</span>
+          <p className="text-lg font-black text-foreground leading-none" data-testid="text-streak-count">{user.hopStreak || 0}</p>
+          <p className="text-[10px] text-muted-foreground font-medium">Streak</p>
+        </button>
+        <div className="w-px h-10 bg-border/50" />
+        <button className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setHopsOpen(true)} data-testid="card-total-hops">
+          <span className="text-2xl">⭐</span>
+          <p className="text-lg font-black text-foreground leading-none" data-testid="text-total-hops-count">{user.totalHops || 0}</p>
+          <p className="text-[10px] text-muted-foreground font-medium">Hops</p>
+        </button>
+        <div className="w-px h-10 bg-border/50" />
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-2xl">🛞</span>
+          <p className="text-lg font-black text-foreground leading-none">{user.credits || 0}</p>
+          <p className="text-[10px] text-muted-foreground font-medium">Wheels</p>
+        </div>
       </div>
 
       {!scheduleBannerDismissed && mySchedules.length === 0 && !activeHop && (
@@ -387,71 +378,23 @@ export default function WalkerDashboard({ user }: { user: User }) {
 
       {!activeHop && (
         <SmartMatchCard onRequestHop={(direction) => {
-          const parts = direction.split(' → ');
-          if (parts.length === 2) {
-            form.setValue("startLocation", parts[0]);
-            form.setValue("endLocation", parts[1]);
-          }
+          setLocation(`/instahop?route=${encodeURIComponent(direction)}`);
         }} />
       )}
 
       {!activeHop && (
-        <Card className="mb-4 border-border/50 shadow-md rounded-2xl" data-testid="card-destination-input">
-          <CardContent className="p-4">
-            <form onSubmit={form.handleSubmit(onSearch)} className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col items-center gap-0.5 py-1">
-                  <div className="w-3 h-3 rounded-full bg-primary border-2 border-primary" />
-                  <div className="w-px h-8 bg-border" />
-                  <div className="w-3 h-3 rounded-sm bg-secondary border-2 border-secondary" />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <Input
-                    placeholder="Current location"
-                    className="h-11 text-sm rounded-xl bg-muted/40 border-transparent focus:bg-background"
-                    data-testid="input-start-location"
-                    {...form.register("startLocation")}
-                  />
-                  <Input
-                    placeholder="Where to?"
-                    className="h-11 text-sm rounded-xl bg-muted/40 border-transparent focus:bg-background font-semibold"
-                    data-testid="input-end-location"
-                    {...form.register("endLocation")}
-                  />
-                </div>
-              </div>
-
-              {savedRoutes && savedRoutes.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {savedRoutes.slice(0, 3).map((r) => (
-                    <Button
-                      key={r.id}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs rounded-full px-3 gap-1 border-primary/20 text-primary"
-                      onClick={() => {
-                        form.setValue("startLocation", r.startLocation);
-                        form.setValue("endLocation", r.endLocation);
-                      }}
-                      data-testid={`button-saved-route-${r.id}`}
-                    >
-                      <Bookmark className="w-3 h-3" />
-                      {r.name}
-                    </Button>
-                  ))}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full primary-action-btn flex items-center justify-center gap-2"
-                data-testid="button-find-options"
-              >
-                <Navigation className="w-5 h-5" />
-                Find Hop
-              </button>
-            </form>
+        <Card className="mb-4 border-green-300/40 shadow-md rounded-2xl bg-gradient-to-r from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20" data-testid="card-instahop-cta">
+          <CardContent className="p-4 text-center">
+            <p className="text-sm font-bold text-foreground mb-1">Ready to hop?</p>
+            <p className="text-xs text-muted-foreground mb-3">Tap the InstaHop tab to find a ride instantly</p>
+            <Button
+              className="h-12 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold gap-2 px-8 shadow-lg shadow-green-500/20"
+              onClick={() => setLocation("/instahop")}
+              data-testid="button-go-instahop"
+            >
+              <Zap className="w-5 h-5" />
+              InstaHop
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -648,7 +591,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
         </CardContent>
       </Card>
 
-      {(activeHop?.status === 'matched' || showOptions) && (
+      {activeHop?.status === 'matched' && (
         <div className="mb-3">
           <PickupMapVisual
             spots={pickupSpots}
@@ -662,7 +605,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
         </div>
       )}
 
-      {pickupSpots.length > 0 && (
+      {pickupSpots.length > 0 && activeHop && (
         <Card className="mb-3 border-border/50 shadow-sm rounded-2xl" data-testid="card-pickup-corridors">
           <CardContent className="p-3">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Nearest Roads</p>
@@ -697,231 +640,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
         </Card>
       )}
 
-      <AnimatePresence mode="wait">
-        {showOptions && !activeHop && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-2 mb-3"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0 }}
-              className="text-center mb-1"
-            >
-              <p className="text-sm font-bold text-foreground" data-testid="text-heading-prompt">Choose your ride</p>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05, type: "spring", stiffness: 200 }}>
-              <Card className="border-green-300/60 dark:border-green-700/60 shadow-sm" data-testid="option-walk">
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">🚶</span>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">Walk</p>
-                        <p className="text-[10px] text-muted-foreground">Drivers may spot you along the way</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-green-600">Free</span>
-                      <Button
-                        size="sm"
-                        className="h-8 text-xs rounded-xl px-4 font-bold bg-green-600 hover:bg-green-700"
-                        onClick={() => handleRequestHop('walk')}
-                        disabled={requestHop.isPending}
-                        data-testid="button-request-walk"
-                      >
-                        Go
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-              <Card className="border-primary/40 shadow-sm" data-testid="option-short-hop">
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">🏎️</span>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">Short Hop</p>
-                        <p className="text-[10px] text-muted-foreground">Ride along a driver's route</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{payWithWheels ? '1-5 🛞' : '$1–5'}</span>
-                      <Button
-                        size="sm"
-                        className="h-8 text-xs rounded-xl px-4 font-bold"
-                        onClick={() => handleRequestHop('short_hop')}
-                        disabled={requestHop.isPending}
-                        data-testid="button-request-short-hop"
-                      >
-                        {requestHop.isPending ? '...' : 'Request'}
-                      </Button>
-                    </div>
-                  </div>
-                  {(user.credits || 0) > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setPayWithWheels(!payWithWheels)}
-                      className={`mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
-                        payWithWheels
-                          ? 'bg-secondary/20 text-secondary border border-secondary/40'
-                          : 'bg-muted/30 text-muted-foreground border border-transparent hover:border-secondary/30'
-                      }`}
-                      data-testid="toggle-pay-wheels"
-                    >
-                      <span>🛞</span>
-                      {payWithWheels ? `Paying with Wheels (${user.credits} available)` : `Pay with Wheels (${user.credits} 🛞)`}
-                    </button>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {hasFlexSub && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
-                <Card className="border-blue-300/60 dark:border-blue-700/60 shadow-sm" data-testid="option-flex-hop">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">🚀</span>
-                        <div>
-                          <p className="text-sm font-bold text-foreground">FlexHop</p>
-                          <p className="text-[10px] text-muted-foreground">Auto-Hop with scheduling</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">$2–5</span>
-                        <Button
-                          size="sm"
-                          className="h-8 text-xs rounded-xl px-4 font-bold"
-                          onClick={() => handleRequestHop('flex_hop')}
-                          disabled={requestHop.isPending}
-                          data-testid="button-request-flex-hop"
-                        >
-                          Request
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {hasPowerSub && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-                <Card className="border-orange-300/60 dark:border-orange-700/60 shadow-sm" data-testid="option-power-hop">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">⚡</span>
-                        <div>
-                          <p className="text-sm font-bold text-foreground">PowerHop</p>
-                          <p className="text-[10px] text-muted-foreground">Premium connection tier</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Priority</span>
-                        <Button
-                          size="sm"
-                          className="h-8 text-xs rounded-xl px-4 font-bold"
-                          onClick={() => handleRequestHop('full_ride')}
-                          disabled={requestHop.isPending}
-                          data-testid="button-request-power-hop"
-                        >
-                          Request
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {pickupSpots.length > 0 && !activeHop && (
-        <Card className="mb-4 border-border/50 shadow-sm rounded-2xl" data-testid="card-pickup-corridors-section">
-          <CardContent className="p-4">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Nearest Roads</p>
-            <p className="text-[10px] text-muted-foreground mb-3">Walk to the closest busy road. Stand on the side where traffic flows your direction.</p>
-            <div className="space-y-2 max-h-[260px] overflow-y-auto">
-              {pickupSpots.slice(0, 5).map((spot, i) => (
-                <button
-                  key={`${spot.name}-${i}`}
-                  type="button"
-                  className="w-full flex items-center justify-between py-3 px-3 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted/60 transition-colors text-left"
-                  onClick={() => setSelectedCorridor(spot)}
-                  data-testid={`pickup-area-${i}`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <Navigation className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{spot.name}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{spot.corridorType || 'busy road'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-2">
-                    {spot.distance != null && (
-                      <span className="text-xs font-bold text-primary">
-                        {spot.distance < 0.1 ? 'Right here' : `${spot.distance.toFixed(1)} mi`}
-                      </span>
-                    )}
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="flex items-center justify-between gap-3 mb-4 px-1">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setStreakOpen(true)} data-testid="card-streak">
-          <span className="text-lg">🔥</span>
-          <div>
-            <p className="text-[10px] text-muted-foreground font-medium">Streak</p>
-            <p className="text-sm font-black text-foreground leading-none" data-testid="text-streak-count">{user.hopStreak || 0}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setHopsOpen(true)} data-testid="card-total-hops">
-          <span className="text-lg">⭐</span>
-          <div>
-            <p className="text-[10px] text-muted-foreground font-medium">Hops</p>
-            <p className="text-sm font-black text-foreground leading-none" data-testid="text-total-hops-count">{user.totalHops || 0}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-lg">🛞</span>
-          <div>
-            <p className="text-[10px] text-muted-foreground font-medium">Wheels</p>
-            <p className="text-sm font-black text-foreground leading-none">{user.credits || 0}</p>
-          </div>
-        </div>
-      </div>
-
-      {networkLoaded && driversInCity === 0 && !activeHop && (
-        <Card className="border-dashed border-primary/30 bg-primary/5 mb-4 rounded-2xl" data-testid="card-invite-drivers">
-          <CardContent className="p-4 text-center space-y-3">
-            <p className="text-sm font-bold text-foreground">No hops nearby yet.</p>
-            <p className="text-xs text-muted-foreground">Be the first to start one.</p>
-            <Button className="h-11 text-sm rounded-xl font-semibold px-6" onClick={handleInvite} data-testid="button-invite-drivers">
-              <Share2 className="w-4 h-4 mr-2" />
-              Invite Friends
-            </Button>
-          </CardContent>
-        </Card>
-      )}
 
       {user.isFounder && (
         <div id="founder-chat-section" className="mb-3">
@@ -1017,9 +735,8 @@ export default function WalkerDashboard({ user }: { user: User }) {
                         variant="ghost"
                         className="h-6 w-6 p-0 text-primary"
                         onClick={() => {
-                          form.setValue("startLocation", r.startLocation);
-                          form.setValue("endLocation", r.endLocation);
                           setSavedRoutesOpen(false);
+                          setLocation(`/instahop?route=${encodeURIComponent(`${r.startLocation} → ${r.endLocation}`)}`);
                         }}
                         data-testid={`button-use-route-${r.id}`}
                       >

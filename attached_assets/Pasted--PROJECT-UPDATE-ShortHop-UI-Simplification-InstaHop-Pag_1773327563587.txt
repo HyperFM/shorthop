@@ -1,0 +1,105 @@
+
+
+
+
+PROJECT UPDATE — ShortHop UI Simplification & InstaHop Page
+
+Goal:Simplify the app interface and separate features across pages so each screen has one clear purpose. The current Hop page has too many elements and needs to become a minimal instant ride screen.
+
+MAIN CHANGES
+
+Create a dedicated "InstaHop" experience on the center tab (⚡ tab)
+
+The middle tab (lightning icon) should open a new page called:
+
+InstaHop
+
+This page should be extremely minimal and focused on instant ride matching.
+
+Remove all extra cards and information.
+
+The InstaHop screen should contain only:
+
+• Destination input• Current location input• A large primary action button• Hopper/Driver mode switcher
+
+Layout structure:
+
+Top spacing
+
+Destination FieldCurrent Location Field
+
+Large Primary Button:⚡ InstaHop
+
+Under the button place a small subtitle:"Find a ride instantly"
+
+Below that place the Hopper / Driver switcher.
+
+Move Hopper / Driver switcher to the center of the screen
+
+The Hopper/Driver selector should no longer be at the top of the screen.
+
+Instead create a modern sliding toggle placed under the InstaHop button.
+
+Design:
+
+A pill shaped slider:[ Hopper | Driver ]
+
+Users should be able to tap or swipe between the two.
+
+Smooth animated transition.
+
+Rename primary action
+
+Change button text from:
+
+"Find Hop"
+
+to:
+
+"InstaHop"
+
+The button should be larger and visually dominant.
+
+Suggested styling:
+
+Large rounded buttonGreen gradientLightning icon optional
+
+Clean up the current Hop page
+
+Remove the following elements from this page:
+
+• Schedule suggestion card• "Nearest Roads" section• Network count• Founder badge• All informational cards
+
+This page should no longer exist in its current form.
+
+Those features should move elsewhere.
+
+Redistribute features to other tabs
+
+HOME TAB should contain:
+
+• Greeting• Network stats• Founder badge• Optional schedule suggestions
+
+SCHEDULE TAB should contain:
+
+• All scheduling features• Calendar functionality• Recurring trips
+
+INSTA HOP TAB (⚡) should contain ONLY:
+
+• Destination• Current location• InstaHop button• Hopper/Driver switcher
+
+Visual improvements
+
+General style improvements:
+
+• Increase spacing between elements• Fewer cards• Larger buttons• More minimal layout• Focus attention on the InstaHop button
+
+The page should feel modern, clean, and fast.
+
+FINAL GOAL
+
+When a user taps the ⚡ tab the experience should feel like:
+
+Open → enter destination → tap InstaHop → ride found.
+
+No extra decisions or clutter.The subscription portion of it can be in the settings. It can be an option in the settings in the settings can be just like a little. Tool kit, I’ll send a photo of the tool kit button.

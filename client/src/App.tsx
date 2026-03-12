@@ -25,6 +25,7 @@ import Admin from "@/pages/Admin";
 import Widget from "@/pages/Widget";
 import InstallApp from "@/pages/InstallApp";
 import SchedulePage from "@/pages/Schedule";
+import InstaHop from "@/pages/InstaHop";
 
 function Router() {
   return (
@@ -44,7 +45,8 @@ function Router() {
       <Route path="/widget" component={Widget} />
       <Route path="/install" component={InstallApp} />
       <Route path="/schedule" component={SchedulePage} />
-      <Route path="/hop" component={Dashboard} />
+      <Route path="/instahop" component={InstaHop} />
+      <Route path="/hop" component={InstaHop} />
       <Route component={NotFound} />
     </Switch>
   );
