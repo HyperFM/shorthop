@@ -1,0 +1,114 @@
+SHORTHOP FEATURE UPDATE — PICKUP CORRIDOR NAVIGATION + LIVE HOP TRACKING
+
+OBJECTIVE  
+When a user taps a Pickup Corridor, guide them to the pickup point with GPS navigation and animated status indicators showing Hopper and Driver positions.
+
+------------------------------------------------------------
+
+FEATURE 1 — CORRIDOR TAP BEHAVIOR
+
+When a user taps a Pickup Corridor card (ex: "Winchester Rd near I-75"):
+
+1. Open a navigation screen with a map.
+2. Show GPS walking directions guiding the Hopper to the corridor location.
+3. Display a progress path on the map showing the route from current location to pickup corridor.
+
+------------------------------------------------------------
+
+FEATURE 2 — LOCATION INDICATORS
+
+Use the following icons for live position indicators:
+
+Hopper location  
+• Use the blue character icon (blue figure standing alone)
+
+Driver location  
+• Use the green car icon (car by itself)
+
+Display both icons on the map when a driver is assigned.
+
+------------------------------------------------------------
+
+FEATURE 3 — WALKING ANIMATION
+
+While the Hopper is navigating to the corridor:
+
+• Show the blue Hopper icon moving along the path.
+• Map should show real-time walking navigation.
+• Display message:
+
+"Walk toward the pickup corridor."
+
+------------------------------------------------------------
+
+FEATURE 4 — DRIVER ARRIVAL
+
+When a driver accepts the hop:
+
+• Show both the Hopper icon and Driver car icon on the map.
+• Display distance between them.
+• Show ETA for driver arrival.
+
+------------------------------------------------------------
+
+FEATURE 5 — ACTIVE RIDE MODE
+
+Once Hopper enters the vehicle:
+
+Switch to LIVE RIDE TRACKING mode.
+
+Map behavior:
+
+• Replace icons with combined animation showing rider inside vehicle.
+• Use the "rider in car" image asset.
+• Show route progress to destination.
+• Continue live GPS tracking until ride completes.
+
+------------------------------------------------------------
+
+FEATURE 6 — CORRIDOR LIMIT
+
+Pickup Corridors list:
+
+• Default: show top 3 corridors near the user.
+• If more are available, allow scroll to view additional corridors.
+
+------------------------------------------------------------
+
+VISUAL STATES SUMMARY
+
+STATE 1  
+User walking to corridor  
+Icon: Blue Hopper figure
+
+STATE 2  
+Driver approaching pickup  
+Icons: Blue Hopper + Green Car
+
+STATE 3  
+Ride in progress  
+Icon: Rider inside vehicle
+
+------------------------------------------------------------
+
+USER FLOW
+
+User opens app  
+→ Selects corridor  
+→ Map opens with walking navigation  
+→ Driver accepts hop  
+→ Driver and Hopper locations appear  
+→ Hopper enters vehicle  
+→ Live ride tracking begins
+
+------------------------------------------------------------
+
+ASSETS REQUIRED
+
+hopper_icon.png  
+driver_car_icon.png  
+ride_active_icon.png
+
+------------------------------------------------------------
+
+END FEATURE UPDATE
