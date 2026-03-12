@@ -12,8 +12,9 @@ import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield,
 import { useLocation } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { api } from "@shared/routes";
 import { RideVibeSelector } from "@/components/RideVibeSelector";
 import { InterestBubbles } from "@/components/InterestBubbles";
@@ -591,6 +592,18 @@ export default function Settings() {
             </CardContent>
           </Card>
         )}
+
+        <Card data-testid="card-notifications-inbox">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="w-5 h-5" />
+              Alerts & Notifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <NotificationCenter />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

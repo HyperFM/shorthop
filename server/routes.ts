@@ -1102,6 +1102,69 @@ export async function registerRoutes(
     res.json({ spots });
   });
 
+  app.get('/api/schedules', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const userSchedules = await storage.getUserSchedules(req.user.id);
+      res.json(userSchedules);
+    } catch {
+      res.status(500).json({ message: "Failed to fetch schedules" });
+    }
+  });
+
+  app.post('/api/schedules', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { days, startLocation, destination, timeStart, timeEnd, returnTrip } = req.body;
+      if (!days || !startLocation || !destination || !timeStart || !timeEnd) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      const schedule = await storage.createSchedule({
+        userId: req.user.id,
+        days,
+        startLocation,
+        destination,
+        timeStart,
+        timeEnd,
+        returnTrip: returnTrip || false,
+        active: true,
+      });
+      res.json(schedule);
+    } catch {
+      res.status(500).json({ message: "Failed to create schedule" });
+    }
+  });
+
+  app.patch('/api/schedules/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { days, startLocation, destination, timeStart, timeEnd, returnTrip, active } = req.body;
+      const updates: Record<string, any> = {};
+      if (days !== undefined) updates.days = days;
+      if (startLocation !== undefined) updates.startLocation = startLocation;
+      if (destination !== undefined) updates.destination = destination;
+      if (timeStart !== undefined) updates.timeStart = timeStart;
+      if (timeEnd !== undefined) updates.timeEnd = timeEnd;
+      if (returnTrip !== undefined) updates.returnTrip = returnTrip;
+      if (active !== undefined) updates.active = active;
+      const schedule = await storage.updateSchedule(parseInt(req.params.id), req.user.id, updates);
+      if (!schedule) return res.status(404).json({ message: "Schedule not found" });
+      res.json(schedule);
+    } catch {
+      res.status(500).json({ message: "Failed to update schedule" });
+    }
+  });
+
+  app.delete('/api/schedules/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await storage.deleteSchedule(parseInt(req.params.id), req.user.id);
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to delete schedule" });
+    }
+  });
+
   // Driver Onboarding & Profile
   app.post('/api/driver/profile', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });

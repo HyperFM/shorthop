@@ -1,0 +1,176 @@
+ShortHop Product Update – Navigation, Scheduling, and Early Network Experience
+
+Goal  
+This update improves clarity, highlights scheduled shared routes (which are the core strength of ShortHop), and makes the early network feel active and engaging for new users.
+
+The design should remain sleek, simple, and modern—similar in clarity to major ride apps—but with ShortHop’s unique focus on shared routes and scheduled commuting.
+
+---
+
+Bottom Navigation Update
+
+Update the bottom navigation bar to simplify the structure and emphasize the core features.
+
+Current Navigation  
+Home  
+Community  
+Routes  
+Profile  
+Alerts  
+
+Updated Navigation  
+Home  
+Schedule  
+Hop  
+Network  
+Profile  
+
+Changes  
+Rename Community to Network  
+Rename Routes to Hop (primary ride request action)  
+Remove Alerts from the bottom navigation  
+Move Alerts/Notifications inside the Profile screen
+
+The Hop tab represents the main action: requesting or finding a ride immediately.
+
+---
+
+Schedule Feature (New Core Tab)
+
+Add a new Schedule tab where users can create recurring trips.
+
+The schedule system should allow users to:
+
+• Select days of the week (Mon–Sun)  
+• Choose starting location  
+• Choose destination  
+• Set a time window (example: 7:30–8:00 AM)  
+• Optionally enable return trips  
+
+Schedules must be editable anytime so users can adjust their weekly travel.
+
+This helps the system match users who regularly travel the same routes.
+
+---
+
+Schedule Reminder Banner (Home Screen)
+
+Add a dismissible banner notification encouraging users to add a schedule.
+
+Design  
+Orange rounded banner card  
+Clean and modern appearance  
+
+Text  
+
+Title  
+ShortHop works best with schedules
+
+Subtext  
+Add your regular trips and we’ll match you with people going the same way.
+
+Buttons  
+Add Schedule  
+Maybe Later
+
+Placement  
+This banner should appear above the ride search/location input area.
+
+If the user has no schedule saved, the banner should occasionally reappear.
+
+---
+
+Home Screen Layout Order
+
+Update the Home screen layout to prioritize the main actions.
+
+Recommended layout order:
+
+1. Schedule reminder banner  
+2. Ride search (current location → destination)  
+3. Corridor or route suggestions  
+4. Lexington ShortHop Network stats card
+
+---
+
+Network Screen Update
+
+Rename Community to Network.
+
+This screen highlights platform growth and community participation.
+
+Current stats already displayed should remain:
+
+Drivers  
+Hoppers  
+Total users  
+
+These stats help early users see that the platform is growing.
+
+---
+
+Live Activity Indicator
+
+Add a small activity section showing current network movement.
+
+Examples:
+
+• 2 riders traveling Richmond Rd this morning  
+• 1 driver heading toward downtown  
+• 3 new members joined today  
+
+This helps the platform feel active even during early growth.
+
+---
+
+Hop Button (Primary Action)
+
+The Hop button should represent requesting a ride immediately.
+
+When tapped, it opens the ride search interface.
+
+Optional micro-interaction  
+Add a small bounce or pulse animation when the Hop button is pressed to make the interface feel responsive.
+
+Keep animation subtle and smooth.
+
+---
+
+Visual Navigation Polish
+
+Improve the visual feel of the bottom navigation bar while keeping the design sleek.
+
+Suggested improvements:
+
+• Thin separator line above the navigation bar  
+• Subtle highlight when an icon is active  
+• Maintain the ShortHop color flow (blue → green → orange)
+
+The design should remain minimal and not overly animated.
+
+---
+
+Founding Member Progress
+
+Keep the Founding Member progress indicator on the Home screen.
+
+This helps early users see that the network is being built in real time.
+
+The goal is to show that users are joining and participating together.
+
+---
+
+Design Goals
+
+This update should achieve:
+
+• clearer navigation  
+• stronger emphasis on scheduled routes  
+• improved onboarding for new users  
+• a sleek modern interface  
+• visible network growth  
+• a stronger sense of community momentum
+
+The interface should stay clean, simple, and intuitive while highlighting ShortHop’s unique shared-route system.
+
+End of update request.

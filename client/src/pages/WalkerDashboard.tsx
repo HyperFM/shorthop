@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, X, Plus, Route, Bookmark } from "lucide-react";
+import { MapPin, Navigation, Clock, Share2, Flame, Award, Star, Lock, Compass, Users, Car, Radio, ChevronRight, X, Plus, Route, Bookmark, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -79,9 +79,16 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const lastCompletedRef = useRef<number | null>(null);
   const [showInsightBubble, setShowInsightBubble] = useState(false);
   const [selectedCorridor, setSelectedCorridor] = useState<PickupSpot | null>(null);
+  const [scheduleBannerDismissed, setScheduleBannerDismissed] = useState(() => {
+    try { return sessionStorage.getItem('schedule_banner_dismissed') === '1'; } catch { return false; }
+  });
 
   const { data: badges } = useQuery<{ id: number; badge: string; earnedAt: string | null }[]>({
     queryKey: ['/api/profile/badges'],
+  });
+
+  const { data: mySchedules = [] } = useQuery<any[]>({
+    queryKey: ['/api/schedules'],
   });
 
   const { data: networkStats } = useQuery<{ totalUsers: number; totalDrivers: number; totalHoppers: number; activeDrivers: number }>({
@@ -263,6 +270,45 @@ export default function WalkerDashboard({ user }: { user: User }) {
           <Share2 className="w-5 h-5" />
         </Button>
       </div>
+
+      {!scheduleBannerDismissed && mySchedules.length === 0 && !activeHop && (
+        <Card className="mb-4 border-orange-200/50 dark:border-orange-800/30 shadow-sm rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20" data-testid="card-schedule-banner">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center shrink-0 mt-0.5">
+                <Calendar className="w-5 h-5 text-orange-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground">ShortHop works best with schedules</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Add your regular trips and we'll match you with people going the same way.</p>
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    size="sm"
+                    className="h-9 rounded-xl bg-orange-500 hover:bg-orange-600 text-white gap-1.5 px-4"
+                    onClick={() => setLocation("/schedule")}
+                    data-testid="button-banner-add-schedule"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    Add Schedule
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 rounded-xl text-muted-foreground"
+                    onClick={() => {
+                      setScheduleBannerDismissed(true);
+                      try { sessionStorage.setItem('schedule_banner_dismissed', '1'); } catch {}
+                    }}
+                    data-testid="button-banner-dismiss"
+                  >
+                    Maybe Later
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {!activeHop && (
         <Card className="mb-4 border-border/50 shadow-md rounded-2xl" data-testid="card-destination-input">

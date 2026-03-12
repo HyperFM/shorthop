@@ -51,6 +51,9 @@ import {
   type CashoutRequest,
   type InsertCashoutRequest,
   donations,
+  schedules,
+  type Schedule,
+  type InsertSchedule,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -152,6 +155,11 @@ export interface IStorage {
     driversInArea: number;
     isActive: boolean;
   }>;
+
+  getUserSchedules(userId: number): Promise<Schedule[]>;
+  createSchedule(schedule: InsertSchedule): Promise<Schedule>;
+  updateSchedule(id: number, userId: number, updates: Partial<Schedule>): Promise<Schedule>;
+  deleteSchedule(id: number, userId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -923,6 +931,27 @@ export class DatabaseStorage implements IStorage {
       driversInArea: activeDrivers.length,
       isActive: user.isActive ?? false,
     };
+  }
+
+  async getUserSchedules(userId: number): Promise<Schedule[]> {
+    return db.select().from(schedules).where(eq(schedules.userId, userId)).orderBy(desc(schedules.createdAt));
+  }
+
+  async createSchedule(schedule: InsertSchedule): Promise<Schedule> {
+    const [created] = await db.insert(schedules).values(schedule).returning();
+    return created;
+  }
+
+  async updateSchedule(id: number, userId: number, updates: Partial<Schedule>): Promise<Schedule> {
+    const [updated] = await db.update(schedules)
+      .set(updates)
+      .where(and(eq(schedules.id, id), eq(schedules.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteSchedule(id: number, userId: number): Promise<void> {
+    await db.delete(schedules).where(and(eq(schedules.id, id), eq(schedules.userId, userId)));
   }
 }
 

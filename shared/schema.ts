@@ -324,5 +324,22 @@ export const insertCashoutSchema = createInsertSchema(cashoutRequests).omit({ id
 export type CashoutRequest = typeof cashoutRequests.$inferSelect;
 export type InsertCashoutRequest = z.infer<typeof insertCashoutSchema>;
 
+export const schedules = pgTable("schedules", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  days: jsonb("days").notNull(),
+  startLocation: text("start_location").notNull(),
+  destination: text("destination").notNull(),
+  timeStart: text("time_start").notNull(),
+  timeEnd: text("time_end").notNull(),
+  returnTrip: boolean("return_trip").default(false),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: true, createdAt: true });
+export type Schedule = typeof schedules.$inferSelect;
+export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
+
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

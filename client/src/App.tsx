@@ -22,6 +22,7 @@ import DriverOnboarding from "@/pages/DriverOnboarding";
 import Admin from "@/pages/Admin";
 import Widget from "@/pages/Widget";
 import InstallApp from "@/pages/InstallApp";
+import SchedulePage from "@/pages/Schedule";
 
 function Router() {
   return (
@@ -40,6 +41,8 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/widget" component={Widget} />
       <Route path="/install" component={InstallApp} />
+      <Route path="/schedule" component={SchedulePage} />
+      <Route path="/hop" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
   );

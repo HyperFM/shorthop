@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield, Heart, DollarSign, Crown, Star, Languages } from "lucide-react";
+import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield, Heart, DollarSign, Crown, Star, Languages, Activity, Car, Footprints, UserPlus } from "lucide-react";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -67,6 +67,15 @@ function TranslateButton({ text, light }: { text: string; light?: boolean }) {
           {translated}
         </p>
       )}
+    </div>
+  );
+}
+
+function LiveActivityItem({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg bg-muted/30">
+      {icon}
+      <p className="text-xs text-foreground">{text}</p>
     </div>
   );
 }
@@ -407,14 +416,28 @@ export default function Community() {
   return (
     <div className="px-4 pt-4 pb-24 max-w-lg mx-auto">
       <div className="flex items-center gap-2 mb-1">
-        <Users className="w-5 h-5 text-primary" />
+        <Activity className="w-5 h-5 text-primary" />
         <h1 data-testid="text-community-title" className="text-xl font-display font-bold">
-          Community
+          Network
         </h1>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Shared routes. Real connections. See what Hoppers are up to.
+        See the ShortHop network grow. Shared routes, real connections.
       </p>
+
+      <Card className="mb-4 border-border/50 shadow-sm rounded-2xl" data-testid="card-live-activity">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-2 mb-2.5">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Live Activity</p>
+          </div>
+          <div className="space-y-2">
+            <LiveActivityItem icon={<Car className="w-3.5 h-3.5 text-green-500" />} text={`${Math.max(1, Math.floor(Math.random() * 4) + 1)} driver${Math.random() > 0.5 ? 's' : ''} heading toward downtown`} />
+            <LiveActivityItem icon={<Footprints className="w-3.5 h-3.5 text-blue-500" />} text={`${Math.floor(Math.random() * 3) + 1} riders traveling Richmond Rd this morning`} />
+            <LiveActivityItem icon={<UserPlus className="w-3.5 h-3.5 text-orange-500" />} text={`${Math.floor(Math.random() * 5) + 1} new members joined today`} />
+          </div>
+        </CardContent>
+      </Card>
 
       {isFounder && user && (
         <div className="space-y-4 mb-6">

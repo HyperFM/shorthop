@@ -11,16 +11,25 @@ I prefer iterative development with a focus on delivering core features first. I
 ### UI/UX Decisions
 The application features a mobile-first, app-like UI with a bottom tab navigation bar for authenticated users, compact layouts (`max-w-lg mx-auto`), and app-style headers. Design incorporates nature-inspired greens (primary), orange (secondary), and blue (accent) themes, with CartoDB dark map tiles. Framer Motion is used for animations, and Shadcn components provide a consistent UI toolkit. A custom Flash Notification system (`showFlash(emoji, text, type)`) offers animated pop-up alerts.
 
+### Bottom Navigation (Updated)
+- **Home** (`/dashboard`) — Main dashboard with ride search, corridors, stats
+- **Schedule** (`/schedule`) — Recurring trip scheduler (days, locations, time windows, return trips)
+- **Hop** (green elevated button) — Primary ride action, navigates to dashboard with bounce animation
+- **Network** (`/community`) — Platform growth stats, live activity feed, community posts
+- **Profile** (`/settings`) — User settings, notifications inbox, preferences
+
 ### Technical Implementations
 - **User Tiers & Movement Options**: Implemented with "Standard ShortHop" (free), "FlexHop" (premium subscription for detours), and "Power Hop" (unlimited rides).
 - **Ride Vibe Preferences**: Users can select "Quiet Ride", "Friendly Chat" (default), or "Community Mode".
 - **Hop Buddy Rating System**: Post-ride rating (Great, Good, Neutral, Issue), optional "Ride again" and "Follow" buttons, and integrated tipping ($1/$2/$3/Custom).
 - **Trusted Hoppers**: A follow system where mutual follows designate "Trusted Hoppers" for improved matching.
-- **Community Feed**: A `/community` page allowing FlexHop users to post (500 char limit) and all users to read. Includes a direct chat feature with the admin ("Hyper").
-- **Notification System**: In-app notification center, flash notifications, and browser notification API integration with user-configurable toggles.
+- **Community Feed**: A `/community` page (renamed "Network") allowing FlexHop users to post (500 char limit) and all users to read. Includes a direct chat feature with the admin ("Hyper"). Live activity feed shows drivers, riders, and new members in real time.
+- **Schedule System**: Users create recurring trip schedules with day selection (Mon-Sun), start/destination locations, time windows, and optional return trips. Schedules are editable, toggleable (active/paused), and deletable. Home screen shows orange dismissible banner encouraging schedule creation if none exist.
+- **Pickup Corridor Navigation**: Road-based corridors (not landmarks). System finds the nearest point on busy roads (Nicholasville Rd, New Circle Rd, Man o' War, etc.) to user's position. Full-screen map overlay with 3 states: walking (blue), driver approaching (green), ride active (combined). Shows traffic flow directions so users stand on correct side of road.
+- **Notification System**: In-app notification center (moved from bottom nav to Profile/Settings page), flash notifications, and browser notification API integration with user-configurable toggles.
 - **Driver Onboarding & Verification**: A multi-step wizard (`/driver-onboarding`) for vehicle info, license/identity uploads, agreement, and notification prompts. Admin approval is required for activation.
 - **GO ACTIVE / GO OFFLINE Toggle**: Prominent toggle for verified drivers to control availability and location broadcasting.
-- **Admin Panel**: Restricted `/admin` route for super-admin (HyperFM) with tabs for overview, inbox, reports, user management, driver applications, active drivers, logs, mass notifications, founder chat, and payments.
+- **Admin Panel**: Restricted `/admin` route for super-admin (HyperFM) with tabs for overview, inbox, reports, user management, driver applications, active drivers, logs, mass notifications, founder chat, and payments. Actions dropdown menu for user management.
 - **Driver Features**: Routine route support, "Wheels" reward system (1 mile driven = 1 Wheel for drivers, 0.5 Wheels/mile for riders), and a Reward Store for redemption.
 - **Rider Request Flow**: Displays driver info upon match; shows "No drivers nearby" if unavailable.
 - **PWA Support**: Includes `manifest.json` for "Add to Home Screen" functionality and a service worker (`sw.js`) for offline caching.
@@ -48,19 +57,37 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Pricing Logic**: Server-side calculation for ride costs ($2.50/mile, minimum $2.50) to prevent client-side manipulation. Driver earns 1 Wheel/mile, platform retains $1.50/mile.
 - **Super Admin Role**: A single, designated super-admin account (HyperFM) with exclusive access to critical admin functions.
 
-## External Dependencies
-- **Stripe**: Payment gateway for ALL revenue streams. Connected account: `acct_1T9cTFEPpyO5NSxU`. Env vars: `STRIPE_SECRET_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` (optional, for production webhook verification). All 4 revenue streams use Stripe Checkout: hop payments ($2.50/mile), subscriptions (FlexHop $5/mo, PowerHop $15/mo recurring), donations (one-time), and tips (one-time). Webhook handler at `/api/stripe/webhook` processes `checkout.session.completed` and `customer.subscription.deleted` events. Stripe Connect Express for driver bank payouts (stripe_account_id, stripe_payouts_enabled columns). Trust proxy enabled for production session cookies.
-- **React**: Frontend library.
-- **Vite**: Build tool for frontend.
-- **Tailwind CSS**: Utility-first CSS framework.
-- **Framer Motion**: Animation library.
-- **TanStack Query**: Data fetching library.
-- **Express**: Backend web framework.
-- **Passport.js**: Authentication middleware.
-- **PostgreSQL**: Relational database.
-- **Drizzle ORM**: TypeScript ORM for PostgreSQL.
-- **`connect-pg-simple`**: PostgreSQL session store.
-- **Zod**: Schema declaration and validation library.
-- **Shadcn UI**: UI component library.
-- **Leaflet**: Interactive map library.
-- **CartoDB**: Map tile provider.
+### Database Tables
+- `users` — User accounts with roles, preferences, vehicle info, badges
+- `driver_applications` — Driver verification applications
+- `user_badges` — Achievement badges
+- `expansion_waitlist` — City expansion signups
+- `routine_routes` — Driver routine routes
+- `short_hops` — Ride requests and matches
+- `donations` — User donations
+- `rewards` / `user_redemptions` — Reward store system
+- `notifications` — In-app notifications
+- `hop_buddy_ratings` — Post-ride ratings
+- `follows` — Social follow system
+- `community_posts` — Community/Network feed posts
+- `walker_routes` — Saved hopper routes
+- `contact_messages` — Support messages
+- `reports` — User reports
+- `founder_messages` — Founder group chat
+- `vip_messages` — VIP direct messages
+- `cashout_requests` — Wheel cashout requests
+- `schedules` — Recurring trip schedules (days, locations, times, return trips)
+
+### Key Files
+- `client/src/pages/WalkerDashboard.tsx` — Hopper home screen
+- `client/src/pages/DriverDashboard.tsx` — Driver home screen
+- `client/src/pages/Schedule.tsx` — Schedule management page
+- `client/src/pages/Community.tsx` — Network page (renamed from Community)
+- `client/src/pages/Settings.tsx` — Profile/settings with notifications inbox
+- `client/src/pages/Admin.tsx` — Admin dashboard
+- `client/src/components/BottomTabBar.tsx` — 5-tab navigation (Home, Schedule, Hop, Network, Profile)
+- `client/src/components/CorridorNavigation.tsx` — Full-screen corridor map navigation
+- `client/src/components/NotificationCenter.tsx` — Notification inbox component
+- `server/routes.ts` — API routes including schedule CRUD, corridor guidance
+- `server/storage.ts` — Database operations
+- `shared/schema.ts` — Drizzle schema definitions
