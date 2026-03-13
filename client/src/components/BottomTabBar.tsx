@@ -28,6 +28,11 @@ function WalkerFigure({ size = 18 }: { size?: number }) {
   );
 }
 
+const WALK_CSS = `
+@keyframes shWalkPulse{0%,100%{transform:scale(1);opacity:0.35}50%{transform:scale(1.8);opacity:0.08}}
+@keyframes shWalkRipple{0%{transform:scale(1);opacity:0.4}100%{transform:scale(2.5);opacity:0}}
+`;
+
 function WalkTabButton({ isOnHop, onPress }: { isOnHop: boolean; onPress: () => void }) {
   return (
     <motion.button
@@ -35,99 +40,66 @@ function WalkTabButton({ isOnHop, onPress }: { isOnHop: boolean; onPress: () => 
       className="flex flex-col items-center justify-center flex-1 h-full relative"
       data-testid="tab-instahop"
     >
+      <style>{WALK_CSS}</style>
+
       <AnimatePresence mode="wait">
         {isOnHop ? (
           <motion.div
             key="walk"
-            initial={{ scale: 0.7, opacity: 0 }}
+            initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.7, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "backOut" }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="flex flex-col items-center -mt-3"
           >
-            <div className="relative flex items-center justify-center w-14 h-14">
-              {/* Outer glow ring — slow pulse */}
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background: "rgba(59,130,246,0.15)",
-                  animation: "walkRingOuter 2.2s ease-in-out infinite",
-                }}
-              />
-              {/* Middle ring — slightly faster */}
-              <div
-                className="absolute"
-                style={{
-                  inset: 4,
-                  borderRadius: "50%",
-                  border: "2px solid rgba(59,130,246,0.35)",
-                  animation: "walkRingMid 2.2s ease-out infinite 0.4s",
-                }}
-              />
-              {/* White glow shadow behind button */}
-              <div
-                className="absolute"
-                style={{
-                  inset: 8,
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.55)",
-                  filter: "blur(6px)",
-                }}
-              />
-              {/* Main blue circle */}
-              <div
-                className="relative flex items-center justify-center rounded-full"
-                style={{
-                  width: 42,
-                  height: 42,
-                  background: "linear-gradient(145deg, #3b82f6, #1d4ed8)",
-                  boxShadow:
-                    "0 0 0 3px rgba(255,255,255,0.85), 0 0 0 5px rgba(59,130,246,0.25), 0 6px 20px rgba(59,130,246,0.5)",
-                }}
-              >
-                <WalkerFigure size={20} />
+            {/* Outer pulsing ring — same as location indicator */}
+            <div className="relative flex items-center justify-center" style={{ width: 48, height: 48 }}>
+              <div style={{
+                position: "absolute", inset: 0, borderRadius: "50%",
+                background: "#3B82F6", opacity: 0.3,
+                animation: "shWalkPulse 2s ease-in-out infinite",
+              }} />
+              <div style={{
+                position: "absolute", inset: 4, borderRadius: "50%",
+                background: "#3B82F6", opacity: 0.15,
+                animation: "shWalkRipple 2.5s ease-out infinite",
+              }} />
+              {/* White glow */}
+              <div style={{
+                position: "absolute", inset: 6, borderRadius: "50%",
+                background: "rgba(255,255,255,0.6)", filter: "blur(5px)",
+              }} />
+              {/* Blue circle button */}
+              <div style={{
+                position: "relative", width: 40, height: 40, borderRadius: "50%",
+                background: "linear-gradient(145deg,#3b82f6,#1d4ed8)",
+                boxShadow: "0 0 0 2.5px rgba(255,255,255,0.9), 0 4px 16px rgba(59,130,246,0.5)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <WalkerFigure size={19} />
               </div>
             </div>
-            <span className="text-[10px] font-bold text-blue-500 leading-none -mt-1">
-              Walk
-            </span>
+            <span className="text-[10px] font-bold text-blue-500 leading-none" style={{ marginTop: -2 }}>Walk</span>
           </motion.div>
         ) : (
           <motion.div
             key="instahop"
-            initial={{ scale: 0.7, opacity: 0 }}
+            initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.7, opacity: 0 }}
-            transition={{ duration: 0.22, ease: "backOut" }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            transition={{ duration: 0.2 }}
             className="flex flex-col items-center gap-0.5 -mt-3"
           >
-            <div
-              className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg"
-              style={{
-                background: "linear-gradient(135deg, #22c55e, #16a34a)",
-                boxShadow: "0 4px 14px rgba(34,197,94,0.4)",
-              }}
-            >
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg" style={{
+              background: "linear-gradient(135deg,#22c55e,#16a34a)",
+              boxShadow: "0 4px 14px rgba(34,197,94,0.4)",
+            }}>
               <Zap className="w-5 h-5 text-white stroke-[2.5]" />
             </div>
-            <span className="text-[10px] font-bold text-green-600 dark:text-green-400 leading-none">
-              InstaHop
-            </span>
+            <span className="text-[10px] font-bold text-green-600 dark:text-green-400 leading-none">InstaHop</span>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Inject keyframe CSS once */}
-      <style>{`
-        @keyframes walkRingOuter {
-          0%, 100% { transform: scale(1); opacity: 0.45; }
-          50%       { transform: scale(1.5); opacity: 0.1; }
-        }
-        @keyframes walkRingMid {
-          0%   { transform: scale(1); opacity: 0.55; }
-          100% { transform: scale(2.1); opacity: 0; }
-        }
-      `}</style>
     </motion.button>
   );
 }

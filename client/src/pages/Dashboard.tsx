@@ -93,6 +93,44 @@ export default function Dashboard() {
         <NearbyHopperAlert hopper={currentHopper} onDismiss={dismiss} />
       )}
 
+      {/* Mode switcher — top of page, in flow */}
+      <div className="flex justify-center pt-4 pb-2" data-testid="mode-switcher">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full blur-xl bg-orange-400/20 scale-110 -z-10" />
+          <div className="relative flex items-center bg-card/98 backdrop-blur-xl rounded-full border border-orange-400/40 shadow-lg p-1">
+            <motion.div
+              className="absolute top-1 bottom-1 rounded-full"
+              animate={{
+                left: activeTab === "hopper" ? 4 : "50%",
+                right: activeTab === "driver" ? 4 : "50%",
+                background: activeTab === "hopper"
+                  ? "linear-gradient(135deg, #3b82f6, #1d4ed8)"
+                  : "linear-gradient(135deg, #16a34a, #15803d)",
+              }}
+              transition={{ type: "spring", stiffness: 500, damping: 35 }}
+            />
+            <button
+              onClick={() => { setActiveTab("hopper"); vibrate(); }}
+              className={`relative z-10 px-7 py-2 rounded-full text-xs font-black tracking-wide transition-colors ${
+                activeTab === "hopper" ? "text-white" : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid="tab-hopper"
+            >
+              Hopper
+            </button>
+            <button
+              onClick={() => { setActiveTab("driver"); vibrate(); }}
+              className={`relative z-10 px-7 py-2 rounded-full text-xs font-black tracking-wide transition-colors ${
+                activeTab === "driver" ? "text-white" : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid="tab-driver"
+            >
+              Driver
+            </button>
+          </div>
+        </div>
+      </div>
+
       {activeTab === "driver" ? (
         <DriverDashboard user={user} />
       ) : (
@@ -201,52 +239,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div
-        className="fixed left-1/2 -translate-x-1/2 z-40"
-        style={{ top: "50%", transform: "translate(-50%, -50%)" }}
-        data-testid="mode-switcher"
-      >
-        <div className="relative">
-          <div className="absolute inset-0 rounded-full blur-xl bg-orange-400/30 scale-110 -z-10" />
-          <div className="relative flex items-center bg-card/98 backdrop-blur-xl rounded-full border border-orange-400/50 shadow-2xl shadow-orange-500/20 p-1">
-            <motion.div
-              className="absolute top-1 bottom-1 rounded-full"
-              animate={{
-                left: activeTab === "hopper" ? 4 : "50%",
-                right: activeTab === "driver" ? 4 : "50%",
-                background: activeTab === "hopper"
-                  ? "linear-gradient(135deg, #3b82f6, #1d4ed8)"
-                  : "linear-gradient(135deg, #16a34a, #15803d)",
-              }}
-              transition={{ type: "spring", stiffness: 500, damping: 35 }}
-            />
-            <button
-              onClick={() => {
-                setActiveTab("hopper");
-                vibrate();
-              }}
-              className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
-                activeTab === "hopper" ? "text-white" : "text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid="tab-hopper"
-            >
-              Hopper
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("driver");
-                vibrate();
-              }}
-              className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
-                activeTab === "driver" ? "text-white" : "text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid="tab-driver"
-            >
-              Driver
-            </button>
-          </div>
-        </div>
-      </div>
     </>
   );
 }

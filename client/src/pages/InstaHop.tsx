@@ -101,7 +101,6 @@ function InstaHopMap() {
 }
 
 function StatsCarousel({ user }: { user: User }) {
-  const [active, setActive] = useState<number | null>(null);
   const stats = [
     { emoji: "🔥", value: user.hopStreak || 0, label: "streak", testId: "text-streak-count" },
     { emoji: "⭐", value: user.totalHops || 0, label: "hops", testId: "text-total-hops-count" },
@@ -110,7 +109,7 @@ function StatsCarousel({ user }: { user: User }) {
 
   return (
     <div
-      className="flex items-stretch gap-0.5 rounded-2xl overflow-hidden"
+      className="flex items-center rounded-2xl overflow-hidden"
       style={{
         background: "rgba(255,255,255,0.93)",
         backdropFilter: "blur(16px)",
@@ -118,46 +117,25 @@ function StatsCarousel({ user }: { user: User }) {
       }}
     >
       {stats.map((s, i) => (
-        <button
+        <div
           key={i}
-          onClick={() => setActive(active === i ? null : i)}
-          className="flex flex-col items-center justify-center px-2.5 py-1.5 transition-all duration-200 relative"
-          style={{
-            background: active === i ? "rgba(249,115,22,0.08)" : "transparent",
-            minWidth: 44,
-          }}
-          data-testid={`stat-btn-${s.label}`}
+          className="flex flex-col items-center justify-center px-3 py-2 relative"
         >
-          <div className="flex items-center gap-1">
-            <span className="text-sm leading-none">{s.emoji}</span>
-            <span
-              className="text-[12px] font-black leading-none text-gray-800"
-              data-testid={s.testId}
-            >
-              {s.value}
-            </span>
-          </div>
-          <AnimatePresence>
-            {active === i && (
-              <motion.span
-                initial={{ opacity: 0, scaleY: 0, height: 0 }}
-                animate={{ opacity: 1, scaleY: 1, height: "auto" }}
-                exit={{ opacity: 0, scaleY: 0, height: 0 }}
-                transition={{ duration: 0.15 }}
-                className="text-[8px] font-bold text-orange-500 overflow-hidden block mt-0.5"
-                style={{ transformOrigin: "top" }}
-              >
-                {s.label}
-              </motion.span>
-            )}
-          </AnimatePresence>
+          <span className="text-base leading-none">{s.emoji}</span>
+          <span
+            className="text-[13px] font-black leading-none text-gray-800 mt-0.5"
+            data-testid={s.testId}
+          >
+            {s.value}
+          </span>
+          <span className="text-[8px] font-semibold text-gray-400 mt-0.5">{s.label}</span>
           {i < stats.length - 1 && (
             <div
               className="absolute right-0 top-1/4 bottom-1/4 w-px"
-              style={{ background: "rgba(0,0,0,0.08)" }}
+              style={{ background: "rgba(0,0,0,0.09)" }}
             />
           )}
-        </button>
+        </div>
       ))}
     </div>
   );
