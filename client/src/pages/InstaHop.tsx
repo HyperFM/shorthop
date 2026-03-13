@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
@@ -16,6 +16,15 @@ import { showFlash } from "@/components/FlashNotification";
 import { WelcomeGlobe, hasSeenWelcomeGlobe } from "@/components/WelcomeGlobe";
 import { Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: undefined,
+  iconUrl: undefined,
+  shadowUrl: undefined,
+});
 import type { User } from "@shared/routes";
 import hopperMarkerUrl from "@assets/Bazaart_0DED352D-3176-4B56-8873-AA260ABD345D_1773383461603.png";
 import driverMarkerUrl from "@assets/Bazaart_D93EFD8E-BC20-40C4-BC5D-F9598DCF4904_1773383461604.png";
@@ -45,107 +54,96 @@ const CORRIDORS: Corridor[] = [
 
 type HopMode = "hop" | "walk" | "drive";
 
-function MapView({ mode, destination }: { mode: HopMode; destination: string }) {
-  const hopperDots = Array.from({ length: 6 }, (_, i) => ({
-    id: i,
-    top: 15 + Math.random() * 55,
-    left: 20 + Math.random() * 60,
-  }));
+const LEX_CENTER: [number, number] = [38.0406, -84.5037];
+
+const hopperIcon = L.icon({
+  iconUrl: hopperMarkerUrl,
+  iconSize: [48, 48],
+  iconAnchor: [24, 24],
+  className: "rounded-full drop-shadow-lg",
+});
+
+const driverIcon = L.icon({
+  iconUrl: driverMarkerUrl,
+  iconSize: [48, 48],
+  iconAnchor: [24, 24],
+  className: "rounded-full drop-shadow-lg",
+});
+
+function MapView({ mode, latitude, longitude }: { mode: HopMode; latitude: number | null; longitude: number | null }) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const accuracyRef = useRef<L.Circle | null>(null);
+
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    const center: [number, number] = latitude && longitude ? [latitude, longitude] : LEX_CENTER;
+
+    const map = L.map(mapContainerRef.current, {
+      center,
+      zoom: 15,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+    }).addTo(map);
+
+    L.control.attribution({ position: "bottomleft", prefix: false }).addTo(map);
+
+    mapRef.current = map;
+
+    setTimeout(() => map.invalidateSize(), 200);
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+      accuracyRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current || !latitude || !longitude) return;
+
+    const pos: [number, number] = [latitude, longitude];
+    const icon = mode === "drive" ? driverIcon : hopperIcon;
+
+    if (markerRef.current) {
+      markerRef.current.setLatLng(pos);
+      markerRef.current.setIcon(icon);
+    } else {
+      markerRef.current = L.marker(pos, { icon }).addTo(mapRef.current);
+    }
+
+    if (accuracyRef.current) {
+      accuracyRef.current.setLatLng(pos);
+    } else {
+      accuracyRef.current = L.circle(pos, {
+        radius: 50,
+        color: mode === "drive" ? "#f97316" : "#3b82f6",
+        fillColor: mode === "drive" ? "#f97316" : "#3b82f6",
+        fillOpacity: 0.12,
+        weight: 1.5,
+      }).addTo(mapRef.current);
+    }
+
+    mapRef.current.setView(pos, mapRef.current.getZoom(), { animate: true });
+  }, [latitude, longitude, mode]);
+
+  useEffect(() => {
+    if (accuracyRef.current) {
+      const color = mode === "drive" ? "#f97316" : "#3b82f6";
+      accuracyRef.current.setStyle({ color, fillColor: color });
+    }
+  }, [mode]);
 
   return (
-    <div className="absolute inset-0 bg-gradient-to-b from-green-50/80 via-green-100/40 to-green-50/60 dark:from-green-950/30 dark:via-green-900/15 dark:to-green-950/20" data-testid="map-view">
-      <div className="absolute inset-0 opacity-20" style={{
-        backgroundImage: `
-          linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px),
-          linear-gradient(180deg, rgba(0,0,0,0.03) 1px, transparent 1px)
-        `,
-        backgroundSize: '40px 40px',
-      }} />
-
-      <div className="absolute top-[20%] left-[15%] right-[15%] h-[2px]">
-        <div className="w-full h-full bg-gray-300/60 dark:bg-gray-600/40 rounded" />
-      </div>
-      <div className="absolute top-[40%] left-[10%] right-[20%] h-[2px]">
-        <div className="w-full h-full bg-gray-300/60 dark:bg-gray-600/40 rounded" />
-      </div>
-      <div className="absolute top-[60%] left-[5%] right-[10%] h-[2px]">
-        <div className="w-full h-full bg-gray-300/60 dark:bg-gray-600/40 rounded" />
-      </div>
-      <div className="absolute left-[30%] top-[10%] bottom-[40%] w-[2px]">
-        <div className="w-full h-full bg-gray-300/60 dark:bg-gray-600/40 rounded" />
-      </div>
-      <div className="absolute left-[60%] top-[15%] bottom-[35%] w-[2px]">
-        <div className="w-full h-full bg-gray-300/60 dark:bg-gray-600/40 rounded" />
-      </div>
-
-      {mode !== "drive" && (
-        <>
-          <motion.div
-            className="absolute left-[28%] top-[18%] right-[18%] h-[6px] rounded-full overflow-hidden"
-            style={{ background: "linear-gradient(90deg, rgba(34,197,94,0.6), rgba(34,197,94,0.3), rgba(34,197,94,0.6))" }}
-          >
-            <motion.div
-              className="h-full w-8 rounded-full bg-green-400/80"
-              animate={{ x: [0, 200, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            />
-          </motion.div>
-          <motion.div
-            className="absolute left-[8%] top-[38%] right-[22%] h-[6px] rounded-full overflow-hidden"
-            style={{ background: "linear-gradient(90deg, rgba(34,197,94,0.5), rgba(34,197,94,0.2), rgba(34,197,94,0.5))" }}
-          >
-            <motion.div
-              className="h-full w-8 rounded-full bg-green-400/80"
-              animate={{ x: [0, 180, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-            />
-          </motion.div>
-        </>
-      )}
-
-      {mode === "drive" && hopperDots.map(dot => (
-        <motion.div
-          key={dot.id}
-          className="absolute w-3 h-3 rounded-full bg-blue-500 shadow-lg shadow-blue-500/40"
-          style={{ top: `${dot.top}%`, left: `${dot.left}%` }}
-          animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
-          transition={{ duration: 2 + dot.id * 0.3, repeat: Infinity }}
-        />
-      ))}
-
-      <div className="absolute top-[30%] left-1/2 -translate-x-1/2">
-        {mode === "drive" ? (
-          <motion.div
-            className="relative"
-            animate={{ y: [-1, 1, -1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <div className="absolute inset-0 rounded-full blur-lg bg-blue-400/30 scale-[1.8]" />
-            <img src={driverMarkerUrl} alt="Driving" className="w-14 h-14 relative z-10 drop-shadow-lg rounded-full" />
-          </motion.div>
-        ) : (
-          <motion.div
-            className="relative"
-            animate={{ y: [-2, 2, -2] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            <div className="absolute inset-0 rounded-full blur-lg bg-blue-400/40 scale-[1.8]" />
-            <img src={hopperMarkerUrl} alt="Walking" className="w-14 h-14 relative z-10 drop-shadow-lg rounded-full" />
-          </motion.div>
-        )}
-      </div>
-
-      {destination && (
-        <div className="absolute top-[22%] left-1/2 -translate-x-1/2 bg-white/90 dark:bg-card/90 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-lg border border-border/30">
-          <p className="text-lg font-black text-foreground text-center">{destination}</p>
-        </div>
-      )}
-
-      {destination && (
-        <div className="absolute bottom-[42%] left-1/2 -translate-x-1/2 bg-white/80 dark:bg-card/80 backdrop-blur-sm rounded-full px-3 py-1 shadow border border-green-300/50">
-          <p className="text-[11px] font-bold text-green-600">1 Wheel = $1</p>
-        </div>
-      )}
+    <div className="absolute inset-0" data-testid="map-view">
+      <div ref={mapContainerRef} className="w-full h-full" />
     </div>
   );
 }
@@ -434,7 +432,7 @@ function InstaHopView({ user }: { user: User }) {
       )}
 
       <div className="fixed inset-0 top-[4rem] bottom-[4rem] flex flex-col">
-        <MapView mode={mode} destination={destination} />
+        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} />
 
         <div
           className="absolute bottom-0 left-0 right-0 bg-background/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 z-20"

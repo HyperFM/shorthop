@@ -40,6 +40,7 @@ export function useGeolocation() {
     loading: false,
     permitted: false,
   });
+  const watchIdRef = useRef<number | null>(null);
 
   const requestPermission = useCallback(() => {
     if (!navigator.geolocation) {
@@ -49,7 +50,11 @@ export function useGeolocation() {
 
     setState((prev) => ({ ...prev, loading: true }));
 
-    navigator.geolocation.getCurrentPosition(
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         setState({
           latitude: position.coords.latitude,
@@ -68,8 +73,16 @@ export function useGeolocation() {
           permitted: false,
         }));
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 3000 }
     );
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
   }, []);
 
   return { ...state, requestPermission };
