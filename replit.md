@@ -42,10 +42,10 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Super Admin Role**: A single designated super-admin account (HyperFM).
 
 ### Bottom Navigation Tabs (Order)
-1. **Connect** (`/community`) — City Chat, Founders Lounge, VIP Hyper Line, community posts
+1. **Connect** (`/community`) — Live Activity, Lexington ShortHop Network, City Chat, Founders Lounge, VIP Hyper Line, community posts
 2. **Schedule** (`/schedule`) — Recurring trip scheduler
 3. **Center Tab** (`/instahop`) — Label always says "Hop"; icon changes: blue walking figure (hopper) or orange car (driver)
-4. **Tailor** (`/dashboard`) — Hopper/Driver switcher at top, Ride Vibe, Privacy Controls, Alert Preferences
+4. **Tailor** (`/dashboard`) — Hopper/Driver switcher at top, Ride Vibe, Privacy Controls, Alert Preferences (no Founder Chat or Network Progress — those live in Connect)
 5. **Profile** (`/settings`) — Photo (color ring), public/private toggle, username, legal name, bio, interests, fun prompts, membership, notifications (slim single-row card), referral, install, contact/report
 
 ### OrangeGlow Border
@@ -53,7 +53,9 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - No flash notification when changing profile tab color
 
 ### InstaHop Panel
-- Full-screen map with FIXED panel pinned at 40% height (no swipe/expand/handle)
+- Full-screen map with panel anchored at 40% height from bottom
+- Panel can be swiped DOWN to dismiss (keeps ~60px peek visible), pull up to restore; cannot slide upward past resting position
+- Small drag handle bar at top of panel for grip affordance
 - Top row layout: 2 corridors stacked vertically (left), greeting (center), carousel at 75% scale (right)
 - Hopper: green InstaHop button + orange X cancel button appears during matching
 - Driver: orange Drive Now button, no corridors, carousel stays

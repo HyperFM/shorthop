@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useHops, useCancelHop } from "@/hooks/use-hops";
 import { HopBuddyRating } from "@/components/HopBuddyRating";
-import { FounderChat } from "@/components/FounderChat";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking, usePickupGuidance } from "@/hooks/use-location";
 import { PickupMapVisual } from "@/components/PickupMapVisual";
 import { CorridorNavigation } from "@/components/CorridorNavigation";
@@ -651,12 +650,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
         </Card>
       )}
 
-
-      {user.isFounder && (
-        <div id="founder-chat-section" className="mb-3">
-          <FounderChat />
-        </div>
-      )}
 
       <Dialog open={streakOpen} onOpenChange={setStreakOpen}>
         <DialogContent className="max-w-sm">

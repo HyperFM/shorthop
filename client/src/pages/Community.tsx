@@ -10,6 +10,7 @@ import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield, Heart, 
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
+import { NetworkProgress } from "@/components/NetworkProgress";
 
 function timeAgo(date: string | null): string {
   if (!date) return "";
@@ -589,6 +590,10 @@ export default function Community() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="mb-4">
+        <NetworkProgress />
+      </div>
 
       {user && (
         <div className="space-y-4 mb-6">

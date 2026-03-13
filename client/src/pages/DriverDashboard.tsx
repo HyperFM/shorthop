@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront, Share2, Flame, Award, Star, Power, Shield, AlertTriangle, Smartphone, Crown } from "lucide-react";
+import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront, Share2, Flame, Award, Star, Power, Shield, AlertTriangle, Smartphone } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,7 @@ import { useRoutes, useCreateRoute, useDeleteRoute } from "@/hooks/use-routes";
 import { useHops, useAcceptHop, useCompleteHop } from "@/hooks/use-hops";
 import { TrustedHoppers } from "@/components/TrustedHoppers";
 import { HopBuddyRating } from "@/components/HopBuddyRating";
-import { NetworkProgress } from "@/components/NetworkProgress";
 import { ShareRideCard } from "@/components/ShareRideCard";
-import { FounderChat } from "@/components/FounderChat";
 import { useLiveLocationBroadcast } from "@/hooks/use-location";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -681,34 +679,11 @@ export default function DriverDashboard({ user }: { user: User }) {
             </div>
           </CardContent>
         </Card>
-        {user.isFounder && (
-          <Card className="flex-1 border-orange-200/50 shadow-sm cursor-pointer hover:border-orange-300 transition-colors" onClick={() => {
-            const el = document.getElementById("founder-chat-section");
-            if (el) el.scrollIntoView({ behavior: "smooth" });
-          }} data-testid="card-founder-chat-link">
-            <CardContent className="p-3 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                <Crown className="w-4 h-4 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold">Founder Chat</p>
-                <p className="text-[9px] text-muted-foreground">Direct line</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        {user.tier === "flexhop" && (
+      {user.tier === "flexhop" && (
+        <div className="grid lg:grid-cols-2 gap-8">
           <TrustedHoppers />
-        )}
-        <NetworkProgress />
-      </div>
-
-      {user.isFounder && (
-        <div id="founder-chat-section" className="mt-4">
-          <FounderChat />
         </div>
       )}
 
