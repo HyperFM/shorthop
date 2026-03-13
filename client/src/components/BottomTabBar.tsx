@@ -113,7 +113,7 @@ export function BottomTabBar() {
               {isActive && (
                 <motion.div
                   layoutId="tabIndicator"
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-orange-500"
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-orange-500"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}
@@ -172,7 +172,7 @@ export function BottomTabBar() {
               {isActive && (
                 <motion.div
                   layoutId="tabIndicator"
-                  className={`absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full ${
+                  className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full ${
                     isProfileTab && isFlexPlus ? profileColor.replace("text-", "bg-") : "bg-orange-500"
                   }`}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
