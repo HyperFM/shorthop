@@ -293,7 +293,7 @@ function InstaHopView({ user }: { user: User }) {
         />
       )}
 
-      <div className="relative flex flex-col" style={{ height: "calc(100vh - 4rem)" }}>
+      <div className="fixed inset-0 top-[4rem] bottom-[4rem] flex flex-col">
         <MapView mode={mode} destination={destination} />
 
         <div
@@ -301,7 +301,7 @@ function InstaHopView({ user }: { user: User }) {
           style={{ height: "40%" }}
           data-testid="control-panel"
         >
-          <div className="px-4 pt-3 pb-4 h-full overflow-y-auto">
+          <div className="px-4 pt-3 pb-2 h-full overflow-y-auto">
             <div className="flex gap-2 mb-2">
               {!isDriverMode && (
                 <div className="flex flex-col gap-1.5 shrink-0">
