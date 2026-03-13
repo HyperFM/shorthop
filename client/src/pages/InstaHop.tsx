@@ -210,6 +210,11 @@ function DriveNowPanel({ user }: { user: User }) {
 
   return (
     <div className="space-y-3">
+      <p className="text-base font-extrabold text-foreground/70 text-center" data-testid="text-driver-greeting">
+        happy driving,{" "}
+        <span className="text-foreground font-black">{user.username}</span>
+      </p>
+
       {needsOnboarding && (
         <Card className="border-border/50 shadow-md rounded-2xl" data-testid="card-onboarding-prompt">
           <CardContent className="p-4 space-y-3">
@@ -472,7 +477,7 @@ function InstaHopView({ user }: { user: User }) {
                           key="greeting"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="text-[11px] font-semibold text-foreground/60 text-center mb-1"
+                          className="text-base font-extrabold text-foreground/70 text-center mb-1"
                           data-testid="text-instahop-greeting"
                         >
                           happy hopping,{" "}
