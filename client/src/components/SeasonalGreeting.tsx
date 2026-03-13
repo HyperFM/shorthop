@@ -183,8 +183,8 @@ export function SeasonalGreeting({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-2xl leading-none" data-testid="seasonal-emoji">{emoji}</span>
-            <h1 className={`text-lg font-display font-extrabold tracking-tight ${nameColor}`}>
+            <span className="text-3xl leading-none" data-testid="seasonal-emoji">{emoji}</span>
+            <h1 className={`text-xl font-display font-extrabold tracking-tight ${nameColor}`} style={{ textShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
               {greeting}
             </h1>
           </div>
