@@ -50,10 +50,10 @@ function WalkTabButton({ isOnHop, onPress }: { isOnHop: boolean; onPress: () => 
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="flex flex-col items-center -mt-3"
+            className="flex flex-col items-center gap-0.5"
           >
-            {/* Outer pulsing ring — same as location indicator */}
-            <div className="relative flex items-center justify-center" style={{ width: 48, height: 48 }}>
+            {/* Icon elevated with -mt-3, same as original InstaHop button */}
+            <div className="relative flex items-center justify-center -mt-3" style={{ width: 48, height: 48 }}>
               <div style={{
                 position: "absolute", inset: 0, borderRadius: "50%",
                 background: "#3B82F6", opacity: 0.3,
@@ -64,12 +64,10 @@ function WalkTabButton({ isOnHop, onPress }: { isOnHop: boolean; onPress: () => 
                 background: "#3B82F6", opacity: 0.15,
                 animation: "shWalkRipple 2.5s ease-out infinite",
               }} />
-              {/* White glow */}
               <div style={{
                 position: "absolute", inset: 6, borderRadius: "50%",
                 background: "rgba(255,255,255,0.6)", filter: "blur(5px)",
               }} />
-              {/* Blue circle button */}
               <div style={{
                 position: "relative", width: 40, height: 40, borderRadius: "50%",
                 background: "linear-gradient(145deg,#3b82f6,#1d4ed8)",
@@ -79,7 +77,7 @@ function WalkTabButton({ isOnHop, onPress }: { isOnHop: boolean; onPress: () => 
                 <WalkerFigure size={19} />
               </div>
             </div>
-            <span className="text-[10px] font-bold text-blue-500 leading-none" style={{ marginTop: -2 }}>Walk</span>
+            <span className="text-[10px] font-bold text-blue-500 leading-none">Walk</span>
           </motion.div>
         ) : (
           <motion.div
@@ -88,9 +86,9 @@ function WalkTabButton({ isOnHop, onPress }: { isOnHop: boolean; onPress: () => 
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="flex flex-col items-center gap-0.5 -mt-3"
+            className="flex flex-col items-center gap-0.5"
           >
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg" style={{
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg -mt-3" style={{
               background: "linear-gradient(135deg,#22c55e,#16a34a)",
               boxShadow: "0 4px 14px rgba(34,197,94,0.4)",
             }}>
