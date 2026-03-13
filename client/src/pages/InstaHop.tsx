@@ -411,7 +411,7 @@ function InstaHopView({ user }: { user: User }) {
         />
       )}
 
-      <div className="fixed inset-0 top-[4rem] bottom-[4rem] flex flex-col">
+      <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
         <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} />
 
         <div
