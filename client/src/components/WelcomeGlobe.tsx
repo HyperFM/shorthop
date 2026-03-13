@@ -29,12 +29,12 @@ export function WelcomeGlobe({ username, isReturning = true, onDismiss }: Welcom
     dismissed.current = true;
     markWelcomeGlobeSeen();
     setPhase("out");
-    setTimeout(onDismiss, 900);
+    setTimeout(onDismiss, 450);
   }
 
   useEffect(() => {
-    const inTimer = setTimeout(() => setPhase("hold"), 600);
-    holdTimerRef.current = setTimeout(() => startExit(), 3600);
+    const inTimer = setTimeout(() => setPhase("hold"), 250);
+    holdTimerRef.current = setTimeout(() => startExit(), 1300);
     return () => {
       clearTimeout(inTimer);
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
@@ -48,12 +48,11 @@ export function WelcomeGlobe({ username, isReturning = true, onDismiss }: Welcom
       {phase !== "out" ? (
         <motion.div
           key="globe-overlay"
-          className="fixed inset-0 z-[300] flex items-center justify-center pointer-events-auto"
+          className="fixed inset-0 z-[300] flex items-center justify-center pointer-events-none"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          onClick={startExit}
+          transition={{ duration: 0.3 }}
           data-testid="welcome-globe-overlay"
         >
           {/* Dark scrim */}
@@ -76,16 +75,9 @@ export function WelcomeGlobe({ username, isReturning = true, onDismiss }: Welcom
               filter: "blur(28px)",
             }}
             initial={{ scale: 0.4, opacity: 0 }}
-            animate={{
-              scale: phase === "in" ? [0.4, 1.15, 1] : [1, 1.06, 1],
-              opacity: 1,
-            }}
-            exit={{ scale: 1.6, opacity: 0 }}
-            transition={
-              phase === "in"
-                ? { duration: 0.65, ease: "easeOut" }
-                : { duration: 2.8, repeat: Infinity, ease: "easeInOut" }
-            }
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 1.5, opacity: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
           />
 
           {/* Core globe */}
@@ -99,16 +91,9 @@ export function WelcomeGlobe({ username, isReturning = true, onDismiss }: Welcom
               filter: "blur(2px)",
             }}
             initial={{ scale: 0.3, opacity: 0 }}
-            animate={{
-              scale: phase === "in" ? [0.3, 1.08, 0.97, 1] : [1, 1.03, 1],
-              opacity: 1,
-            }}
-            exit={{ scale: 1.5, opacity: 0 }}
-            transition={
-              phase === "in"
-                ? { duration: 0.7, ease: "easeOut" }
-                : { duration: 3.5, repeat: Infinity, ease: "easeInOut" }
-            }
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 1.4, opacity: 0 }}
+            transition={{ duration: 0.38, ease: "easeOut" }}
           />
 
           {/* Inner shimmer highlight */}
@@ -129,46 +114,24 @@ export function WelcomeGlobe({ username, isReturning = true, onDismiss }: Welcom
           {/* Text — centered in globe */}
           <motion.div
             className="relative z-10 flex flex-col items-center select-none"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -80, scale: 0.92 }}
-            transition={
-              phase === "in"
-                ? { delay: 0.25, duration: 0.5, ease: "easeOut" }
-                : { duration: 0.85, ease: "easeIn" }
-            }
+            initial={{ opacity: 0, scale: 0.88 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.94 }}
+            transition={{ delay: 0.12, duration: 0.32, ease: "easeOut" }}
           >
             {/* Small label above */}
-            <motion.p
-              className="text-[11px] font-semibold tracking-[0.28em] uppercase text-sky-300/80 mb-1.5 leading-none"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
+            <p className="text-[11px] font-semibold tracking-[0.28em] uppercase text-sky-300/80 mb-1.5 leading-none">
               {greeting}
-            </motion.p>
+            </p>
 
             {/* Big name */}
-            <motion.p
-              className="text-5xl font-black text-white tracking-tight leading-none drop-shadow-[0_2px_24px_rgba(56,189,248,0.6)]"
-              style={{ textShadow: "0 0 32px rgba(56,189,248,0.55), 0 2px 8px rgba(0,0,0,0.6)" }}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.32, type: "spring", stiffness: 280, damping: 22 }}
+            <p
+              className="text-5xl font-black text-white tracking-tight leading-none"
+              style={{ textShadow: "0 0 32px rgba(56,189,248,0.65), 0 2px 8px rgba(0,0,0,0.5)" }}
             >
               {username}
-            </motion.p>
+            </p>
           </motion.div>
-
-          {/* Tap to skip hint */}
-          <motion.p
-            className="absolute bottom-16 text-[10px] text-white/20 tracking-widest uppercase"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.5 }}
-          >
-            tap to continue
-          </motion.p>
         </motion.div>
       ) : null}
     </AnimatePresence>
