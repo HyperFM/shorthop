@@ -142,8 +142,8 @@ function MapView({ mode, latitude, longitude }: { mode: HopMode; latitude: numbe
   }, [mode]);
 
   return (
-    <div className="absolute inset-0" data-testid="map-view">
-      <div ref={mapContainerRef} className="w-full h-full" />
+    <div className="absolute inset-0 z-0" data-testid="map-view">
+      <div ref={mapContainerRef} className="w-full h-full" style={{ zIndex: 0 }} />
     </div>
   );
 }
