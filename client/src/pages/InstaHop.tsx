@@ -35,6 +35,7 @@ function InstaHopView({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const { data: hops } = useHops();
   const requestHop = useRequestHop();
+  const [payWithWheels, setPayWithWheels] = useState(false);
   const geo = useGeolocation();
   const [showGlobe, setShowGlobe] = useState(() => !hasSeenWelcomeGlobe());
   const [greetingVisible, setGreetingVisible] = useState(() => hasSeenWelcomeGlobe());
@@ -74,8 +75,9 @@ function InstaHopView({ user }: { user: User }) {
   }, []);
 
   const onSubmit = (data: z.infer<typeof searchSchema>) => {
-    requestHop.mutate({ ...data, hopType: 'short_hop' } as any, {
+    requestHop.mutate({ ...data, hopType: 'short_hop', payWithWheels } as any, {
       onSuccess: () => {
+        setPayWithWheels(false);
         showFlash("⚡", "InstaHop requested!", "success");
       }
     });
@@ -196,6 +198,21 @@ function InstaHopView({ user }: { user: User }) {
               {requestHop.isPending ? 'Finding...' : 'InstaHop'}
             </motion.button>
 
+            {(user.credits || 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => setPayWithWheels(!payWithWheels)}
+                className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                  payWithWheels
+                    ? 'bg-secondary/20 text-secondary border border-secondary/40'
+                    : 'bg-muted/30 text-muted-foreground border border-transparent hover:border-secondary/30'
+                }`}
+                data-testid="toggle-instahop-wheels"
+              >
+                <span>🛞</span>
+                {payWithWheels ? `Paying with Wheels (${user.credits} available)` : `Pay with Wheels (${user.credits} 🛞)`}
+              </button>
+            )}
           </form>
         </motion.div>
 
@@ -241,6 +258,7 @@ function InstaHopView({ user }: { user: User }) {
             <Car className="w-3.5 h-3.5" />
             <span>{driversInCity > 0 ? `${driversInCity} driver${driversInCity !== 1 ? 's' : ''} active nearby` : 'Drivers coming soon'}</span>
           </div>
+          <p className="text-[10px] text-muted-foreground/60 mt-1">$1–5 per hop</p>
         </motion.div>
       </div>
     </div>

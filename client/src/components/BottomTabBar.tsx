@@ -1,16 +1,8 @@
 import { useLocation } from "wouter";
-import { Calendar, Zap, Activity, User, Car } from "lucide-react";
+import { Calendar, Zap, Activity, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-
-function getActiveMode(): "hopper" | "driver" {
-  try {
-    return (localStorage.getItem("sh-active-mode") as "hopper" | "driver") || "hopper";
-  } catch {
-    return "hopper";
-  }
-}
 
 function BowTieIcon({ className }: { className?: string }) {
   return (
@@ -56,23 +48,14 @@ export function BottomTabBar() {
   const { data: user } = useAuth();
   const [hopBounce, setHopBounce] = useState(false);
   const [profileColor, setProfileColor] = useState(getProfileTabColor);
-  const [activeMode, setActiveMode] = useState<"hopper" | "driver">(getActiveMode);
 
   useEffect(() => {
     function onColorChange(e: Event) {
       const color = (e as CustomEvent).detail;
       if (color) setProfileColor(color);
     }
-    function onModeChange(e: Event) {
-      const mode = (e as CustomEvent).detail as "hopper" | "driver";
-      if (mode) setActiveMode(mode);
-    }
     window.addEventListener("sh-profile-color-change", onColorChange);
-    window.addEventListener("sh-mode-change", onModeChange);
-    return () => {
-      window.removeEventListener("sh-profile-color-change", onColorChange);
-      window.removeEventListener("sh-mode-change", onModeChange);
-    };
+    return () => window.removeEventListener("sh-profile-color-change", onColorChange);
   }, []);
 
   if (!user) return null;
@@ -99,45 +82,23 @@ export function BottomTabBar() {
           const inactiveColor = isProfileTab && isFlexPlus ? profileColor.replace("-500", "-400").replace("-400", "-300") : "";
 
           if ((tab as any).isHop) {
-            const isDriverMode = activeMode === "driver";
             return (
               <motion.button
                 key={tab.path}
                 onClick={() => {
                   setHopBounce(true);
                   setTimeout(() => setHopBounce(false), 400);
-                  setLocation(isDriverMode ? "/dashboard" : "/instahop");
+                  setLocation("/instahop");
                 }}
                 animate={hopBounce ? { scale: [1, 1.2, 0.95, 1.05, 1] } : {}}
                 transition={{ duration: 0.4 }}
                 className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative"
-                data-testid={isDriverMode ? "tab-drive" : "tab-instahop"}
+                data-testid="tab-instahop"
               >
-                {isDriverMode ? (
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 bg-gradient-to-br from-blue-500 to-blue-700 -mt-3">
-                    <Car className="w-5 h-5 text-white stroke-[2.5]" />
-                  </div>
-                ) : (
-                  <div
-                    className="w-11 h-11 rounded-2xl flex items-center justify-center -mt-3 overflow-hidden relative"
-                    style={{
-                      background: "linear-gradient(135deg, #1a56db 0%, #1e40af 100%)",
-                      boxShadow: "0 4px 14px rgba(37,99,235,0.45), 0 0 0 2px rgba(37,99,235,0.25)",
-                    }}
-                  >
-                    <img
-                      src="/walker-figure.jpeg"
-                      alt="Walk"
-                      className="w-9 h-9 object-cover scale-110"
-                      style={{ mixBlendMode: "multiply" }}
-                    />
-                  </div>
-                )}
-                <span className={`text-[10px] font-bold leading-none ${
-                  isDriverMode ? "text-blue-600 dark:text-blue-400" : "text-blue-500 dark:text-blue-400"
-                }`}>
-                  {isDriverMode ? "Drive" : "Walk"}
-                </span>
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/25 -mt-3">
+                  <Zap className="w-5 h-5 text-white stroke-[2.5]" />
+                </div>
+                <span className="text-[10px] font-bold leading-none text-green-600 dark:text-green-400">InstaHop</span>
               </motion.button>
             );
           }
@@ -160,7 +121,7 @@ export function BottomTabBar() {
               {isActive && (
                 <motion.div
                   layoutId="tabIndicator"
-                  className={`absolute top-0 inset-x-0 mx-auto w-8 h-0.5 rounded-full ${
+                  className={`absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full ${
                     isProfileTab && isFlexPlus ? profileColor.replace("text-", "bg-") : "bg-orange-500"
                   }`}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
