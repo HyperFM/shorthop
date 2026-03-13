@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -28,6 +28,39 @@ import InstallApp from "@/pages/InstallApp";
 import SchedulePage from "@/pages/Schedule";
 import InstaHop from "@/pages/InstaHop";
 
+function FloatingStats() {
+  const { data: user } = useAuth();
+  if (!user) return null;
+  return (
+    <div
+      className="fixed left-0 right-0 z-40 flex items-center justify-center pointer-events-none"
+      style={{ bottom: "5.25rem" }}
+    >
+      <div className="relative pointer-events-auto">
+        <div className="absolute inset-0 rounded-full blur-md bg-orange-400/20 scale-110" />
+        <div className="relative flex items-center gap-0 bg-background/97 backdrop-blur-lg border border-orange-400/35 rounded-full shadow-lg px-1 py-0.5">
+          <div className="flex items-center gap-1 px-3 py-1.5">
+            <span className="text-sm leading-none">🔥</span>
+            <span className="text-[11px] font-black text-foreground leading-none" data-testid="text-streak-count">{user.hopStreak || 0}</span>
+            <span className="text-[9px] text-muted-foreground font-semibold ml-0.5">streak</span>
+          </div>
+          <div className="w-px h-4 bg-border/60" />
+          <div className="flex items-center gap-1 px-3 py-1.5">
+            <span className="text-sm leading-none">⭐</span>
+            <span className="text-[11px] font-black text-foreground leading-none" data-testid="text-total-hops-count">{user.totalHops || 0}</span>
+            <span className="text-[9px] text-muted-foreground font-semibold ml-0.5">hops</span>
+          </div>
+          <div className="w-px h-4 bg-border/60" />
+          <div className="flex items-center gap-1 px-3 py-1.5">
+            <span className="text-sm leading-none">🛞</span>
+            <span className="text-[11px] font-black text-foreground leading-none">{user.credits || 0}</span>
+            <span className="text-[9px] text-muted-foreground font-semibold ml-0.5">wheels</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function OrangeGlow() {
   return (
@@ -65,24 +98,6 @@ function Router() {
   );
 }
 
-function AppInner() {
-  const [location] = useLocation();
-  const isHopPage = location === "/instahop" || location === "/hop";
-
-  return (
-    <>
-      <OrangeGlow />
-      <Toaster />
-      <FlashNotificationContainer />
-      <NavBar />
-      <main className={isHopPage ? "" : "min-h-screen pb-32"}>
-        <Router />
-      </main>
-      <BottomTabBar />
-    </>
-  );
-}
-
 function App() {
   const [splashDone, setSplashDone] = useState(false);
 
@@ -93,7 +108,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AppInner />
+        <OrangeGlow />
+        <Toaster />
+        <FlashNotificationContainer />
+        <NavBar />
+        <main className="min-h-screen pb-32">
+          <Router />
+        </main>
+        <FloatingStats />
+        <BottomTabBar />
       </TooltipProvider>
     </QueryClientProvider>
   );
