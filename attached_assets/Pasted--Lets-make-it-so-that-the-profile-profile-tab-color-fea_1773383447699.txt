@@ -1,0 +1,45 @@
+
+
+Lets make it so that the profile profile tab color feature changes the ring around the profile square and the circle around the profile image and lets make both of them thicker boarders and add a public/private option 
+
+
+Remove the top and bottom of the orange boarder and make sure both sides go from the top to bottom and make a fade effect fading up and down softly and slowly 
+
+
+The tab that says notifications on the profile section needs to fit in with the other options surrounding it like contact short hop and install short hop and report an issue lets make the whole thing one long button to view all notification as well as a mark all as read button on the same slab and take the extra space off
+
+
+Lets make it so that when the switcher is switched from hopper to driver the green instahop button should change to orange and It should be called DriveNow with a the car logo ill send you as a image you can remove the background and make it fit and look neat 
+
+Also when a hopper makes a instahop request with both addresses it switches to the tailor tad I don’t want it to ever show the searching for drivers tab on the tailors tab lets remove that and keep the user on the instahop panel and just change the instahup button orange and say matching you.. 
+
+
+
+the middle tab should show a full screen and fully accurate gps map screen with the location of the user behind the panel and they should be directed to pay with either their wheels or the payment system stripe 1 wheel = $1 and the hoppers should pay $1.50 per .5/mile 
+
+
+the current location indicator should have the blue walking figure attached to it I will attach it to this update
+
+
+The instahop green button needs to change to a walk button and be relabeled walk and also it needs to be blue with the same walking figure I attached to this It should fit perfectly not stoking the top bottom or sides of the now blue button 
+
+
+
+When the hopper clicks on insta hop at the bottom the button should also turn blue and change to walk and have a blue walk character ill attach below I do want you to use the one I send you give him a glow so the blue stands out over the already blue button
+
+
+Do not change the large instahop button on the panel it stays the same 
+
+
+Make the corridor Buttons sit next to each other the left side of the panel on top of it and lower the panel since it should have extra space 
+
+
+Replace small green outlined zap button that changes the panel from drive now to walk and instahop with the streak/hops/wheels carosel just completely delete it I don’t want this button 
+
+When someone is on the driver option the middle panel should automatically change from instahop to DriveNow it should be the sane panel but for drivers taking impulsive drives and wanting to make money and help hoppers on the way with no corridor indicators necessary but the carousel remains as well as the current location but use the vehicle animation I attached as the current location 
+
+For the hopper selection I want a close up accurate gps showing their location and nearest road 
+
+For drivers I want the same but with the different indicator
+
+I will submit the driver and hopper current location indicators already edited in the circles for you to use directly 

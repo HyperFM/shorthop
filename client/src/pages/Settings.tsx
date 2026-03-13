@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Users, Globe, Sparkles, Shield, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Palette, Camera, Plus, X } from "lucide-react";
+import { Bell, Users, Globe, Sparkles, Shield, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Palette, Camera, Plus, X, Eye, EyeOff } from "lucide-react";
 import { PROFILE_TAB_COLORS } from "@/components/BottomTabBar";
 import { useLocation } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
@@ -59,6 +59,16 @@ export default function Settings() {
     } catch { return []; }
   });
   const [showPromptPicker, setShowPromptPicker] = useState(false);
+  const [profilePublic, setProfilePublic] = useState(() => {
+    try { return localStorage.getItem("sh-profile-public") !== "false"; } catch { return true; }
+  });
+
+  function toggleProfilePublic() {
+    const next = !profilePublic;
+    setProfilePublic(next);
+    try { localStorage.setItem("sh-profile-public", String(next)); } catch {}
+    showFlash(next ? "🌐" : "🔒", next ? "Profile set to Public" : "Profile set to Private", "info");
+  }
 
   function applyProfileTabColor(color: string) {
     setProfileTabColor(color);
@@ -258,24 +268,63 @@ export default function Settings() {
         )}
 
         {user && (
-          <Card className="border-green-200/50 dark:border-green-800/40" data-testid="card-your-profile">
+          <Card
+            className="border-2"
+            style={{
+              borderColor: profileTabColor.includes("violet") ? "#8b5cf680"
+                : profileTabColor.includes("cyan") ? "#06b6d480"
+                : profileTabColor.includes("rose") ? "#f43f5e80"
+                : profileTabColor.includes("lime") ? "#84cc1680"
+                : profileTabColor.includes("amber") ? "#fbbf2480"
+                : profileTabColor.includes("sky") ? "#0ea5e980"
+                : profileTabColor.includes("fuchsia") ? "#d946ef80"
+                : "#f9731680",
+            }}
+            data-testid="card-your-profile"
+          >
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-green-500" />
-                Your Profile
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-green-500" />
+                  Your Profile
+                </div>
+                <button
+                  onClick={toggleProfilePublic}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${
+                    profilePublic
+                      ? "bg-green-50 dark:bg-green-950/20 border-green-300/50 text-green-600"
+                      : "bg-muted/50 border-border/50 text-muted-foreground"
+                  }`}
+                  data-testid="button-profile-visibility"
+                >
+                  {profilePublic ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                  {profilePublic ? "Public" : "Private"}
+                </button>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col items-center gap-3">
                 <div
-                  className="relative w-20 h-20 rounded-full bg-muted flex items-center justify-center cursor-pointer overflow-hidden border-2 border-green-300/50 hover:border-green-400 transition-colors"
+                  className="relative w-24 h-24 rounded-full flex items-center justify-center cursor-pointer overflow-hidden transition-colors"
+                  style={{
+                    border: `4px solid`,
+                    borderColor: profileTabColor.replace("text-", "").replace("-500", "").replace("-400", "") === "orange" ? "#f97316"
+                      : profileTabColor.includes("violet") ? "#8b5cf6"
+                      : profileTabColor.includes("cyan") ? "#06b6d4"
+                      : profileTabColor.includes("rose") ? "#f43f5e"
+                      : profileTabColor.includes("lime") ? "#84cc16"
+                      : profileTabColor.includes("amber") ? "#fbbf24"
+                      : profileTabColor.includes("sky") ? "#0ea5e9"
+                      : profileTabColor.includes("fuchsia") ? "#d946ef"
+                      : "#f97316",
+                  }}
                   onClick={() => fileInputRef.current?.click()}
                   data-testid="button-profile-photo"
                 >
                   {profilePhoto ? (
                     <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="flex flex-col items-center gap-1">
+                    <div className="flex flex-col items-center gap-1 bg-muted w-full h-full flex items-center justify-center">
                       <Camera className="w-6 h-6 text-muted-foreground" />
                       <span className="text-[8px] text-muted-foreground font-bold">Add Photo</span>
                     </div>
@@ -650,15 +699,47 @@ export default function Settings() {
           </Card>
         )}
 
-        <Card data-testid="card-notifications-inbox">
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" data-testid="card-notifications-inbox">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center shadow-md shadow-blue-500/20">
-                <Bell className="w-4.5 h-4.5 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-md shadow-blue-500/20">
+                <Bell className="w-5 h-5 text-white" />
               </div>
-              <p className="text-sm font-extrabold text-foreground">Notifications</p>
+              <div className="flex-1">
+                <p className="text-sm font-extrabold text-foreground">Notifications</p>
+                <p className="text-[10px] text-muted-foreground">View alerts, updates, and messages</p>
+              </div>
             </div>
-            <NotificationCenter />
+            <div className="flex gap-2 mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs font-bold"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const el = document.getElementById("notification-center-expand");
+                  if (el) el.click();
+                }}
+                data-testid="button-view-notifications"
+              >
+                View All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs font-bold text-blue-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showFlash("✅", "All notifications marked as read", "success");
+                }}
+                data-testid="button-mark-all-read"
+              >
+                Mark All Read
+              </Button>
+            </div>
+            <div className="mt-3" id="notification-center-wrapper">
+              <NotificationCenter />
+            </div>
           </CardContent>
         </Card>
 

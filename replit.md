@@ -41,6 +41,30 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Pricing Logic**: Server-side calculation for ride costs ($3.00/mile, minimum $1.50).
 - **Super Admin Role**: A single designated super-admin account (HyperFM).
 
+### Bottom Navigation Tabs (Order)
+1. **Connect** (`/community`) — City Chat, Founders Lounge, VIP Hyper Line, community posts
+2. **Schedule** (`/schedule`) — Recurring trip scheduler
+3. **Center Tab** (`/instahop`) — Mode-aware: blue "Walk" (hopper) or orange "DriveNow" (driver) using custom marker images
+4. **Tailor** (`/dashboard`) — Hopper/Driver switcher at top, Ride Vibe, Privacy Controls, Alert Preferences
+5. **Profile** (`/settings`) — Photo (color ring), public/private toggle, username, legal name, bio, interests, fun prompts, membership, notifications (compact card), referral, install, contact/report
+
+### OrangeGlow Border
+- Left/right sides only (no top/bottom) with soft fade at both ends
+- 3px solid line + 32px glow behind
+
+### InstaHop Panel
+- Full-screen map with sliding panel (<40% height)
+- Hopper: green InstaHop button + 4 corridor buttons + carousel
+- Driver: orange Drive Now button, no corridors, carousel stays
+- Matching state: stays on InstaHop, orange "matching you..." button (no redirect)
+- No mode toggle button — carousel sits next to main button
+- Custom map markers: `hopper-marker.png` and `driver-marker.png`
+
+### Profile Color System
+- Profile tab color changes: ring around photo circle (4px), profile card border (2px)
+- Public/Private visibility toggle on profile card header
+- Stored in `sh-profile-tab-color` and `sh-profile-public` localStorage
+
 ## External Dependencies
 - **Stripe**: For subscription management and payment processing.
 - **MyMemory API**: For multi-language auto-translation functionality.

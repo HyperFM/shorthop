@@ -15,8 +15,8 @@ import { showFlash } from "@/components/FlashNotification";
 import { WelcomeGlobe, hasSeenWelcomeGlobe } from "@/components/WelcomeGlobe";
 import { Loader2 } from "lucide-react";
 import type { User } from "@shared/routes";
-import carIconUrl from "@assets/Bazaart_9CBD9453-5426-403A-86B2-695880EF24E1_1773378532833.jpeg";
-import walkerIconUrl from "@assets/Bazaart_9CBD9453-5426-403A-86B2-695880EF24E1_1773378565668.jpeg";
+import hopperMarkerUrl from "@assets/Bazaart_0DED352D-3176-4B56-8873-AA260ABD345D_1773383461603.png";
+import driverMarkerUrl from "@assets/Bazaart_D93EFD8E-BC20-40C4-BC5D-F9598DCF4904_1773383461604.png";
 
 const searchSchema = z.object({
   startLocation: z.string().min(2, "Required"),
@@ -104,29 +104,24 @@ function MapView({ mode, destination }: { mode: HopMode; destination: string }) 
       ))}
 
       <div className="absolute top-[30%] left-1/2 -translate-x-1/2">
-        {mode === "walk" ? (
-          <motion.div
-            className="relative"
-            animate={{ y: [-2, 2, -2] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            <div className="absolute inset-0 rounded-full blur-lg bg-blue-400/40 scale-150" />
-            <img src={walkerIconUrl} alt="Walking" className="w-12 h-12 relative z-10 drop-shadow-lg" />
-          </motion.div>
-        ) : mode === "drive" ? (
+        {mode === "drive" ? (
           <motion.div
             className="relative"
             animate={{ y: [-1, 1, -1] }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            <img src={carIconUrl} alt="Driving" className="w-14 h-14 drop-shadow-lg" />
+            <div className="absolute inset-0 rounded-full blur-lg bg-blue-400/30 scale-[1.8]" />
+            <img src={driverMarkerUrl} alt="Driving" className="w-14 h-14 relative z-10 drop-shadow-lg rounded-full" />
           </motion.div>
         ) : (
           <motion.div
-            className="w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow-lg"
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
+            className="relative"
+            animate={{ y: [-2, 2, -2] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <div className="absolute inset-0 rounded-full blur-lg bg-blue-400/40 scale-[1.8]" />
+            <img src={hopperMarkerUrl} alt="Walking" className="w-14 h-14 relative z-10 drop-shadow-lg rounded-full" />
+          </motion.div>
         )}
       </div>
 
@@ -137,7 +132,7 @@ function MapView({ mode, destination }: { mode: HopMode; destination: string }) 
       )}
 
       {destination && (
-        <div className="absolute bottom-[46%] left-1/2 -translate-x-1/2 bg-white/80 dark:bg-card/80 backdrop-blur-sm rounded-full px-3 py-1 shadow border border-green-300/50">
+        <div className="absolute bottom-[42%] left-1/2 -translate-x-1/2 bg-white/80 dark:bg-card/80 backdrop-blur-sm rounded-full px-3 py-1 shadow border border-green-300/50">
           <p className="text-[11px] font-bold text-green-600">1 Wheel = $1</p>
         </div>
       )}
@@ -203,6 +198,7 @@ function InstaHopView({ user }: { user: User }) {
     } catch { return "hop"; }
   });
   const [panelExpanded, setPanelExpanded] = useState(false);
+  const [isMatching, setIsMatching] = useState(false);
 
   useEffect(() => {
     function onModeChange(e: Event) {
@@ -215,6 +211,12 @@ function InstaHopView({ user }: { user: User }) {
   }, [mode]);
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
+
+  useEffect(() => {
+    if (activeHop && activeHop.status === "matched") {
+      setIsMatching(false);
+    }
+  }, [activeHop]);
 
   const { data: savedRoutes } = useQuery<WalkerRouteData[]>({
     queryKey: ['/api/walker-routes'],
@@ -256,33 +258,20 @@ function InstaHopView({ user }: { user: User }) {
       showFlash("🚶", "GPS navigation starting...", "info");
       return;
     }
+    setIsMatching(true);
     requestHop.mutate({ ...data, hopType: 'short_hop' } as any, {
       onSuccess: () => {
         showFlash("⚡", mode === "drive" ? "Drive started!" : "InstaHop requested!", "success");
+      },
+      onError: () => {
+        setIsMatching(false);
       }
     });
   };
 
-  if (activeHop) {
-    setLocation("/dashboard");
-    return null;
-  }
+  const nearestCorridors = CORRIDORS.slice(0, 4);
 
-  const cycleMode = () => {
-    if (mode === "hop") setMode("walk");
-    else if (mode === "walk") setMode("drive");
-    else setMode("hop");
-  };
-
-  const nearestCorridors = CORRIDORS.slice(0, 2);
-
-  const buttonConfig = {
-    hop: { label: "InstaHop", color: "from-green-500 to-green-600", shadow: "shadow-green-500/25", icon: <Zap className="w-5 h-5" /> },
-    walk: { label: "Walk", color: "from-blue-500 to-blue-600", shadow: "shadow-blue-500/25", icon: <Navigation className="w-5 h-5" /> },
-    drive: { label: "Drive Now", color: "from-blue-500 to-blue-600", shadow: "shadow-blue-500/25", icon: <Car className="w-5 h-5" /> },
-  };
-
-  const currentButton = buttonConfig[mode];
+  const isDriverMode = mode === "drive";
 
   return (
     <>
@@ -304,7 +293,7 @@ function InstaHopView({ user }: { user: User }) {
           className="absolute bottom-0 left-0 right-0 bg-background/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 z-20"
           initial={{ y: 0 }}
           animate={{ y: 0 }}
-          style={{ maxHeight: panelExpanded ? "55%" : "45%" }}
+          style={{ maxHeight: panelExpanded ? "50%" : "40%" }}
           data-testid="control-panel"
         >
           <div className="flex justify-center pt-2 pb-1">
@@ -353,10 +342,10 @@ function InstaHopView({ user }: { user: User }) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {mode !== "drive" && (
+              {!isDriverMode && (
+                <div className="flex items-center gap-2">
                   <div className="flex-shrink-0">
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-wrap gap-1.5">
                       {nearestCorridors.map((c) => (
                         <button
                           key={c.id}
@@ -365,69 +354,51 @@ function InstaHopView({ user }: { user: User }) {
                             form.setValue("startLocation", c.name);
                             showFlash("📍", `${c.name}`, "info");
                           }}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30 text-left hover:border-orange-400/60 transition-all"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30 text-left hover:border-orange-400/60 transition-all"
                           data-testid={`button-corridor-${c.id}`}
                         >
                           <MapPin className="w-2.5 h-2.5 text-orange-500 shrink-0" />
-                          <div>
-                            <span className="text-[10px] font-black text-foreground leading-none block">{c.name}</span>
-                            <span className="text-[8px] text-muted-foreground leading-none">{c.description}</span>
-                          </div>
+                          <span className="text-[9px] font-black text-foreground leading-none">{c.name}</span>
                         </button>
                       ))}
                     </div>
                   </div>
-                )}
-
-                <div className="flex-1" />
-
-                <GlowingCarousel user={user} />
-              </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-2">
                 <motion.button
                   type="submit"
-                  disabled={requestHop.isPending}
+                  disabled={requestHop.isPending || isMatching}
                   whileTap={{ scale: 0.97 }}
-                  className={`flex-1 h-14 rounded-2xl bg-gradient-to-r ${currentButton.color} text-white font-black text-base flex items-center justify-center gap-2.5 shadow-xl ${currentButton.shadow} transition-all disabled:opacity-60`}
+                  className={`flex-1 h-14 rounded-2xl text-white font-black text-base flex items-center justify-center gap-2.5 shadow-xl transition-all disabled:opacity-60 ${
+                    isMatching
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/25"
+                      : isDriverMode
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/25"
+                      : "bg-gradient-to-r from-green-500 to-green-600 shadow-green-500/25"
+                  }`}
                   data-testid="button-instahop"
                 >
-                  {currentButton.icon}
-                  {requestHop.isPending ? 'Finding...' : currentButton.label}
+                  {isMatching ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      matching you...
+                    </>
+                  ) : isDriverMode ? (
+                    <>
+                      <Car className="w-5 h-5" />
+                      Drive Now
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-5 h-5" />
+                      {requestHop.isPending ? 'Finding...' : 'InstaHop'}
+                    </>
+                  )}
                 </motion.button>
 
-                <button
-                  type="button"
-                  onClick={cycleMode}
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all ${
-                    mode === "walk"
-                      ? "border-blue-400 bg-blue-50 dark:bg-blue-950/30"
-                      : mode === "drive"
-                      ? "border-blue-500 bg-blue-100 dark:bg-blue-900/30"
-                      : "border-green-400 bg-green-50 dark:bg-green-950/30"
-                  }`}
-                  data-testid="button-mode-toggle"
-                >
-                  {mode === "walk" ? (
-                    <motion.img
-                      src={walkerIconUrl}
-                      alt="Walk"
-                      className="w-8 h-8"
-                      animate={{ y: [-1, 1, -1] }}
-                      transition={{ duration: 1, repeat: Infinity }}
-                    />
-                  ) : mode === "drive" ? (
-                    <motion.img
-                      src={carIconUrl}
-                      alt="Drive"
-                      className="w-8 h-8"
-                      animate={{ scale: [1, 1.05, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    />
-                  ) : (
-                    <Zap className="w-6 h-6 text-green-500" />
-                  )}
-                </button>
+                <GlowingCarousel user={user} />
               </div>
 
               <div className="flex items-center justify-between text-xs text-muted-foreground px-1">

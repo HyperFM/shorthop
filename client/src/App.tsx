@@ -31,21 +31,27 @@ function OrangeGlow() {
   return (
     <>
       <div
-        className="fixed inset-0 pointer-events-none z-[200]"
+        className="fixed top-0 left-0 w-[3px] bottom-0 pointer-events-none z-[200]"
         style={{
-          boxShadow: "inset 0 2.5px 0 2.5px rgba(249,115,22,0.65), inset 0 0 38px rgba(249,115,22,0.18), inset 0 -2.5px 0 2.5px rgba(249,115,22,0.65)",
+          background: "linear-gradient(to bottom, transparent 0%, rgba(249,115,22,0.15) 8%, rgba(249,115,22,0.45) 25%, rgba(249,115,22,0.65) 50%, rgba(249,115,22,0.45) 75%, rgba(249,115,22,0.15) 92%, transparent 100%)",
         }}
       />
       <div
-        className="fixed top-0 left-0 w-2.5 bottom-0 pointer-events-none z-[199]"
+        className="fixed top-0 right-0 w-[3px] bottom-0 pointer-events-none z-[200]"
         style={{
-          background: "linear-gradient(to top, rgba(249,115,22,0.65) 0%, rgba(249,115,22,0.4) 20%, rgba(249,115,22,0.15) 50%, transparent 100%)",
+          background: "linear-gradient(to bottom, transparent 0%, rgba(249,115,22,0.15) 8%, rgba(249,115,22,0.45) 25%, rgba(249,115,22,0.65) 50%, rgba(249,115,22,0.45) 75%, rgba(249,115,22,0.15) 92%, transparent 100%)",
         }}
       />
       <div
-        className="fixed top-0 right-0 w-2.5 bottom-0 pointer-events-none z-[199]"
+        className="fixed top-0 left-0 w-8 bottom-0 pointer-events-none z-[199]"
         style={{
-          background: "linear-gradient(to top, rgba(249,115,22,0.65) 0%, rgba(249,115,22,0.4) 20%, rgba(249,115,22,0.15) 50%, transparent 100%)",
+          background: "linear-gradient(to bottom, transparent 0%, rgba(249,115,22,0.04) 10%, rgba(249,115,22,0.10) 30%, rgba(249,115,22,0.14) 50%, rgba(249,115,22,0.10) 70%, rgba(249,115,22,0.04) 90%, transparent 100%)",
+        }}
+      />
+      <div
+        className="fixed top-0 right-0 w-8 bottom-0 pointer-events-none z-[199]"
+        style={{
+          background: "linear-gradient(to bottom, transparent 0%, rgba(249,115,22,0.04) 10%, rgba(249,115,22,0.10) 30%, rgba(249,115,22,0.14) 50%, rgba(249,115,22,0.10) 70%, rgba(249,115,22,0.04) 90%, transparent 100%)",
         }}
       />
     </>
