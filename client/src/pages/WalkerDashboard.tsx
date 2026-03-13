@@ -410,7 +410,15 @@ export default function WalkerDashboard({ user }: { user: User }) {
               <>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className={`w-2.5 h-2.5 rounded-full ${activeHop.status === 'matched' ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse`} />
+                  <div className="relative flex items-center justify-center w-7 h-7">
+                    <div className={`absolute inset-0 rounded-full animate-ping opacity-40 ${activeHop.status === 'matched' ? 'bg-green-400' : 'bg-blue-400'}`} />
+                    <img
+                      src="/walker-figure.jpeg"
+                      alt="walker"
+                      className="w-7 h-7 object-cover rounded-full relative z-10"
+                      style={{ boxShadow: activeHop.status === 'matched' ? '0 0 0 2px #22c55e' : '0 0 0 2px #3b82f6' }}
+                    />
+                  </div>
                   <span className="text-sm font-bold text-foreground" data-testid="text-hop-status">
                     {activeHop.status === 'requested' ? 'Searching for driver...' : 'Driver matched!'}
                   </span>

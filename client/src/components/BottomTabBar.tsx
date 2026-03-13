@@ -113,20 +113,30 @@ export function BottomTabBar() {
                 className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative"
                 data-testid={isDriverMode ? "tab-drive" : "tab-instahop"}
               >
-                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg -mt-3 ${
-                  isDriverMode
-                    ? "bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-500/25"
-                    : "bg-gradient-to-br from-green-500 to-green-600 shadow-green-500/25"
-                }`}>
-                  {isDriverMode
-                    ? <Car className="w-5 h-5 text-white stroke-[2.5]" />
-                    : <Zap className="w-5 h-5 text-white stroke-[2.5]" />
-                  }
-                </div>
+                {isDriverMode ? (
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 bg-gradient-to-br from-blue-500 to-blue-700 -mt-3">
+                    <Car className="w-5 h-5 text-white stroke-[2.5]" />
+                  </div>
+                ) : (
+                  <div
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center -mt-3 overflow-hidden relative"
+                    style={{
+                      background: "linear-gradient(135deg, #1a56db 0%, #1e40af 100%)",
+                      boxShadow: "0 4px 14px rgba(37,99,235,0.45), 0 0 0 2px rgba(37,99,235,0.25)",
+                    }}
+                  >
+                    <img
+                      src="/walker-figure.jpeg"
+                      alt="Walk"
+                      className="w-9 h-9 object-cover scale-110"
+                      style={{ mixBlendMode: "multiply" }}
+                    />
+                  </div>
+                )}
                 <span className={`text-[10px] font-bold leading-none ${
-                  isDriverMode ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"
+                  isDriverMode ? "text-blue-600 dark:text-blue-400" : "text-blue-500 dark:text-blue-400"
                 }`}>
-                  {isDriverMode ? "Drive" : "InstaHop"}
+                  {isDriverMode ? "Drive" : "Walk"}
                 </span>
               </motion.button>
             );
