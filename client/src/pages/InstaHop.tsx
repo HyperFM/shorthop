@@ -5,13 +5,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Navigation, Bookmark, Car, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useHops, useRequestHop } from "@/hooks/use-hops";
 import { useGeolocation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
+import { WelcomeGlobe, hasSeenWelcomeGlobe } from "@/components/WelcomeGlobe";
 import { Loader2 } from "lucide-react";
 import type { User } from "@shared/routes";
 
@@ -36,6 +37,8 @@ function InstaHopView({ user }: { user: User }) {
   const requestHop = useRequestHop();
   const [payWithWheels, setPayWithWheels] = useState(false);
   const geo = useGeolocation();
+  const [showGlobe, setShowGlobe] = useState(() => !hasSeenWelcomeGlobe());
+  const [greetingVisible, setGreetingVisible] = useState(() => hasSeenWelcomeGlobe());
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
 
@@ -88,6 +91,19 @@ function InstaHopView({ user }: { user: User }) {
   const nearestCorridors = CORRIDORS.slice(0, 2);
 
   return (
+    <>
+      {/* Welcome globe — fires once on first entry */}
+      {showGlobe && (
+        <WelcomeGlobe
+          username={user.username}
+          isReturning={true}
+          onDismiss={() => {
+            setShowGlobe(false);
+            setTimeout(() => setGreetingVisible(true), 80);
+          }}
+        />
+      )}
+
     <div className="px-4 pt-6 pb-4 max-w-lg mx-auto flex flex-col items-center min-h-[calc(100vh-10rem)]">
       <div className="w-full flex-1 flex flex-col justify-center max-w-sm">
 
@@ -97,7 +113,28 @@ function InstaHopView({ user }: { user: User }) {
           className="text-center mb-5"
         >
           <h1 className="text-3xl font-black text-foreground tracking-tight" data-testid="text-instahop-title">⚡ InstaHop</h1>
-          <p className="text-xs text-muted-foreground mt-1 font-medium">Find a ride instantly in Lexington</p>
+
+          {/* Greeting — invisible until globe exits, then fades in */}
+          <AnimatePresence>
+            {greetingVisible && (
+              <motion.p
+                key="greeting"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, ease: "easeOut" }}
+                className="text-sm font-semibold text-foreground/70 mt-1 tracking-wide"
+                data-testid="text-instahop-greeting"
+              >
+                happy hopping,{" "}
+                <span className="text-foreground font-black">{user.username}</span>
+              </motion.p>
+            )}
+          </AnimatePresence>
+
+          {/* Tagline — only visible when no greeting yet */}
+          {!greetingVisible && (
+            <p className="text-xs text-muted-foreground mt-1 font-medium">Find a ride instantly in Lexington</p>
+          )}
         </motion.div>
 
         <motion.div
@@ -225,6 +262,7 @@ function InstaHopView({ user }: { user: User }) {
         </motion.div>
       </div>
     </div>
+    </>
   );
 }
 

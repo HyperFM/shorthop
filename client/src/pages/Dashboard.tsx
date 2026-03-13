@@ -57,8 +57,6 @@ export default function Dashboard() {
       } else if (params.get("tip") === "cancelled") {
         showFlash("ℹ️", "Tip cancelled", "info");
         window.history.replaceState({}, "", "/dashboard");
-      } else {
-        showFlash("👋", `Welcome back, ${user.username}!`, "welcome", user.username);
       }
     }
   }, [user]);
