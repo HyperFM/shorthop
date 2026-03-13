@@ -37,9 +37,9 @@ function OrangeGlow() {
         }}
       />
       <div
-        className="fixed top-0 left-0 right-0 h-16 pointer-events-none z-[199]"
+        className="fixed top-0 left-0 right-0 h-48 pointer-events-none z-[199]"
         style={{
-          background: "linear-gradient(to bottom, rgba(249,115,22,0.10) 0%, transparent 100%)",
+          background: "linear-gradient(to bottom, rgba(249,115,22,0.25) 0%, rgba(249,115,22,0.08) 50%, transparent 100%)",
         }}
       />
     </>
