@@ -46,3 +46,4 @@ integrations = ["stripe:1.0.0"]
 [userenv.shared]
 STRIPE_SECRET_KEY = "sk_test_51T9cTFEPpyO5NSxUuxOqhypa6mgkeeeyZFoDkLNpelso0mCHBgHQq537dF5WI96GdX5QYy0TGhh26Pog9OmYiyrB00SxLM5k4b"
 VITE_STRIPE_PUBLISHABLE_KEY = "pk_test_51T9cTFEPpyO5NSxUb07clp887UZ5ZclutaWjZc7Vtps3f9Pwn5OfRuu65jvHm3bfxfaQUZTKSh4BUKxo2YDtU9zP00gIK6ZU8e"
+VITE_MAPBOX_TOKEN = "pk.eyJ1IjoiaHlwZXJmbSIsImEiOiJjbW1vcWt1aHMwZ3VrMnJwdTEwZ2Jzb2xzIn0.YhF_6QILyLEoATdtxn8KOA"

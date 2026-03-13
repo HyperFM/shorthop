@@ -16,18 +16,13 @@ import { showFlash } from "@/components/FlashNotification";
 import { WelcomeGlobe, hasSeenWelcomeGlobe } from "@/components/WelcomeGlobe";
 import { Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: undefined,
-  iconUrl: undefined,
-  shadowUrl: undefined,
-});
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 import type { User } from "@shared/routes";
 import hopperMarkerUrl from "@assets/Bazaart_0DED352D-3176-4B56-8873-AA260ABD345D_1773383461603.png";
 import driverMarkerUrl from "@assets/Bazaart_D93EFD8E-BC20-40C4-BC5D-F9598DCF4904_1773383461604.png";
+
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
 
 type DriverStatus = {
   isDriver: boolean;
@@ -54,92 +49,77 @@ const CORRIDORS: Corridor[] = [
 
 type HopMode = "hop" | "walk" | "drive";
 
-const LEX_CENTER: [number, number] = [38.0406, -84.5037];
+const LEX_CENTER: [number, number] = [-84.5037, 38.0406];
 
-const hopperIcon = L.icon({
-  iconUrl: hopperMarkerUrl,
-  iconSize: [48, 48],
-  iconAnchor: [24, 24],
-  className: "rounded-full drop-shadow-lg",
-});
-
-const driverIcon = L.icon({
-  iconUrl: driverMarkerUrl,
-  iconSize: [48, 48],
-  iconAnchor: [24, 24],
-  className: "rounded-full drop-shadow-lg",
-});
+function createMarkerEl(src: string): HTMLElement {
+  const el = document.createElement("div");
+  el.style.width = "48px";
+  el.style.height = "48px";
+  el.style.borderRadius = "50%";
+  el.style.overflow = "hidden";
+  el.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+  el.style.border = "3px solid white";
+  const img = document.createElement("img");
+  img.src = src;
+  img.style.width = "100%";
+  img.style.height = "100%";
+  img.style.objectFit = "cover";
+  el.appendChild(img);
+  return el;
+}
 
 function MapView({ mode, latitude, longitude }: { mode: HopMode; latitude: number | null; longitude: number | null }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
-  const accuracyRef = useRef<L.Circle | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markerRef = useRef<mapboxgl.Marker | null>(null);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const center: [number, number] = latitude && longitude ? [latitude, longitude] : LEX_CENTER;
+    const center: [number, number] = latitude && longitude ? [longitude, latitude] : LEX_CENTER;
 
-    const map = L.map(mapContainerRef.current, {
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: "mapbox://styles/mapbox/streets-v12",
       center,
       zoom: 15,
-      zoomControl: false,
       attributionControl: false,
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-    }).addTo(map);
-
-    L.control.attribution({ position: "bottomleft", prefix: false }).addTo(map);
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-left");
 
     mapRef.current = map;
 
-    setTimeout(() => map.invalidateSize(), 200);
-
     return () => {
+      if (markerRef.current) {
+        markerRef.current.remove();
+        markerRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
-      markerRef.current = null;
-      accuracyRef.current = null;
     };
   }, []);
 
   useEffect(() => {
     if (!mapRef.current || !latitude || !longitude) return;
 
-    const pos: [number, number] = [latitude, longitude];
-    const icon = mode === "drive" ? driverIcon : hopperIcon;
+    const lngLat: [number, number] = [longitude, latitude];
+    const iconSrc = mode === "drive" ? driverMarkerUrl : hopperMarkerUrl;
 
     if (markerRef.current) {
-      markerRef.current.setLatLng(pos);
-      markerRef.current.setIcon(icon);
+      markerRef.current.setLngLat(lngLat);
+      const el = markerRef.current.getElement();
+      const img = el.querySelector("img");
+      if (img) img.src = iconSrc;
     } else {
-      markerRef.current = L.marker(pos, { icon }).addTo(mapRef.current);
+      const el = createMarkerEl(iconSrc);
+      markerRef.current = new mapboxgl.Marker({ element: el })
+        .setLngLat(lngLat)
+        .addTo(mapRef.current);
     }
 
-    if (accuracyRef.current) {
-      accuracyRef.current.setLatLng(pos);
-    } else {
-      accuracyRef.current = L.circle(pos, {
-        radius: 50,
-        color: mode === "drive" ? "#f97316" : "#3b82f6",
-        fillColor: mode === "drive" ? "#f97316" : "#3b82f6",
-        fillOpacity: 0.12,
-        weight: 1.5,
-      }).addTo(mapRef.current);
-    }
-
-    mapRef.current.setView(pos, mapRef.current.getZoom(), { animate: true });
+    mapRef.current.easeTo({ center: lngLat, duration: 800 });
   }, [latitude, longitude, mode]);
-
-  useEffect(() => {
-    if (accuracyRef.current) {
-      const color = mode === "drive" ? "#f97316" : "#3b82f6";
-      accuracyRef.current.setStyle({ color, fillColor: color });
-    }
-  }, [mode]);
 
   return (
     <div className="absolute inset-0 z-0" data-testid="map-view">
