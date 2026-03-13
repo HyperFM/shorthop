@@ -14,7 +14,7 @@ import { showFlash } from "@/components/FlashNotification";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { NotificationCenter } from "@/components/NotificationCenter";
+
 import { api } from "@shared/routes";
 import { InterestBubbles } from "@/components/InterestBubbles";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
@@ -74,7 +74,6 @@ export default function Settings() {
     setProfileTabColor(color);
     try { localStorage.setItem("sh-profile-tab-color", color); } catch {}
     window.dispatchEvent(new CustomEvent("sh-profile-color-change", { detail: color }));
-    showFlash("🎨", "Profile tab color updated!", "success");
   }
   const [subscriptionPlan, setSubscriptionPlan] = useState<"flex_hop" | "power_hop" | null>(null);
 
@@ -699,46 +698,39 @@ export default function Settings() {
           </Card>
         )}
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow" data-testid="card-notifications-inbox">
-          <CardContent className="p-4">
+        <Card className="border-border/40" data-testid="card-notifications-inbox">
+          <CardContent className="py-3 px-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center shadow-md shadow-blue-500/20">
-                <Bell className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center shadow-sm">
+                <Bell className="w-4 h-4 text-white" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-extrabold text-foreground">Notifications</p>
-                <p className="text-[10px] text-muted-foreground">View alerts, updates, and messages</p>
+              <p className="text-sm font-bold text-foreground flex-1">Notifications</p>
+              <div className="flex gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-[10px] font-bold h-7 px-2.5"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLocation("/dashboard");
+                  }}
+                  data-testid="button-view-notifications"
+                >
+                  View All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-[10px] font-bold h-7 px-2.5 text-blue-600"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    showFlash("✅", "All marked as read", "success");
+                  }}
+                  data-testid="button-mark-all-read"
+                >
+                  Mark Read
+                </Button>
               </div>
-            </div>
-            <div className="flex gap-2 mt-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 text-xs font-bold"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const el = document.getElementById("notification-center-expand");
-                  if (el) el.click();
-                }}
-                data-testid="button-view-notifications"
-              >
-                View All
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 text-xs font-bold text-blue-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  showFlash("✅", "All notifications marked as read", "success");
-                }}
-                data-testid="button-mark-all-read"
-              >
-                Mark All Read
-              </Button>
-            </div>
-            <div className="mt-3" id="notification-center-wrapper">
-              <NotificationCenter />
             </div>
           </CardContent>
         </Card>

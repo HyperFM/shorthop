@@ -154,7 +154,7 @@ export default function DriverDashboard({ user }: { user: User }) {
             <SeasonalGreeting username={user.username} testId="text-driver-title" role="driver" />
             {user.isFounder && user.founderBadge && (
               <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[8px] px-1 py-0 self-end mb-0.5" data-testid="badge-founder">
-                🛞
+                Founder
               </Badge>
             )}
           </div>

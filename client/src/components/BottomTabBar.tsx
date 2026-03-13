@@ -128,7 +128,7 @@ export function BottomTabBar() {
                 </div>
                 <span className={`text-[10px] font-bold leading-none ${
                   isDriver ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
-                }`}>{isDriver ? "DriveNow" : "Walk"}</span>
+                }`}>Hop</span>
               </motion.button>
             );
           }

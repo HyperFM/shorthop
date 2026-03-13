@@ -6,10 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useHops, useRequestHop } from "@/hooks/use-hops";
+import { useHops, useRequestHop, useCancelHop } from "@/hooks/use-hops";
 import { useGeolocation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
 import { WelcomeGlobe, hasSeenWelcomeGlobe } from "@/components/WelcomeGlobe";
@@ -189,6 +189,7 @@ function InstaHopView({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const { data: hops } = useHops();
   const requestHop = useRequestHop();
+  const cancelHop = useCancelHop();
   const geo = useGeolocation();
   const [showGlobe, setShowGlobe] = useState(() => !hasSeenWelcomeGlobe());
   const [greetingVisible, setGreetingVisible] = useState(() => hasSeenWelcomeGlobe());
@@ -197,7 +198,6 @@ function InstaHopView({ user }: { user: User }) {
       return localStorage.getItem("sh-active-tab") === "driver" ? "drive" : "hop";
     } catch { return "hop"; }
   });
-  const [panelExpanded, setPanelExpanded] = useState(false);
   const [isMatching, setIsMatching] = useState(false);
 
   useEffect(() => {
@@ -269,9 +269,16 @@ function InstaHopView({ user }: { user: User }) {
     });
   };
 
-  const nearestCorridors = CORRIDORS.slice(0, 4);
+  const nearestCorridors = CORRIDORS.slice(0, 2);
 
   const isDriverMode = mode === "drive";
+
+  function cancelMatching() {
+    setIsMatching(false);
+    if (activeHop && activeHop.status === "requested") {
+      cancelHop.mutate(activeHop.id);
+    }
+  }
 
   return (
     <>
@@ -289,38 +296,56 @@ function InstaHopView({ user }: { user: User }) {
       <div className="relative flex flex-col" style={{ height: "calc(100vh - 4rem)" }}>
         <MapView mode={mode} destination={destination} />
 
-        <motion.div
+        <div
           className="absolute bottom-0 left-0 right-0 bg-background/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 z-20"
-          initial={{ y: 0 }}
-          animate={{ y: 0 }}
-          style={{ maxHeight: panelExpanded ? "50%" : "40%" }}
+          style={{ height: "40%" }}
           data-testid="control-panel"
         >
-          <div className="flex justify-center pt-2 pb-1">
-            <button
-              onClick={() => setPanelExpanded(!panelExpanded)}
-              className="w-10 h-1 rounded-full bg-border/60"
-              data-testid="panel-handle"
-            />
-          </div>
-
-          <div className="px-4 pb-4 overflow-y-auto" style={{ maxHeight: "calc(100% - 20px)" }}>
-            <AnimatePresence>
-              {greetingVisible && (
-                <motion.p
-                  key="greeting"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-[11px] font-semibold text-foreground/60 text-center mb-2"
-                  data-testid="text-instahop-greeting"
-                >
-                  happy hopping,{" "}
-                  <span className="text-foreground font-black">{user.username}</span>
-                </motion.p>
+          <div className="px-4 pt-3 pb-4 h-full overflow-y-auto">
+            <div className="flex gap-2 mb-2">
+              {!isDriverMode && (
+                <div className="flex flex-col gap-1.5 shrink-0">
+                  {nearestCorridors.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        form.setValue("startLocation", c.name);
+                        showFlash("📍", `${c.name}`, "info");
+                      }}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30 text-left hover:border-orange-400/60 transition-all"
+                      data-testid={`button-corridor-${c.id}`}
+                    >
+                      <MapPin className="w-2.5 h-2.5 text-orange-500 shrink-0" />
+                      <span className="text-[9px] font-black text-foreground leading-none">{c.name}</span>
+                    </button>
+                  ))}
+                </div>
               )}
-            </AnimatePresence>
 
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2.5">
+              <div className="flex-1">
+                <AnimatePresence>
+                  {greetingVisible && (
+                    <motion.p
+                      key="greeting"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-[11px] font-semibold text-foreground/60 text-center mb-1"
+                      data-testid="text-instahop-greeting"
+                    >
+                      happy hopping,{" "}
+                      <span className="text-foreground font-black">{user.username}</span>
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="shrink-0 scale-75 origin-top-right">
+                <GlowingCarousel user={user} />
+              </div>
+            </div>
+
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
               <div className="space-y-2">
                 <div className="relative">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500" />
@@ -341,30 +366,6 @@ function InstaHopView({ user }: { user: User }) {
                   />
                 </div>
               </div>
-
-              {!isDriverMode && (
-                <div className="flex items-center gap-2">
-                  <div className="flex-shrink-0">
-                    <div className="flex flex-wrap gap-1.5">
-                      {nearestCorridors.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            form.setValue("startLocation", c.name);
-                            showFlash("📍", `${c.name}`, "info");
-                          }}
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30 text-left hover:border-orange-400/60 transition-all"
-                          data-testid={`button-corridor-${c.id}`}
-                        >
-                          <MapPin className="w-2.5 h-2.5 text-orange-500 shrink-0" />
-                          <span className="text-[9px] font-black text-foreground leading-none">{c.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="flex items-center gap-2">
                 <motion.button
@@ -398,22 +399,35 @@ function InstaHopView({ user }: { user: User }) {
                   )}
                 </motion.button>
 
-                <GlowingCarousel user={user} />
+                {isMatching && (
+                  <motion.button
+                    type="button"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    onClick={cancelMatching}
+                    className="w-14 h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/25 shrink-0"
+                    data-testid="button-cancel-matching"
+                  >
+                    <X className="w-6 h-6" strokeWidth={3} />
+                  </motion.button>
+                )}
               </div>
 
               <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                <div className="flex items-center gap-1.5">
-                  <Car className="w-3.5 h-3.5" />
-                  <span>{driversInCity > 0 ? `${driversInCity} driver${driversInCity !== 1 ? 's' : ''} active nearby` : 'Connecting drivers...'}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
+                {driversInCity > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Car className="w-3.5 h-3.5" />
+                    <span>{driversInCity} driver{driversInCity !== 1 ? 's' : ''} active nearby</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 ml-auto">
                   <Navigation className="w-3 h-3" />
                   <span>{hoppersNearby} hoppers nearby</span>
                 </div>
               </div>
             </form>
           </div>
-        </motion.div>
+        </div>
       </div>
     </>
   );

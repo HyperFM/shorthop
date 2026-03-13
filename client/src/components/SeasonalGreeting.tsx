@@ -137,7 +137,21 @@ export function SeasonalGreeting({
   role?: "driver" | "rider";
 }) {
   const { greeting, emoji, gradient } = getSeasonInfo(username);
-  const { nameColor, dotColor } = getRoleColors(role);
+  const { dotColor } = getRoleColors(role);
+
+  const [profileColor, setProfileColor] = useState(() => {
+    try { return localStorage.getItem("sh-profile-tab-color") || ""; } catch { return ""; }
+  });
+
+  useEffect(() => {
+    function onColorChange(e: Event) {
+      setProfileColor((e as CustomEvent).detail || "");
+    }
+    window.addEventListener("sh-profile-color-change", onColorChange);
+    return () => window.removeEventListener("sh-profile-color-change", onColorChange);
+  }, []);
+
+  const nameColor = profileColor || getRoleColors(role).nameColor;
 
   const { data: weather } = useQuery<WeatherData>({
     queryKey: ["/api/weather"],

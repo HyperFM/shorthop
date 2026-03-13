@@ -274,6 +274,15 @@ export default function WalkerDashboard({ user }: { user: User }) {
     }
   }, [hops]);
 
+  const [walkerProfileColor, setWalkerProfileColor] = useState(() => {
+    try { return localStorage.getItem("sh-profile-tab-color") || ""; } catch { return ""; }
+  });
+  useEffect(() => {
+    function onColorChange(e: Event) { setWalkerProfileColor((e as CustomEvent).detail || ""); }
+    window.addEventListener("sh-profile-color-change", onColorChange);
+    return () => window.removeEventListener("sh-profile-color-change", onColorChange);
+  }, []);
+
   const handleInvite = async () => {
     const shareData = {
       title: "Join ShortHop",
@@ -318,8 +327,8 @@ export default function WalkerDashboard({ user }: { user: User }) {
 
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h1 className="text-xl font-bold text-foreground" data-testid="text-dashboard-title">
-            Happy Hopping, {user.username}
+          <h1 className="text-xl font-bold" data-testid="text-dashboard-title">
+            Happy Hopping, <span className={walkerProfileColor || "text-foreground"}>{user.username}</span>
           </h1>
           {user.isFounder && user.founderBadge && (
             <Badge className="bg-gradient-to-r from-orange-500 to-green-500 text-white border-0 text-[9px] px-1.5 py-0 mt-1" data-testid="badge-founder">
