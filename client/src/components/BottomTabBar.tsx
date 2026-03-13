@@ -125,15 +125,26 @@ export function BottomTabBar() {
           className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative"
           data-testid="tab-instahop"
         >
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg -mt-3 overflow-hidden transition-all duration-200">
+          <div className="w-14 h-14 rounded-full -mt-4 relative overflow-hidden"
+            style={{
+              background: activeMode === "hopper"
+                ? "radial-gradient(circle, #f97316 60%, #ea580c 100%)"
+                : "radial-gradient(circle, #22c55e 60%, #16a34a 100%)",
+              boxShadow: activeMode === "hopper"
+                ? "0 4px 12px rgba(249,115,22,0.4)"
+                : "0 4px 12px rgba(34,197,94,0.4)",
+            }}
+          >
             <motion.img
               key={activeMode}
               src={activeMode === "hopper" ? "/hop-btn.png" : "/drive-btn.png"}
               alt={activeMode === "hopper" ? "InstaHop" : "Drive Now"}
-              className="w-12 h-12 object-cover rounded-2xl"
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+              draggable={false}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.15 }}
+              style={{ willChange: "transform", transform: "translateZ(0)" }}
             />
           </div>
           <span className={`text-[10px] font-bold leading-none ${
