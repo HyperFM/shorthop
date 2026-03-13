@@ -21,6 +21,8 @@ import { InterestTags, SharedInterestsBadge } from "@/components/InterestBubbles
 import { SmartMatchCard } from "@/components/SmartMatchCard";
 import { FirstHopCelebration } from "@/components/FirstHopCelebration";
 import { LiveRideOverlay } from "@/components/LiveRideOverlay";
+import { HopperRoadSideAlert, buildRoadSideInfo, findCorridorByName } from "@/components/RoadSideGuide";
+import type { RoadSideInfo } from "@/components/RoadSideGuide";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { playDriverApproachingSound } from "@/lib/sounds";
@@ -59,6 +61,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const lastCompletedRef = useRef<number | null>(null);
   const [showInsightBubble, setShowInsightBubble] = useState(false);
   const [selectedCorridor, setSelectedCorridor] = useState<PickupSpot | null>(null);
+  const [roadSideInfo, setRoadSideInfo] = useState<RoadSideInfo | null>(null);
   const [scheduleBannerDismissed, setScheduleBannerDismissed] = useState(() => {
     try { return sessionStorage.getItem('schedule_banner_dismissed') === '1'; } catch { return false; }
   });
@@ -155,6 +158,18 @@ export default function WalkerDashboard({ user }: { user: User }) {
       }
       playDriverApproachingSound();
       setShowInsightBubble(true);
+      const spot = pickupSpots[0] ?? null;
+      const corridor = spot
+        ? { name: spot.name, lat: spot.lat, lng: spot.lng, trafficFlow: spot.trafficFlow, corridorType: spot.corridorType }
+        : findCorridorByName(activeHop?.startLocation || "");
+      const info = buildRoadSideInfo(
+        corridor,
+        geo.latitude,
+        geo.longitude,
+        activeHop?.startLocation || "",
+        activeHop?.endLocation || ""
+      );
+      setRoadSideInfo(info);
     }
     if (activeHop?.status === 'matched') {
       setMatchedElapsed(0);
@@ -450,6 +465,13 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     {cancelHop.isPending ? "Cancelling..." : "Change Destination"}
                   </Button>
                 </div>
+              )}
+
+              {activeHop.status === 'matched' && roadSideInfo && (
+                <HopperRoadSideAlert
+                  info={roadSideInfo}
+                  onDismiss={() => setRoadSideInfo(null)}
+                />
               )}
 
               {activeHop.status === 'matched' && matchedDriverInfo && (

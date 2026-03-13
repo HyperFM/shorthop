@@ -23,6 +23,7 @@ import { FounderChat } from "@/components/FounderChat";
 import { useLiveLocationBroadcast } from "@/hooks/use-location";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
+import { DriverRoadSideNotice, buildRoadSideInfo, findCorridorByName } from "@/components/RoadSideGuide";
 import { DriverQuestionnaire } from "@/components/DriverQuestionnaire";
 import { useLocation } from "wouter";
 import type { User } from "@shared/routes";
@@ -565,6 +566,12 @@ export default function DriverDashboard({ user }: { user: User }) {
                       <div className="text-sm text-muted-foreground">
                         Going to: <strong className="text-foreground">{hop.endLocation}</strong>
                       </div>
+
+                      {(() => {
+                        const corridor = findCorridorByName(hop.startLocation);
+                        const info = buildRoadSideInfo(corridor, null, null, hop.startLocation, hop.endLocation);
+                        return info ? <DriverRoadSideNotice key={hop.id} info={info} minutesAway={5} /> : null;
+                      })()}
                       
                       <Dialog open={completeHopId === hop.id} onOpenChange={(open) => !open && setCompleteHopId(null)}>
                         <DialogTrigger asChild>
