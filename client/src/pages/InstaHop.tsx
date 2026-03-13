@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
@@ -199,35 +199,6 @@ function InstaHopView({ user }: { user: User }) {
     } catch { return "hop"; }
   });
   const [isMatching, setIsMatching] = useState(false);
-  const [panelOffset, setPanelOffset] = useState(0);
-  const dragStartY = useRef<number | null>(null);
-  const dragStartOffset = useRef(0);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  const PEEK_HEIGHT = 60;
-
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    dragStartY.current = e.touches[0].clientY;
-    dragStartOffset.current = panelOffset;
-  }, [panelOffset]);
-
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (dragStartY.current === null) return;
-    const dy = e.touches[0].clientY - dragStartY.current;
-    const newOffset = Math.max(0, dragStartOffset.current + dy);
-    setPanelOffset(newOffset);
-  }, []);
-
-  const onTouchEnd = useCallback(() => {
-    dragStartY.current = null;
-    const panelH = panelRef.current?.offsetHeight || 300;
-    const maxSlide = panelH - PEEK_HEIGHT;
-    if (panelOffset > maxSlide * 0.3) {
-      setPanelOffset(maxSlide);
-    } else {
-      setPanelOffset(0);
-    }
-  }, [panelOffset]);
 
   useEffect(() => {
     function onModeChange(e: Event) {
@@ -326,22 +297,11 @@ function InstaHopView({ user }: { user: User }) {
         <MapView mode={mode} destination={destination} />
 
         <div
-          ref={panelRef}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
           className="absolute bottom-0 left-0 right-0 bg-background/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 z-20"
-          style={{
-            height: "40%",
-            transform: `translateY(${panelOffset}px)`,
-            transition: dragStartY.current !== null ? "none" : "transform 0.3s ease-out",
-          }}
+          style={{ height: "40%" }}
           data-testid="control-panel"
         >
-          <div className="flex justify-center pt-2 pb-0">
-            <div className="w-10 h-1 rounded-full bg-border/60" data-testid="panel-handle" />
-          </div>
-          <div className="px-4 pt-1 pb-4 overflow-y-auto" style={{ height: "calc(100% - 12px)" }}>
+          <div className="px-4 pt-3 pb-4 h-full overflow-y-auto">
             <div className="flex gap-2 mb-2">
               {!isDriverMode && (
                 <div className="flex flex-col gap-1.5 shrink-0">
