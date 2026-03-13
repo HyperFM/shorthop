@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -30,7 +30,9 @@ import InstaHop from "@/pages/InstaHop";
 
 function FloatingStats() {
   const { data: user } = useAuth();
-  if (!user) return null;
+  const [location] = useLocation();
+  const isHopPage = location === "/instahop" || location === "/hop";
+  if (!user || isHopPage) return null;
   return (
     <div
       className="fixed left-0 right-0 z-40 flex items-center justify-center pointer-events-none"
@@ -98,6 +100,25 @@ function Router() {
   );
 }
 
+function AppInner() {
+  const [location] = useLocation();
+  const isHopPage = location === "/instahop" || location === "/hop";
+
+  return (
+    <>
+      <OrangeGlow />
+      <Toaster />
+      <FlashNotificationContainer />
+      <NavBar />
+      <main className={isHopPage ? "" : "min-h-screen pb-32"}>
+        <Router />
+      </main>
+      <FloatingStats />
+      <BottomTabBar />
+    </>
+  );
+}
+
 function App() {
   const [splashDone, setSplashDone] = useState(false);
 
@@ -108,15 +129,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <OrangeGlow />
-        <Toaster />
-        <FlashNotificationContainer />
-        <NavBar />
-        <main className="min-h-screen pb-32">
-          <Router />
-        </main>
-        <FloatingStats />
-        <BottomTabBar />
+        <AppInner />
       </TooltipProvider>
     </QueryClientProvider>
   );
