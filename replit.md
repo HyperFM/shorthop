@@ -36,6 +36,9 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Direction-Based Hop Matching**: Available hops are sorted for drivers by a combined score of pickup proximity and route/direction alignment (matching corridor names, start/end locations against driver's routine routes).
 - **Destination Geocoding**: Hop destinations are geocoded via Mapbox Geocoding API before submission, storing lat/lng coordinates for proximity-based matching and drop-off notifications.
 - **Drop-Off Proximity Notification**: Same notification sound plays when driver+hopper approach the hopper's destination (within 0.15 miles), on both driver and hopper sides.
+- **Friends System**: Mutual friendship via request/accept flow (no followers/following). `friendships` table with status (pending/accepted/declined). Storage methods: sendFriendRequest, respondFriendRequest, getFriends, getFriendRequests, getFriendCount, getFriendshipStatus, getPublicProfiles. API routes: POST /api/friends/request, POST /api/friends/respond/:id, GET /api/friends, GET /api/friends/requests, GET /api/friends/count, GET /api/friends/status/:userId, GET /api/community/profiles.
+- **Community Discovery**: Connect page has 3 tabs (Feed, Community, Friends). Community tab shows public/semi-private profiles with status-aware friend actions. Friends tab shows pending requests with accept/decline and a friends list.
+- **Profile Privacy**: 3-level profile visibility stored in DB (`profileVisibility` column): public (full profile in Community), semi_private (username+photo only), private (hidden). Selector in Settings profile card header.
 
 ### System Design Choices
 - **Authentication**: Passport.js with a local strategy and session-based authentication.
@@ -50,7 +53,7 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 2. **Schedule** (`/schedule`) — Recurring trip scheduler
 3. **Center Tab** (`/instahop`) — Label always says "Hop"; icon changes: blue walking figure (hopper) or orange car (driver)
 4. **Tailor** (`/dashboard`) — Hopper/Driver switcher at top, Ride Vibe, Privacy Controls, Alert Preferences (no Founder Chat or Network Progress — those live in Connect)
-5. **Profile** (`/settings`) — Photo (color ring), public/private toggle, username, legal name, bio, interests, fun prompts, membership, notifications (slim single-row card), referral, install, contact/report
+5. **Profile** (`/settings`) — Photo (color ring), 3-level visibility selector (Public/Semi/Private), friends count + hops count, username, legal name, bio, interests, fun prompts, membership, notifications (slim single-row card), referral, install, contact/report
 
 ### OrangeGlow Border
 - Left/right sides only, thin 2px line + 18px animated glow that pulses gently (glowPulse/glowPulseRight CSS keyframes)
@@ -72,8 +75,9 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - SeasonalGreeting component uses profile tab color for username display
 - WalkerDashboard username also colored by profile tab choice
 - DriverDashboard founder badge shows "Founder" text only (no wheel emoji)
-- Public/Private visibility toggle on profile card header
-- Stored in `sh-profile-tab-color` and `sh-profile-public` localStorage
+- 3-level visibility selector (Public/Semi-Private/Private) on profile card header, persisted to DB `profileVisibility` column
+- Friends count and total hops displayed below profile photo
+- Stored in `sh-profile-tab-color` localStorage (color only; visibility is DB-backed)
 
 ## External Dependencies
 - **Stripe**: For subscription management and payment processing.

@@ -855,6 +855,80 @@ export async function registerRoutes(
     }
   });
 
+  // Friends
+  app.post("/api/friends/request", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const addresseeId = Number(req.body.addresseeId);
+    if (!addresseeId || isNaN(addresseeId) || addresseeId === req.user.id) return res.status(400).json({ message: "Invalid request" });
+    try {
+      const result = await storage.sendFriendRequest(req.user.id, addresseeId);
+      res.status(201).json(result);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/friends/respond/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const accept = req.body.accept === true;
+    try {
+      const result = await storage.respondFriendRequest(Number(req.params.id), req.user.id, accept);
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
+    }
+  });
+
+  app.get("/api/friends/requests", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const requests = await storage.getFriendRequests(req.user.id);
+      res.json(requests);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch friend requests" });
+    }
+  });
+
+  app.get("/api/friends", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const friends = await storage.getFriends(req.user.id);
+      res.json(friends);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch friends" });
+    }
+  });
+
+  app.get("/api/friends/count", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const count = await storage.getFriendCount(req.user.id);
+      res.json({ count });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch friend count" });
+    }
+  });
+
+  app.get("/api/friends/status/:userId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const status = await storage.getFriendshipStatus(req.user.id, Number(req.params.userId));
+      res.json({ status });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to check friendship status" });
+    }
+  });
+
+  app.get("/api/community/profiles", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const profiles = await storage.getPublicProfiles(req.user.id);
+      res.json(profiles);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch profiles" });
+    }
+  });
+
   // Ratings
   app.post(api.ratings.create.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
@@ -915,13 +989,16 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const SUPPORTED_LANGUAGES = Object.keys(getLanguages());
-      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto'];
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility'];
       const updates: Record<string, any> = {};
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
       }
       if (updates.language && !SUPPORTED_LANGUAGES.includes(updates.language)) {
         updates.language = "en";
+      }
+      if (updates.profileVisibility && !["public", "semi_private", "private"].includes(updates.profileVisibility)) {
+        updates.profileVisibility = "public";
       }
       if (Object.keys(updates).length === 0) return res.status(400).json({ message: "No valid fields" });
       const user = await storage.updateUser(req.user.id, updates);

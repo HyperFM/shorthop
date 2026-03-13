@@ -9,6 +9,7 @@ import {
   notifications,
   hopBuddyRatings,
   follows,
+  friendships,
   communityPosts,
   expansionWaitlist,
   userBadges,
@@ -26,6 +27,7 @@ import {
   type HopBuddyRating,
   type InsertHopBuddyRating,
   type Follow,
+  type Friendship,
   type CommunityPost,
   type InsertCommunityPost,
   type InsertExpansionWaitlist,
@@ -116,6 +118,14 @@ export interface IStorage {
   followUser(followerId: number, followingId: number): Promise<Follow>;
   unfollowUser(followerId: number, followingId: number): Promise<void>;
   getFollows(userId: number): Promise<{ id: number; userId: number; username: string; isMutual: boolean }[]>;
+
+  sendFriendRequest(requesterId: number, addresseeId: number): Promise<any>;
+  respondFriendRequest(friendshipId: number, userId: number, accept: boolean): Promise<any>;
+  getFriendRequests(userId: number): Promise<{ id: number; requesterId: number; username: string; profilePhoto: string | null; createdAt: Date | null }[]>;
+  getFriends(userId: number): Promise<{ id: number; friendId: number; username: string; profilePhoto: string | null }[]>;
+  getFriendCount(userId: number): Promise<number>;
+  getFriendshipStatus(userId: number, otherUserId: number): Promise<string | null>;
+  getPublicProfiles(currentUserId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number }[]>;
 
   getCommunityPosts(): Promise<{ id: number; userId: number; content: string; createdAt: Date | null; username: string }[]>;
   createCommunityPost(post: InsertCommunityPost): Promise<CommunityPost>;
@@ -522,6 +532,128 @@ export class DatabaseStorage implements IStorage {
       username: f.username,
       isMutual: followerIds.has(f.followingId),
     }));
+  }
+
+  async sendFriendRequest(requesterId: number, addresseeId: number): Promise<any> {
+    const existing = await db.select().from(friendships).where(
+      or(
+        and(eq(friendships.requesterId, requesterId), eq(friendships.addresseeId, addresseeId)),
+        and(eq(friendships.requesterId, addresseeId), eq(friendships.addresseeId, requesterId))
+      )
+    );
+    if (existing.length > 0) {
+      if (existing[0].status === "accepted") throw new Error("Already friends");
+      if (existing[0].status === "pending") throw new Error("Request already pending");
+      if (existing[0].status === "declined") {
+        const [updated] = await db.update(friendships)
+          .set({ status: "pending", requesterId, addresseeId })
+          .where(eq(friendships.id, existing[0].id))
+          .returning();
+        return updated;
+      }
+    }
+    const [f] = await db.insert(friendships).values({ requesterId, addresseeId, status: "pending" }).returning();
+    return f;
+  }
+
+  async respondFriendRequest(friendshipId: number, userId: number, accept: boolean): Promise<any> {
+    const [friendship] = await db.select().from(friendships).where(eq(friendships.id, friendshipId));
+    if (!friendship || friendship.addresseeId !== userId) throw new Error("Not authorized");
+    if (friendship.status !== "pending") throw new Error("Request already handled");
+    const [updated] = await db.update(friendships)
+      .set({ status: accept ? "accepted" : "declined" })
+      .where(eq(friendships.id, friendshipId))
+      .returning();
+    return updated;
+  }
+
+  async getFriendRequests(userId: number): Promise<{ id: number; requesterId: number; username: string; profilePhoto: string | null; createdAt: Date | null }[]> {
+    const requests = await db.select({
+      id: friendships.id,
+      requesterId: friendships.requesterId,
+      username: users.username,
+      profilePhoto: users.profilePhoto,
+      createdAt: friendships.createdAt,
+    })
+      .from(friendships)
+      .innerJoin(users, eq(friendships.requesterId, users.id))
+      .where(and(eq(friendships.addresseeId, userId), eq(friendships.status, "pending")));
+    return requests;
+  }
+
+  async getFriends(userId: number): Promise<{ id: number; friendId: number; username: string; profilePhoto: string | null }[]> {
+    const sent = await db.select({
+      id: friendships.id,
+      friendId: friendships.addresseeId,
+      username: users.username,
+      profilePhoto: users.profilePhoto,
+    })
+      .from(friendships)
+      .innerJoin(users, eq(friendships.addresseeId, users.id))
+      .where(and(eq(friendships.requesterId, userId), eq(friendships.status, "accepted")));
+
+    const received = await db.select({
+      id: friendships.id,
+      friendId: friendships.requesterId,
+      username: users.username,
+      profilePhoto: users.profilePhoto,
+    })
+      .from(friendships)
+      .innerJoin(users, eq(friendships.requesterId, users.id))
+      .where(and(eq(friendships.addresseeId, userId), eq(friendships.status, "accepted")));
+
+    return [...sent, ...received];
+  }
+
+  async getFriendCount(userId: number): Promise<number> {
+    const result = await db.select({ count: count() }).from(friendships)
+      .where(and(
+        eq(friendships.status, "accepted"),
+        or(eq(friendships.requesterId, userId), eq(friendships.addresseeId, userId))
+      ));
+    return result[0]?.count || 0;
+  }
+
+  async getFriendshipStatus(userId: number, otherUserId: number): Promise<string | null> {
+    const result = await db.select().from(friendships).where(
+      or(
+        and(eq(friendships.requesterId, userId), eq(friendships.addresseeId, otherUserId)),
+        and(eq(friendships.requesterId, otherUserId), eq(friendships.addresseeId, userId))
+      )
+    );
+    if (result.length === 0) return null;
+    const f = result[0];
+    if (f.status === "accepted") return "friends";
+    if (f.status === "pending" && f.requesterId === userId) return "pending_sent";
+    if (f.status === "pending" && f.addresseeId === userId) return "pending_received";
+    return f.status;
+  }
+
+  async getPublicProfiles(currentUserId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number }[]> {
+    const allUsers = await db.select({
+      id: users.id,
+      username: users.username,
+      profilePhoto: users.profilePhoto,
+      bio: users.bio,
+      interests: users.interests,
+      profileVisibility: users.profileVisibility,
+      isFounder: users.isFounder,
+      founderBadge: users.founderBadge,
+      subscription: users.subscription,
+      totalHops: users.totalHops,
+    }).from(users)
+      .where(and(
+        sql`${users.id} != ${currentUserId}`,
+        sql`(${users.profileVisibility} = 'public' OR ${users.profileVisibility} = 'semi_private')`,
+        sql`${users.isDisabled} = false`
+      ));
+
+    const result = [];
+    for (const u of allUsers) {
+      const fc = await this.getFriendCount(u.id);
+      result.push({ ...u, friendCount: fc });
+    }
+    return result;
   }
 
   async getCommunityPosts(): Promise<{ id: number; userId: number; content: string; createdAt: Date | null; username: string }[]> {

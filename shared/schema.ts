@@ -58,6 +58,8 @@ export const users = pgTable("users", {
   travelTime: text("travel_time"),
   favoritePlaces: text("favorite_places"),
   profilePhoto: text("profile_photo"),
+  profileVisibility: text("profile_visibility").default("public"),
+  lifetimeSubscription: boolean("lifetime_subscription").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -176,6 +178,16 @@ export const follows = pgTable("follows", {
   uniqueFollow: unique().on(table.followerId, table.followingId),
 }));
 
+export const friendships = pgTable("friendships", {
+  id: serial("id").primaryKey(),
+  requesterId: integer("requester_id").references(() => users.id).notNull(),
+  addresseeId: integer("addressee_id").references(() => users.id).notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueFriendship: unique().on(table.requesterId, table.addresseeId),
+}));
+
 export const communityPosts = pgTable("community_posts", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
@@ -217,6 +229,7 @@ export const insertRedemptionSchema = createInsertSchema(userRedemptions).omit({
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export const insertHopBuddyRatingSchema = createInsertSchema(hopBuddyRatings).omit({ id: true, createdAt: true });
 export const insertFollowSchema = createInsertSchema(follows).omit({ id: true, createdAt: true });
+export const insertFriendshipSchema = createInsertSchema(friendships).omit({ id: true, createdAt: true });
 export const insertCommunityPostSchema = createInsertSchema(communityPosts).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
@@ -242,6 +255,9 @@ export type InsertHopBuddyRating = z.infer<typeof insertHopBuddyRatingSchema>;
 
 export type Follow = typeof follows.$inferSelect;
 export type InsertFollow = z.infer<typeof insertFollowSchema>;
+
+export type Friendship = typeof friendships.$inferSelect;
+export type InsertFriendship = z.infer<typeof insertFriendshipSchema>;
 
 export type CommunityPost = typeof communityPosts.$inferSelect;
 export type InsertCommunityPost = z.infer<typeof insertCommunityPostSchema>;

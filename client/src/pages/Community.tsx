@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield, Heart, DollarSign, Crown, Star, Languages, Activity, Car, Footprints, UserPlus } from "lucide-react";
+import { Loader2, Send, Users, Sparkles, Lock, MessageCircle, X, Shield, Heart, DollarSign, Crown, Star, Languages, Activity, Car, Footprints, UserPlus, UserCheck, UserX, Globe, EyeOff, Eye } from "lucide-react";
 import { api } from "@shared/routes";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { NetworkProgress } from "@/components/NetworkProgress";
 
@@ -472,6 +472,282 @@ function CityChat({ user }: { user: any }) {
   );
 }
 
+type ProfileData = {
+  id: number;
+  username: string;
+  profilePhoto: string | null;
+  bio: string | null;
+  interests: string | null;
+  profileVisibility: string | null;
+  isFounder: boolean | null;
+  founderBadge: string | null;
+  subscription: string | null;
+  totalHops: number | null;
+  friendCount: number;
+};
+
+function CommunityProfiles({ user }: { user: any }) {
+  const { data: profiles = [], isLoading } = useQuery<ProfileData[]>({
+    queryKey: ["/api/community/profiles"],
+  });
+
+  const { data: friends = [] } = useQuery<{ id: number; friendId: number; username: string }[]>({
+    queryKey: ["/api/friends"],
+  });
+
+  const { data: pendingRequests = [] } = useQuery<{ id: number; requesterId: number }[]>({
+    queryKey: ["/api/friends/requests"],
+  });
+
+  const friendIds = new Set(friends.map(f => f.friendId));
+  const pendingReceivedIds = new Set(pendingRequests.map(r => r.requesterId));
+  const [pendingSentIds, setPendingSentIds] = useState<Set<number>>(new Set());
+
+  const sendRequest = useMutation({
+    mutationFn: async (addresseeId: number) => {
+      await apiRequest("POST", "/api/friends/request", { addresseeId });
+      return addresseeId;
+    },
+    onSuccess: (addresseeId: number) => {
+      setPendingSentIds(prev => new Set([...prev, addresseeId]));
+      queryClient.invalidateQueries({ queryKey: ["/api/community/profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/friends"] });
+      showFlash("🤝", "Friend request sent!", "success");
+    },
+    onError: (err: any) => {
+      showFlash("❌", err.message || "Failed to send request", "error");
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (profiles.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <Users className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+        <p className="text-muted-foreground font-medium" data-testid="text-no-profiles">No community members yet</p>
+        <p className="text-sm text-muted-foreground/70 mt-1">Be the first to make your profile public!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3" data-testid="list-community-profiles">
+      {profiles.map((p) => {
+        const isSemiPrivate = p.profileVisibility === "semi_private";
+        return (
+          <Card key={p.id} data-testid={`profile-card-${p.id}`} className="hover:shadow-sm transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-sm font-bold shrink-0 overflow-hidden">
+                  {p.profilePhoto ? (
+                    <img src={p.profilePhoto} alt={p.username} className="w-full h-full object-cover" />
+                  ) : (
+                    p.username[0].toUpperCase()
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-bold" data-testid={`profile-username-${p.id}`}>{p.username}</span>
+                    {p.isFounder && (
+                      <Badge className="text-[7px] bg-amber-100 text-amber-700 border-0 px-1 py-0" data-testid={`badge-founder-${p.id}`}>
+                        <Crown className="w-2.5 h-2.5 mr-0.5" />
+                        {p.founderBadge || "Founder"}
+                      </Badge>
+                    )}
+                    {p.profileVisibility === "semi_private" && (
+                      <EyeOff className="w-3 h-3 text-muted-foreground" />
+                    )}
+                  </div>
+                  {!isSemiPrivate && p.bio && (
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2" data-testid={`profile-bio-${p.id}`}>{p.bio}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-1">
+                    {!isSemiPrivate && (
+                      <>
+                        <span className="text-[10px] text-muted-foreground">{p.totalHops || 0} hops</span>
+                        <span className="text-[10px] text-muted-foreground">{p.friendCount} friends</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {friendIds.has(p.id) ? (
+                  <Badge variant="secondary" className="text-[9px] h-8 px-3">
+                    <UserCheck className="w-3 h-3 mr-1" />
+                    Friends
+                  </Badge>
+                ) : pendingSentIds.has(p.id) ? (
+                  <Badge variant="outline" className="text-[9px] h-8 px-3 text-muted-foreground">
+                    Pending
+                  </Badge>
+                ) : pendingReceivedIds.has(p.id) ? (
+                  <Badge variant="outline" className="text-[9px] h-8 px-3 text-blue-500 border-blue-200">
+                    Respond
+                  </Badge>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs h-8 px-3"
+                    onClick={() => sendRequest.mutate(p.id)}
+                    disabled={sendRequest.isPending}
+                    data-testid={`button-add-friend-${p.id}`}
+                  >
+                    <UserPlus className="w-3.5 h-3.5 mr-1" />
+                    Add
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+type FriendRequestData = {
+  id: number;
+  requesterId: number;
+  username: string;
+  profilePhoto: string | null;
+  createdAt: string | null;
+};
+
+function FriendRequestsTab({ user }: { user: any }) {
+  const { data: requests = [], isLoading } = useQuery<FriendRequestData[]>({
+    queryKey: ["/api/friends/requests"],
+  });
+
+  const { data: friends = [] } = useQuery<{ id: number; friendId: number; username: string; profilePhoto: string | null }[]>({
+    queryKey: ["/api/friends"],
+  });
+
+  const respond = useMutation({
+    mutationFn: async ({ id, accept }: { id: number; accept: boolean }) => {
+      await apiRequest("POST", `/api/friends/respond/${id}`, { accept });
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/friends/requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/friends"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/friends/count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/community/profiles"] });
+      showFlash(vars.accept ? "🤝" : "👋", vars.accept ? "Friend added!" : "Request declined", vars.accept ? "success" : "info");
+    },
+    onError: () => {
+      showFlash("❌", "Failed to respond", "error");
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {requests.length > 0 && (
+        <div>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Pending Requests</p>
+          <div className="space-y-2" data-testid="list-friend-requests">
+            {requests.map((r) => (
+              <Card key={r.id} data-testid={`friend-request-${r.id}`}>
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
+                    {r.profilePhoto ? (
+                      <img src={r.profilePhoto} alt={r.username} className="w-full h-full object-cover" />
+                    ) : (
+                      r.username[0].toUpperCase()
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold" data-testid={`request-username-${r.id}`}>{r.username}</p>
+                    <p className="text-[10px] text-muted-foreground">{timeAgo(r.createdAt)}</p>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <Button
+                      size="sm"
+                      className="h-8 px-3 bg-green-500 hover:bg-green-600 text-white text-xs"
+                      onClick={() => respond.mutate({ id: r.id, accept: true })}
+                      disabled={respond.isPending}
+                      data-testid={`button-accept-${r.id}`}
+                    >
+                      <UserCheck className="w-3.5 h-3.5 mr-1" />
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-3 text-xs"
+                      onClick={() => respond.mutate({ id: r.id, accept: false })}
+                      disabled={respond.isPending}
+                      data-testid={`button-decline-${r.id}`}
+                    >
+                      <UserX className="w-3.5 h-3.5 mr-1" />
+                      Decline
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          My Friends ({friends.length})
+        </p>
+        {friends.length === 0 ? (
+          <div className="text-center py-8">
+            <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">No friends yet</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">Check out the Community tab to find people!</p>
+          </div>
+        ) : (
+          <div className="space-y-2" data-testid="list-friends">
+            {friends.map((f) => (
+              <Card key={f.id} data-testid={`friend-${f.friendId}`}>
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
+                    {f.profilePhoto ? (
+                      <img src={f.profilePhoto} alt={f.username} className="w-full h-full object-cover" />
+                    ) : (
+                      f.username[0].toUpperCase()
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold" data-testid={`friend-username-${f.friendId}`}>{f.username}</p>
+                  <Badge variant="secondary" className="ml-auto text-[9px]">
+                    <UserCheck className="w-3 h-3 mr-0.5" />
+                    Friends
+                  </Badge>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {requests.length === 0 && friends.length === 0 && (
+        <div className="text-center py-12">
+          <Users className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium">No friend activity</p>
+          <p className="text-sm text-muted-foreground/70 mt-1">Visit the Community tab to discover people!</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const DONATE_AMOUNTS = [
   { label: "$0.50", cents: 50 },
   { label: "$1", cents: 100 },
@@ -480,13 +756,19 @@ const DONATE_AMOUNTS = [
 
 export default function Community() {
   const { data: user, isLoading: authLoading } = useAuth();
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const [newPost, setNewPost] = useState("");
   const [vipOpen, setVipOpen] = useState(false);
   const [donateAmount, setDonateAmount] = useState<number | null>(null);
   const [donateMsg, setDonateMsg] = useState("");
   const [customDonate, setCustomDonate] = useState("");
   const [showCustomDonate, setShowCustomDonate] = useState(false);
+  const [connectTab, setConnectTab] = useState<"feed" | "community" | "requests">("feed");
+
+  const { data: requestCount } = useQuery<{ id: number }[]>({
+    queryKey: ["/api/friends/requests"],
+    select: (data: any) => data,
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -517,7 +799,7 @@ export default function Community() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.community.list.path] });
+      qc.invalidateQueries({ queryKey: [api.community.list.path] });
       setNewPost("");
       showFlash("📝", "Posted!", "success");
     },
@@ -573,10 +855,47 @@ export default function Community() {
           Connect
         </h1>
       </div>
-      <p className="text-xs text-muted-foreground mb-4">
+      <p className="text-xs text-muted-foreground mb-3">
         See the ShortHop network grow. Shared routes, real connections.
       </p>
 
+      <div className="flex gap-1 mb-4 bg-muted/40 rounded-xl p-1" data-testid="connect-tabs">
+        {([
+          { key: "feed" as const, label: "Feed", icon: <Activity className="w-3.5 h-3.5" /> },
+          { key: "community" as const, label: "Community", icon: <Globe className="w-3.5 h-3.5" /> },
+          { key: "requests" as const, label: "Friends", icon: <Users className="w-3.5 h-3.5" /> },
+        ]).map(t => (
+          <button
+            key={t.key}
+            onClick={() => setConnectTab(t.key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all relative ${
+              connectTab === t.key
+                ? "bg-background shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            data-testid={`tab-${t.key}`}
+          >
+            {t.icon}
+            {t.label}
+            {t.key === "requests" && requestCount && Array.isArray(requestCount) && requestCount.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center font-bold">
+                {requestCount.length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {connectTab === "community" && user && (
+        <CommunityProfiles user={user} />
+      )}
+
+      {connectTab === "requests" && user && (
+        <FriendRequestsTab user={user} />
+      )}
+
+      {connectTab !== "feed" ? null : (
+      <>
       <Card className="mb-4 border-border/50 shadow-sm rounded-2xl" data-testid="card-live-activity">
         <CardContent className="p-3">
           <div className="flex items-center gap-2 mb-2.5">
@@ -806,6 +1125,9 @@ export default function Community() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      </>
       )}
 
       {vipOpen && user && isFounder && (

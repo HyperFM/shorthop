@@ -7,12 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Users, Globe, Sparkles, Shield, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Palette, Camera, Plus, X, Eye, EyeOff } from "lucide-react";
+import { Bell, Users, Globe, Sparkles, Shield, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Palette, Camera, Plus, X, Eye, EyeOff, Lock } from "lucide-react";
 import { PROFILE_TAB_COLORS } from "@/components/BottomTabBar";
 import { useLocation } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
 import { useAuth } from "@/hooks/use-auth";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 import { api } from "@shared/routes";
@@ -59,15 +59,26 @@ export default function Settings() {
     } catch { return []; }
   });
   const [showPromptPicker, setShowPromptPicker] = useState(false);
-  const [profilePublic, setProfilePublic] = useState(() => {
-    try { return localStorage.getItem("sh-profile-public") !== "false"; } catch { return true; }
+  const [profileVisibility, setProfileVisibility] = useState<"public" | "semi_private" | "private">(() => {
+    return ((user as any)?.profileVisibility as any) || "public";
   });
 
-  function toggleProfilePublic() {
-    const next = !profilePublic;
-    setProfilePublic(next);
-    try { localStorage.setItem("sh-profile-public", String(next)); } catch {}
-    showFlash(next ? "🌐" : "🔒", next ? "Profile set to Public" : "Profile set to Private", "info");
+  const { data: friendCountData } = useQuery<{ count: number }>({
+    queryKey: ["/api/friends/count"],
+    enabled: !!user,
+  });
+
+  async function changeProfileVisibility(val: "public" | "semi_private" | "private") {
+    setProfileVisibility(val);
+    try {
+      await apiRequest("PATCH", "/api/user/profile", { profileVisibility: val });
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      const labels = { public: "Public", semi_private: "Semi-Private", private: "Private" };
+      const icons = { public: "🌐", semi_private: "👤", private: "🔒" };
+      showFlash(icons[val], `Profile set to ${labels[val]}`, "info");
+    } catch {
+      showFlash("❌", "Failed to update visibility", "error");
+    }
   }
 
   function applyProfileTabColor(color: string) {
@@ -86,6 +97,7 @@ export default function Settings() {
       setPreferredUsername(user.username || "");
       setLegalName((user as any)?.legalName || "");
       setProfilePhoto((user as any)?.profilePhoto || null);
+      setProfileVisibility(((user as any)?.profileVisibility as any) || "public");
       const raw = (user as any)?.interests;
       setSelectedInterests(raw ? raw.split(',').filter(Boolean) : []);
     }
@@ -307,18 +319,29 @@ export default function Settings() {
                   <Users className="w-5 h-5 text-green-500" />
                   Your Profile
                 </div>
-                <button
-                  onClick={toggleProfilePublic}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${
-                    profilePublic
-                      ? "bg-green-50 dark:bg-green-950/20 border-green-300/50 text-green-600"
-                      : "bg-muted/50 border-border/50 text-muted-foreground"
-                  }`}
-                  data-testid="button-profile-visibility"
-                >
-                  {profilePublic ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                  {profilePublic ? "Public" : "Private"}
-                </button>
+                <div className="flex items-center gap-1" data-testid="profile-visibility-selector">
+                  {([
+                    { val: "public" as const, icon: <Globe className="w-3 h-3" />, label: "Public" },
+                    { val: "semi_private" as const, icon: <EyeOff className="w-3 h-3" />, label: "Semi" },
+                    { val: "private" as const, icon: <Lock className="w-3 h-3" />, label: "Private" },
+                  ]).map(opt => (
+                    <button
+                      key={opt.val}
+                      onClick={() => changeProfileVisibility(opt.val)}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold border transition-all ${
+                        profileVisibility === opt.val
+                          ? opt.val === "public" ? "bg-green-50 dark:bg-green-950/20 border-green-300/50 text-green-600"
+                            : opt.val === "semi_private" ? "bg-blue-50 dark:bg-blue-950/20 border-blue-300/50 text-blue-600"
+                            : "bg-muted border-border text-muted-foreground"
+                          : "bg-transparent border-transparent text-muted-foreground/50 hover:text-muted-foreground"
+                      }`}
+                      data-testid={`button-visibility-${opt.val}`}
+                    >
+                      {opt.icon}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -361,6 +384,19 @@ export default function Settings() {
                   data-testid="input-profile-photo"
                 />
               </div>
+
+              {friendCountData && (
+                <div className="flex items-center justify-center gap-4 text-center" data-testid="friends-count-display">
+                  <div>
+                    <p className="text-lg font-bold" data-testid="text-friend-count">{friendCountData.count}</p>
+                    <p className="text-[10px] text-muted-foreground">Friends</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold">{(user as any)?.totalHops || 0}</p>
+                    <p className="text-[10px] text-muted-foreground">Hops</p>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Label className="text-xs font-bold mb-1.5 block">Preferred Username</Label>
