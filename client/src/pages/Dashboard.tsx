@@ -65,6 +65,15 @@ export default function Dashboard() {
     try { navigator.vibrate?.(30); } catch {}
   }
 
+  function switchMode(mode: "hopper" | "driver") {
+    setActiveTab(mode);
+    vibrate();
+    try {
+      localStorage.setItem("sh-active-mode", mode);
+      window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: mode }));
+    } catch {}
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -221,10 +230,7 @@ export default function Dashboard() {
               transition={{ type: "spring", stiffness: 500, damping: 35 }}
             />
             <button
-              onClick={() => {
-                setActiveTab("hopper");
-                vibrate();
-              }}
+              onClick={() => switchMode("hopper")}
               className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
                 activeTab === "hopper" ? "text-white" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -233,10 +239,7 @@ export default function Dashboard() {
               Hopper
             </button>
             <button
-              onClick={() => {
-                setActiveTab("driver");
-                vibrate();
-              }}
+              onClick={() => switchMode("driver")}
               className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
                 activeTab === "driver" ? "text-white" : "text-muted-foreground hover:text-foreground"
               }`}

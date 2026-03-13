@@ -64,12 +64,16 @@ function FloatingStats() {
 
 function OrangeGlow() {
   return (
-    <div
-      className="fixed inset-0 pointer-events-none z-[200]"
-      style={{
-        boxShadow: "inset 0 0 0 2.5px rgba(249,115,22,0.55), inset 0 0 28px rgba(249,115,22,0.12)",
-      }}
-    />
+    <>
+      <div
+        className="fixed inset-0 pointer-events-none z-[200]"
+        style={{
+          boxShadow: "inset 0 0 0 2.5px rgba(249,115,22,0.55), inset 0 0 28px rgba(249,115,22,0.12)",
+          maskImage: "linear-gradient(to bottom, transparent 0%, black 18%, black 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 18%, black 100%)",
+        }}
+      />
+    </>
   );
 }
 
