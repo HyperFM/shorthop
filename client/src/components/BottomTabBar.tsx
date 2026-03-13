@@ -125,28 +125,17 @@ export function BottomTabBar() {
           className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative"
           data-testid="tab-instahop"
         >
-          <div className="w-14 h-14 rounded-full -mt-4 relative overflow-hidden"
-            style={{
-              background: activeMode === "hopper"
-                ? "radial-gradient(circle, #f97316 60%, #ea580c 100%)"
-                : "radial-gradient(circle, #22c55e 60%, #16a34a 100%)",
-              boxShadow: activeMode === "hopper"
-                ? "0 4px 12px rgba(249,115,22,0.4)"
-                : "0 4px 12px rgba(34,197,94,0.4)",
-            }}
-          >
-            <motion.img
-              key={activeMode}
-              src={activeMode === "hopper" ? "/hop-btn.png" : "/drive-btn.png"}
-              alt={activeMode === "hopper" ? "InstaHop" : "Drive Now"}
-              className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
-              draggable={false}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.15 }}
-              style={{ willChange: "transform", transform: "translateZ(0)" }}
-            />
-          </div>
+          <motion.img
+            key={activeMode}
+            src={activeMode === "hopper" ? "/hop-btn.png" : "/drive-btn.png"}
+            alt={activeMode === "hopper" ? "InstaHop" : "Drive Now"}
+            draggable={false}
+            className="w-14 h-14 -mt-3 pointer-events-none select-none"
+            style={{ willChange: "transform", transform: "translateZ(0)", filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.25))" }}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.15 }}
+          />
           <span className={`text-[10px] font-bold leading-none ${
             activeMode === "hopper"
               ? "text-orange-600 dark:text-orange-400"
