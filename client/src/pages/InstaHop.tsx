@@ -375,13 +375,31 @@ function InstaHopView({ user }: { user: User }) {
     }
   }, []);
 
-  const onSubmit = (data: z.infer<typeof searchSchema>) => {
+  const onSubmit = async (data: z.infer<typeof searchSchema>) => {
     if (mode === "walk") {
       showFlash("🚶", "GPS navigation starting...", "info");
       return;
     }
     setIsMatching(true);
-    requestHop.mutate({ ...data, hopType: 'short_hop' } as any, {
+    const hopData: any = { ...data, hopType: 'short_hop' };
+    if (geo.latitude && geo.longitude) {
+      hopData.startLat = String(geo.latitude);
+      hopData.startLng = String(geo.longitude);
+    }
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (token && data.endLocation) {
+      try {
+        const query = encodeURIComponent(data.endLocation + ", Lexington, KY");
+        const geoRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${token}&limit=1`);
+        const geoJson = await geoRes.json();
+        if (geoJson.features && geoJson.features.length > 0) {
+          const [lng, lat] = geoJson.features[0].center;
+          hopData.endLat = String(lat);
+          hopData.endLng = String(lng);
+        }
+      } catch {}
+    }
+    requestHop.mutate(hopData, {
       onSuccess: () => {
         showFlash("⚡", mode === "drive" ? "Drive started!" : "InstaHop requested!", "success");
       },

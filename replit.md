@@ -31,14 +31,18 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Subscription System**: Free, FlexHop ($10/mo), and PowerHop ($25/mo) tiers with server-side Stripe enforcement.
 - **Growth Features**: Hop Streak System, Achievement Badges, Referral System, Leaderboard, and Shareable Ride Cards.
 - **Multi-Language & Auto-Translation**: Supports 14 languages with automatic translation in DMs and a "Translate" button on chat messages, powered by MyMemory API.
-- **GPS/Map Visuals**: Uses Leaflet with CartoDB dark tiles, displaying user/driver locations, animated route lines, and pickup markers.
+- **GPS/Map Visuals**: Uses Mapbox GL JS (streets-v12 style) with live GPS tracking, three context-aware map markers (hopper alone, driver alone, driver+hopper together), and drop-shadow rendering.
+- **Profile Photo Storage**: Profile photos are resized client-side (max 400px, JPEG 0.8 quality), stored as base64 in the `profilePhoto` column of the users table, and persisted via PATCH /api/user/profile.
+- **Direction-Based Hop Matching**: Available hops are sorted for drivers by a combined score of pickup proximity and route/direction alignment (matching corridor names, start/end locations against driver's routine routes).
+- **Destination Geocoding**: Hop destinations are geocoded via Mapbox Geocoding API before submission, storing lat/lng coordinates for proximity-based matching and drop-off notifications.
+- **Drop-Off Proximity Notification**: Same notification sound plays when driver+hopper approach the hopper's destination (within 0.15 miles), on both driver and hopper sides.
 
 ### System Design Choices
 - **Authentication**: Passport.js with a local strategy and session-based authentication.
 - **Data Validation**: Zod schemas.
 - **Database**: PostgreSQL with Drizzle ORM.
 - **Session Management**: PostgreSQL-backed sessions (`connect-pg-simple`) for 30-day persistence.
-- **Pricing Logic**: Server-side calculation for ride costs ($3.00/mile, minimum $1.50).
+- **Pricing Logic**: Server-side calculation at $3.00/mile (= $1.50/half-mile = 1.5 Wheels), minimum charge $1.50. Consistent across hop creation and Stripe checkout.
 - **Super Admin Role**: A single designated super-admin account (HyperFM).
 
 ### Bottom Navigation Tabs (Order)
@@ -74,8 +78,7 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 ## External Dependencies
 - **Stripe**: For subscription management and payment processing.
 - **MyMemory API**: For multi-language auto-translation functionality.
-- **Leaflet**: Open-source JavaScript library for interactive maps.
-- **CartoDB**: Provides dark map tiles for Leaflet.
+- **Mapbox GL JS**: Interactive maps with streets-v12 style and geocoding API.
 - **PostgreSQL**: Primary database.
 - **Framer Motion**: For UI animations.
 - **Shadcn**: UI component library.

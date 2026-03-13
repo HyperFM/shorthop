@@ -408,8 +408,57 @@ export async function registerRoutes(
       const availableHops = await storage.getAvailableHops();
       const driverHops = await storage.getHopsForDriver(req.user.id);
       const availableIds = new Set(availableHops.map(h => h.id));
+
+      const driverLoc = liveLocations.get(req.user.id);
+      const driverRoutes = await storage.getRoutes(req.user.id);
+      let sortedAvailable = availableHops;
+      if (driverLoc && Date.now() - driverLoc.updatedAt < 120000) {
+        const driverDestinations = driverRoutes.map(r => ({
+          start: r.startLocation?.toLowerCase() || "",
+          end: r.destination?.toLowerCase() || "",
+        }));
+
+        function scoreHop(hop: typeof availableHops[0]): number {
+          const hopStartLat = parseFloat(hop.startLat || "0");
+          const hopStartLng = parseFloat(hop.startLng || "0");
+          if (!hopStartLat) return 999;
+
+          const pickupDist = getDistance(driverLoc!.latitude, driverLoc!.longitude, hopStartLat, hopStartLng);
+
+          let directionBonus = 0;
+          const hopDest = (hop.endLocation || "").toLowerCase();
+          const hopStart = (hop.startLocation || "").toLowerCase();
+          for (const route of driverDestinations) {
+            if (route.end && hopDest && (route.end.includes(hopDest) || hopDest.includes(route.end))) {
+              directionBonus = -5;
+              break;
+            }
+            if (route.start && hopStart && (route.start.includes(hopStart) || hopStart.includes(route.start))) {
+              directionBonus = Math.min(directionBonus, -2);
+            }
+          }
+
+          const hopEndLat = parseFloat(hop.endLat || "0");
+          const hopEndLng = parseFloat(hop.endLng || "0");
+          if (hopEndLat && hopEndLng) {
+            for (const route of driverDestinations) {
+              for (const corridor of LEXINGTON_CORRIDORS) {
+                const cNameLower = corridor.name.toLowerCase();
+                if (route.end.includes(cNameLower) || hopDest.includes(cNameLower)) {
+                  directionBonus = Math.min(directionBonus, -3);
+                }
+              }
+            }
+          }
+
+          return pickupDist + directionBonus;
+        }
+
+        sortedAvailable = [...availableHops].sort((a, b) => scoreHop(a) - scoreHop(b));
+      }
+
       const mergedHops = [
-        ...availableHops,
+        ...sortedAvailable,
         ...driverHops.filter(h => !availableIds.has(h.id)),
       ];
 
@@ -456,11 +505,11 @@ export async function registerRoutes(
       let priceCents = 0;
       const miles = parseFloat(input.distanceMiles || "1");
       if (input.hopType === "short_hop") {
-        priceCents = Math.floor(miles * 250);
+        priceCents = Math.floor(miles * 300);
       } else if (input.hopType === "flex_hop") {
-        priceCents = Math.floor(miles * 250);
+        priceCents = Math.floor(miles * 300);
       } else if (input.hopType === "full_ride") {
-        priceCents = Math.floor(parseFloat(input.distanceMiles || "5") * 250);
+        priceCents = Math.floor(parseFloat(input.distanceMiles || "5") * 300);
       }
 
       const payWithWheels = req.body.payWithWheels === true;
@@ -482,7 +531,11 @@ export async function registerRoutes(
         endLocation: input.endLocation,
         distanceMiles: input.distanceMiles ? (input.distanceMiles as any) : null,
         priceCents,
-        detourDistance: null
+        detourDistance: null,
+        startLat: input.startLat || null,
+        startLng: input.startLng || null,
+        endLat: input.endLat || null,
+        endLng: input.endLng || null,
       });
       res.status(201).json(hop);
     } catch (err) {
@@ -862,7 +915,7 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const SUPPORTED_LANGUAGES = Object.keys(getLanguages());
-      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces'];
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto'];
       const updates: Record<string, any> = {};
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];

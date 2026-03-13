@@ -172,6 +172,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
     }
     if (activeHop?.status === 'matched') {
       setMatchedElapsed(0);
+      dropoffSoundPlayedRef.current = false;
       matchedTimerRef.current = setInterval(() => setMatchedElapsed(s => s + 1), 1000);
     } else {
       if (matchedTimerRef.current) clearInterval(matchedTimerRef.current);
@@ -199,6 +200,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
   }, [activeHop?.status, user.id]);
 
   const autoCompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropoffSoundPlayedRef = useRef(false);
 
   useEffect(() => {
     if (activeHop?.status === 'matched' && tracking?.distance !== undefined) {
@@ -232,6 +234,22 @@ export default function WalkerDashboard({ user }: { user: User }) {
           autoCompleteTimerRef.current = null;
         }
       }
+
+      const endLat = parseFloat((activeHop as any).endLat || "0");
+      const endLng = parseFloat((activeHop as any).endLng || "0");
+      if (endLat && endLng && geo.latitude && geo.longitude && !dropoffSoundPlayedRef.current) {
+        const R = 3959;
+        const dLat = (endLat - geo.latitude) * Math.PI / 180;
+        const dLon = (endLng - geo.longitude) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(geo.latitude * Math.PI / 180) * Math.cos(endLat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+        const distToDestMiles = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        if (distToDestMiles < 0.15) {
+          dropoffSoundPlayedRef.current = true;
+          playDriverApproachingSound();
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]);
+          showFlash("📍", "Approaching drop-off!", "success");
+        }
+      }
     }
 
     return () => {
@@ -244,7 +262,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
         autoCompleteTimerRef.current = null;
       }
     };
-  }, [activeHop?.status, tracking?.distance]);
+  }, [activeHop?.status, tracking?.distance, geo.latitude, geo.longitude]);
 
   useEffect(() => {
     if (prevStatusRef.current === 'in_ride' && activeHop === undefined) {

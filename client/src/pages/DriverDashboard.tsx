@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { SeasonalGreeting } from "@/components/SeasonalGreeting";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,9 +18,10 @@ import { useHops, useAcceptHop, useCompleteHop } from "@/hooks/use-hops";
 import { TrustedHoppers } from "@/components/TrustedHoppers";
 import { HopBuddyRating } from "@/components/HopBuddyRating";
 import { ShareRideCard } from "@/components/ShareRideCard";
-import { useLiveLocationBroadcast } from "@/hooks/use-location";
+import { useGeolocation, useLiveLocationBroadcast, useHopTracking } from "@/hooks/use-location";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
+import { playDriverApproachingSound } from "@/lib/sounds";
 import { DriverRoadSideNotice, buildRoadSideInfo, findCorridorByName } from "@/components/RoadSideGuide";
 import { DriverQuestionnaire } from "@/components/DriverQuestionnaire";
 import { useLocation } from "wouter";
@@ -132,6 +133,33 @@ export default function DriverDashboard({ user }: { user: User }) {
 
   const availableHops = hops?.filter(h => h.status === 'requested') || [];
   const activeHops = hops?.filter(h => h.status === 'matched' || h.status === 'in_ride') || [];
+  const currentActiveHop = activeHops[0];
+  const geo = useGeolocation();
+  const tracking = useHopTracking(currentActiveHop?.id, !!(currentActiveHop && (currentActiveHop.status === 'matched' || currentActiveHop.status === 'in_ride')));
+  const driverDropoffSoundRef = useRef(false);
+
+  useEffect(() => {
+    if (currentActiveHop?.status === 'matched') {
+      driverDropoffSoundRef.current = false;
+    }
+    if (currentActiveHop?.status === 'in_ride' && geo.latitude && geo.longitude && !driverDropoffSoundRef.current) {
+      const endLat = parseFloat((currentActiveHop as any).endLat || "0");
+      const endLng = parseFloat((currentActiveHop as any).endLng || "0");
+      if (endLat && endLng) {
+        const R = 3959;
+        const dLat = (endLat - geo.latitude) * Math.PI / 180;
+        const dLon = (endLng - geo.longitude) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(geo.latitude * Math.PI / 180) * Math.cos(endLat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+        const distToDestMiles = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        if (distToDestMiles < 0.15) {
+          driverDropoffSoundRef.current = true;
+          playDriverApproachingSound();
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 300]);
+          showFlash("📍", "Approaching hopper's drop-off!", "success");
+        }
+      }
+    }
+  }, [currentActiveHop?.status, geo.latitude, geo.longitude]);
 
   const isVerified = driverStatus?.driverVerified ?? false;
   const isActiveNow = driverStatus?.isActive ?? false;

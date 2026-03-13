@@ -57,6 +57,7 @@ export const users = pgTable("users", {
   preferredRoutes: text("preferred_routes"),
   travelTime: text("travel_time"),
   favoritePlaces: text("favorite_places"),
+  profilePhoto: text("profile_photo"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -112,6 +113,10 @@ export const shortHops = pgTable("short_hops", {
   tipCents: integer("tip_cents").default(0),
   detourDistance: text("detour_distance"),
   corridor: text("corridor"),
+  startLat: text("start_lat"),
+  startLng: text("start_lng"),
+  endLat: text("end_lat"),
+  endLng: text("end_lng"),
   rideStartedAt: timestamp("ride_started_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });

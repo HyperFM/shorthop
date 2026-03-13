@@ -50,7 +50,7 @@ export default function Settings() {
   });
   const [preferredUsername, setPreferredUsername] = useState(user?.username || "");
   const [legalName, setLegalName] = useState((user as any)?.legalName || "");
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState<string | null>((user as any)?.profilePhoto || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [funPrompts, setFunPrompts] = useState<{ prompt: string; answer: string }[]>(() => {
     try {
@@ -85,6 +85,7 @@ export default function Settings() {
       setFavoritePlaces((user as any)?.favoritePlaces || "");
       setPreferredUsername(user.username || "");
       setLegalName((user as any)?.legalName || "");
+      setProfilePhoto((user as any)?.profilePhoto || null);
       const raw = (user as any)?.interests;
       setSelectedInterests(raw ? raw.split(',').filter(Boolean) : []);
     }
@@ -98,6 +99,7 @@ export default function Settings() {
         language,
         travelTime: travelTime || null,
         favoritePlaces: favoritePlaces.trim() || null,
+        profilePhoto: profilePhoto || null,
       });
     },
     onSuccess: () => {
@@ -162,11 +164,29 @@ export default function Settings() {
   function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setProfilePhoto(ev.target?.result as string);
-      showFlash("📸", "Photo updated!", "success");
+    if (file.size > 2 * 1024 * 1024) {
+      showFlash("❌", "Photo must be under 2MB", "error");
+      return;
+    }
+    const canvas = document.createElement("canvas");
+    const img = new Image();
+    img.onload = () => {
+      const maxSize = 400;
+      let w = img.width, h = img.height;
+      if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+      else { w = Math.round(w * maxSize / h); h = maxSize; }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        setProfilePhoto(dataUrl);
+        showFlash("📸", "Photo updated! Tap Save to keep it.", "success");
+      }
     };
+    const reader = new FileReader();
+    reader.onload = (ev) => { img.src = ev.target?.result as string; };
     reader.readAsDataURL(file);
   }
 

@@ -96,6 +96,10 @@ export const api = {
         endLocation: z.string(),
         hopType: z.enum(["walk", "short_hop", "flex_hop", "full_ride"]),
         distanceMiles: z.string().optional(),
+        startLat: z.string().optional(),
+        startLng: z.string().optional(),
+        endLat: z.string().optional(),
+        endLng: z.string().optional(),
       }),
       responses: {
         201: z.custom<typeof shortHops.$inferSelect>(),
