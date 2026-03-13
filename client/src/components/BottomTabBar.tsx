@@ -2,7 +2,9 @@ import { useLocation } from "wouter";
 import { Calendar, Activity, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import hopBtnSrc from "@assets/Untitled_design_1773404932229.png";
+import driveBtnSrc from "@assets/Untitled_design_1773404932231.png";
 
 function BowTieIcon({ className }: { className?: string }) {
   return (
@@ -125,17 +127,17 @@ export function BottomTabBar() {
           className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative"
           data-testid="tab-instahop"
         >
-          <motion.img
-            key={activeMode}
-            src={activeMode === "hopper" ? "/hop-btn.png" : "/drive-btn.png"}
+          <img
+            src={activeMode === "hopper" ? hopBtnSrc : driveBtnSrc}
             alt={activeMode === "hopper" ? "InstaHop" : "Drive Now"}
             draggable={false}
+            width={56}
+            height={56}
             className="w-14 h-14 -mt-3 pointer-events-none select-none"
-            style={{ willChange: "transform", transform: "translateZ(0)", filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.25))" }}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.15 }}
+            style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.25))" }}
           />
+          <img src={hopBtnSrc} alt="" className="hidden" aria-hidden="true" />
+          <img src={driveBtnSrc} alt="" className="hidden" aria-hidden="true" />
           <span className={`text-[10px] font-bold leading-none ${
             activeMode === "hopper"
               ? "text-orange-600 dark:text-orange-400"
