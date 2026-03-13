@@ -4,19 +4,29 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useHops, useRequestHop, useCancelHop } from "@/hooks/use-hops";
 import { useGeolocation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
 import { WelcomeGlobe, hasSeenWelcomeGlobe } from "@/components/WelcomeGlobe";
 import { Loader2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 import type { User } from "@shared/routes";
 import hopperMarkerUrl from "@assets/Bazaart_0DED352D-3176-4B56-8873-AA260ABD345D_1773383461603.png";
 import driverMarkerUrl from "@assets/Bazaart_D93EFD8E-BC20-40C4-BC5D-F9598DCF4904_1773383461604.png";
+
+type DriverStatus = {
+  isDriver: boolean;
+  isActive: boolean;
+  driverVerified: boolean;
+  vehicleMake: string | null;
+  applicationStatus: string | null;
+};
 
 const searchSchema = z.object({
   startLocation: z.string().min(2, "Required"),
@@ -185,6 +195,136 @@ function GlowingCarousel({ user }: { user: User }) {
   );
 }
 
+function DriveNowPanel({ user }: { user: User }) {
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+
+  const { data: driverStatus } = useQuery<DriverStatus>({
+    queryKey: ['/api/driver/status'],
+  });
+
+  const { data: hops } = useHops();
+
+  const toggleActive = useMutation({
+    mutationFn: async (active: boolean) => {
+      await apiRequest("POST", "/api/driver/active", { active });
+    },
+    onSuccess: (_data, active) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/driver/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+      showFlash(active ? "🟢" : "🔴", active ? "You're active!" : "You're offline", active ? "success" : "info");
+    },
+    onError: (err: any) => {
+      showFlash("⚠️", err?.message || "Can't toggle status", "error");
+    },
+  });
+
+  const isVerified = driverStatus?.driverVerified ?? false;
+  const isActiveNow = driverStatus?.isActive ?? false;
+  const appStatus = driverStatus?.applicationStatus;
+  const needsOnboarding = !driverStatus?.vehicleMake && !appStatus;
+
+  const availableHops = hops?.filter(h => h.status === 'requested') || [];
+
+  return (
+    <div className="space-y-3">
+      {needsOnboarding && (
+        <Card className="border-border/50 shadow-md rounded-2xl" data-testid="card-onboarding-prompt">
+          <CardContent className="p-4 space-y-3">
+            <h2 className="text-base font-bold text-foreground">Become a Driver</h2>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">1</div>
+                <p className="text-sm text-foreground">Verify your license</p>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">2</div>
+                <p className="text-sm text-foreground">Add your vehicle</p>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">3</div>
+                <p className="text-sm text-foreground">Start accepting hops</p>
+              </div>
+            </div>
+            <button
+              className="w-full primary-action-btn flex items-center justify-center gap-2"
+              onClick={() => setLocation("/driver-onboarding")}
+              data-testid="button-start-onboarding"
+            >
+              <Shield className="w-5 h-5" />
+              Start Driver Setup
+            </button>
+          </CardContent>
+        </Card>
+      )}
+
+      {appStatus === "pending" && (
+        <Card className="border-yellow-200 bg-yellow-50/50 rounded-2xl" data-testid="card-pending-verification">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-yellow-700">Verification Pending</p>
+              <p className="text-[10px] text-muted-foreground">Your application is under review.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {appStatus === "rejected" && (
+        <Card className="border-red-200 bg-red-50/50 rounded-2xl" data-testid="card-rejected">
+          <CardContent className="p-3 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-red-700">Not Approved</p>
+              <p className="text-[10px] text-muted-foreground">Update your info and reapply.</p>
+            </div>
+            <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setLocation("/driver-onboarding")} data-testid="button-reapply">
+              Reapply
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {isVerified && (
+        <Card className={`border-2 transition-colors rounded-2xl ${isActiveNow ? 'border-green-400 bg-green-50/30 dark:bg-green-950/20' : 'border-border/50'}`} data-testid="card-active-toggle">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                  isActiveNow ? 'bg-gradient-to-br from-green-400 to-green-600' : 'bg-muted'
+                }`}>
+                  <Power className={`w-5 h-5 ${isActiveNow ? 'text-white' : 'text-muted-foreground'}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">{isActiveNow ? "You're Active" : "Go Active"}</p>
+                  <p className="text-[10px] text-muted-foreground">{isActiveNow ? "Accepting hop requests" : "Tap to start driving"}</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant={isActiveNow ? "destructive" : "default"}
+                onClick={() => toggleActive.mutate(!isActiveNow)}
+                disabled={toggleActive.isPending}
+                data-testid="button-toggle-active"
+              >
+                {isActiveNow ? "Stop" : "Start"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isVerified && availableHops.length > 0 && (
+        <div className="text-xs text-muted-foreground text-center">
+          {availableHops.length} hop request{availableHops.length !== 1 ? 's' : ''} nearby
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InstaHopView({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const { data: hops } = useHops();
@@ -302,130 +442,127 @@ function InstaHopView({ user }: { user: User }) {
           data-testid="control-panel"
         >
           <div className="px-4 pt-3 pb-2 h-full overflow-y-auto">
-            <div className="flex gap-2 mb-2">
-              {!isDriverMode && (
-                <div className="flex flex-col gap-1.5 shrink-0">
-                  {nearestCorridors.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        form.setValue("startLocation", c.name);
-                        showFlash("📍", `${c.name}`, "info");
-                      }}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30 text-left hover:border-orange-400/60 transition-all"
-                      data-testid={`button-corridor-${c.id}`}
-                    >
-                      <MapPin className="w-2.5 h-2.5 text-orange-500 shrink-0" />
-                      <span className="text-[9px] font-black text-foreground leading-none">{c.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex-1">
-                <AnimatePresence>
-                  {greetingVisible && (
-                    <motion.p
-                      key="greeting"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-[11px] font-semibold text-foreground/60 text-center mb-1"
-                      data-testid="text-instahop-greeting"
-                    >
-                      happy hopping,{" "}
-                      <span className="text-foreground font-black">{user.username}</span>
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div className="shrink-0 scale-75 origin-top-right">
-                <GlowingCarousel user={user} />
-              </div>
-            </div>
-
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
-              <div className="space-y-2">
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500" />
-                  <Input
-                    placeholder="Current location"
-                    className="h-11 text-sm rounded-xl bg-muted/40 border-border/50 pl-9 focus:bg-background"
-                    data-testid="input-instahop-start"
-                    {...form.register("startLocation")}
-                  />
-                </div>
-                <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
-                  <Input
-                    placeholder="Where to?"
-                    className="h-11 text-sm rounded-xl bg-muted/40 border-border/50 pl-9 focus:bg-background font-semibold"
-                    data-testid="input-instahop-destination"
-                    {...form.register("endLocation")}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <motion.button
-                  type="submit"
-                  disabled={requestHop.isPending || isMatching}
-                  whileTap={{ scale: 0.97 }}
-                  className={`flex-1 h-14 rounded-2xl text-white font-black text-base flex items-center justify-center gap-2.5 shadow-xl transition-all disabled:opacity-60 ${
-                    isMatching
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/25"
-                      : isDriverMode
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/25"
-                      : "bg-gradient-to-r from-green-500 to-green-600 shadow-green-500/25"
-                  }`}
-                  data-testid="button-instahop"
-                >
-                  {isMatching ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      matching you...
-                    </>
-                  ) : isDriverMode ? (
-                    <>
-                      <Car className="w-5 h-5" />
-                      Drive Now
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-5 h-5" />
-                      {requestHop.isPending ? 'Finding...' : 'InstaHop'}
-                    </>
-                  )}
-                </motion.button>
-
-                {isMatching && (
-                  <motion.button
-                    type="button"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    onClick={cancelMatching}
-                    className="w-14 h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/25 shrink-0"
-                    data-testid="button-cancel-matching"
-                  >
-                    <X className="w-6 h-6" strokeWidth={3} />
-                  </motion.button>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                {driversInCity > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Car className="w-3.5 h-3.5" />
-                    <span>{driversInCity} driver{driversInCity !== 1 ? 's' : ''} active nearby</span>
+            {isDriverMode ? (
+              <DriveNowPanel user={user} />
+            ) : (
+              <>
+                <div className="flex gap-2 mb-2">
+                  <div className="flex flex-col gap-1.5 shrink-0">
+                    {nearestCorridors.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          form.setValue("startLocation", c.name);
+                          showFlash("📍", `${c.name}`, "info");
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30 text-left hover:border-orange-400/60 transition-all"
+                        data-testid={`button-corridor-${c.id}`}
+                      >
+                        <MapPin className="w-2.5 h-2.5 text-orange-500 shrink-0" />
+                        <span className="text-[9px] font-black text-foreground leading-none">{c.name}</span>
+                      </button>
+                    ))}
                   </div>
-                )}
-                <div className="flex items-center gap-1.5 ml-auto">
-                  <Navigation className="w-3 h-3" />
-                  <span>{hoppersNearby} hoppers nearby</span>
+
+                  <div className="flex-1">
+                    <AnimatePresence>
+                      {greetingVisible && (
+                        <motion.p
+                          key="greeting"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-[11px] font-semibold text-foreground/60 text-center mb-1"
+                          data-testid="text-instahop-greeting"
+                        >
+                          happy hopping,{" "}
+                          <span className="text-foreground font-black">{user.username}</span>
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <div className="shrink-0 scale-75 origin-top-right">
+                    <GlowingCarousel user={user} />
+                  </div>
                 </div>
-              </div>
-            </form>
+
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500" />
+                      <Input
+                        placeholder="Current location"
+                        className="h-11 text-sm rounded-xl bg-muted/40 border-border/50 pl-9 focus:bg-background"
+                        data-testid="input-instahop-start"
+                        {...form.register("startLocation")}
+                      />
+                    </div>
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
+                      <Input
+                        placeholder="Where to?"
+                        className="h-11 text-sm rounded-xl bg-muted/40 border-border/50 pl-9 focus:bg-background font-semibold"
+                        data-testid="input-instahop-destination"
+                        {...form.register("endLocation")}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <motion.button
+                      type="submit"
+                      disabled={requestHop.isPending || isMatching}
+                      whileTap={{ scale: 0.97 }}
+                      className={`flex-1 h-14 rounded-2xl text-white font-black text-base flex items-center justify-center gap-2.5 shadow-xl transition-all disabled:opacity-60 ${
+                        isMatching
+                          ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/25"
+                          : "bg-gradient-to-r from-green-500 to-green-600 shadow-green-500/25"
+                      }`}
+                      data-testid="button-instahop"
+                    >
+                      {isMatching ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          matching you...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5" />
+                          {requestHop.isPending ? 'Finding...' : 'InstaHop'}
+                        </>
+                      )}
+                    </motion.button>
+
+                    {isMatching && (
+                      <motion.button
+                        type="button"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        onClick={cancelMatching}
+                        className="w-14 h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/25 shrink-0"
+                        data-testid="button-cancel-matching"
+                      >
+                        <X className="w-6 h-6" strokeWidth={3} />
+                      </motion.button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                    {driversInCity > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <Car className="w-3.5 h-3.5" />
+                        <span>{driversInCity} driver{driversInCity !== 1 ? 's' : ''} active nearby</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 ml-auto">
+                      <Navigation className="w-3 h-3" />
+                      <span>{hoppersNearby} hoppers nearby</span>
+                    </div>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </div>

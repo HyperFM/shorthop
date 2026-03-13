@@ -175,66 +175,6 @@ export default function DriverDashboard({ user }: { user: User }) {
         </Card>
       </motion.div>
 
-      {needsOnboarding && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="border-border/50 shadow-md rounded-2xl" data-testid="card-onboarding-prompt">
-            <CardContent className="p-5 space-y-4">
-              <h2 className="text-lg font-bold text-foreground">Become a Driver</h2>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">1</div>
-                  <p className="text-sm text-foreground">Verify your license</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">2</div>
-                  <p className="text-sm text-foreground">Add your vehicle</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">3</div>
-                  <p className="text-sm text-foreground">Start accepting hops</p>
-                </div>
-              </div>
-              <button
-                className="w-full primary-action-btn flex items-center justify-center gap-2"
-                onClick={() => setLocation("/driver-onboarding")}
-                data-testid="button-start-onboarding"
-              >
-                <Shield className="w-5 h-5" />
-                Start Driver Setup
-              </button>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {appStatus === "pending" && (
-        <Card className="border-yellow-200 bg-yellow-50/50" data-testid="card-pending-verification">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-yellow-700">Verification Pending</p>
-              <p className="text-[10px] text-muted-foreground">Your application is under review. We'll notify you once approved.</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {appStatus === "rejected" && (
-        <Card className="border-red-200 bg-red-50/50" data-testid="card-rejected">
-          <CardContent className="p-3 flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-            <div>
-              <p className="text-sm font-bold text-red-700">Application Not Approved</p>
-              <p className="text-[10px] text-muted-foreground">Please update your info and reapply.</p>
-            </div>
-            <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setLocation("/driver-onboarding")} data-testid="button-reapply">
-              Reapply
-            </Button>
-          </CardContent>
-        </Card>
-      )}
 
       {isVerified && (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
