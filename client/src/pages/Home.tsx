@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Leaf, ShieldCheck, MapPin, Zap, Sparkles, Globe, ChevronDown } from "lucide-react";
+import { ArrowRight, Leaf, ShieldCheck, MapPin, Zap, Sparkles, Globe, ChevronDown, ArrowLeftRight, CheckCircle2, AlertTriangle, Car } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
@@ -361,6 +361,125 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Safety Section */}
+      <section className="py-20 bg-card border-y border-border" id="safety">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="space-y-10"
+          >
+            <div className="text-center space-y-3">
+              <div className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 font-semibold text-sm border border-orange-500/20 mb-2">
+                <ShieldCheck className="w-4 h-4" />
+                Safety 👮🏽‍♂️
+              </div>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-foreground">Built around your safety.</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto text-lg leading-relaxed">
+                ShortHop's road side awareness system fires automatically the moment a driver and hopper are matched — giving both parties clear, real-time guidance before anyone moves.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              <motion.div
+                whileHover={{ y: -4 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="rounded-3xl border border-orange-200/60 dark:border-orange-700/30 bg-orange-50/60 dark:bg-orange-950/15 p-6 space-y-3"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-orange-500/15 flex items-center justify-center">
+                  <ArrowLeftRight className="w-6 h-6 text-orange-500" />
+                </div>
+                <h3 className="font-bold text-lg">Road Side Detection</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  The app uses your GPS and corridor data to determine exactly which side of the road you're on — and whether you need to cross before your driver arrives.
+                </p>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ y: -4 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="rounded-3xl border border-amber-200/60 dark:border-amber-700/30 bg-amber-50/60 dark:bg-amber-950/15 p-6 space-y-3"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 flex items-center justify-center">
+                  <Car className="w-6 h-6 text-amber-600" />
+                </div>
+                <h3 className="font-bold text-lg">Instant Driver Notice</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Drivers receive a live notice showing exactly where their hopper is positioned — and if the hopper needs to cross, the driver is told to continue their route with no penalties.
+                </p>
+              </motion.div>
+
+              <motion.div
+                whileHover={{ y: -4 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="rounded-3xl border border-blue-200/60 dark:border-blue-700/30 bg-blue-50/60 dark:bg-blue-950/15 p-6 space-y-3"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/15 flex items-center justify-center">
+                  <MapPin className="w-6 h-6 text-blue-500" />
+                </div>
+                <h3 className="font-bold text-lg">One-Way Road Handling</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  On one-way roads, both the driver and hopper receive specific guidance ahead of time so there's no confusion — the hopper knows to stand visibly and the driver knows to slow down.
+                </p>
+              </motion.div>
+            </div>
+
+            <div className="rounded-3xl border border-border/50 bg-muted/30 p-6 md:p-8 grid md:grid-cols-2 gap-8 items-center">
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold">Clear responsibilities. No surprises.</h3>
+                <ul className="space-y-3 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>Hoppers on two-way roads are responsible for being on the correct side — the app always tells them which side that is.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>Drivers on one-way roads just need to drive their route — the hopper handles positioning.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                    <span>No penalties ever apply for road side positioning — it's purely a smooth-pickup system.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+                    <span>Safety warnings appear with every crossing notice — ShortHop never encourages unsafe road crossing.</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold">More safety features</h3>
+                <ul className="space-y-3 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-3">
+                    <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <span><strong className="text-foreground">Live trip tracking</strong> — real-time location sharing between matched driver and hopper during active rides.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <span><strong className="text-foreground">Two-way ratings</strong> — drivers and hoppers rate each trip to build trust and flag issues.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <span><strong className="text-foreground">In-app reporting</strong> — report any safety concern, misconduct, or emergency directly from the app.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <span><strong className="text-foreground">Automatic refunds</strong> — if a ride doesn't happen, you don't pay.</span>
+                  </li>
+                </ul>
+                <Link href="/support">
+                  <Button variant="outline" size="sm" className="mt-2 rounded-full">
+                    Full Safety Guide
+                    <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       <section className="py-20 bg-gradient-to-b from-background to-muted/20 border-t border-border">
         <div className="container mx-auto px-4 max-w-4xl">
           <motion.div
@@ -410,6 +529,7 @@ export default function Home() {
             <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} ShortHop. Shared routes. Real connections.</p>
             <div className="flex items-center gap-6 text-sm">
               <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/support#safety" className="text-muted-foreground hover:text-foreground transition-colors">Safety</Link>
               <Link href="/artist" className="relative group flex flex-col items-center gap-0 transition-transform hover:scale-105">
                 <span className="relative">
                   <img src="/artist-icon.png" alt="" className="w-12 h-12 inline-block dark:invert drop-shadow-md" />
