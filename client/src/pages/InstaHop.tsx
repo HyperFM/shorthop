@@ -19,8 +19,9 @@ import { apiRequest } from "@/lib/queryClient";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { User } from "@shared/routes";
-import hopperMarkerUrl from "@assets/Bazaart_0DED352D-3176-4B56-8873-AA260ABD345D_1773383461603.png";
-import driverMarkerUrl from "@assets/Bazaart_D93EFD8E-BC20-40C4-BC5D-F9598DCF4904_1773383461604.png";
+import hopperAloneUrl from "@assets/Untitled_design_1773399128365.png";
+import driverAloneUrl from "@assets/Untitled_design_1773399149078.png";
+import driverWithHopperUrl from "@assets/Untitled_design_1773399128366.png";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
 
@@ -53,22 +54,25 @@ const LEX_CENTER: [number, number] = [-84.5037, 38.0406];
 
 function createMarkerEl(src: string): HTMLElement {
   const el = document.createElement("div");
-  el.style.width = "48px";
-  el.style.height = "48px";
-  el.style.borderRadius = "50%";
-  el.style.overflow = "hidden";
-  el.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
-  el.style.border = "3px solid white";
+  el.style.width = "56px";
+  el.style.height = "56px";
+  el.style.filter = "drop-shadow(0 3px 6px rgba(0,0,0,0.35))";
   const img = document.createElement("img");
   img.src = src;
   img.style.width = "100%";
   img.style.height = "100%";
-  img.style.objectFit = "cover";
+  img.style.objectFit = "contain";
   el.appendChild(img);
   return el;
 }
 
-function MapView({ mode, latitude, longitude }: { mode: HopMode; latitude: number | null; longitude: number | null }) {
+function getMarkerIcon(mode: HopMode, hasMatchedRide: boolean): string {
+  if (hasMatchedRide) return driverWithHopperUrl;
+  if (mode === "drive") return driverAloneUrl;
+  return hopperAloneUrl;
+}
+
+function MapView({ mode, latitude, longitude, hasMatchedRide }: { mode: HopMode; latitude: number | null; longitude: number | null; hasMatchedRide: boolean }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
@@ -104,7 +108,7 @@ function MapView({ mode, latitude, longitude }: { mode: HopMode; latitude: numbe
     if (!mapRef.current || !latitude || !longitude) return;
 
     const lngLat: [number, number] = [longitude, latitude];
-    const iconSrc = mode === "drive" ? driverMarkerUrl : hopperMarkerUrl;
+    const iconSrc = getMarkerIcon(mode, hasMatchedRide);
 
     if (markerRef.current) {
       markerRef.current.setLngLat(lngLat);
@@ -119,7 +123,7 @@ function MapView({ mode, latitude, longitude }: { mode: HopMode; latitude: numbe
     }
 
     mapRef.current.easeTo({ center: lngLat, duration: 800 });
-  }, [latitude, longitude, mode]);
+  }, [latitude, longitude, mode, hasMatchedRide]);
 
   return (
     <div className="absolute inset-0 z-0" data-testid="map-view">
@@ -412,7 +416,7 @@ function InstaHopView({ user }: { user: User }) {
       )}
 
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
-        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} />
+        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} />
 
         <div
           className="absolute bottom-0 left-0 right-0 bg-background/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 z-20"
