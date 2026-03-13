@@ -17,6 +17,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { api } from "@shared/routes";
+import { getDriverSoundDuration, setDriverSoundDuration, type DriverSoundDuration } from "@/lib/sounds";
 import { RideVibeSelector } from "@/components/RideVibeSelector";
 import { InterestBubbles } from "@/components/InterestBubbles";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
@@ -75,6 +76,7 @@ export default function Settings() {
   const [profileTabColor, setProfileTabColor] = useState(() => {
     try { return localStorage.getItem("sh-profile-tab-color") || "text-orange-500"; } catch { return "text-orange-500"; }
   });
+  const [soundDuration, setSoundDuration] = useState<DriverSoundDuration>(getDriverSoundDuration);
 
   function applyProfileTabColor(color: string) {
     setProfileTabColor(color);
@@ -713,6 +715,31 @@ export default function Settings() {
                   />
                 </div>
               ))}
+
+              {prefs.driverApproachingSound && (
+                <div className="flex items-start justify-between gap-4 pl-8">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Alert Duration</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">How long the driver approaching sound plays.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next: DriverSoundDuration = soundDuration === "full" ? "short" : "full";
+                      setDriverSoundDuration(next);
+                      setSoundDuration(next);
+                      showFlash("🔔", `Alert: ${next === "full" ? "8 seconds" : "2 seconds"}`, "info");
+                    }}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-black transition-all border ${
+                      soundDuration === "full"
+                        ? "bg-orange-500 text-white border-orange-500"
+                        : "bg-muted/60 text-foreground border-border/50"
+                    }`}
+                    data-testid="button-settings-sound-duration"
+                  >
+                    {soundDuration === "full" ? "8 seconds" : "2 seconds"}
+                  </button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

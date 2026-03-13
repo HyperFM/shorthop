@@ -6,14 +6,12 @@ import DriverDashboard from "./DriverDashboard";
 import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
-import { Loader2, Bell, Gift, Crown, ChevronRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { Loader2, Bell, Gift, Crown, ChevronRight, Volume2 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
+import { getDriverSoundDuration, setDriverSoundDuration, type DriverSoundDuration } from "@/lib/sounds";
 
 export default function Dashboard() {
   const { data: user, isLoading } = useAuth();
@@ -24,7 +22,23 @@ export default function Dashboard() {
   );
   const welcomeShown = useRef(false);
   const [subModal, setSubModal] = useState<"flex_hop" | "power_hop" | null>(null);
-  const queryClient = useQueryClient();
+  const [soundDuration, setSoundDuration] = useState<DriverSoundDuration>(getDriverSoundDuration);
+
+  useEffect(() => {
+    function onDurationChange(e: Event) {
+      setSoundDuration((e as CustomEvent).detail);
+    }
+    window.addEventListener("sh-sound-duration-change", onDurationChange);
+    return () => window.removeEventListener("sh-sound-duration-change", onDurationChange);
+  }, []);
+
+  function toggleSoundDuration() {
+    const next: DriverSoundDuration = soundDuration === "full" ? "short" : "full";
+    setDriverSoundDuration(next);
+    setSoundDuration(next);
+    showFlash("🔔", `Alert sound: ${next === "full" ? "8 seconds" : "2 seconds"}`, "info");
+    try { navigator.vibrate?.(20); } catch {}
+  }
 
   useEffect(() => {
     if (user && !welcomeShown.current) {
@@ -150,18 +164,41 @@ export default function Dashboard() {
         )}
 
         <Card className="border-border/40">
-          <CardContent className="py-3 px-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <Bell className="w-4 h-4 text-accent shrink-0" />
-              <p className="text-xs font-black text-foreground">Notifications & Alerts</p>
+          <CardContent className="py-3 px-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <Bell className="w-4 h-4 text-accent shrink-0" />
+                <p className="text-xs font-black text-foreground">Notifications & Alerts</p>
+              </div>
+              <button
+                onClick={() => setLocation("/settings")}
+                className="text-[10px] text-orange-500 font-bold flex items-center gap-0.5"
+                data-testid="link-tailor-notifications"
+              >
+                All Settings <ChevronRight className="w-3 h-3" />
+              </button>
             </div>
-            <button
-              onClick={() => setLocation("/settings")}
-              className="text-[10px] text-orange-500 font-bold flex items-center gap-0.5"
-              data-testid="link-tailor-notifications"
-            >
-              Manage <ChevronRight className="w-3 h-3" />
-            </button>
+
+            <div className="flex items-center justify-between gap-3 pt-1 border-t border-border/30">
+              <div className="flex items-center gap-2.5">
+                <Volume2 className="w-4 h-4 text-orange-400 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-foreground">Driver Approaching Sound</p>
+                  <p className="text-[10px] text-muted-foreground">Duration of the alert tone</p>
+                </div>
+              </div>
+              <button
+                onClick={toggleSoundDuration}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-black transition-all border ${
+                  soundDuration === "full"
+                    ? "bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-400/30"
+                    : "bg-muted/60 text-foreground border-border/50"
+                }`}
+                data-testid="button-sound-duration"
+              >
+                {soundDuration === "full" ? "8 seconds" : "2 seconds"}
+              </button>
+            </div>
           </CardContent>
         </Card>
       </div>
