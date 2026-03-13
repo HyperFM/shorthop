@@ -321,6 +321,156 @@ function FoundersGroupChat({ user }: { user: any }) {
   );
 }
 
+function CityChat({ user }: { user: any }) {
+  const queryClient = useQueryClient();
+  const [msg, setMsg] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isFlexPlus = user?.subscription === "flex_hop" || user?.subscription === "power_hop";
+
+  const { data: messages, isLoading } = useQuery<ChatMsg[]>({
+    queryKey: ["/api/founder-chat"],
+    refetchInterval: 10000,
+    enabled: isFlexPlus,
+  });
+
+  const sorted = messages ? [...messages].sort((a, b) =>
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  ) : [];
+
+  const fakeMsgs = [
+    "Hey anyone heading down Nicholasville?",
+    "Love the new update! So smooth",
+    "Looking for a ride from campus around 3pm",
+    "Just passed Keeneland, beautiful morning!",
+    "Who else is at the Rupp game tonight?",
+    "Traffic on New Circle is wild right now",
+    "First hop today was amazing, driver was super nice",
+  ];
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  if (!isFlexPlus) {
+    return (
+      <Card className="border-blue-200/40 dark:border-blue-800/40 overflow-hidden" data-testid="city-chat-locked">
+        <CardContent className="p-4 relative">
+          <div className="flex items-center gap-2 mb-3">
+            <MessageCircle className="w-4 h-4 text-blue-500" />
+            <p className="text-sm font-extrabold">Lexington Chat</p>
+            <Badge className="text-[8px] bg-blue-100 text-blue-700 border-0 ml-auto">FlexHop+</Badge>
+          </div>
+
+          <div className="relative h-[160px] overflow-hidden rounded-xl">
+            <div className="absolute inset-0 backdrop-blur-md bg-background/30 z-10 flex flex-col items-center justify-center">
+              <Lock className="w-6 h-6 text-muted-foreground mb-2" />
+              <p className="text-sm font-bold text-foreground">Unlock City Chat</p>
+              <p className="text-[10px] text-muted-foreground mt-1 text-center px-6">
+                Upgrade to FlexHop to join the Lexington chat and connect with your city.
+              </p>
+              <Badge variant="secondary" className="text-[10px] mt-2">
+                <Sparkles className="w-3 h-3 mr-1" />
+                FlexHop $10/mo
+              </Badge>
+            </div>
+            <div className="space-y-2 animate-pulse-slow opacity-40">
+              {fakeMsgs.map((m, i) => (
+                <div key={i} className={`flex ${i % 3 === 0 ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[75%] rounded-2xl px-3 py-2 ${i % 3 === 0 ? "bg-blue-500/20" : "bg-muted/60"}`}>
+                    <p className="text-xs blur-[3px] select-none">{m}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const sendMsg = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/founder-chat", { message: msg });
+    },
+    onSuccess: () => {
+      setMsg("");
+      queryClient.invalidateQueries({ queryKey: ["/api/founder-chat"] });
+    },
+    onError: () => {
+      showFlash("❌", "Failed to send", "error");
+    },
+  });
+
+  return (
+    <Card className="border-blue-200/40 dark:border-blue-800/40" data-testid="city-chat">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <MessageCircle className="w-4 h-4 text-blue-500" />
+          <p className="text-sm font-extrabold">Lexington Chat</p>
+          <Badge className="text-[8px] bg-blue-100 text-blue-700 border-0 ml-auto">City</Badge>
+        </div>
+
+        <div
+          ref={scrollRef}
+          className="h-[200px] overflow-y-auto space-y-2 mb-3 pr-1 scrollbar-thin"
+          data-testid="city-chat-messages"
+        >
+          {isLoading && (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {!isLoading && sorted.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <MessageCircle className="w-8 h-8 mb-2 text-blue-300" />
+              <p className="text-xs">Start a conversation with Lexington!</p>
+            </div>
+          )}
+          {sorted.map(m => {
+            const isMe = m.userId === user.id;
+            return (
+              <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${
+                  isMe ? "bg-blue-500 text-white" : "bg-muted"
+                }`}>
+                  <span className={`text-[10px] font-bold ${isMe ? "text-white/80" : "text-foreground/70"}`}>
+                    {m.username}
+                  </span>
+                  <p className={`text-xs leading-relaxed ${isMe ? "text-white" : ""}`}>{m.message}</p>
+                  <p className={`text-[9px] mt-0.5 ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
+                    {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex gap-1.5">
+          <Input
+            placeholder="Chat with Lexington..."
+            value={msg}
+            onChange={e => setMsg(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && msg.trim()) sendMsg.mutate(); }}
+            className="text-sm h-9"
+            data-testid="input-city-chat"
+          />
+          <Button
+            size="sm"
+            className="h-9 px-3 bg-blue-500 hover:bg-blue-600"
+            disabled={!msg.trim() || sendMsg.isPending}
+            onClick={() => sendMsg.mutate()}
+            data-testid="button-send-city-chat"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 const DONATE_AMOUNTS = [
   { label: "$0.50", cents: 50 },
   { label: "$1", cents: 100 },
@@ -402,8 +552,9 @@ export default function Community() {
     },
   });
 
-  const isFlexHop = user?.tier === "flexhop";
+  const isFlexHop = user?.subscription === "flex_hop" || user?.subscription === "power_hop";
   const isFounder = !!(user as any)?.isFounder;
+  const isHyperFM = user?.username === "HyperFM" || user?.isAdmin;
 
   if (authLoading) {
     return (
@@ -418,7 +569,7 @@ export default function Community() {
       <div className="flex items-center gap-2 mb-1">
         <Activity className="w-5 h-5 text-primary" />
         <h1 data-testid="text-community-title" className="text-xl font-display font-bold">
-          Network
+          Connect
         </h1>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
@@ -439,27 +590,31 @@ export default function Community() {
         </CardContent>
       </Card>
 
-      {isFounder && user && (
+      {user && (
         <div className="space-y-4 mb-6">
-          <FoundersGroupChat user={user} />
+          <CityChat user={user} />
 
-          <button
-            onClick={() => setVipOpen(true)}
-            className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-200 dark:border-amber-800 hover:shadow-md transition-all"
-            data-testid="button-open-vip-chat"
-          >
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-md shrink-0">
-              <Star className="w-5 h-5" />
-            </div>
-            <div className="text-left flex-1">
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-extrabold">VIP Hyper Line</p>
-                <Badge className="text-[7px] bg-amber-100 text-amber-700 border-0 px-1 py-0">FOUNDER DM</Badge>
+          {isFounder && <FoundersGroupChat user={user} />}
+
+          {isFounder && !isHyperFM && (
+            <button
+              onClick={() => setVipOpen(true)}
+              className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-200 dark:border-amber-800 hover:shadow-md transition-all"
+              data-testid="button-open-vip-chat"
+            >
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-md shrink-0">
+                <Star className="w-5 h-5" />
               </div>
-              <p className="text-[10px] text-muted-foreground">Private direct message to Hyper — founders only</p>
-            </div>
-            <MessageCircle className="w-5 h-5 text-amber-500 shrink-0" />
-          </button>
+              <div className="text-left flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-extrabold">VIP Hyper Line</p>
+                  <Badge className="text-[7px] bg-amber-100 text-amber-700 border-0 px-1 py-0">FOUNDER DM</Badge>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Private direct message to Hyper — founders only</p>
+              </div>
+              <MessageCircle className="w-5 h-5 text-amber-500 shrink-0" />
+            </button>
+          )}
         </div>
       )}
 

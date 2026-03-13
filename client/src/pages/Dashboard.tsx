@@ -6,12 +6,51 @@ import DriverDashboard from "./DriverDashboard";
 import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
-import { Loader2, Bell, Gift, Crown, ChevronRight, Volume2 } from "lucide-react";
+import { Loader2, Bell, ChevronRight, Volume2, Eye, EyeOff, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
+import { RideVibeSelector } from "@/components/RideVibeSelector";
 import { getDriverSoundDuration, setDriverSoundDuration, type DriverSoundDuration } from "@/lib/sounds";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { api } from "@shared/routes";
+
+const NOTIF_STORAGE_KEY = "shorthop-notification-preferences";
+
+interface NotificationPreferences {
+  rideAlerts: boolean;
+  routeAlerts: boolean;
+  hopperNearbyAlerts: boolean;
+  busyRouteAlerts: boolean;
+  communityNotifications: boolean;
+  growthNotifications: boolean;
+  driverApproachingSound: boolean;
+}
+
+const defaultPreferences: NotificationPreferences = {
+  rideAlerts: true,
+  routeAlerts: true,
+  hopperNearbyAlerts: true,
+  busyRouteAlerts: false,
+  communityNotifications: true,
+  growthNotifications: true,
+  driverApproachingSound: true,
+};
+
+function loadPreferences(): NotificationPreferences {
+  try {
+    const stored = localStorage.getItem(NOTIF_STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return defaultPreferences;
+}
+
+function savePreferences(prefs: NotificationPreferences) {
+  localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(prefs));
+}
 
 export default function Dashboard() {
   const { data: user, isLoading } = useAuth();
@@ -23,6 +62,9 @@ export default function Dashboard() {
   const welcomeShown = useRef(false);
   const [subModal, setSubModal] = useState<"flex_hop" | "power_hop" | null>(null);
   const [soundDuration, setSoundDuration] = useState<DriverSoundDuration>(getDriverSoundDuration);
+  const [rideVibe, setRideVibe] = useState(user?.rideVibe || "friendly_chat");
+  const [prefs, setPrefs] = useState<NotificationPreferences>(loadPreferences);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     function onDurationChange(e: Event) {
@@ -32,6 +74,18 @@ export default function Dashboard() {
     return () => window.removeEventListener("sh-sound-duration-change", onDurationChange);
   }, []);
 
+  useEffect(() => {
+    if (user?.rideVibe) setRideVibe(user.rideVibe);
+  }, [user?.rideVibe]);
+
+  useEffect(() => {
+    savePreferences(prefs);
+  }, [prefs]);
+
+  function togglePref(key: keyof NotificationPreferences) {
+    setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
   function toggleSoundDuration() {
     const next: DriverSoundDuration = soundDuration === "full" ? "short" : "full";
     setDriverSoundDuration(next);
@@ -39,6 +93,22 @@ export default function Dashboard() {
     showFlash("🔔", `Alert sound: ${next === "full" ? "8 seconds" : "2 seconds"}`, "info");
     try { navigator.vibrate?.(20); } catch {}
   }
+
+  const updatePreferences = useMutation({
+    mutationFn: async (updates: { rideVibe?: string }) => {
+      const res = await apiRequest(api.profile.updatePreferences.method, api.profile.updatePreferences.path, updates);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
+      showFlash("✨", "Preferences saved!", "success");
+    },
+  });
+
+  const handleVibeChange = (value: string) => {
+    setRideVibe(value);
+    updatePreferences.mutate({ rideVibe: value });
+  };
 
   useEffect(() => {
     if (user && !welcomeShown.current) {
@@ -78,7 +148,13 @@ export default function Dashboard() {
     return null;
   }
 
-  const isFlexPlus = user.subscription === "flex_hop" || user.subscription === "power_hop";
+  const toggleItems: { key: keyof NotificationPreferences; label: string; description: string; icon: typeof Bell }[] = [
+    { key: "rideAlerts", label: "Ride Alerts", description: "Matches or incoming drivers", icon: Bell },
+    { key: "driverApproachingSound", label: "Driver Approaching Sound", description: "Alert sound when your driver enters the corridor zone", icon: Volume2 },
+    { key: "hopperNearbyAlerts", label: "Hopper Nearby", description: "Know when a hopper is nearby", icon: Bell },
+    { key: "communityNotifications", label: "Community", description: "Social updates and news", icon: Bell },
+    { key: "growthNotifications", label: "Network Growth", description: "Milestones and progress", icon: Bell },
+  ];
 
   return (
     <>
@@ -92,6 +168,55 @@ export default function Dashboard() {
       {activeTab === "driver" && (
         <NearbyHopperAlert hopper={currentHopper} onDismiss={dismiss} />
       )}
+
+      <div className="pt-2 pb-1 px-4 max-w-lg mx-auto" data-testid="mode-switcher">
+        <div className="flex justify-center">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full blur-lg bg-orange-400/25 scale-110 -z-10" />
+            <div className="relative flex items-center bg-card/98 backdrop-blur-xl rounded-full border border-orange-400/50 shadow-lg shadow-orange-500/15 p-1">
+              <motion.div
+                className="absolute top-1 bottom-1 rounded-full"
+                animate={{
+                  left: activeTab === "hopper" ? 4 : "50%",
+                  right: activeTab === "driver" ? 4 : "50%",
+                  background: activeTab === "hopper"
+                    ? "linear-gradient(135deg, #3b82f6, #1d4ed8)"
+                    : "linear-gradient(135deg, #16a34a, #15803d)",
+                }}
+                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+              />
+              <button
+                onClick={() => {
+                  setActiveTab("hopper");
+                  vibrate();
+                  try { localStorage.setItem("sh-active-tab", "hopper"); } catch {}
+                  window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "hopper" }));
+                }}
+                className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
+                  activeTab === "hopper" ? "text-white" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-hopper"
+              >
+                Hopper
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab("driver");
+                  vibrate();
+                  try { localStorage.setItem("sh-active-tab", "driver"); } catch {}
+                  window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "driver" }));
+                }}
+                className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
+                  activeTab === "driver" ? "text-white" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="tab-driver"
+              >
+                Driver
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {activeTab === "driver" ? (
         <DriverDashboard user={user} />
@@ -107,145 +232,96 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {!isFlexPlus && (
-          <Card className="border-orange-300/40 bg-gradient-to-r from-orange-50/60 to-amber-50/60 dark:from-orange-950/20 dark:to-amber-950/10">
-            <CardContent className="py-3 px-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black text-foreground">Upgrade Membership</p>
-                <p className="text-[10px] text-muted-foreground">FlexHop $10/mo • PowerHop $25/mo</p>
-              </div>
-              <div className="flex gap-1.5">
-                <button onClick={() => setSubModal("flex_hop")} className="px-3 py-1.5 rounded-xl bg-green-500 text-white text-[10px] font-bold" data-testid="button-tailor-flexhop">Flex</button>
-                <button onClick={() => setSubModal("power_hop")} className="px-3 py-1.5 rounded-xl bg-orange-500 text-white text-[10px] font-bold" data-testid="button-tailor-powerhop">Power</button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="border-border/40" data-testid="card-tailor-vibe">
+          <CardContent className="py-3 px-4 space-y-3">
+            <div className="flex items-center gap-2.5">
+              <Shield className="w-4 h-4 text-primary shrink-0" />
+              <p className="text-xs font-black text-foreground">Ride Vibe</p>
+            </div>
+            <p className="text-[10px] text-muted-foreground">Set your ride vibe so matches know what to expect.</p>
+            <RideVibeSelector
+              value={rideVibe}
+              onChange={handleVibeChange}
+              disabled={updatePreferences.isPending}
+            />
+          </CardContent>
+        </Card>
 
-        {isFlexPlus && (
-          <Card className="border-green-300/40 bg-gradient-to-r from-green-50/60 to-emerald-50/40 dark:from-green-950/20 dark:to-emerald-950/10">
-            <CardContent className="py-3 px-4 flex items-center gap-3">
-              <Crown className="w-5 h-5 text-green-500 shrink-0" />
-              <div>
-                <p className="text-xs font-black text-foreground">{user.subscription === "power_hop" ? "PowerHop" : "FlexHop"} Active</p>
-                <p className="text-[10px] text-muted-foreground">{user.subscription === "power_hop" ? "$25/mo • Unlimited rides" : "$10/mo • Flexible detours"}</p>
-              </div>
-              <Badge className="ml-auto text-[9px] bg-green-500/10 text-green-600 border-green-500/30 h-5">Active</Badge>
-            </CardContent>
-          </Card>
-        )}
-
-        {user.referralCode && (
-          <Card className="border-border/40">
-            <CardContent className="py-3 px-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <Gift className="w-4 h-4 text-secondary shrink-0" />
+        <Card className="border-border/40" data-testid="card-tailor-privacy">
+          <CardContent className="py-3 px-4 space-y-3">
+            <div className="flex items-center gap-2.5">
+              <Eye className="w-4 h-4 text-muted-foreground shrink-0" />
+              <p className="text-xs font-black text-foreground">Privacy Controls</p>
+            </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <EyeOff className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                 <div>
-                  <p className="text-xs font-black text-foreground">Your Referral Code</p>
-                  <p className="text-[10px] font-mono text-orange-500 font-bold tracking-wider" data-testid="text-tailor-referral">{user.referralCode}</p>
+                  <Label htmlFor="toggle-community-tailor" className="text-[11px] font-medium cursor-pointer">Community Features</Label>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Show profile in community and allow follows.</p>
                 </div>
               </div>
-              <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(user.referralCode!);
-                    showFlash("📋", "Copied!", "success");
-                  } catch { showFlash("📋", user.referralCode!, "info"); }
-                }}
-                className="px-3 py-1.5 rounded-xl bg-muted/60 text-[10px] font-bold text-foreground"
-                data-testid="button-tailor-copy-referral"
-              >
-                Copy
-              </button>
-            </CardContent>
-          </Card>
-        )}
+              <Switch
+                id="toggle-community-tailor"
+                data-testid="switch-community-features-tailor"
+                checked={prefs.communityNotifications}
+                onCheckedChange={() => togglePref("communityNotifications")}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-        <Card className="border-border/40">
+        <Card className="border-border/40" data-testid="card-tailor-notifications">
           <CardContent className="py-3 px-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <Bell className="w-4 h-4 text-accent shrink-0" />
-                <p className="text-xs font-black text-foreground">Notifications & Alerts</p>
+                <p className="text-xs font-black text-foreground">Alert Preferences</p>
               </div>
-              <button
-                onClick={() => setLocation("/settings")}
-                className="text-[10px] text-orange-500 font-bold flex items-center gap-0.5"
-                data-testid="link-tailor-notifications"
-              >
-                All Settings <ChevronRight className="w-3 h-3" />
-              </button>
             </div>
 
-            <div className="flex items-center justify-between gap-3 pt-1 border-t border-border/30">
-              <div className="flex items-center gap-2.5">
-                <Volume2 className="w-4 h-4 text-orange-400 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-foreground">Driver Approaching Sound</p>
-                  <p className="text-[10px] text-muted-foreground">Duration of the alert tone</p>
+            {toggleItems.map(({ key, label, description, icon: Icon }) => (
+              <div key={key} className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
+                <div className="flex items-center gap-2">
+                  <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <div>
+                    <p className="text-[11px] font-bold text-foreground">{label}</p>
+                    <p className="text-[9px] text-muted-foreground">{description}</p>
+                  </div>
                 </div>
+                <Switch
+                  id={`toggle-tailor-${key}`}
+                  data-testid={`switch-tailor-${key}`}
+                  checked={prefs[key]}
+                  onCheckedChange={() => togglePref(key)}
+                />
               </div>
-              <button
-                onClick={toggleSoundDuration}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-black transition-all border ${
-                  soundDuration === "full"
-                    ? "bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-400/30"
-                    : "bg-muted/60 text-foreground border-border/50"
-                }`}
-                data-testid="button-sound-duration"
-              >
-                {soundDuration === "full" ? "8 seconds" : "2 seconds"}
-              </button>
-            </div>
+            ))}
+
+            {prefs.driverApproachingSound && (
+              <div className="flex items-center justify-between gap-3 pt-1 border-t border-border/30">
+                <div className="flex items-center gap-2.5">
+                  <Volume2 className="w-4 h-4 text-orange-400 shrink-0" />
+                  <div>
+                    <p className="text-[11px] font-bold text-foreground">Alert Duration</p>
+                    <p className="text-[9px] text-muted-foreground">Duration of the alert tone</p>
+                  </div>
+                </div>
+                <button
+                  onClick={toggleSoundDuration}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-black transition-all border ${
+                    soundDuration === "full"
+                      ? "bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-400/30"
+                      : "bg-muted/60 text-foreground border-border/50"
+                  }`}
+                  data-testid="button-sound-duration"
+                >
+                  {soundDuration === "full" ? "8 seconds" : "2 seconds"}
+                </button>
+              </div>
+            )}
           </CardContent>
         </Card>
-      </div>
-
-      <div
-        className="fixed left-1/2 -translate-x-1/2 z-40"
-        style={{ top: "50%", transform: "translate(-50%, -50%)" }}
-        data-testid="mode-switcher"
-      >
-        <div className="relative">
-          <div className="absolute inset-0 rounded-full blur-xl bg-orange-400/30 scale-110 -z-10" />
-          <div className="relative flex items-center bg-card/98 backdrop-blur-xl rounded-full border border-orange-400/50 shadow-2xl shadow-orange-500/20 p-1">
-            <motion.div
-              className="absolute top-1 bottom-1 rounded-full"
-              animate={{
-                left: activeTab === "hopper" ? 4 : "50%",
-                right: activeTab === "driver" ? 4 : "50%",
-                background: activeTab === "hopper"
-                  ? "linear-gradient(135deg, #3b82f6, #1d4ed8)"
-                  : "linear-gradient(135deg, #16a34a, #15803d)",
-              }}
-              transition={{ type: "spring", stiffness: 500, damping: 35 }}
-            />
-            <button
-              onClick={() => {
-                setActiveTab("hopper");
-                vibrate();
-              }}
-              className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
-                activeTab === "hopper" ? "text-white" : "text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid="tab-hopper"
-            >
-              Hopper
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("driver");
-                vibrate();
-              }}
-              className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
-                activeTab === "driver" ? "text-white" : "text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid="tab-driver"
-            >
-              Driver
-            </button>
-          </div>
-        </div>
       </div>
     </>
   );

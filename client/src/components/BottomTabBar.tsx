@@ -36,7 +36,7 @@ function getProfileTabColor(): string {
 }
 
 const tabs = [
-  { path: "/community", icon: Activity, label: "Network" },
+  { path: "/community", icon: Activity, label: "Connect" },
   { path: "/schedule", icon: Calendar, label: "Schedule" },
   { path: "/instahop", icon: Zap, label: "InstaHop", isHop: true },
   { path: "/dashboard", customIcon: BowTieIcon, label: "Tailor" },

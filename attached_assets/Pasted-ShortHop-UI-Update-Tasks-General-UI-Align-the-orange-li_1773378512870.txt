@@ -1,0 +1,202 @@
+ShortHop UI Update Tasks
+
+General UI
+	•	Align the orange line above the control panel with the word and symbol.
+	•	Increase the glow of the orange border around the screen slightly.
+	•	Add a subtle orange fade at the top above the LCD area.
+
+⸻
+
+Tabs
+	•	Rename Network tab → Connect.
+
+⸻
+
+Connect Tab
+	•	Add City Chat for Flex Hop users.
+	•	Display the city name above the chat next to the word “Chat”.
+	•	Move Founder Chat from Tailor tab → Connect tab.
+	•	Keep VIP Hyper Line in Connect tab.
+	•	Remove VIP Hyper Line from admin account @HyperFM.
+
+⸻
+
+City Chat Access
+	•	Standard users should see the chat blurred.
+	•	Show moving messages underneath but unreadable.
+	•	Add prompt directing them to Membership tab → Flex Hop.
+
+⸻
+
+Tailor Tab Changes
+
+Move these to the Tailor tab:
+	•	Ride Vibe
+	•	Privacy Controls
+	•	Notifications
+	•	Alert Preferences
+
+Keep:
+	•	Driver approaching notification button (leave it exactly where it is).
+
+Remove from Tailor tab:
+	•	Small Referral tab
+	•	Small Upgrade Subscription tab
+	•	Ready to Hop panel
+	•	Network Hopper count indicator
+
+⸻
+
+Profile Tab
+
+Add:
+	•	Profile photo upload
+	•	Preferred username field
+	•	Legal name field
+
+Remove:
+	•	Preferred Routes
+
+Keep:
+	•	Favorite Places
+
+Add:
+	•	Fun prompt section
+	•	Limit to 3 prompts per user
+
+Keep the Upgrade Subscription section exactly the same (do not change size or layout).
+
+⸻
+
+Notifications UI
+	•	Replace Alerts and Notifications tab with a Bell icon.
+	•	Bell icon background should be blue.
+	•	Match style of the Install ShortHop button.
+
+⸻
+
+Support Tab
+	•	Leave Support ShortHop tab exactly as it is.
+
+⸻
+
+Hopper / Driver Switcher
+	•	Move the Hopper / Driver switcher back to the top of the screen.
+	•	Keep the same colors and layout.
+
+Mode behavior:
+
+Hopper Mode
+	•	Green InstaHop button.
+
+Driver Mode
+	•	Change button to DriveNow.
+	•	Button color Orange.
+	•	Add car icon (asset will be provided).
+
+Switching modes should NOT change the Tailor screen layout.
+
+⸻
+
+Hopper Map Behavior
+
+When InstaHop button on the bottom panel is pressed:
+	•	Open the middle tab.
+	•	Show full screen map.
+	•	Add a panel that rises less than halfway up the screen.
+
+Remove:
+	•	“Drivers coming soon…” text.
+	•	InstaHop title at top.
+	•	“10 wheels” label.
+
+Replace with:
+	•	After entering destination show
+1 Wheel = $1
+
+⸻
+
+Control Panel Layout
+
+Move these into the panel:
+	•	Current Location
+	•	Mail icon
+	•	InstaHop green button
+
+Do not change their sizes.
+
+Reference image will be provided.
+
+⸻
+
+Walk Mode
+
+When the InstaHop button is pressed again:
+	•	Button turns Blue.
+	•	Button label becomes Walk.
+	•	Show blue walking character animation (asset provided).
+	•	Add glow effect to the character.
+
+Behavior:
+	•	Walk → GPS navigation to destination.
+	•	Hop → Connect to drivers headed same direction.
+
+⸻
+
+Corridor UI
+	•	Make corridors smaller.
+	•	Move corridors to the left side of the panel.
+
+⸻
+
+Carousel
+
+Remove Streak Hops button from all pages.
+Remove Wheels button from all pages.
+
+Replace with:
+	•	Glowing carousel
+	•	Position on the right side of the panel
+	•	Across from the corridors.
+
+⸻
+
+Driver Mode Layout
+
+Driver mode uses the same panel layout.
+
+Remove:
+	•	Corridors
+
+Keep:
+	•	Carousel
+	•	Current Location
+	•	Destination field
+
+Button changes:
+	•	InstaHop → Drive Now
+	•	Button color Blue
+	•	Add car icon
+
+Show full screen map.
+
+⸻
+
+Map Visuals
+
+Hopper Map
+	•	Close GPS view.
+	•	Highlight nearest road.
+	•	Show green streaks indicating flowing traffic.
+
+Driver Map
+	•	Same map view.
+	•	Show blue dots representing hoppers along roads.
+
+⸻
+
+Assets To Be Provided
+	•	Car icon
+	•	Hopper icon
+	•	Walking animation
+	•	Reference layout image

@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Route, Users, TrendingUp, MessageCircle, Globe, Sparkles, Shield, Eye, EyeOff, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Volume2, Palette } from "lucide-react";
+import { Bell, Users, Globe, Sparkles, Shield, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Palette, Camera, Plus, X } from "lucide-react";
 import { PROFILE_TAB_COLORS } from "@/components/BottomTabBar";
 import { useLocation } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
@@ -17,51 +16,25 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { api } from "@shared/routes";
-import { getDriverSoundDuration, setDriverSoundDuration, type DriverSoundDuration } from "@/lib/sounds";
-import { RideVibeSelector } from "@/components/RideVibeSelector";
 import { InterestBubbles } from "@/components/InterestBubbles";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 
-const STORAGE_KEY = "shorthop-notification-preferences";
-
-interface NotificationPreferences {
-  rideAlerts: boolean;
-  routeAlerts: boolean;
-  hopperNearbyAlerts: boolean;
-  busyRouteAlerts: boolean;
-  communityNotifications: boolean;
-  growthNotifications: boolean;
-  driverApproachingSound: boolean;
-}
-
-const defaultPreferences: NotificationPreferences = {
-  rideAlerts: true,
-  routeAlerts: true,
-  hopperNearbyAlerts: true,
-  busyRouteAlerts: false,
-  communityNotifications: true,
-  growthNotifications: true,
-  driverApproachingSound: true,
-};
-
-function loadPreferences(): NotificationPreferences {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
-  } catch {}
-  return defaultPreferences;
-}
-
-function savePreferences(prefs: NotificationPreferences) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
-}
+const FUN_PROMPTS = [
+  "My go-to karaoke song is...",
+  "The best hidden gem in Lexington is...",
+  "My dream road trip would be...",
+  "If I could only eat one food forever...",
+  "My unpopular opinion is...",
+  "The best thing about Lexington is...",
+  "My morning routine always includes...",
+  "You'll never guess that I...",
+  "My ideal weekend looks like...",
+  "The last thing that made me laugh was...",
+];
 
 export default function Settings() {
   const { data: user } = useAuth();
   const [, setLocation] = useLocation();
-  const [prefs, setPrefs] = useState<NotificationPreferences>(loadPreferences);
-  const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">("default");
-  const [rideVibe, setRideVibe] = useState(user?.rideVibe || "friendly_chat");
   const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
   const [bio, setBio] = useState((user as any)?.bio || "");
@@ -70,13 +43,22 @@ export default function Settings() {
     return raw ? raw.split(',').filter(Boolean) : [];
   });
   const [language, setLanguage] = useState((user as any)?.language || "en");
-  const [preferredRoutes, setPreferredRoutes] = useState((user as any)?.preferredRoutes || "");
   const [travelTime, setTravelTime] = useState((user as any)?.travelTime || "");
   const [favoritePlaces, setFavoritePlaces] = useState((user as any)?.favoritePlaces || "");
   const [profileTabColor, setProfileTabColor] = useState(() => {
     try { return localStorage.getItem("sh-profile-tab-color") || "text-orange-500"; } catch { return "text-orange-500"; }
   });
-  const [soundDuration, setSoundDuration] = useState<DriverSoundDuration>(getDriverSoundDuration);
+  const [preferredUsername, setPreferredUsername] = useState(user?.username || "");
+  const [legalName, setLegalName] = useState((user as any)?.legalName || "");
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [funPrompts, setFunPrompts] = useState<{ prompt: string; answer: string }[]>(() => {
+    try {
+      const stored = localStorage.getItem("sh-fun-prompts");
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
+  const [showPromptPicker, setShowPromptPicker] = useState(false);
 
   function applyProfileTabColor(color: string) {
     setProfileTabColor(color);
@@ -90,9 +72,10 @@ export default function Settings() {
     if (user) {
       setBio((user as any)?.bio || "");
       setLanguage((user as any)?.language || "en");
-      setPreferredRoutes((user as any)?.preferredRoutes || "");
       setTravelTime((user as any)?.travelTime || "");
       setFavoritePlaces((user as any)?.favoritePlaces || "");
+      setPreferredUsername(user.username || "");
+      setLegalName((user as any)?.legalName || "");
       const raw = (user as any)?.interests;
       setSelectedInterests(raw ? raw.split(',').filter(Boolean) : []);
     }
@@ -104,13 +87,13 @@ export default function Settings() {
         bio: bio.trim() || null,
         interests: selectedInterests.join(',') || null,
         language,
-        preferredRoutes: preferredRoutes.trim() || null,
         travelTime: travelTime || null,
         favoritePlaces: favoritePlaces.trim() || null,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+      localStorage.setItem("sh-fun-prompts", JSON.stringify(funPrompts));
       showFlash("✅", "Profile saved!", "success");
     },
     onError: () => showFlash("❌", "Failed to save", "error"),
@@ -144,13 +127,11 @@ export default function Settings() {
     if (!user?.referralCode) return;
     const shareData = {
       title: "Join ShortHop!",
-      text: `Use my referral code "${user.referralCode}" to join ShortHop and we both earn bonus credits! Hop, skip, and a jump away from your next ride.`,
+      text: `Use my referral code "${user.referralCode}" to join ShortHop and we both earn bonus credits!`,
       url: window.location.origin + "/auth?tab=register",
     };
     if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {}
+      try { await navigator.share(shareData); } catch {}
     } else {
       copyReferralCode();
     }
@@ -169,70 +150,41 @@ export default function Settings() {
     },
   });
 
-  useEffect(() => {
-    if (user?.rideVibe) setRideVibe(user.rideVibe);
-  }, [user?.rideVibe]);
-
-  useEffect(() => {
-    if ("Notification" in window) {
-      setBrowserPermission(Notification.permission);
-    } else {
-      setBrowserPermission("unsupported");
-    }
-  }, []);
-
-  useEffect(() => {
-    savePreferences(prefs);
-  }, [prefs]);
-
-  function toggle(key: keyof NotificationPreferences) {
-    setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+  function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setProfilePhoto(ev.target?.result as string);
+      showFlash("📸", "Photo updated!", "success");
+    };
+    reader.readAsDataURL(file);
   }
 
-  async function requestBrowserPermission() {
-    if (!("Notification" in window)) {
-      showFlash("🚫", "Not supported", "error");
+  function addFunPrompt(prompt: string) {
+    if (funPrompts.length >= 3) {
+      showFlash("ℹ️", "Maximum 3 prompts", "info");
       return;
     }
-    const permission = await Notification.requestPermission();
-    setBrowserPermission(permission);
-    if (permission === "granted") {
-      showFlash("🔔", "Notifications enabled!", "success");
-    } else if (permission === "denied") {
-      showFlash("🚫", "Notifications blocked", "error");
-    }
+    setFunPrompts(prev => [...prev, { prompt, answer: "" }]);
+    setShowPromptPicker(false);
   }
 
-  const updatePreferences = useMutation({
-    mutationFn: async (updates: { rideVibe?: string; tier?: string }) => {
-      const res = await apiRequest(api.profile.updatePreferences.method, api.profile.updatePreferences.path, updates);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
-      showFlash("✨", "Preferences saved!", "success");
-    },
-  });
+  function removeFunPrompt(index: number) {
+    setFunPrompts(prev => prev.filter((_, i) => i !== index));
+  }
 
-  const handleVibeChange = (value: string) => {
-    setRideVibe(value);
-    updatePreferences.mutate({ rideVibe: value });
-  };
+  function updateFunPromptAnswer(index: number, answer: string) {
+    setFunPrompts(prev => prev.map((p, i) => i === index ? { ...p, answer } : p));
+  }
 
-  const toggleItems: { key: keyof NotificationPreferences; label: string; description: string; icon: typeof Bell }[] = [
-    { key: "rideAlerts", label: "Ride Alerts", description: "Get notified when a ride matches your route or a driver is heading your way.", icon: Bell },
-    { key: "driverApproachingSound", label: "Driver Approaching Sound", description: "Play an alert sound when your driver enters the corridor zone. Notification always stays on.", icon: Volume2 },
-    { key: "routeAlerts", label: "Route Alerts", description: "Receive alerts about your saved routes and schedule changes.", icon: Route },
-    { key: "hopperNearbyAlerts", label: "Hopper Nearby Alerts", description: "Know when a hopper is nearby and ready to connect.", icon: Users },
-    { key: "busyRouteAlerts", label: "Busy Route Alerts", description: "Get updates when your common routes are especially active.", icon: TrendingUp },
-    { key: "communityNotifications", label: "Community Notifications", description: "Stay in the loop with community updates and Short Hop news.", icon: MessageCircle },
-    { key: "growthNotifications", label: "Network Growth Updates", description: "Get notified about founder milestones, new members, and network progress.", icon: TrendingUp },
-  ];
+  const usedPrompts = funPrompts.map(p => p.prompt);
+  const availablePrompts = FUN_PROMPTS.filter(p => !usedPrompts.includes(p));
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
-      <h1 data-testid="text-settings-title" className="text-xl font-display font-bold mb-1">Settings</h1>
-      <p className="text-xs text-muted-foreground mb-4">Manage your preferences and notifications.</p>
+      <h1 data-testid="text-settings-title" className="text-xl font-display font-bold mb-1">Profile</h1>
+      <p className="text-xs text-muted-foreground mb-4">Your identity and preferences.</p>
 
       <div className="space-y-6">
         {user && (user as any)?.isRoutePioneer && (
@@ -314,6 +266,57 @@ export default function Settings() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex flex-col items-center gap-3">
+                <div
+                  className="relative w-20 h-20 rounded-full bg-muted flex items-center justify-center cursor-pointer overflow-hidden border-2 border-green-300/50 hover:border-green-400 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  data-testid="button-profile-photo"
+                >
+                  {profilePhoto ? (
+                    <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-1">
+                      <Camera className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-[8px] text-muted-foreground font-bold">Add Photo</span>
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                    <Camera className="w-3 h-3 text-white" />
+                  </div>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                  data-testid="input-profile-photo"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs font-bold mb-1.5 block">Preferred Username</Label>
+                <Input
+                  placeholder="How you want to be known..."
+                  value={preferredUsername}
+                  onChange={(e) => setPreferredUsername(e.target.value)}
+                  className="text-sm"
+                  data-testid="input-preferred-username"
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs font-bold mb-1.5 block">Legal Name</Label>
+                <Input
+                  placeholder="Your legal name (private, for verification)"
+                  value={legalName}
+                  onChange={(e) => setLegalName(e.target.value)}
+                  className="text-sm"
+                  data-testid="input-legal-name"
+                />
+                <p className="text-[9px] text-muted-foreground mt-0.5">Only visible to ShortHop for verification purposes</p>
+              </div>
+
               <div>
                 <Label className="text-xs font-bold mb-1.5 block flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5 text-green-500" />
@@ -342,6 +345,7 @@ export default function Settings() {
                 </Select>
                 <p className="text-[9px] text-muted-foreground mt-0.5">Messages you receive will be auto-translated to your language</p>
               </div>
+
               <div>
                 <Label className="text-xs font-bold mb-1.5 block">Bio</Label>
                 <Textarea
@@ -354,6 +358,7 @@ export default function Settings() {
                 />
                 <p className="text-[9px] text-muted-foreground text-right mt-0.5">{bio.length}/200</p>
               </div>
+
               <div>
                 <Label className="text-xs font-bold mb-1 block">Interests</Label>
                 <p className="text-[10px] text-muted-foreground mb-2">Tap to select up to 12 — riders see what you have in common</p>
@@ -364,19 +369,7 @@ export default function Settings() {
                 />
                 <p className="text-[9px] text-muted-foreground text-right mt-1">{selectedInterests.length}/12 selected</p>
               </div>
-              <div>
-                <Label className="text-xs font-bold mb-1.5 block flex items-center gap-1.5">
-                  <Route className="w-3.5 h-3.5 text-green-500" />
-                  Preferred Routes
-                </Label>
-                <Input
-                  placeholder="e.g. UK Campus to Hamburg, Tates Creek to Downtown..."
-                  value={preferredRoutes}
-                  onChange={(e) => setPreferredRoutes(e.target.value)}
-                  className="text-sm"
-                  data-testid="input-preferred-routes"
-                />
-              </div>
+
               <div>
                 <Label className="text-xs font-bold mb-1.5 block">Travel Time</Label>
                 <Select value={travelTime} onValueChange={setTravelTime}>
@@ -391,6 +384,7 @@ export default function Settings() {
                   </SelectContent>
                 </Select>
               </div>
+
               <div>
                 <Label className="text-xs font-bold mb-1.5 block">Favorite Places in the City</Label>
                 <Input
@@ -401,6 +395,74 @@ export default function Settings() {
                   data-testid="input-favorite-places"
                 />
               </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-xs font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-orange-500" />
+                    Fun Prompts
+                  </Label>
+                  <span className="text-[9px] text-muted-foreground">{funPrompts.length}/3</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground mb-2">Show a fun side of yourself — riders love personality!</p>
+
+                {funPrompts.map((fp, index) => (
+                  <div key={index} className="mb-3 p-3 rounded-xl bg-muted/30 border border-border/30">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[10px] font-bold text-orange-500">{fp.prompt}</p>
+                      <button
+                        onClick={() => removeFunPrompt(index)}
+                        className="text-muted-foreground hover:text-destructive"
+                        data-testid={`button-remove-prompt-${index}`}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <Input
+                      placeholder="Your answer..."
+                      value={fp.answer}
+                      onChange={(e) => updateFunPromptAnswer(index, e.target.value)}
+                      className="text-sm h-9"
+                      maxLength={100}
+                      data-testid={`input-fun-prompt-${index}`}
+                    />
+                  </div>
+                ))}
+
+                {funPrompts.length < 3 && (
+                  <button
+                    onClick={() => setShowPromptPicker(true)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-dashed border-orange-300/50 text-orange-500 text-xs font-bold hover:border-orange-400 hover:bg-orange-50/30 dark:hover:bg-orange-950/10 transition-all"
+                    data-testid="button-add-prompt"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add a Fun Prompt
+                  </button>
+                )}
+
+                {showPromptPicker && (
+                  <div className="mt-2 p-3 rounded-xl bg-muted/50 border border-border/50 space-y-1.5">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Pick a prompt</p>
+                    {availablePrompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        onClick={() => addFunPrompt(prompt)}
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:text-orange-600 transition-colors"
+                        data-testid={`button-pick-prompt`}
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setShowPromptPicker(false)}
+                      className="w-full text-center text-[10px] text-muted-foreground mt-1 py-1"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <Button
                 className="w-full bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => saveProfile.mutate()}
@@ -557,93 +619,6 @@ export default function Settings() {
           </Card>
         )}
 
-        {user && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                Ride Vibe
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Set your ride vibe so matches know what to expect. This helps prevent awkward social expectations and protects everyone's comfort.
-              </p>
-              <RideVibeSelector
-                value={rideVibe}
-                onChange={handleVibeChange}
-                disabled={updatePreferences.isPending}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {user && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="w-5 h-5" />
-                Privacy Controls
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground mb-2">
-                All social features are optional. You can disable community interactions at any time.
-              </p>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <EyeOff className="w-5 h-5 mt-0.5 text-muted-foreground" />
-                  <div>
-                    <Label htmlFor="toggle-community" className="text-sm font-medium cursor-pointer">Community Features</Label>
-                    <p className="text-sm text-muted-foreground mt-0.5">Show your profile in the community and allow follows.</p>
-                  </div>
-                </div>
-                <Switch
-                  id="toggle-community"
-                  data-testid="switch-community-features"
-                  checked={prefs.communityNotifications}
-                  onCheckedChange={() => toggle("communityNotifications")}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="w-5 h-5" />
-              Browser Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Enable browser notifications to receive real-time alerts even when you're not actively using Short Hop.
-            </p>
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button
-                data-testid="button-request-browser-notifications"
-                onClick={requestBrowserPermission}
-                disabled={browserPermission === "granted" || browserPermission === "unsupported"}
-              >
-                {browserPermission === "granted"
-                  ? "Notifications Enabled"
-                  : browserPermission === "denied"
-                    ? "Notifications Blocked"
-                    : browserPermission === "unsupported"
-                      ? "Not Supported"
-                      : "Enable Browser Notifications"}
-              </Button>
-              {browserPermission === "granted" && (
-                <span data-testid="text-browser-permission-status" className="text-sm text-green-600 dark:text-green-400 font-medium">Active</span>
-              )}
-              {browserPermission === "denied" && (
-                <span data-testid="text-browser-permission-status" className="text-sm text-destructive font-medium">Blocked in browser settings</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="border-green-200/50 dark:border-green-800/40 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/install")} data-testid="card-install-app">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -676,71 +651,14 @@ export default function Settings() {
         )}
 
         <Card data-testid="card-notifications-inbox">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              Alerts & Notifications
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <NotificationCenter />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              Notification Preferences
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {toggleItems.map(({ key, label, description, icon: Icon }) => (
-                <div key={key} className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <Icon className="w-5 h-5 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <Label htmlFor={`toggle-${key}`} className="text-sm font-medium cursor-pointer">
-                        {label}
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
-                    </div>
-                  </div>
-                  <Switch
-                    id={`toggle-${key}`}
-                    data-testid={`switch-${key}`}
-                    checked={prefs[key]}
-                    onCheckedChange={() => toggle(key)}
-                  />
-                </div>
-              ))}
-
-              {prefs.driverApproachingSound && (
-                <div className="flex items-start justify-between gap-4 pl-8">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Alert Duration</p>
-                    <p className="text-sm text-muted-foreground mt-0.5">How long the driver approaching sound plays.</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const next: DriverSoundDuration = soundDuration === "full" ? "short" : "full";
-                      setDriverSoundDuration(next);
-                      setSoundDuration(next);
-                      showFlash("🔔", `Alert: ${next === "full" ? "8 seconds" : "2 seconds"}`, "info");
-                    }}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-black transition-all border ${
-                      soundDuration === "full"
-                        ? "bg-orange-500 text-white border-orange-500"
-                        : "bg-muted/60 text-foreground border-border/50"
-                    }`}
-                    data-testid="button-settings-sound-duration"
-                  >
-                    {soundDuration === "full" ? "8 seconds" : "2 seconds"}
-                  </button>
-                </div>
-              )}
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center shadow-md shadow-blue-500/20">
+                <Bell className="w-4.5 h-4.5 text-white" />
+              </div>
+              <p className="text-sm font-extrabold text-foreground">Notifications</p>
             </div>
+            <NotificationCenter />
           </CardContent>
         </Card>
 
