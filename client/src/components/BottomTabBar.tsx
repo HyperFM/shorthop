@@ -76,17 +76,11 @@ export function BottomTabBar() {
   const isFlexPlus = user.subscription === "flex_hop" || user.subscription === "power_hop";
   const isOnHopPage = location === "/instahop" || location === "/hop";
 
-  function switchToHopper() {
-    localStorage.setItem("sh-active-tab", "hopper");
-    window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "hopper" }));
-    setActiveMode("hopper");
-    setLocation("/instahop");
-  }
-
-  function switchToDriver() {
-    localStorage.setItem("sh-active-tab", "driver");
-    window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "driver" }));
-    setActiveMode("driver");
+  function toggleMode() {
+    const next = activeMode === "hopper" ? "driver" : "hopper";
+    localStorage.setItem("sh-active-tab", next);
+    window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: next }));
+    setActiveMode(next);
     setLocation("/instahop");
   }
 
@@ -125,41 +119,29 @@ export function BottomTabBar() {
           );
         })}
 
-        <div className="flex items-center gap-1 flex-1 justify-center h-full" data-testid="tab-instahop">
-          <button
-            onClick={switchToHopper}
-            className={`flex flex-col items-center justify-center gap-0.5 relative`}
-            data-testid="tab-hop-hopper"
-          >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md -mt-2 transition-all ${
-              activeMode === "hopper" && isOnHopPage
-                ? "bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/30 ring-2 ring-blue-400/50"
-                : "bg-muted/80 shadow-none"
-            }`}>
-              <img src="/hopper-btn.png" alt="Hop" className="w-7 h-7 object-contain" />
-            </div>
-            <span className={`text-[9px] leading-none mt-0.5 ${
-              activeMode === "hopper" && isOnHopPage ? "text-blue-600 dark:text-blue-400 font-bold" : "text-muted-foreground font-medium"
-            }`}>Hop</span>
-          </button>
-
-          <button
-            onClick={switchToDriver}
-            className={`flex flex-col items-center justify-center gap-0.5 relative`}
-            data-testid="tab-hop-driver"
-          >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md -mt-2 transition-all ${
-              activeMode === "driver" && isOnHopPage
-                ? "bg-gradient-to-br from-orange-500 to-orange-600 shadow-orange-500/30 ring-2 ring-orange-400/50"
-                : "bg-muted/80 shadow-none"
-            }`}>
-              <img src="/driver-btn.png" alt="Drive" className="w-7 h-7 object-contain" />
-            </div>
-            <span className={`text-[9px] leading-none mt-0.5 ${
-              activeMode === "driver" && isOnHopPage ? "text-orange-600 dark:text-orange-400 font-bold" : "text-muted-foreground font-medium"
-            }`}>Drive</span>
-          </button>
-        </div>
+        <motion.button
+          onClick={toggleMode}
+          whileTap={{ scale: 0.92 }}
+          className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full relative"
+          data-testid="tab-instahop"
+        >
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg -mt-3 overflow-hidden transition-all duration-200">
+            <motion.img
+              key={activeMode}
+              src={activeMode === "hopper" ? "/hop-btn.png" : "/drive-btn.png"}
+              alt={activeMode === "hopper" ? "InstaHop" : "Drive Now"}
+              className="w-12 h-12 object-cover rounded-2xl"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.2 }}
+            />
+          </div>
+          <span className={`text-[10px] font-bold leading-none ${
+            activeMode === "hopper"
+              ? "text-orange-600 dark:text-orange-400"
+              : "text-green-600 dark:text-green-400"
+          }`}>{activeMode === "hopper" ? "Hop" : "Drive"}</span>
+        </motion.button>
 
         {rightTabs.map((tab) => {
           const isActive = location === tab.path || ((tab as any).isProfile && location === "/profile");
