@@ -39,13 +39,13 @@ const searchSchema = z.object({
 });
 
 type WalkerRouteData = { id: number; name: string; startLocation: string; endLocation: string };
-type Corridor = { id: number; name: string; description?: string };
+type Corridor = { id: number; name: string; description?: string; lat: number; lng: number };
 
 const CORRIDORS: Corridor[] = [
-  { id: 1, name: "New Circle Rd", description: "Heavy flow" },
-  { id: 2, name: "Nicholasville Rd", description: "Peak hours" },
-  { id: 3, name: "Richmond Rd", description: "Midday flow" },
-  { id: 4, name: "Leestown Rd", description: "West Lex" },
+  { id: 1, name: "New Circle Rd", description: "Heavy flow", lat: 38.0320, lng: -84.5260 },
+  { id: 2, name: "Nicholasville Rd", description: "Peak hours", lat: 38.0280, lng: -84.5050 },
+  { id: 3, name: "Richmond Rd", description: "Midday flow", lat: 38.0350, lng: -84.4780 },
+  { id: 4, name: "Leestown Rd", description: "West Lex", lat: 38.0560, lng: -84.5320 },
 ];
 
 type HopMode = "hop" | "walk" | "drive";
@@ -459,7 +459,9 @@ function InstaHopView({ user }: { user: User }) {
                         type="button"
                         onClick={() => {
                           form.setValue("startLocation", c.name);
-                          showFlash("📍", `${c.name}`, "info");
+                          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}&travelmode=walking`;
+                          window.open(mapsUrl, "_blank");
+                          showFlash("🚶", `Walking directions to ${c.name}`, "info");
                         }}
                         className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30 text-left hover:border-orange-400/60 transition-all"
                         data-testid={`button-corridor-${c.id}`}
@@ -495,13 +497,14 @@ function InstaHopView({ user }: { user: User }) {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
                   <div className="space-y-2">
                     <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500" />
-                      <Input
-                        placeholder="Current location"
-                        className="h-11 text-sm rounded-xl bg-muted/40 border-border/50 pl-9 focus:bg-background"
-                        data-testid="input-instahop-start"
-                        {...form.register("startLocation")}
-                      />
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                      <div
+                        className="h-11 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 flex items-center text-green-700 dark:text-green-400"
+                        data-testid="display-instahop-start"
+                      >
+                        {form.watch("startLocation") || "🚶 Walk to nearest corridor"}
+                      </div>
+                      <input type="hidden" {...form.register("startLocation")} />
                     </div>
                     <div className="relative">
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
