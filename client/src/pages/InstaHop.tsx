@@ -697,7 +697,10 @@ function InstaHopView({ user }: { user: User }) {
                         <div className="flex gap-1 items-stretch">
                           <button
                             type="button"
-                            onClick={() => { setCorridorSide("same"); fetchWalkingRoute(c); }}
+                            onClick={() => { 
+                              setCorridorSide("same"); 
+                              form.setValue("startLocation", c.name);
+                            }}
                             className={`flex-1 flex items-center gap-1 px-2 py-1 rounded-lg text-left transition-all text-[9px] font-black leading-none ${
                               corridorSide === "same"
                                 ? "bg-orange-500 text-white border border-orange-600"
@@ -710,7 +713,10 @@ function InstaHopView({ user }: { user: User }) {
                           </button>
                           <button
                             type="button"
-                            onClick={() => { setCorridorSide("opposite"); fetchWalkingRoute(c); }}
+                            onClick={() => { 
+                              setCorridorSide("opposite"); 
+                              form.setValue("startLocation", c.name);
+                            }}
                             className={`flex items-center gap-1 px-2 py-1 rounded-lg text-left transition-all text-[9px] font-black leading-none whitespace-nowrap ${
                               corridorSide === "opposite"
                                 ? "bg-blue-500 text-white border border-blue-600"
