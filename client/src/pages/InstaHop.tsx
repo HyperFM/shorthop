@@ -738,7 +738,7 @@ function InstaHopView({ user }: { user: User }) {
                         className="h-11 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 pr-3 flex items-center justify-between text-green-700 dark:text-green-400"
                         data-testid="display-instahop-start"
                       >
-                        <span>{form.watch("startLocation") || "🚶 Walk to nearest corridor"}</span>
+                        <span>{form.watch("startLocation") || "🚶 Walk toward your destination's nearest corridor"}</span>
                         {walkingInfo && (
                           <span className="text-[10px] font-semibold text-orange-500 shrink-0 ml-2">{walkingInfo.duration} · {walkingInfo.distance}</span>
                         )}
