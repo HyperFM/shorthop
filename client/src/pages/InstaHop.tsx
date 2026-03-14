@@ -42,16 +42,46 @@ type WalkerRouteData = { id: number; name: string; startLocation: string; endLoc
 type Corridor = { id: number; name: string; description?: string; lat: number; lng: number; widthRank: number };
 
 const CORRIDORS: Corridor[] = [
-  { id: 1, name: "New Circle Rd", description: "Heavy flow", lat: 38.0320, lng: -84.5260, widthRank: 1 },
-  { id: 2, name: "Nicholasville Rd", description: "Peak hours", lat: 38.0280, lng: -84.5050, widthRank: 2 },
-  { id: 3, name: "Richmond Rd", description: "Midday flow", lat: 38.0350, lng: -84.4780, widthRank: 3 },
-  { id: 4, name: "Leestown Rd", description: "West Lex", lat: 38.0560, lng: -84.5320, widthRank: 5 },
-  { id: 5, name: "Tates Creek Rd", description: "South Lex", lat: 38.0150, lng: -84.4930, widthRank: 4 },
-  { id: 6, name: "Harrodsburg Rd", description: "Southwest", lat: 38.0200, lng: -84.5280, widthRank: 3 },
-  { id: 7, name: "Georgetown Rd", description: "North Lex", lat: 38.0620, lng: -84.5140, widthRank: 4 },
-  { id: 8, name: "Versailles Rd", description: "West side", lat: 38.0480, lng: -84.5400, widthRank: 4 },
-  { id: 9, name: "Man o' War Blvd", description: "Outer loop", lat: 38.0050, lng: -84.5100, widthRank: 1 },
-  { id: 10, name: "Broadway", description: "Downtown", lat: 38.0470, lng: -84.4990, widthRank: 5 },
+  { id: 1, name: "New Circle Rd NW", lat: 38.0680, lng: -84.5350, widthRank: 1 },
+  { id: 2, name: "New Circle Rd N", lat: 38.0720, lng: -84.5100, widthRank: 1 },
+  { id: 3, name: "New Circle Rd NE", lat: 38.0650, lng: -84.4750, widthRank: 1 },
+  { id: 4, name: "New Circle Rd E", lat: 38.0420, lng: -84.4550, widthRank: 1 },
+  { id: 5, name: "New Circle Rd SE", lat: 38.0200, lng: -84.4700, widthRank: 1 },
+  { id: 6, name: "New Circle Rd S", lat: 38.0100, lng: -84.5100, widthRank: 1 },
+  { id: 7, name: "New Circle Rd SW", lat: 38.0200, lng: -84.5400, widthRank: 1 },
+  { id: 8, name: "New Circle Rd W", lat: 38.0450, lng: -84.5550, widthRank: 1 },
+  { id: 9, name: "Man o' War Blvd E", lat: 37.9980, lng: -84.4600, widthRank: 1 },
+  { id: 10, name: "Man o' War Blvd S", lat: 37.9900, lng: -84.5050, widthRank: 1 },
+  { id: 11, name: "Man o' War Blvd W", lat: 37.9950, lng: -84.5400, widthRank: 1 },
+  { id: 12, name: "Nicholasville Rd N", lat: 38.0400, lng: -84.5040, widthRank: 2 },
+  { id: 13, name: "Nicholasville Rd", lat: 38.0280, lng: -84.5050, widthRank: 2 },
+  { id: 14, name: "Nicholasville Rd S", lat: 38.0100, lng: -84.5060, widthRank: 2 },
+  { id: 15, name: "Richmond Rd", lat: 38.0350, lng: -84.4780, widthRank: 2 },
+  { id: 16, name: "Richmond Rd E", lat: 38.0250, lng: -84.4600, widthRank: 2 },
+  { id: 17, name: "Harrodsburg Rd N", lat: 38.0350, lng: -84.5200, widthRank: 2 },
+  { id: 18, name: "Harrodsburg Rd S", lat: 38.0150, lng: -84.5350, widthRank: 2 },
+  { id: 19, name: "Tates Creek Rd N", lat: 38.0300, lng: -84.4930, widthRank: 3 },
+  { id: 20, name: "Tates Creek Rd S", lat: 38.0100, lng: -84.4900, widthRank: 3 },
+  { id: 21, name: "Georgetown Rd", lat: 38.0620, lng: -84.5140, widthRank: 3 },
+  { id: 22, name: "Versailles Rd", lat: 38.0500, lng: -84.5400, widthRank: 3 },
+  { id: 23, name: "Leestown Rd", lat: 38.0560, lng: -84.5320, widthRank: 3 },
+  { id: 24, name: "Broadway", lat: 38.0470, lng: -84.4990, widthRank: 3 },
+  { id: 25, name: "Main St", lat: 38.0490, lng: -84.4960, widthRank: 3 },
+  { id: 26, name: "Limestone St", lat: 38.0440, lng: -84.4970, widthRank: 4 },
+  { id: 27, name: "S Broadway", lat: 38.0390, lng: -84.5000, widthRank: 3 },
+  { id: 28, name: "Winchester Rd", lat: 38.0550, lng: -84.4800, widthRank: 3 },
+  { id: 29, name: "Bryan Station Rd", lat: 38.0700, lng: -84.4850, widthRank: 3 },
+  { id: 30, name: "Russell Cave Rd", lat: 38.0650, lng: -84.4950, widthRank: 3 },
+  { id: 31, name: "Clays Mill Rd", lat: 38.0200, lng: -84.5500, widthRank: 4 },
+  { id: 32, name: "Alumni Dr", lat: 38.0300, lng: -84.5100, widthRank: 4 },
+  { id: 33, name: "Waller Ave", lat: 38.0380, lng: -84.5080, widthRank: 4 },
+  { id: 34, name: "Rose St", lat: 38.0420, lng: -84.5040, widthRank: 4 },
+  { id: 35, name: "Euclid Ave", lat: 38.0430, lng: -84.5100, widthRank: 4 },
+  { id: 36, name: "High St", lat: 38.0460, lng: -84.4940, widthRank: 4 },
+  { id: 37, name: "Southland Dr", lat: 38.0200, lng: -84.5150, widthRank: 4 },
+  { id: 38, name: "Lane Allen Rd", lat: 38.0250, lng: -84.5300, widthRank: 4 },
+  { id: 39, name: "Liberty Rd", lat: 38.0100, lng: -84.4750, widthRank: 4 },
+  { id: 40, name: "Athens-Boonesboro Rd", lat: 38.0300, lng: -84.4500, widthRank: 4 },
 ];
 
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -68,10 +98,12 @@ function getNearestCorridors(userLat: number | null, userLng: number | null): Co
     ...c,
     dist: haversineDistance(userLat, userLng, c.lat, c.lng),
   }));
-  withDist.sort((a, b) => {
-    if (a.widthRank !== b.widthRank) return a.widthRank - b.widthRank;
-    return a.dist - b.dist;
-  });
+  const nearby = withDist.filter(c => c.dist <= 0.25);
+  if (nearby.length >= 2) {
+    nearby.sort((a, b) => a.widthRank !== b.widthRank ? a.widthRank - b.widthRank : a.dist - b.dist);
+    return nearby.slice(0, 2);
+  }
+  withDist.sort((a, b) => a.dist - b.dist);
   return withDist.slice(0, 2);
 }
 
