@@ -106,6 +106,7 @@ export default function Settings() {
   const saveProfile = useMutation({
     mutationFn: async () => {
       await apiRequest("PATCH", "/api/user/profile", {
+        legalName: legalName.trim() || null,
         bio: bio.trim() || null,
         interests: selectedInterests.join(',') || null,
         language,
