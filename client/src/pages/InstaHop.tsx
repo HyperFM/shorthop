@@ -69,7 +69,7 @@ function getNearestCorridors(userLat: number | null, userLng: number | null): Co
     dist: haversineDistance(userLat, userLng, c.lat, c.lng),
   }));
   withDist.sort((a, b) => {
-    if (Math.abs(a.dist - b.dist) < 0.3) return a.widthRank - b.widthRank;
+    if (a.widthRank !== b.widthRank) return a.widthRank - b.widthRank;
     return a.dist - b.dist;
   });
   return withDist.slice(0, 2);
@@ -444,30 +444,43 @@ function DriverAutoNotifications({ hopsCount }: { hopsCount: number }) {
   }, [hopsCount, enabled]);
 
   return (
-    <Card className={`border transition-colors rounded-2xl ${enabled ? 'border-orange-300 bg-orange-50/30 dark:bg-orange-950/10' : 'border-border/50'}`} data-testid="card-auto-notify">
-      <CardContent className="p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${enabled ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-muted'}`}>
-              {enabled ? <Bell className="w-4 h-4 text-orange-500" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
+    <>
+      <Card className={`border transition-colors rounded-2xl ${enabled ? 'border-orange-300 bg-orange-50/30 dark:bg-orange-950/10' : 'border-border/50'}`} data-testid="card-auto-notify">
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${enabled ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-muted'}`}>
+                {enabled ? <Bell className="w-4 h-4 text-orange-500" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-bold">{enabled ? "Auto-Alerts ON" : "Auto-Alerts"}</p>
+                <p className="text-[10px] text-muted-foreground">Alert when pickup is on your route</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold">{enabled ? "Auto-Alerts ON" : "Auto-Alerts"}</p>
-              <p className="text-[10px] text-muted-foreground">Alert when pickup is on your route</p>
-            </div>
+            <Button
+              size="sm"
+              variant={enabled ? "default" : "outline"}
+              className="text-xs h-7 shrink-0"
+              onClick={toggle}
+              data-testid="button-toggle-auto-notify"
+            >
+              {enabled ? "ON" : "OFF"}
+            </Button>
           </div>
-          <Button
-            size="sm"
-            variant={enabled ? "default" : "outline"}
-            className="text-xs h-7"
-            onClick={toggle}
-            data-testid="button-toggle-auto-notify"
-          >
-            {enabled ? "ON" : "OFF"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/50 bg-blue-50/30 dark:bg-blue-950/10 rounded-2xl" data-testid="card-detour-notice">
+        <CardContent className="p-3">
+          <div className="flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0">💡</div>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              <span className="font-semibold text-foreground">Detours increase your chances of getting a hopper</span> along your route. You can take small detours and still head in the same direction—more flexibility means more hops!
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 
