@@ -1072,6 +1072,15 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Invalid plan" });
     }
     try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (currentUser?.isFounder && currentUser?.lifetimeSubscription) {
+        await storage.updateUser(req.user.id, {
+          subscription: plan,
+          subscriptionStartDate: new Date(),
+        });
+        return res.json({ checkoutRequired: false, founderFree: true });
+      }
+
       const stripe = await getUncachableStripeClient();
       const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
       const priceMap: Record<string, number> = { flex_hop: 1000, power_hop: 2500 };

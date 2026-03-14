@@ -73,6 +73,7 @@ export function SubscriptionModal({ open, onOpenChange, plan, user, onSubscribed
     },
   });
 
+  const isFounderFree = !!(user.isFounder && user.lifetimeSubscription);
   const currentPlan = user.subscription;
   const isCurrentPlan = currentPlan === plan;
   const isUpgrade = plan === "power_hop" && currentPlan === "flex_hop";
@@ -92,8 +93,17 @@ export function SubscriptionModal({ open, onOpenChange, plan, user, onSubscribed
               {details.name}
             </DialogTitle>
             <div className="text-center mt-2">
-              <span className="text-4xl font-black text-foreground" data-testid="text-subscription-price">{details.price}</span>
-              <span className="text-muted-foreground text-lg">{details.period}</span>
+              {isFounderFree ? (
+                <div>
+                  <span className="text-4xl font-black text-green-500" data-testid="text-subscription-price">FREE</span>
+                  <span className="text-muted-foreground text-sm line-through ml-2">{details.price}{details.period}</span>
+                </div>
+              ) : (
+                <>
+                  <span className="text-4xl font-black text-foreground" data-testid="text-subscription-price">{details.price}</span>
+                  <span className="text-muted-foreground text-lg">{details.period}</span>
+                </>
+              )}
             </div>
             {details.perRide && (
               <p className="text-center text-sm text-muted-foreground mt-1" data-testid="text-per-ride">{details.perRide}</p>
@@ -114,6 +124,13 @@ export function SubscriptionModal({ open, onOpenChange, plan, user, onSubscribed
             </CardContent>
           </Card>
 
+          {isFounderFree && (
+            <div className="text-center py-2 px-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-green-500/10 border border-amber-500/20">
+              <p className="text-sm font-bold text-foreground" data-testid="text-founder-thank-you">🏆 Thank you, Founding Member!</p>
+              <p className="text-xs text-muted-foreground mt-1">As a founder, you can subscribe to any plan for free — for life. Thank you for believing in ShortHop from the start!</p>
+            </div>
+          )}
+
           {isCurrentPlan ? (
             <div className="text-center py-2">
               <Badge className="bg-green-500/10 text-green-600 border-green-500/30 px-4 py-1.5">
@@ -132,12 +149,15 @@ export function SubscriptionModal({ open, onOpenChange, plan, user, onSubscribed
                 {subscribe.isPending ? (
                   <Sparkles className="w-5 h-5 animate-spin mr-2" />
                 ) : null}
-                {isUpgrade ? "Upgrade to " : isDowngrade ? "Switch to " : "Start "}
-                {details.name} — {details.price}{details.period}
+                {isFounderFree
+                  ? `Activate ${details.name} — Free for Life`
+                  : `${isUpgrade ? "Upgrade to " : isDowngrade ? "Switch to " : "Start "}${details.name} — ${details.price}${details.period}`}
               </Button>
-              <p className="text-xs text-center text-muted-foreground">
-                Cancel anytime from Settings. No commitment required.
-              </p>
+              {!isFounderFree && (
+                <p className="text-xs text-center text-muted-foreground">
+                  Cancel anytime from Settings. No commitment required.
+                </p>
+              )}
             </div>
           )}
         </div>

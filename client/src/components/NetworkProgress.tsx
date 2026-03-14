@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { api } from "@shared/routes";
 import { motion } from "framer-motion";
+import { Share2, Check, Copy } from "lucide-react";
+import type { User } from "@shared/routes";
 
 interface NetworkStats {
   totalUsers: number;
@@ -14,6 +18,12 @@ interface NetworkStats {
 }
 
 export function NetworkProgress() {
+  const [copied, setCopied] = useState(false);
+
+  const { data: user } = useQuery<User>({
+    queryKey: [api.auth.me.path],
+  });
+
   const { data: stats, isLoading } = useQuery<NetworkStats>({
     queryKey: [api.network.stats.path],
     queryFn: async () => {
@@ -27,6 +37,24 @@ export function NetworkProgress() {
   if (isLoading || !stats) return null;
 
   const progress = Math.min(100, (stats.totalUsers / stats.nextMilestone) * 100);
+
+  const shareReferral = async () => {
+    if (!user?.referralCode) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Join ShortHop!",
+          text: `Use my referral code "${user.referralCode}" to join ShortHop and we both earn bonus credits!`,
+        });
+      } catch {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(user.referralCode);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {}
+    }
+  };
 
   return (
     <motion.div
@@ -100,6 +128,21 @@ export function NetworkProgress() {
                   🛞 {stats.foundingHoppersRemaining} Founding Member spots left!
                 </Badge>
               </motion.div>
+            </div>
+          )}
+
+          {user?.referralCode && (
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[11px] font-bold gap-1.5 rounded-full border-secondary/30 bg-secondary/5 hover:bg-secondary/10"
+                onClick={shareReferral}
+                data-testid="button-goal-referral"
+              >
+                {copied ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
+                {copied ? "Copied!" : "Invite friends to help grow!"}
+              </Button>
             </div>
           )}
         </CardContent>
