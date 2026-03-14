@@ -169,6 +169,9 @@ export function DriverQuestionnaire({ onComplete, initialValues }: DriverQuestio
                   <p className="text-xs font-bold">No Pets</p>
                 </button>
               </div>
+              <p className="text-[10px] text-muted-foreground mt-2 px-1" data-testid="text-service-animal-disclosure">
+                🐕‍🦺 Service animals are always permitted regardless of pet preference. This is required by law and cannot be denied.
+              </p>
             </motion.div>
           )}
 

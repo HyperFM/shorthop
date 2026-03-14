@@ -573,7 +573,7 @@ export default function DriverDashboard({ user }: { user: User }) {
 
           <div className="space-y-4">
             <h2 className="text-xl font-bold flex items-center gap-2">
-              🗺️ Hoppers Along Your Route
+              🗺️ Available Hop Requests
             </h2>
             
             {availableHops.length === 0 ? (
@@ -587,7 +587,7 @@ export default function DriverDashboard({ user }: { user: User }) {
                     🔍
                   </motion.span>
                   <p className="text-muted-foreground font-medium">No hops nearby yet.</p>
-                  <p className="text-xs text-muted-foreground mt-1">Be the first to start one.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Check back soon for new requests.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -601,19 +601,23 @@ export default function DriverDashboard({ user }: { user: User }) {
                   >
                     <Card className="hover:shadow-md transition-shadow border-primary/20" data-testid={`hop-request-${hop.id}`}>
                       <CardContent className="p-4 space-y-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                          <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Along your path</p>
-                        </div>
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-1">
-                            <div className="text-[10px] font-bold text-muted-foreground uppercase">Pick up</div>
-                            <div className="text-sm font-bold text-foreground">{hop.startLocation}</div>
-                          </div>
-                          <div className="flex items-center text-muted-foreground mx-2">→</div>
-                          <div className="space-y-1 text-right">
-                            <div className="text-[10px] font-bold text-muted-foreground uppercase">Drop off</div>
-                            <div className="text-sm font-bold text-foreground">{hop.endLocation}</div>
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <div className="flex flex-col items-center mt-1">
+                              <div className="w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-green-200" />
+                              <div className="w-0.5 h-8 bg-gradient-to-b from-green-400 to-blue-400" />
+                              <div className="w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-blue-200" />
+                            </div>
+                            <div className="flex-1 space-y-3">
+                              <div>
+                                <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Start</p>
+                                <p className="text-sm font-bold text-foreground" data-testid={`text-hop-start-${hop.id}`}>{hop.startLocation}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Finish</p>
+                                <p className="text-sm font-bold text-foreground" data-testid={`text-hop-end-${hop.id}`}>{hop.endLocation}</p>
+                              </div>
+                            </div>
                           </div>
                         </div>
                         <Button 
