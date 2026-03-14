@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").default(false),
   agreedToTerms: boolean("agreed_to_terms").default(false),
   isAdmin: boolean("is_admin").default(false),
+  isAmbassador: boolean("is_ambassador").default(false),
   isDisabled: boolean("is_disabled").default(false),
   phone: text("phone"),
   notificationsEnabled: boolean("notifications_enabled").default(false),
@@ -364,6 +365,22 @@ export const schedules = pgTable("schedules", {
 export const insertScheduleSchema = createInsertSchema(schedules).omit({ id: true, createdAt: true });
 export type Schedule = typeof schedules.$inferSelect;
 export type InsertSchedule = z.infer<typeof insertScheduleSchema>;
+
+export const ambassadorRequests = pgTable("ambassador_requests", {
+  id: serial("id").primaryKey(),
+  ambassadorId: integer("ambassador_id").references(() => users.id).notNull(),
+  targetUserId: integer("target_user_id").references(() => users.id).notNull(),
+  actionType: text("action_type").notNull(), // "suspend_hopper", "suspend_driver", "delete_hopper", "delete_driver"
+  evidence: text("evidence").notNull(),
+  status: text("status").default("pending").notNull(), // "pending", "approved", "rejected"
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+});
+
+export const insertAmbassadorRequestSchema = createInsertSchema(ambassadorRequests).omit({ id: true, createdAt: true, reviewedAt: true, status: true, adminNotes: true });
+export type AmbassadorRequest = typeof ambassadorRequests.$inferSelect;
+export type InsertAmbassadorRequest = z.infer<typeof insertAmbassadorRequestSchema>;
 
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

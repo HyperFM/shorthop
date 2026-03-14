@@ -68,6 +68,7 @@ type AdminUser = {
   driverVerified: boolean;
   isDisabled: boolean;
   isAdmin: boolean;
+  isAmbassador: boolean;
   isFounder: boolean;
   credits: number;
   totalHops: number;
@@ -125,7 +126,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
