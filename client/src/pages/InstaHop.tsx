@@ -627,6 +627,7 @@ function InstaHopView({ user }: { user: User }) {
   const nearestCorridors = getNearestCorridors(geo.latitude, geo.longitude);
   const [walkingRoute, setWalkingRoute] = useState<GeoJSON.LineString | null>(null);
   const [walkingInfo, setWalkingInfo] = useState<{ distance: string; duration: string } | null>(null);
+  const [corridorSide, setCorridorSide] = useState<"same" | "opposite">("same");
 
   const fetchWalkingRoute = useCallback(async (corridor: Corridor) => {
     if (!geo.latitude || !geo.longitude) {
@@ -692,16 +693,40 @@ function InstaHopView({ user }: { user: User }) {
                 <div className="flex gap-2 mb-2">
                   <div className="flex flex-col gap-1.5 shrink-0">
                     {nearestCorridors.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => fetchWalkingRoute(c)}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30 text-left hover:border-orange-400/60 transition-all"
-                        data-testid={`button-corridor-${c.id}`}
-                      >
-                        <MapPin className="w-2.5 h-2.5 text-orange-500 shrink-0" />
-                        <span className="text-[9px] font-black text-foreground leading-none">{c.name}</span>
-                      </button>
+                      <div key={c.id} className="flex flex-col gap-0.5">
+                        <div className="flex gap-1 items-stretch">
+                          <button
+                            type="button"
+                            onClick={() => { setCorridorSide("same"); fetchWalkingRoute(c); }}
+                            className={`flex-1 flex items-center gap-1 px-2 py-1 rounded-lg text-left transition-all text-[9px] font-black leading-none ${
+                              corridorSide === "same"
+                                ? "bg-orange-500 text-white border border-orange-600"
+                                : "bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30 text-foreground hover:border-orange-400/60"
+                            }`}
+                            data-testid={`button-corridor-${c.id}-same`}
+                          >
+                            <MapPin className="w-2.5 h-2.5 shrink-0" />
+                            <span>{c.name}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setCorridorSide("opposite"); fetchWalkingRoute(c); }}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-left transition-all text-[9px] font-black leading-none whitespace-nowrap ${
+                              corridorSide === "opposite"
+                                ? "bg-blue-500 text-white border border-blue-600"
+                                : "bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-700/30 text-foreground hover:border-blue-400/60"
+                            }`}
+                            data-testid={`button-corridor-${c.id}-opposite`}
+                          >
+                            ↔
+                          </button>
+                        </div>
+                        {corridorSide === "opposite" && (
+                          <div className="text-[8px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 px-1">
+                            <span>✓ Cross safely</span>
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
 
