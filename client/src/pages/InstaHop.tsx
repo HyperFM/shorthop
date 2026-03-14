@@ -627,8 +627,6 @@ function InstaHopView({ user }: { user: User }) {
   const nearestCorridors = getNearestCorridors(geo.latitude, geo.longitude);
   const [walkingRoute, setWalkingRoute] = useState<GeoJSON.LineString | null>(null);
   const [walkingInfo, setWalkingInfo] = useState<{ distance: string; duration: string } | null>(null);
-  const [corridorSide, setCorridorSide] = useState<"same" | "opposite">("same");
-
   const fetchWalkingRoute = useCallback(async (corridor: Corridor) => {
     if (!geo.latitude || !geo.longitude) {
       showFlash("📍", "Enable location to get directions", "error");
@@ -691,49 +689,11 @@ function InstaHopView({ user }: { user: User }) {
             ) : (
               <>
                 <div className="flex gap-2 mb-2">
-                  <div className="flex flex-col gap-1.5 shrink-0">
-                    {nearestCorridors.map((c) => (
-                      <div key={c.id} className="flex flex-col gap-0.5">
-                        <div className="flex gap-1 items-stretch">
-                          <button
-                            type="button"
-                            onClick={() => { 
-                              setCorridorSide("same"); 
-                              form.setValue("startLocation", c.name);
-                            }}
-                            className={`flex-1 flex items-center gap-1 px-2 py-1 rounded-lg text-left transition-all text-[9px] font-black leading-none ${
-                              corridorSide === "same"
-                                ? "bg-orange-500 text-white border border-orange-600"
-                                : "bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30 text-foreground hover:border-orange-400/60"
-                            }`}
-                            data-testid={`button-corridor-${c.id}-same`}
-                          >
-                            <MapPin className="w-2.5 h-2.5 shrink-0" />
-                            <span>{c.name}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { 
-                              setCorridorSide("opposite"); 
-                              form.setValue("startLocation", c.name);
-                            }}
-                            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-left transition-all text-[9px] font-black leading-none whitespace-nowrap ${
-                              corridorSide === "opposite"
-                                ? "bg-blue-500 text-white border border-blue-600"
-                                : "bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-700/30 text-foreground hover:border-blue-400/60"
-                            }`}
-                            data-testid={`button-corridor-${c.id}-opposite`}
-                          >
-                            ↔
-                          </button>
-                        </div>
-                        {corridorSide === "opposite" && (
-                          <div className="text-[8px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 px-1">
-                            <span>✓ Cross safely</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="flex-1 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-700/30 p-3">
+                    <p className="text-[11px] font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5" />
+                      🚦 Stay aware and cross safely at marked intersections
+                    </p>
                   </div>
 
                   <div className="flex-1">
@@ -766,7 +726,7 @@ function InstaHopView({ user }: { user: User }) {
                         className="h-11 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 pr-3 flex items-center justify-between text-green-700 dark:text-green-400"
                         data-testid="display-instahop-start"
                       >
-                        <span>{form.watch("startLocation") || "🚶 Walk toward your destination's nearest corridor"}</span>
+                        <span>{form.watch("startLocation") || "📍 Auto current location"}</span>
                         {walkingInfo && (
                           <span className="text-[10px] font-semibold text-orange-500 shrink-0 ml-2">{walkingInfo.duration} · {walkingInfo.distance}</span>
                         )}
