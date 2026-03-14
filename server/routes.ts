@@ -1458,6 +1458,11 @@ export async function registerRoutes(
   });
 
   // Driver Onboarding & Profile
+  app.post('/api/upload-driver-image', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    res.json({ url: `data:image/placeholder;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==` });
+  });
+
   app.post('/api/driver/profile', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {

@@ -5,6 +5,8 @@ import { createServer } from "http";
 import { WebhookHandlers } from "./webhookHandlers";
 
 const app = express();
+
+app.use("/uploads", express.static("server/uploads"));
 app.set('trust proxy', 1);
 const httpServer = createServer(app);
 

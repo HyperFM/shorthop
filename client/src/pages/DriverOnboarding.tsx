@@ -37,8 +37,30 @@ export default function DriverOnboarding() {
     mutationFn: async () => {
       let driverLicenseUrl = null;
       let selfieUrl = null;
-      if (licenseFile) driverLicenseUrl = `license_${user?.id}_${Date.now()}`;
-      if (selfieFile) selfieUrl = `selfie_${user?.id}_${Date.now()}`;
+
+      if (licenseFile) {
+        const formData = new FormData();
+        formData.append("file", licenseFile);
+        const uploadRes = await fetch("/api/upload-driver-image", {
+          method: "POST",
+          body: formData,
+        });
+        if (!uploadRes.ok) throw new Error("License upload failed");
+        const uploadData = await uploadRes.json();
+        driverLicenseUrl = uploadData.url;
+      }
+
+      if (selfieFile) {
+        const formData = new FormData();
+        formData.append("file", selfieFile);
+        const uploadRes = await fetch("/api/upload-driver-image", {
+          method: "POST",
+          body: formData,
+        });
+        if (!uploadRes.ok) throw new Error("Selfie upload failed");
+        const uploadData = await uploadRes.json();
+        selfieUrl = uploadData.url;
+      }
 
       await apiRequest("POST", "/api/driver/profile", {
         vehicleMake, vehicleModel, vehicleColor, licensePlate,

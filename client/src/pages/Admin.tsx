@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
@@ -138,6 +139,8 @@ export default function Admin() {
   const [resolveText, setResolveText] = useState<Record<number, string>>({});
   const [grantWheels, setGrantWheels] = useState<Record<number, string>>({});
   const [userSearch, setUserSearch] = useState("");
+  const [confirmApp, setConfirmApp] = useState<{ appId: number; status: "approved" | "rejected"; username: string } | null>(null);
+  const [rejectNotes, setRejectNotes] = useState("");
 
   const { data: stats } = useQuery<AdminStats>({ queryKey: ["/api/admin/stats"] });
   const { data: allUsers } = useQuery<AdminUser[]>({ queryKey: ["/api/admin/users"], enabled: tab === "users" });
@@ -647,29 +650,55 @@ export default function Admin() {
           {applications?.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">No applications yet</p>
           )}
-          {applications?.map(app => (
-            <Card key={app.id} className={`border-border/50 ${app.status === "pending" ? "border-orange-200" : ""}`}>
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold">{app.username}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      Submitted {new Date(app.submittedAt).toLocaleDateString()}
-                    </p>
-                    <Badge className={`text-[9px] mt-1 border-0 ${
-                      app.status === "pending" ? "bg-orange-100 text-orange-700" :
-                      app.status === "approved" ? "bg-green-100 text-green-700" :
-                      "bg-red-100 text-red-700"
-                    }`}>
-                      {app.status}
-                    </Badge>
+          {applications?.map(app => {
+            const appUser = allUsers?.find(u => u.id === app.userId);
+            return (
+              <Card key={app.id} className={`border-border/50 ${app.status === "pending" ? "border-orange-200" : ""}`}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold">{app.username}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Submitted {new Date(app.submittedAt).toLocaleDateString()}
+                      </p>
+                      {appUser?.vehicleMake && (
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {appUser.vehicleColor} {appUser.vehicleMake} {appUser.vehicleModel} · {appUser.licensePlate}
+                        </p>
+                      )}
+                      <Badge className={`text-[9px] mt-1 border-0 ${
+                        app.status === "pending" ? "bg-orange-100 text-orange-700" :
+                        app.status === "approved" ? "bg-green-100 text-green-700" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        {app.status}
+                      </Badge>
+                    </div>
                   </div>
+
+                  {app.status === "pending" && appUser?.driverLicenseUrl && (
+                    <div className="flex gap-2 pt-1">
+                      {appUser.driverLicenseUrl && (
+                        <div className="flex-1 rounded-lg overflow-hidden border border-border/50 bg-muted/30">
+                          <img src={appUser.driverLicenseUrl} alt="Driver License" className="w-full h-20 object-cover" />
+                          <p className="text-[9px] text-muted-foreground text-center py-1">License</p>
+                        </div>
+                      )}
+                      {appUser.selfieUrl && (
+                        <div className="flex-1 rounded-lg overflow-hidden border border-border/50 bg-muted/30">
+                          <img src={appUser.selfieUrl} alt="Selfie" className="w-full h-20 object-cover" />
+                          <p className="text-[9px] text-muted-foreground text-center py-1">Selfie</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {app.status === "pending" && (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 pt-1">
                       <Button
                         size="sm"
-                        className="text-xs h-7 bg-green-500 hover:bg-green-600"
-                        onClick={() => reviewApp.mutate({ id: app.id, status: "approved" })}
+                        className="text-xs h-7 flex-1 bg-green-500 hover:bg-green-600"
+                        onClick={() => setConfirmApp({ appId: app.id, status: "approved", username: app.username })}
                         disabled={reviewApp.isPending}
                         data-testid={`button-approve-${app.id}`}
                       >
@@ -678,8 +707,8 @@ export default function Admin() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        className="text-xs h-7"
-                        onClick={() => reviewApp.mutate({ id: app.id, status: "rejected", notes: "Does not meet requirements" })}
+                        className="text-xs h-7 flex-1"
+                        onClick={() => setConfirmApp({ appId: app.id, status: "rejected", username: app.username })}
                         disabled={reviewApp.isPending}
                         data-testid={`button-reject-${app.id}`}
                       >
@@ -687,12 +716,62 @@ export default function Admin() {
                       </Button>
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      <Dialog open={!!confirmApp} onOpenChange={() => setConfirmApp(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmApp?.status === "approved" ? "Approve Driver?" : "Reject Driver?"}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmApp?.status === "approved"
+                ? `Approve ${confirmApp?.username} to become a verified driver?`
+                : `Reject ${confirmApp?.username}'s driver application?`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmApp?.status === "rejected" && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Rejection notes (optional):</label>
+              <Textarea
+                placeholder="Explain why the application was rejected..."
+                value={rejectNotes}
+                onChange={(e) => setRejectNotes(e.target.value)}
+                className="text-sm h-24"
+              />
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setConfirmApp(null)}>
+              Cancel
+            </Button>
+            <Button
+              className={confirmApp?.status === "approved" ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"}
+              onClick={() => {
+                if (confirmApp) {
+                  reviewApp.mutate({
+                    id: confirmApp.appId,
+                    status: confirmApp.status,
+                    notes: rejectNotes || undefined,
+                  });
+                  setConfirmApp(null);
+                  setRejectNotes("");
+                }
+              }}
+              disabled={reviewApp.isPending}
+            >
+              {confirmApp?.status === "approved" ? "✓ Approve" : "✗ Reject"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {tab === "drivers" && (
         <div className="space-y-2">
