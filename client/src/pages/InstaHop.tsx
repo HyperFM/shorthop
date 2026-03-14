@@ -92,17 +92,26 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+const SEARCH_BANDS_MILES = [50/5280, 100/5280, 150/5280, 200/5280, 300/5280, 500/5280, 1000/5280];
+
 function getNearestCorridors(userLat: number | null, userLng: number | null): Corridor[] {
   if (!userLat || !userLng) return CORRIDORS.slice(0, 2);
   const withDist = CORRIDORS.map(c => ({
     ...c,
     dist: haversineDistance(userLat, userLng, c.lat, c.lng),
   }));
-  const nearby = withDist.filter(c => c.dist <= 0.25);
-  if (nearby.length >= 2) {
-    nearby.sort((a, b) => a.widthRank !== b.widthRank ? a.widthRank - b.widthRank : a.dist - b.dist);
-    return nearby.slice(0, 2);
+
+  for (const band of SEARCH_BANDS_MILES) {
+    const inBand = withDist.filter(c => c.dist <= band);
+    if (inBand.length > 0) {
+      inBand.sort((a, b) => a.widthRank !== b.widthRank ? a.widthRank - b.widthRank : a.dist - b.dist);
+      if (inBand.length >= 2) return inBand.slice(0, 2);
+      const remaining = withDist.filter(c => c.dist > band);
+      remaining.sort((a, b) => a.dist - b.dist);
+      return [inBand[0], remaining[0]].filter(Boolean);
+    }
   }
+
   withDist.sort((a, b) => a.dist - b.dist);
   return withDist.slice(0, 2);
 }
