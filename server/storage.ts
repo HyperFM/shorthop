@@ -56,6 +56,9 @@ import {
   schedules,
   type Schedule,
   type InsertSchedule,
+  ambassadorRequests,
+  type AmbassadorRequest,
+  type InsertAmbassadorRequest,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -170,6 +173,12 @@ export interface IStorage {
   createSchedule(schedule: InsertSchedule): Promise<Schedule>;
   updateSchedule(id: number, userId: number, updates: Partial<Schedule>): Promise<Schedule>;
   deleteSchedule(id: number, userId: number): Promise<void>;
+
+  getAmbassadors(): Promise<User[]>;
+  setAmbassador(userId: number, isAmbassador: boolean): Promise<User>;
+  getAmbassadorRequests(): Promise<(AmbassadorRequest & { ambassadorUsername: string; targetUsername: string })[]>;
+  createAmbassadorRequest(request: InsertAmbassadorRequest): Promise<AmbassadorRequest>;
+  reviewAmbassadorRequest(id: number, status: string, adminNotes?: string): Promise<AmbassadorRequest>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1125,6 +1134,54 @@ export class DatabaseStorage implements IStorage {
       .where(eq(shortHops.id, hopId))
       .returning();
     if (!updated) throw new Error("Hop not found");
+    return updated;
+  }
+
+  async getAmbassadors(): Promise<User[]> {
+    return db.select().from(users).where(eq(users.isAmbassador, true));
+  }
+
+  async setAmbassador(userId: number, isAmbassador: boolean): Promise<User> {
+    const [updated] = await db.update(users)
+      .set({ isAmbassador })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated) throw new Error("User not found");
+    return updated;
+  }
+
+  async getAmbassadorRequests(): Promise<(AmbassadorRequest & { ambassadorUsername: string; targetUsername: string })[]> {
+    const ambassadorUser = db.select({ id: users.id, username: users.username }).from(users).as("ambassadorUser");
+    const targetUser = db.select({ id: users.id, username: users.username }).from(users).as("targetUser");
+
+    const results = await db.select({
+      request: ambassadorRequests,
+      ambassadorUsername: ambassadorUser.username,
+      targetUsername: targetUser.username,
+    })
+      .from(ambassadorRequests)
+      .innerJoin(ambassadorUser, eq(ambassadorRequests.ambassadorId, ambassadorUser.id))
+      .innerJoin(targetUser, eq(ambassadorRequests.targetUserId, targetUser.id))
+      .orderBy(desc(ambassadorRequests.createdAt));
+
+    return results.map(r => ({
+      ...r.request,
+      ambassadorUsername: r.ambassadorUsername,
+      targetUsername: r.targetUsername,
+    }));
+  }
+
+  async createAmbassadorRequest(request: InsertAmbassadorRequest): Promise<AmbassadorRequest> {
+    const [created] = await db.insert(ambassadorRequests).values(request).returning();
+    return created;
+  }
+
+  async reviewAmbassadorRequest(id: number, status: string, adminNotes?: string): Promise<AmbassadorRequest> {
+    const [updated] = await db.update(ambassadorRequests)
+      .set({ status, adminNotes: adminNotes || null, reviewedAt: new Date() })
+      .where(eq(ambassadorRequests.id, id))
+      .returning();
+    if (!updated) throw new Error("Ambassador request not found");
     return updated;
   }
 

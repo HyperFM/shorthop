@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -311,6 +311,7 @@ export default function Admin() {
     { key: "founders", label: "Founders", icon: Crown },
     { key: "dms", label: "DMs", icon: Star, badge: vipConvos?.reduce((sum, c) => sum + c.unread, 0) || 0 },
     { key: "payments", label: "Payments", icon: DollarSign },
+    { key: "ambassadors", label: "Ambassadors", icon: Award },
   ];
 
   return (
@@ -1022,6 +1023,9 @@ export default function Admin() {
       {tab === "payments" && (
         <PaymentsTab />
       )}
+      {tab === "ambassadors" && (
+        <AmbassadorsTab />
+      )}
     </div>
   );
 }
@@ -1123,6 +1127,219 @@ function PaymentsTab() {
               <Badge className={`text-[9px] border-0 ${account.payoutsEnabled ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                 {account.payoutsEnabled ? "Payouts Enabled" : "Payouts Disabled"}
               </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+type AmbassadorUser = { id: number; username: string; isAmbassador: boolean; isDriver: boolean; totalHops: number; createdAt: string };
+type AmbassadorReq = { id: number; ambassadorId: number; targetUserId: number; ambassadorUsername: string; targetUsername: string; actionType: string; evidence: string; status: string; adminNotes: string | null; createdAt: string; reviewedAt: string | null };
+
+function AmbassadorsTab() {
+  const queryClient = useQueryClient();
+  const [assignSearch, setAssignSearch] = useState("");
+  const [reviewNotes, setReviewNotes] = useState<Record<number, string>>({});
+
+  const { data: ambassadors, isLoading: ambLoading } = useQuery<AmbassadorUser[]>({ queryKey: ["/api/admin/ambassadors"] });
+  const { data: requests, isLoading: reqLoading } = useQuery<AmbassadorReq[]>({ queryKey: ["/api/admin/ambassador-requests"] });
+  const { data: allUsers } = useQuery<AdminUser[]>({ queryKey: ["/api/admin/users"] });
+
+  const setAmbassador = useMutation({
+    mutationFn: async ({ id, isAmbassador }: { id: number; isAmbassador: boolean }) => {
+      await apiRequest("POST", `/api/admin/ambassadors/${id}/set`, { isAmbassador });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/ambassadors"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      showFlash("🎖️", "Ambassador status updated", "success");
+    },
+    onError: () => showFlash("❌", "Failed to update", "error"),
+  });
+
+  const reviewRequest = useMutation({
+    mutationFn: async ({ id, status, adminNotes }: { id: number; status: string; adminNotes?: string }) => {
+      await apiRequest("POST", `/api/admin/ambassador-requests/${id}/review`, { status, adminNotes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/ambassador-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      showFlash("✅", "Request reviewed", "success");
+    },
+    onError: () => showFlash("❌", "Failed to review", "error"),
+  });
+
+  const pendingRequests = requests?.filter(r => r.status === "pending") || [];
+  const pastRequests = requests?.filter(r => r.status !== "pending") || [];
+  const nonAmbassadorUsers = allUsers?.filter(u => !u.isAmbassador && !u.isAdmin && u.username.toLowerCase().includes(assignSearch.toLowerCase())) || [];
+
+  const actionLabels: Record<string, string> = {
+    suspend_hopper: "Suspend Hopper",
+    suspend_driver: "Suspend Driver",
+    delete_hopper: "Remove Hopper",
+    delete_driver: "Remove Driver",
+  };
+
+  return (
+    <div className="space-y-4" data-testid="admin-ambassadors-tab">
+      <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Award className="w-5 h-5 text-amber-600" />
+            <p className="text-xs font-bold text-amber-600 uppercase tracking-wider">Active Ambassadors</p>
+            <Badge className="text-[9px] bg-amber-100 text-amber-700 border-0 ml-auto">{ambassadors?.length || 0}</Badge>
+          </div>
+          {ambLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+          ) : ambassadors && ambassadors.length > 0 ? (
+            <div className="space-y-2">
+              {ambassadors.map(a => (
+                <div key={a.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/50" data-testid={`ambassador-user-${a.id}`}>
+                  <div>
+                    <p className="text-sm font-bold">{a.username}</p>
+                    <p className="text-[10px] text-muted-foreground">{a.isDriver ? "Driver" : "Hopper"} · {a.totalHops || 0} hops</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-[10px] h-7 px-2 border-red-300 text-red-600 hover:bg-red-50"
+                    onClick={() => setAmbassador.mutate({ id: a.id, isAmbassador: false })}
+                    disabled={setAmbassador.isPending}
+                    data-testid={`button-revoke-ambassador-${a.id}`}
+                  >
+                    <XCircle className="w-3 h-3 mr-1" /> Revoke
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-3">No ambassadors assigned yet</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/50">
+        <CardContent className="p-4">
+          <p className="text-xs font-bold text-foreground mb-3">Assign New Ambassador</p>
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              className="pl-9 h-8 text-xs"
+              value={assignSearch}
+              onChange={e => setAssignSearch(e.target.value)}
+              data-testid="input-ambassador-search"
+            />
+          </div>
+          {assignSearch.length >= 2 && (
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {nonAmbassadorUsers.slice(0, 8).map(u => (
+                <div key={u.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
+                  <div>
+                    <p className="text-xs font-medium">{u.username}</p>
+                    <p className="text-[10px] text-muted-foreground">{u.isDriver ? "Driver" : "Hopper"}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="text-[10px] h-6 px-2 bg-amber-600 hover:bg-amber-700 text-white"
+                    onClick={() => { setAmbassador.mutate({ id: u.id, isAmbassador: true }); setAssignSearch(""); }}
+                    disabled={setAmbassador.isPending}
+                    data-testid={`button-assign-ambassador-${u.id}`}
+                  >
+                    <Award className="w-3 h-3 mr-1" /> Assign
+                  </Button>
+                </div>
+              ))}
+              {nonAmbassadorUsers.length === 0 && (
+                <p className="text-[10px] text-muted-foreground text-center py-2">No matching users</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-transparent">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-4 h-4 text-orange-600" />
+            <p className="text-xs font-bold text-orange-600 uppercase tracking-wider">Pending Requests</p>
+            {pendingRequests.length > 0 && (
+              <Badge className="text-[9px] bg-orange-100 text-orange-700 border-0 ml-auto">{pendingRequests.length}</Badge>
+            )}
+          </div>
+          {reqLoading ? (
+            <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+          ) : pendingRequests.length > 0 ? (
+            <div className="space-y-3">
+              {pendingRequests.map(r => (
+                <div key={r.id} className="p-3 rounded-xl bg-muted/50 space-y-2" data-testid={`ambassador-request-${r.id}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold">{r.ambassadorUsername} <span className="font-normal text-muted-foreground">→</span> {r.targetUsername}</p>
+                      <Badge className="text-[9px] bg-orange-100 text-orange-700 border-0 mt-1">{actionLabels[r.actionType] || r.actionType}</Badge>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-background">
+                    <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Evidence:</p>
+                    <p className="text-xs">{r.evidence}</p>
+                  </div>
+                  <Textarea
+                    placeholder="Admin notes (optional)..."
+                    className="text-xs min-h-[50px]"
+                    value={reviewNotes[r.id] || ""}
+                    onChange={e => setReviewNotes(prev => ({ ...prev, [r.id]: e.target.value }))}
+                    data-testid={`input-review-notes-${r.id}`}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1 text-[10px] h-7 bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => reviewRequest.mutate({ id: r.id, status: "approved", adminNotes: reviewNotes[r.id] })}
+                      disabled={reviewRequest.isPending}
+                      data-testid={`button-approve-request-${r.id}`}
+                    >
+                      <CheckCircle className="w-3 h-3 mr-1" /> Approve & Execute
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 text-[10px] h-7 border-red-300 text-red-600 hover:bg-red-50"
+                      onClick={() => reviewRequest.mutate({ id: r.id, status: "rejected", adminNotes: reviewNotes[r.id] })}
+                      disabled={reviewRequest.isPending}
+                      data-testid={`button-reject-request-${r.id}`}
+                    >
+                      <XCircle className="w-3 h-3 mr-1" /> Reject
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center py-3">No pending requests</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {pastRequests.length > 0 && (
+        <Card className="border-border/50">
+          <CardContent className="p-4">
+            <p className="text-xs font-bold text-foreground mb-3">Request History</p>
+            <div className="space-y-2">
+              {pastRequests.slice(0, 20).map(r => (
+                <div key={r.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30" data-testid={`ambassador-history-${r.id}`}>
+                  <div>
+                    <p className="text-[11px] font-medium">{r.ambassadorUsername} → {r.targetUsername}</p>
+                    <p className="text-[10px] text-muted-foreground">{actionLabels[r.actionType] || r.actionType}</p>
+                    {r.adminNotes && <p className="text-[10px] text-muted-foreground italic mt-0.5">"{r.adminNotes}"</p>}
+                  </div>
+                  <Badge className={`text-[9px] border-0 ${r.status === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                    {r.status}
+                  </Badge>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

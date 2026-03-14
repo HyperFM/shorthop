@@ -2371,6 +2371,133 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/admin/ambassadors', requireAdmin, async (_req, res) => {
+    try {
+      const ambassadors = await storage.getAmbassadors();
+      res.json(ambassadors.map(a => ({ id: a.id, username: a.username, isAmbassador: a.isAmbassador, isDriver: a.isDriver, totalHops: a.totalHops, createdAt: a.createdAt })));
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post('/api/admin/ambassadors/:id/set', requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (!Number.isFinite(userId)) return res.status(400).json({ message: "Invalid user ID" });
+      const { isAmbassador } = req.body;
+      if (typeof isAmbassador !== "boolean") return res.status(400).json({ message: "isAmbassador must be boolean" });
+      const target = await storage.getUser(userId);
+      if (!target) return res.status(404).json({ message: "User not found" });
+      const updated = await storage.setAmbassador(userId, isAmbassador);
+      if (isAmbassador) {
+        await storage.createNotification({
+          userId,
+          title: "🎖️ Ambassador Status Granted",
+          message: "You've been appointed as a ShortHop Ambassador! You can now submit moderation requests.",
+          type: "system",
+        });
+      }
+      res.json({ id: updated.id, username: updated.username, isAmbassador: updated.isAmbassador });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get('/api/admin/ambassador-requests', requireAdmin, async (_req, res) => {
+    try {
+      const requests = await storage.getAmbassadorRequests();
+      res.json(requests);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post('/api/admin/ambassador-requests/:id/review', requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status, adminNotes } = req.body;
+      if (!["approved", "rejected"].includes(status)) {
+        return res.status(400).json({ message: "Status must be 'approved' or 'rejected'" });
+      }
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid request ID" });
+
+      const existing = await storage.getAmbassadorRequests();
+      const thisReq = existing.find(r => r.id === id);
+      if (!thisReq) return res.status(404).json({ message: "Request not found" });
+      if (thisReq.status !== "pending") return res.status(400).json({ message: "Request already reviewed" });
+
+      const target = await storage.getUser(thisReq.targetUserId);
+      if (target?.isAdmin) return res.status(403).json({ message: "Cannot take action against admin users" });
+
+      const reviewed = await storage.reviewAmbassadorRequest(id, status, adminNotes);
+
+      if (status === "approved" && target) {
+        if (reviewed.actionType === "suspend_hopper" || reviewed.actionType === "suspend_driver") {
+          await storage.disableUser(reviewed.targetUserId, true);
+          await storage.createNotification({
+            userId: reviewed.targetUserId,
+            title: "⚠️ Account Suspended",
+            message: "Your account has been suspended following a moderation review.",
+            type: "system",
+          });
+        } else if (reviewed.actionType === "delete_hopper" || reviewed.actionType === "delete_driver") {
+          await storage.disableUser(reviewed.targetUserId, true);
+          await storage.createNotification({
+            userId: reviewed.targetUserId,
+            title: "🚫 Account Removed",
+            message: "Your account has been removed following a moderation review.",
+            type: "system",
+          });
+        }
+      }
+
+      await storage.createNotification({
+        userId: reviewed.ambassadorId,
+        title: status === "approved" ? "✅ Request Approved" : "❌ Request Denied",
+        message: `Your moderation request was ${status}. ${adminNotes || ""}`.trim(),
+        type: "system",
+      });
+
+      res.json(reviewed);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post('/api/ambassador/request', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const currentUser = req.user as User;
+    if (!currentUser.isAmbassador) return res.status(403).json({ message: "Ambassador access required" });
+
+    try {
+      const { targetUserId, actionType, evidence } = req.body;
+      if (!targetUserId || !actionType || !evidence) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      if (!["suspend_hopper", "suspend_driver", "delete_hopper", "delete_driver"].includes(actionType)) {
+        return res.status(400).json({ message: "Invalid action type" });
+      }
+      const parsedTargetId = parseInt(targetUserId);
+      if (!Number.isFinite(parsedTargetId)) return res.status(400).json({ message: "Invalid target user ID" });
+      if (parsedTargetId === currentUser.id) return res.status(400).json({ message: "Cannot target yourself" });
+      const target = await storage.getUser(parsedTargetId);
+      if (!target) return res.status(404).json({ message: "Target user not found" });
+      if (target.isAdmin) return res.status(403).json({ message: "Cannot target admin users" });
+      if (typeof evidence !== "string" || evidence.trim().length < 10) {
+        return res.status(400).json({ message: "Evidence must be at least 10 characters" });
+      }
+      const request = await storage.createAmbassadorRequest({
+        ambassadorId: currentUser.id,
+        targetUserId: parsedTargetId,
+        actionType,
+        evidence: evidence.trim(),
+      });
+      res.json(request);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get('/api/languages', (_req, res) => {
     res.json(getLanguages());
   });
