@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront, Share2, Flame, Award, Star, Power, Shield, AlertTriangle, Smartphone } from "lucide-react";
+import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront, Share2, Flame, Award, Star, Power, Shield, AlertTriangle, Smartphone, Navigation, LocateFixed } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +97,9 @@ export default function DriverDashboard({ user }: { user: User }) {
   const [distance, setDistance] = useState("1.0");
   const [ratingHop, setRatingHop] = useState<{ tripId: number; ratedUserId: number } | null>(null);
   const [completedHopForShare, setCompletedHopForShare] = useState<ShortHop | null>(null);
+  const [driverCurrentLoc, setDriverCurrentLoc] = useState("");
+  const [driverDestination, setDriverDestination] = useState("");
+  const [driverTripActive, setDriverTripActive] = useState(false);
 
   const form = useForm<z.infer<typeof routeSchema>>({
     resolver: zodResolver(routeSchema),
@@ -459,18 +462,85 @@ export default function DriverDashboard({ user }: { user: User }) {
           </div>
         </div>
 
-        {/* Middle Col: Flex Hop Settings */}
+        {/* Middle Col: Current Trip & Flex Settings */}
         <div className="lg:col-span-1 space-y-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
-            🚕 Flex Hop Settings
+            📍 Where Are You Heading?
           </h2>
-          
+
+          <Card className="game-card border-primary/20 bg-gradient-to-b from-primary/5 to-transparent">
+            <CardContent className="p-5 space-y-4">
+              <p className="text-xs text-muted-foreground">Set your current trip so we can match you with hoppers going your way.</p>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-green-600 uppercase tracking-wider">Current Location</Label>
+                  <div className="relative">
+                    <LocateFixed className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                    <Input
+                      placeholder="Where are you now?"
+                      className="pl-10 h-10 text-sm border-green-200 focus:border-green-400"
+                      value={driverCurrentLoc}
+                      onChange={(e) => setDriverCurrentLoc(e.target.value)}
+                      data-testid="input-driver-current-location"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-center">
+                  <div className="w-0.5 h-4 bg-gradient-to-b from-green-400 to-blue-400" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-blue-600 uppercase tracking-wider">Destination</Label>
+                  <div className="relative">
+                    <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
+                    <Input
+                      placeholder="Where are you going?"
+                      className="pl-10 h-10 text-sm border-blue-200 focus:border-blue-400"
+                      value={driverDestination}
+                      onChange={(e) => setDriverDestination(e.target.value)}
+                      data-testid="input-driver-destination"
+                    />
+                  </div>
+                </div>
+              </div>
+              <Button
+                className="w-full h-10 text-sm rounded-xl bg-gradient-to-r from-green-500 to-blue-500 font-bold text-white"
+                onClick={() => {
+                  if (!driverCurrentLoc.trim() || !driverDestination.trim()) {
+                    showFlash("📍", "Enter both locations", "error");
+                    return;
+                  }
+                  setDriverTripActive(true);
+                  showFlash("✅", "Trip set! Matching hoppers along your route", "success");
+                }}
+                disabled={driverTripActive}
+                data-testid="button-set-driver-trip"
+              >
+                {driverTripActive ? "Trip Active — Matching Hoppers" : "Set My Trip"}
+              </Button>
+              {driverTripActive && (
+                <Button
+                  variant="outline"
+                  className="w-full h-8 text-xs rounded-xl border-red-200 text-red-600 hover:bg-red-50"
+                  onClick={() => {
+                    setDriverTripActive(false);
+                    setDriverCurrentLoc("");
+                    setDriverDestination("");
+                    showFlash("🛑", "Trip cleared", "success");
+                  }}
+                  data-testid="button-clear-driver-trip"
+                >
+                  Clear Trip
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="game-card bg-gradient-to-b from-accent/5 to-transparent border-accent/20">
-            <CardContent className="p-6 space-y-4">
+            <CardContent className="p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-bold text-foreground">Enable Flex Hops</p>
-                  <p className="text-xs text-muted-foreground">Allow small detours beyond your route</p>
+                  <p className="font-bold text-foreground text-sm">Enable Detours</p>
+                  <p className="text-[10px] text-muted-foreground">Allow small detours to pick up more hoppers</p>
                 </div>
                 <Checkbox 
                   checked={user.isFlexibleDriver || false}
@@ -479,31 +549,31 @@ export default function DriverDashboard({ user }: { user: User }) {
               </div>
 
               {user.isFlexibleDriver && (
-                <div className="space-y-3 pt-4 border-t">
-                  <div className="space-y-2">
-                    <Label className="text-sm">Max Detour Distance (miles)</Label>
+                <div className="space-y-3 pt-3 border-t">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Max Detour (miles)</Label>
                     <Input 
                       type="number" 
                       step="0.1" 
                       defaultValue={user.maxDetourDistance || "1.0"}
                       disabled
-                      className="text-sm"
+                      className="text-sm h-8"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm">Max Detour Time (minutes)</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Max Detour (minutes)</Label>
                     <Input 
                       type="number" 
                       defaultValue={user.maxDetourTime || 15}
                       disabled
-                      className="text-sm"
+                      className="text-sm h-8"
                     />
                   </div>
                 </div>
               )}
               
-              <Button disabled className="w-full mt-2 text-xs">
-                {user.isFlexibleDriver ? "Update Settings" : "Enable Flex Hops"}
+              <Button disabled className="w-full mt-1 text-xs h-8">
+                {user.isFlexibleDriver ? "Update Settings" : "Enable Detours"}
               </Button>
             </CardContent>
           </Card>

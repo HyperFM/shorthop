@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api } from "@shared/routes";
 import { motion } from "framer-motion";
-import { Share2, Check, Copy } from "lucide-react";
+import { Share2, Check, Copy, Eye } from "lucide-react";
 import type { User } from "@shared/routes";
 
 interface NetworkStats {
@@ -142,6 +142,16 @@ export function NetworkProgress() {
               >
                 {copied ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
                 {copied ? "Copied!" : "Invite friends to help grow!"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[11px] font-bold gap-1.5 rounded-full border-primary/30 bg-primary/5 hover:bg-primary/10"
+                onClick={() => window.open("https://beacons.ai/hyperfm", "_blank")}
+                data-testid="button-connect-beacons"
+              >
+                <Eye className="w-3 h-3" />
+                Connect
               </Button>
             </div>
           )}
