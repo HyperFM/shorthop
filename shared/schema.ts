@@ -64,6 +64,7 @@ export const users = pgTable("users", {
   pricingPreference: text("pricing_preference").default("1.20"),
   allowFreeRides: boolean("allow_free_rides").default(false),
   allowFollowerFreeRides: boolean("allow_follower_free_rides").default(false),
+  stripeSetupCompleted: boolean("stripe_setup_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

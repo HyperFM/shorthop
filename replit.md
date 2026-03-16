@@ -45,14 +45,14 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Data Validation**: Zod schemas.
 - **Database**: PostgreSQL with Drizzle ORM.
 - **Session Management**: PostgreSQL-backed sessions (`connect-pg-simple`) for 30-day persistence.
-- **Pricing Logic**: Server-side calculation at $3.00/mile (= $1.50/half-mile = 1.5 Wheels), minimum charge $1.50. Consistent across hop creation and Stripe checkout. User-controlled pricing via slider ($0–$5 per 0.5mi, default $1.20, step $0.05). 15% platform fee. Matching: rider_price >= driver_price. Schema fields: `pricingPreference`, `allowFreeRides`, `allowFollowerFreeRides`. Free ride list in `free_ride_list` table.
+- **Pricing Logic**: Drivers earn fixed $0.50/0.5mi ($1.00/mi). ShortHop charges riders internally at higher rate. No percentage fees. Early network rule: under 50 active drivers, payment deferred until after match. $1 Stripe setup fee for account activation.
 - **Super Admin Role**: A single designated super-admin account (HyperFM).
 
 ### Bottom Navigation Tabs (Order)
 1. **Connect** (`/community`) — Live Activity, Lexington ShortHop Network, City Chat, Founders Lounge, VIP Hyper Line, community posts
 2. **Schedule** (`/schedule`) — Recurring trip scheduler
 3. **Center Tab** (`/instahop`) — Label always says "Hop"; icon changes: blue walking figure (hopper) or orange car (driver)
-4. **Tailor** (`/dashboard`) — Hopper/Driver switcher at top, Pricing Preferences (slider $0–$5 per 0.5mi, presets, guidance, earnings breakdown), Free Ride Settings (driver-only: everyone toggle, follower toggle, manual free ride list), Ride Vibe, Privacy Controls, Alert Preferences
+4. **Tailor** (`/dashboard`) — Hopper/Driver switcher at top, Plan a Ride (pickup, destination, date, time, submit), Driver Earnings display (driver mode), Ride Vibe, Privacy Controls, Alert Preferences
 5. **Profile** (`/settings`) — Photo (color ring), 3-level visibility selector (Public/Semi/Private), friends count + hops count, username, legal name, bio, interests, fun prompts, membership, notifications (slim single-row card), referral, install, contact/report
 
 ### OrangeGlow Border

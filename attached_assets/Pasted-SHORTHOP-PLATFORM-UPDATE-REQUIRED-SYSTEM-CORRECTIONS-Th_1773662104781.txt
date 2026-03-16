@@ -1,0 +1,166 @@
+SHORTHOP PLATFORM UPDATE — REQUIRED SYSTEM CORRECTIONS
+
+The following changes must be implemented exactly as written.  
+Do not add additional pricing systems, fees, or matching logic unless specifically requested.
+
+----------------------------------
+
+1. REAL-TIME MATCHING CONDITIONS
+
+A Hopper should only be matched with drivers when ALL of the following are true:
+
+• GPS is enabled  
+• Push notifications are enabled  
+• The Hopper is actively walking (movement detected)  
+• The ShortHop app session is still active
+
+If the user completely closes the app (swipes it away / session destroyed), the hop request must automatically end.
+
+However:
+
+• Locking the phone must NOT cancel the request  
+• Switching to another app must NOT cancel the request  
+• Push notifications must still function
+
+Display message if session closes:
+
+"Hop request ended because the app was closed."
+
+This prevents forgotten ride requests from users who leave requests running.
+
+----------------------------------
+
+2. NO TIME-BASED EXPIRATION
+
+Hop requests must NOT cancel automatically due to time.
+
+A hop request only ends if:
+
+• the user cancels the request  
+• the driver and hopper are matched  
+• the app session is closed
+
+----------------------------------
+
+3. REMOVE PERCENTAGE FEES
+
+Delete the 15% fee system and any percentage-based platform fees.
+
+ShortHop does NOT use percentage fees.
+
+----------------------------------
+
+4. PRICING STRUCTURE
+
+Driver earnings are fixed.
+
+Drivers earn:
+$0.50 per 0.5 mile
+
+ShortHop internally charges riders a higher amount per mile.
+
+Drivers must ONLY see their earnings rate.
+
+Drivers must NOT see what riders pay.
+
+----------------------------------
+
+5. REMOVE PRICE PREFERENCES
+
+Delete the following UI elements:
+
+• Community price
+• Budget price
+• Fast match price
+• Price sliders
+• Pricing preference settings
+
+Drivers do NOT set prices.
+
+Replace with a simple display:
+
+"Drivers earn $0.50 per 0.5 mile on routes they already drive."
+
+----------------------------------
+
+6. EARLY NETWORK PAYMENT RULE
+
+Until the ShortHop network reaches at least 50 active drivers in a city:
+
+Riders should NOT be charged when requesting a hop.
+
+Payment should only occur AFTER a driver and hopper are successfully paired.
+
+Correct flow:
+
+1. Hopper requests ride
+2. System searches for drivers already traveling that route
+3. Driver accepts match
+4. Hopper confirms match
+5. Payment is processed
+
+----------------------------------
+
+7. STRIPE ACCOUNT SETUP
+
+All new users must connect a payment card using Stripe.
+
+Charge a one-time $1 setup fee to activate the account.
+
+Display message:
+
+"$1 verification charge to activate ShortHop."
+
+----------------------------------
+
+8. TAILOR TAB PURPOSE
+
+The Tailor section must NOT search for drivers.
+
+Searching for rides only happens in the center Drive/Hop panel.
+
+The Tailor tab is only for PLANNED RIDES.
+
+Tailor features should include:
+
+• Schedule future ride
+• Select pickup location
+• Select destination
+• Choose date and time
+• Pre-pay ride
+• Submit scheduled request
+
+Planned rides must be prepaid before submission.
+
+----------------------------------
+
+9. APP STRUCTURE
+
+Correct tab purposes:
+
+Connect  
+Community connections and referrals
+
+Schedule  
+Future ride planning
+
+Drive / Hop (center button)  
+Real-time ride matching
+
+Tailor  
+Ride planning and preferences
+
+Profile  
+User account settings
+
+----------------------------------
+
+10. PLATFORM PRINCIPLE
+
+ShortHop connects people walking nearby with drivers already traveling that direction.
+
+Drivers do not change their route.
+
+Hoppers join routes that are already happening.
+
+The system must remain simple, fast, and automatic.

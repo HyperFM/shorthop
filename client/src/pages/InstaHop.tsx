@@ -524,6 +524,7 @@ function DriverAutoNotifications({ hopsCount }: { hopsCount: number }) {
 
 function InstaHopView({ user }: { user: User }) {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const { data: hops } = useHops();
   const requestHop = useRequestHop();
   const cancelHop = useCancelHop();
@@ -554,6 +555,35 @@ function InstaHopView({ user }: { user: User }) {
       setIsMatching(false);
     }
   }, [activeHop]);
+
+  useEffect(() => {
+    if (!activeHop || activeHop.status !== "requested") return;
+
+    const handleBeforeUnload = () => {
+      const url = `/api/hops/${activeHop.id}/cancel`;
+      const blob = new Blob([JSON.stringify({})], { type: 'application/json' });
+      navigator.sendBeacon(url, blob);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [activeHop]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('setup') === 'success') {
+      const sessionId = params.get('session_id');
+      if (sessionId) {
+        apiRequest("POST", "/api/stripe/confirm-setup", { sessionId }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+          showFlash("✅", "Account activated!", "success");
+        }).catch(() => {
+          showFlash("⚠️", "Activation verification failed. Please contact support.", "error");
+        });
+      }
+      window.history.replaceState({}, "", "/instahop");
+    }
+  }, []);
 
   const { data: savedRoutes } = useQuery<WalkerRouteData[]>({
     queryKey: ['/api/walker-routes'],
@@ -654,6 +684,26 @@ function InstaHopView({ user }: { user: User }) {
   }, [geo.latitude, geo.longitude]);
 
   const isDriverMode = mode === "drive";
+  const needsSetup = !user.stripeSetupCompleted;
+
+  const setupFeeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/stripe/setup-fee", {});
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      if (data.alreadyCompleted) {
+        showFlash("✅", "Account already activated!", "success");
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: () => {
+      showFlash("❌", "Failed to start setup", "error");
+    },
+  });
 
   function cancelMatching() {
     setIsMatching(false);
@@ -717,6 +767,24 @@ function InstaHopView({ user }: { user: User }) {
                     <GlowingCarousel user={user} />
                   </div>
                 </div>
+
+                {needsSetup && (
+                  <Card className="border-orange-500/40 bg-gradient-to-br from-orange-500/10 to-transparent mb-2" data-testid="card-setup-fee">
+                    <CardContent className="py-3 px-4 space-y-2">
+                      <p className="text-sm font-bold text-foreground">Activate Your Account</p>
+                      <p className="text-xs text-muted-foreground">$1 verification charge to activate ShortHop.</p>
+                      <Button
+                        className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs h-9"
+                        onClick={() => setupFeeMutation.mutate()}
+                        disabled={setupFeeMutation.isPending}
+                        data-testid="button-activate-account"
+                      >
+                        {setupFeeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Activate for $1
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
                   <div className="space-y-2">

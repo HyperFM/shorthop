@@ -495,6 +495,10 @@ export async function registerRoutes(
       const currentUser = await storage.getUser(req.user.id);
       if (!currentUser) return res.status(401).json({ message: "Unauthorized" });
 
+      if (!currentUser.stripeSetupCompleted) {
+        return res.status(403).json({ message: "Please activate your account first ($1 setup fee)." });
+      }
+
       if (input.hopType === "flex_hop" && currentUser.subscription !== "flex_hop" && currentUser.subscription !== "power_hop") {
         return res.status(403).json({ message: "Flex Hop requires an active Flex Hop or Power Hop subscription." });
       }
@@ -502,25 +506,9 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Power Hop requires an active Power Hop subscription." });
       }
       
-      let priceCents = 0;
       const miles = parseFloat(input.distanceMiles || "1");
-      if (input.hopType === "short_hop") {
-        priceCents = Math.floor(miles * 300);
-      } else if (input.hopType === "flex_hop") {
-        priceCents = Math.floor(miles * 300);
-      } else if (input.hopType === "full_ride") {
-        priceCents = Math.floor(parseFloat(input.distanceMiles || "5") * 300);
-      }
-
-      const payWithWheels = req.body.payWithWheels === true;
-      if (payWithWheels) {
-        const wheelsNeeded = Math.max(1, Math.ceil(priceCents / 100));
-        if (currentUser.credits < wheelsNeeded) {
-          return res.status(400).json({ message: `Not enough Wheels. You need ${wheelsNeeded} but have ${currentUser.credits}.` });
-        }
-        await storage.deductCredits(currentUser.id, wheelsNeeded);
-        priceCents = 0;
-      }
+      const driverEarningsCents = Math.floor(miles * 100);
+      const priceCents = driverEarningsCents;
 
       const hop = await storage.createHop({
         walkerId: req.user.id,
@@ -989,7 +977,7 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const SUPPORTED_LANGUAGES = Object.keys(getLanguages());
-      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility', 'pricingPreference', 'allowFreeRides', 'allowFollowerFreeRides'];
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility'];
       const updates: Record<string, any> = {};
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -999,19 +987,6 @@ export async function registerRoutes(
       }
       if (updates.profileVisibility && !["public", "semi_private", "private"].includes(updates.profileVisibility)) {
         updates.profileVisibility = "public";
-      }
-      if (updates.pricingPreference !== undefined) {
-        const priceVal = parseFloat(updates.pricingPreference);
-        if (isNaN(priceVal) || priceVal < 0 || priceVal > 5) {
-          return res.status(400).json({ message: "Price must be between $0.00 and $5.00" });
-        }
-        updates.pricingPreference = priceVal.toFixed(2);
-      }
-      if (updates.allowFreeRides !== undefined) {
-        updates.allowFreeRides = !!updates.allowFreeRides;
-      }
-      if (updates.allowFollowerFreeRides !== undefined) {
-        updates.allowFollowerFreeRides = !!updates.allowFollowerFreeRides;
       }
       if (Object.keys(updates).length === 0) return res.status(400).json({ message: "No valid fields" });
       const user = await storage.updateUser(req.user.id, updates);
@@ -2338,10 +2313,17 @@ export async function registerRoutes(
       if (!distance || distance <= 0 || distance > 100) {
         return res.status(400).json({ message: "Invalid distance" });
       }
-      const RATE_PER_MILE_CENTS = 300;
-      const amountCents = Math.round(distance * RATE_PER_MILE_CENTS);
+      const activeDrivers = await storage.getActiveDrivers();
+      const earlyNetwork = activeDrivers.length < 50;
+
+      const RIDER_RATE_PER_MILE_CENTS = 300;
+      const amountCents = Math.round(distance * RIDER_RATE_PER_MILE_CENTS);
       const minChargeCents = 150;
-      const finalAmount = Math.max(amountCents, minChargeCents);
+      const finalAmount = earlyNetwork ? 0 : Math.max(amountCents, minChargeCents);
+
+      if (earlyNetwork) {
+        return res.json({ earlyNetwork: true, message: "Payment deferred until after match (early network period)", amount: 0 });
+      }
 
       const stripe = await getUncachableStripeClient();
       const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
@@ -2352,7 +2334,7 @@ export async function registerRoutes(
             currency: 'usd',
             product_data: {
               name: `ShortHop Ride (${distance.toFixed(1)} mi)`,
-              description: `$1.50/half-mile × ${distance.toFixed(1)} miles`,
+              description: `ShortHop ride - ${distance.toFixed(1)} miles`,
             },
             unit_amount: finalAmount,
           },
@@ -2372,6 +2354,64 @@ export async function registerRoutes(
     } catch (e: any) {
       console.error('Stripe checkout error:', e.message);
       res.status(500).json({ message: "Failed to create payment" });
+    }
+  });
+
+  app.post('/api/stripe/setup-fee', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.stripeSetupCompleted) {
+        return res.json({ alreadyCompleted: true, message: "Account already activated" });
+      }
+      const stripe = await getUncachableStripeClient();
+      const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+      const checkoutSession = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'ShortHop Account Activation',
+              description: '$1 verification charge to activate ShortHop.',
+            },
+            unit_amount: 100,
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        metadata: {
+          userId: String(req.user.id),
+          type: 'setup_fee',
+        },
+        success_url: `https://${domain}/instahop?setup=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `https://${domain}/instahop?setup=cancelled`,
+      });
+      res.json({ url: checkoutSession.url, checkoutRequired: true });
+    } catch (e: any) {
+      console.error('Stripe setup fee error:', e.message);
+      res.status(500).json({ message: "Failed to create setup payment" });
+    }
+  });
+
+  app.post('/api/stripe/confirm-setup', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { sessionId } = req.body;
+      if (!sessionId) {
+        return res.status(400).json({ message: "Missing session ID" });
+      }
+      const stripe = await getUncachableStripeClient();
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (session.payment_status !== 'paid' || session.metadata?.type !== 'setup_fee' || session.metadata?.userId !== String(req.user.id)) {
+        return res.status(400).json({ message: "Invalid or unpaid session" });
+      }
+      await storage.updateUser(req.user.id, { stripeSetupCompleted: true });
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error('Confirm setup error:', e.message);
+      res.status(500).json({ message: "Failed to confirm setup" });
     }
   });
 
