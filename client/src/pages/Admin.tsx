@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
@@ -1148,16 +1148,21 @@ function PoliciesTab() {
   const [safetyContent, setSafetyContent] = useState("");
   const [privacySaving, setPrivacySaving] = useState(false);
   const [safetySaving, setSafetySaving] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   const { data: policies } = useQuery<{ policyType: string; content: string; updatedAt: string }[]>({
     queryKey: ["/api/admin/policies"],
-    onSuccess: (data) => {
-      const privacy = data?.find(p => p.policyType === "privacy");
-      const safety = data?.find(p => p.policyType === "safety");
+  });
+
+  useEffect(() => {
+    if (policies && !initialized) {
+      const privacy = policies.find(p => p.policyType === "privacy");
+      const safety = policies.find(p => p.policyType === "safety");
       if (privacy) setPrivacyContent(privacy.content);
       if (safety) setSafetyContent(safety.content);
+      setInitialized(true);
     }
-  });
+  }, [policies, initialized]);
 
   const savePolicy = async (type: string, content: string, setSaving: (b: boolean) => void) => {
     setSaving(true);
