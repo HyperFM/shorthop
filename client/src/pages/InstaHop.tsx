@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -331,10 +331,20 @@ function DriveNowPanel({ user }: { user: User }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-base font-extrabold text-foreground/70 text-center" data-testid="text-driver-greeting">
-        happy driving,{" "}
-        <span className="text-foreground font-black">{user.username}</span>
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-base font-extrabold text-foreground/70 text-center flex-1" data-testid="text-driver-greeting">
+          happy driving,{" "}
+          <span className="text-foreground font-black">{user.username}</span>
+        </p>
+        <a
+          href="tel:8594202312"
+          className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all active:scale-95"
+          title="Call for help: (859) 420-2312"
+          data-testid="button-call-help"
+        >
+          <Phone className="w-5 h-5" />
+        </a>
+      </div>
 
       {needsOnboarding && (
         <Card className="border-border/50 shadow-md rounded-2xl" data-testid="card-onboarding-prompt">
@@ -770,7 +780,7 @@ function InstaHopView({ user }: { user: User }) {
               <DriveNowPanel user={user} />
             ) : (
               <>
-                <div className="flex gap-2 mb-2">
+                <div className="flex gap-2 mb-2 items-start">
                   <div className="flex-1 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-700/30 p-3">
                     <p className="text-[11px] font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
                       <Shield className="w-3.5 h-3.5" />
@@ -794,6 +804,15 @@ function InstaHopView({ user }: { user: User }) {
                       )}
                     </AnimatePresence>
                   </div>
+
+                  <a
+                    href="tel:8594202312"
+                    className="shrink-0 flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all active:scale-95"
+                    title="Call for help: (859) 420-2312"
+                    data-testid="button-call-help-hopper"
+                  >
+                    <Phone className="w-5 h-5" />
+                  </a>
 
                   <div className="shrink-0 scale-75 origin-top-right">
                     <GlowingCarousel user={user} />
