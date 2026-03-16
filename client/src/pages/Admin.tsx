@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award, FileText, Save } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -126,7 +126,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors" | "policies";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
@@ -312,6 +312,7 @@ export default function Admin() {
     { key: "dms", label: "DMs", icon: Star, badge: vipConvos?.reduce((sum, c) => sum + c.unread, 0) || 0 },
     { key: "payments", label: "Payments", icon: DollarSign },
     { key: "ambassadors", label: "Ambassadors", icon: Award },
+    { key: "policies", label: "Policies", icon: FileText },
   ];
 
   return (
@@ -1026,6 +1027,9 @@ export default function Admin() {
       {tab === "ambassadors" && (
         <AmbassadorsTab />
       )}
+      {tab === "policies" && (
+        <PoliciesTab />
+      )}
     </div>
   );
 }
@@ -1137,6 +1141,101 @@ function PaymentsTab() {
 
 type AmbassadorUser = { id: number; username: string; isAmbassador: boolean; isDriver: boolean; totalHops: number; createdAt: string };
 type AmbassadorReq = { id: number; ambassadorId: number; targetUserId: number; ambassadorUsername: string; targetUsername: string; actionType: string; evidence: string; status: string; adminNotes: string | null; createdAt: string; reviewedAt: string | null };
+
+function PoliciesTab() {
+  const queryClient = useQueryClient();
+  const [privacyContent, setPrivacyContent] = useState("");
+  const [safetyContent, setSafetyContent] = useState("");
+  const [privacySaving, setPrivacySaving] = useState(false);
+  const [safetySaving, setSafetySaving] = useState(false);
+
+  const { data: policies } = useQuery<{ policyType: string; content: string; updatedAt: string }[]>({
+    queryKey: ["/api/admin/policies"],
+    onSuccess: (data) => {
+      const privacy = data?.find(p => p.policyType === "privacy");
+      const safety = data?.find(p => p.policyType === "safety");
+      if (privacy) setPrivacyContent(privacy.content);
+      if (safety) setSafetyContent(safety.content);
+    }
+  });
+
+  const savePolicy = async (type: string, content: string, setSaving: (b: boolean) => void) => {
+    setSaving(true);
+    try {
+      await apiRequest("POST", `/api/admin/policies/${type}`, { content });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/policies"] });
+      showFlash("✅", `${type === "privacy" ? "Privacy" : "Safety"} policy updated`, "success");
+    } catch {
+      showFlash("❌", "Failed to save policy", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6" data-testid="admin-policies-tab">
+      <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-transparent">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield className="w-5 h-5 text-blue-600" />
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Privacy Policy</p>
+          </div>
+          <Textarea
+            placeholder="Enter privacy policy content..."
+            className="min-h-[300px] mb-4 text-sm font-mono border-blue-200 focus:border-blue-400"
+            value={privacyContent}
+            onChange={(e) => setPrivacyContent(e.target.value)}
+            data-testid="textarea-privacy-policy"
+          />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+            {policies?.find(p => p.policyType === "privacy")?.updatedAt && (
+              <p>Last updated: {new Date(policies.find(p => p.policyType === "privacy")!.updatedAt).toLocaleDateString()}</p>
+            )}
+          </div>
+          <Button
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
+            onClick={() => savePolicy("privacy", privacyContent, setPrivacySaving)}
+            disabled={privacySaving}
+            data-testid="button-save-privacy-policy"
+          >
+            {privacySaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {privacySaving ? "Saving..." : "Save Privacy Policy"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-transparent">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="w-5 h-5 text-orange-600" />
+            <p className="text-xs font-bold text-orange-600 uppercase tracking-wider">Safety Policy</p>
+          </div>
+          <Textarea
+            placeholder="Enter safety policy content..."
+            className="min-h-[300px] mb-4 text-sm font-mono border-orange-200 focus:border-orange-400"
+            value={safetyContent}
+            onChange={(e) => setSafetyContent(e.target.value)}
+            data-testid="textarea-safety-policy"
+          />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+            {policies?.find(p => p.policyType === "safety")?.updatedAt && (
+              <p>Last updated: {new Date(policies.find(p => p.policyType === "safety")!.updatedAt).toLocaleDateString()}</p>
+            )}
+          </div>
+          <Button
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold"
+            onClick={() => savePolicy("safety", safetyContent, setSafetySaving)}
+            disabled={safetySaving}
+            data-testid="button-save-safety-policy"
+          >
+            {safetySaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {safetySaving ? "Saving..." : "Save Safety Policy"}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 function AmbassadorsTab() {
   const queryClient = useQueryClient();

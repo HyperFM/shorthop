@@ -382,5 +382,16 @@ export const insertAmbassadorRequestSchema = createInsertSchema(ambassadorReques
 export type AmbassadorRequest = typeof ambassadorRequests.$inferSelect;
 export type InsertAmbassadorRequest = z.infer<typeof insertAmbassadorRequestSchema>;
 
+export const policies = pgTable("policies", {
+  id: serial("id").primaryKey(),
+  policyType: text("policy_type").notNull(), // "privacy" or "safety"
+  content: text("content").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPoliciesSchema = createInsertSchema(policies).omit({ id: true, updatedAt: true });
+export type Policy = typeof policies.$inferSelect;
+export type InsertPolicy = z.infer<typeof insertPoliciesSchema>;
+
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

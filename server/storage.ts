@@ -59,6 +59,9 @@ import {
   ambassadorRequests,
   type AmbassadorRequest,
   type InsertAmbassadorRequest,
+  policies,
+  type Policy,
+  type InsertPolicy,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -179,6 +182,10 @@ export interface IStorage {
   getAmbassadorRequests(): Promise<(AmbassadorRequest & { ambassadorUsername: string; targetUsername: string })[]>;
   createAmbassadorRequest(request: InsertAmbassadorRequest): Promise<AmbassadorRequest>;
   reviewAmbassadorRequest(id: number, status: string, adminNotes?: string): Promise<AmbassadorRequest>;
+
+  getPolicy(policyType: string): Promise<Policy | undefined>;
+  updatePolicy(policyType: string, content: string): Promise<Policy>;
+  getAllPolicies(): Promise<Policy[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1183,6 +1190,29 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!updated) throw new Error("Ambassador request not found");
     return updated;
+  }
+
+  async getPolicy(policyType: string): Promise<Policy | undefined> {
+    const [policy] = await db.select().from(policies).where(eq(policies.policyType, policyType));
+    return policy;
+  }
+
+  async updatePolicy(policyType: string, content: string): Promise<Policy> {
+    const [existing] = await db.select().from(policies).where(eq(policies.policyType, policyType));
+    if (existing) {
+      const [updated] = await db.update(policies)
+        .set({ content, updatedAt: new Date() })
+        .where(eq(policies.policyType, policyType))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(policies).values({ policyType, content }).returning();
+      return created;
+    }
+  }
+
+  async getAllPolicies(): Promise<Policy[]> {
+    return db.select().from(policies);
   }
 
 }

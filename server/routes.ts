@@ -2498,6 +2498,32 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/admin/policies', requireAdmin, async (_req, res) => {
+    try {
+      const allPolicies = await storage.getAllPolicies();
+      res.json(allPolicies);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post('/api/admin/policies/:type', requireAdmin, async (req, res) => {
+    try {
+      const type = req.params.type;
+      if (!["privacy", "safety"].includes(type)) {
+        return res.status(400).json({ message: "Invalid policy type" });
+      }
+      const { content } = req.body;
+      if (!content || typeof content !== "string") {
+        return res.status(400).json({ message: "Content is required" });
+      }
+      const policy = await storage.updatePolicy(type, content.trim());
+      res.json(policy);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get('/api/languages', (_req, res) => {
     res.json(getLanguages());
   });
