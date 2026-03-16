@@ -30,10 +30,10 @@ export function PricingPreferences({ user, activeTab }: PlannedRideProps) {
       setDestination("");
       setDate("");
       setTime("");
-      showFlash("✅", "Planned ride submitted!", "success");
+      showFlash("✅", "Planned ride scheduled!", "success");
     },
     onError: () => {
-      showFlash("❌", "Failed to submit planned ride", "error");
+      showFlash("❌", "Failed to schedule ride", "error");
     },
   });
 
@@ -54,22 +54,7 @@ export function PricingPreferences({ user, activeTab }: PlannedRideProps) {
   };
 
   return (
-    <div className="space-y-3">
-      {activeTab === "driver" && (
-        <Card className="border-green-500/30 bg-gradient-to-br from-green-500/5 to-transparent" data-testid="card-driver-earnings">
-          <CardContent className="py-3 px-4">
-            <div className="flex items-center gap-2.5 mb-2">
-              <DollarSign className="w-4 h-4 text-green-600 shrink-0" />
-              <p className="text-xs font-black text-foreground">Driver Earnings</p>
-            </div>
-            <p className="text-sm text-foreground font-semibold" data-testid="text-driver-earnings-rate">
-              Drivers earn $0.50 per 0.5 mile on routes they already drive.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card className="border-border/40" data-testid="card-planned-ride">
+    <Card className="border-border/40" data-testid="card-planned-ride">
         <CardContent className="py-3 px-4 space-y-3">
           <div className="flex items-center gap-2.5">
             <Calendar className="w-4 h-4 text-orange-500 shrink-0" />
@@ -137,6 +122,5 @@ export function PricingPreferences({ user, activeTab }: PlannedRideProps) {
           </Button>
         </CardContent>
       </Card>
-    </div>
   );
 }

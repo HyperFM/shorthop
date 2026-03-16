@@ -45,14 +45,14 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Data Validation**: Zod schemas.
 - **Database**: PostgreSQL with Drizzle ORM.
 - **Session Management**: PostgreSQL-backed sessions (`connect-pg-simple`) for 30-day persistence.
-- **Pricing Logic**: Drivers earn fixed $0.50/0.5mi ($1.00/mi). ShortHop charges riders internally at higher rate. No percentage fees. Early network rule: under 50 active drivers, payment deferred until after match. $1 temporary card verification hold triggers when driver matches hop (on accept) to verify card is active and keep user attentive.
+- **Pricing Logic**: Drivers earn fixed $0.50/0.5mi ($1.00/mi). ShortHop charges riders internally at higher rate. No percentage fees. Early network rule: under 50 active drivers, payment deferred until after match. **$1 temporary card hold**: Triggered upfront before hop submission (distance < 10 miles only) to verify card is active. Instant hops blocked for 10+ mile trips - directs to Plan a Ride instead.
 - **Super Admin Role**: A single designated super-admin account (HyperFM).
 
 ### Bottom Navigation Tabs (Order)
 1. **Connect** (`/community`) — Live Activity, Lexington ShortHop Network, City Chat, Founders Lounge, VIP Hyper Line, community posts
 2. **Schedule** (`/schedule`) — Recurring trip scheduler
 3. **Center Tab** (`/instahop`) — Label always says "Hop"; icon changes: blue walking figure (hopper) or orange car (driver)
-4. **Tailor** (`/dashboard`) — Hopper/Driver switcher at top, Plan a Ride (pickup, destination, date, time, submit), Driver Earnings display (driver mode), Ride Vibe, Privacy Controls, Alert Preferences
+4. **Tailor** (`/dashboard`) — Hopper/Driver switcher at top, Plan a Ride card (pickup, destination, date, time, submit for scheduled rides), Ride Vibe, Privacy Controls, Alert Preferences
 5. **Profile** (`/settings`) — Photo (color ring), 3-level visibility selector (Public/Semi/Private), friends count + hops count, username, legal name, bio, interests, fun prompts, membership, notifications (slim single-row card), referral, install, contact/report
 
 ### OrangeGlow Border

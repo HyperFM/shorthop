@@ -620,38 +620,90 @@ function InstaHopView({ user }: { user: User }) {
     }
   }, []);
 
+  const [cardHoldUrl, setCardHoldUrl] = useState<string | null>(null);
+  const [tooFarForInstahop, setTooFarForInstahop] = useState(false);
+
   const onSubmit = async (data: z.infer<typeof searchSchema>) => {
     if (mode === "walk") {
       showFlash("🚶", "GPS navigation starting...", "info");
       return;
     }
-    setIsMatching(true);
-    const hopData: any = { ...data, hopType: 'short_hop' };
-    if (geo.latitude && geo.longitude) {
-      hopData.startLat = String(geo.latitude);
-      hopData.startLng = String(geo.longitude);
-    }
+
     const token = import.meta.env.VITE_MAPBOX_TOKEN;
-    if (token && data.endLocation) {
-      try {
-        const query = encodeURIComponent(data.endLocation + ", Lexington, KY");
-        const geoRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${token}&limit=1`);
-        const geoJson = await geoRes.json();
-        if (geoJson.features && geoJson.features.length > 0) {
-          const [lng, lat] = geoJson.features[0].center;
-          hopData.endLat = String(lat);
-          hopData.endLng = String(lng);
-        }
-      } catch {}
+    if (!token || !data.startLocation || !data.endLocation) {
+      showFlash("⚠️", "Need location data", "error");
+      return;
     }
-    requestHop.mutate(hopData, {
-      onSuccess: () => {
-        showFlash("⚡", mode === "drive" ? "Drive started!" : "InstaHop requested!", "success");
-      },
-      onError: () => {
-        setIsMatching(false);
+
+    try {
+      const startQuery = encodeURIComponent(data.startLocation + ", Lexington, KY");
+      const startRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${startQuery}.json?access_token=${token}&limit=1`);
+      const startJson = await startRes.json();
+      if (!startJson.features?.length) {
+        showFlash("⚠️", "Can't find pickup location", "error");
+        return;
       }
-    });
+      const [startLng, startLat] = startJson.features[0].center;
+
+      const endQuery = encodeURIComponent(data.endLocation + ", Lexington, KY");
+      const endRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${endQuery}.json?access_token=${token}&limit=1`);
+      const endJson = await endRes.json();
+      if (!endJson.features?.length) {
+        showFlash("⚠️", "Can't find destination", "error");
+        return;
+      }
+      const [endLng, endLat] = endJson.features[0].center;
+
+      const directionsRes = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${startLng},${startLat};${endLng},${endLat}?geometries=geojson&access_token=${token}`
+      );
+      const directionsJson = await directionsRes.json();
+      if (!directionsJson.routes?.length) {
+        showFlash("⚠️", "Can't calculate distance", "error");
+        return;
+      }
+
+      const distanceMiles = directionsJson.routes[0].distance / 1609.34;
+
+      if (distanceMiles > 10) {
+        setTooFarForInstahop(true);
+        showFlash("📅", "Use Plan a Ride for trips over 10 miles", "info");
+        return;
+      }
+
+      if (!user.stripeSetupCompleted) {
+        try {
+          const setupRes = await apiRequest("POST", "/api/stripe/setup-fee", {});
+          const setupJson = await setupRes.json();
+          if (setupJson.url) {
+            setCardHoldUrl(setupJson.url);
+            showFlash("💳", "Verify your card is active before continuing", "info");
+            return;
+          }
+        } catch (e) {
+          showFlash("❌", "Card verification failed", "error");
+          return;
+        }
+      }
+
+      setIsMatching(true);
+      const hopData: any = { ...data, hopType: 'short_hop', distanceMiles };
+      hopData.startLat = String(startLat);
+      hopData.startLng = String(startLng);
+      hopData.endLat = String(endLat);
+      hopData.endLng = String(endLng);
+
+      requestHop.mutate(hopData, {
+        onSuccess: () => {
+          showFlash("⚡", mode === "drive" ? "Drive started!" : "InstaHop requested!", "success");
+        },
+        onError: () => {
+          setIsMatching(false);
+        }
+      });
+    } catch (e) {
+      showFlash("⚠️", "Error processing request", "error");
+    }
   };
 
   const nearestCorridors = getNearestCorridors(geo.latitude, geo.longitude);
@@ -747,6 +799,45 @@ function InstaHopView({ user }: { user: User }) {
                     <GlowingCarousel user={user} />
                   </div>
                 </div>
+
+                {cardHoldUrl && (
+                  <Card className="border-orange-500/40 bg-gradient-to-br from-orange-500/10 to-transparent mb-2" data-testid="card-card-hold">
+                    <CardContent className="py-3 px-4 space-y-2">
+                      <p className="text-sm font-bold text-foreground">Verify Your Card</p>
+                      <p className="text-xs text-muted-foreground">$1 temporary hold to confirm your card is active.</p>
+                      <Button
+                        className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs h-9"
+                        onClick={() => window.location.href = cardHoldUrl}
+                        data-testid="button-verify-card"
+                      >
+                        Complete Verification
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => setCardHoldUrl(null)}
+                        className="w-full text-xs text-muted-foreground hover:text-foreground transition"
+                      >
+                        Cancel
+                      </button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {tooFarForInstahop && (
+                  <Card className="border-blue-500/40 bg-gradient-to-br from-blue-500/10 to-transparent mb-2" data-testid="card-plan-ride">
+                    <CardContent className="py-3 px-4 space-y-2">
+                      <p className="text-sm font-bold text-foreground">Too Far for InstaHop</p>
+                      <p className="text-xs text-muted-foreground">Trips over 10 miles use Plan a Ride in Tailor for prepayment.</p>
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9"
+                        onClick={() => setLocation("/dashboard")}
+                        data-testid="button-go-to-plan"
+                      >
+                        Go to Plan a Ride
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
                   <div className="space-y-2">
