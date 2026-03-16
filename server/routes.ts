@@ -2510,7 +2510,7 @@ export async function registerRoutes(
   app.post('/api/admin/policies/:type', requireAdmin, async (req, res) => {
     try {
       const type = req.params.type;
-      if (!["privacy", "safety"].includes(type)) {
+      if (!["privacy", "safety", "terms"].includes(type)) {
         return res.status(400).json({ message: "Invalid policy type" });
       }
       const { content } = req.body;
