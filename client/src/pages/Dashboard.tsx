@@ -91,7 +91,7 @@ export default function Dashboard() {
     const next: DriverSoundDuration = soundDuration === "full" ? "short" : "full";
     setDriverSoundDuration(next);
     setSoundDuration(next);
-    showFlash("🔔", `Alert sound: ${next === "full" ? "8 seconds" : "2 seconds"}`, "info");
+    showFlash("🔔", `Alert sound: ${next === "full" ? "8 seconds" : "3 seconds"}`, "info");
     try { navigator.vibrate?.(20); } catch {}
     playDriverApproachingSound();
   }
@@ -320,7 +320,7 @@ export default function Dashboard() {
                   }`}
                   data-testid="button-sound-duration"
                 >
-                  {soundDuration === "full" ? "8 seconds" : "2 seconds"}
+                  {soundDuration === "full" ? "8 seconds" : "3 seconds"}
                 </button>
               </div>
             )}

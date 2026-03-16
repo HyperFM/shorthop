@@ -48,7 +48,7 @@ export function playDriverApproachingSound() {
           driverApproachingAudio.pause();
           driverApproachingAudio.currentTime = 0;
         }
-      }, 2000);
+      }, 3000);
     }
   } catch {}
 }
