@@ -1146,8 +1146,10 @@ function PoliciesTab() {
   const queryClient = useQueryClient();
   const [privacyContent, setPrivacyContent] = useState("");
   const [safetyContent, setSafetyContent] = useState("");
+  const [termsContent, setTermsContent] = useState("");
   const [privacySaving, setPrivacySaving] = useState(false);
   const [safetySaving, setSafetySaving] = useState(false);
+  const [termsSaving, setTermsSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   const { data: policies } = useQuery<{ policyType: string; content: string; updatedAt: string }[]>({
@@ -1158,8 +1160,10 @@ function PoliciesTab() {
     if (policies && !initialized) {
       const privacy = policies.find(p => p.policyType === "privacy");
       const safety = policies.find(p => p.policyType === "safety");
+      const terms = policies.find(p => p.policyType === "terms");
       if (privacy) setPrivacyContent(privacy.content);
       if (safety) setSafetyContent(safety.content);
+      if (terms) setTermsContent(terms.content);
       setInitialized(true);
     }
   }, [policies, initialized]);
@@ -1268,6 +1272,48 @@ function PoliciesTab() {
           >
             {safetySaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             {safetySaving ? "Saving..." : "Save Safety Policy"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-transparent">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-purple-600" />
+              <p className="text-xs font-bold text-purple-600 uppercase tracking-wider">Terms of Service</p>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0 text-purple-600 hover:bg-purple-100"
+              onClick={() => copyToClipboard(termsContent, "Terms of Service")}
+              data-testid="button-copy-terms-policy"
+              title="Copy policy content"
+            >
+              <Copy className="w-4 h-4" />
+            </Button>
+          </div>
+          <Textarea
+            placeholder="Enter terms of service content..."
+            className="min-h-[300px] mb-4 text-sm font-mono border-purple-200 focus:border-purple-400"
+            value={termsContent}
+            onChange={(e) => setTermsContent(e.target.value)}
+            data-testid="textarea-terms-policy"
+          />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+            {policies?.find(p => p.policyType === "terms")?.updatedAt && (
+              <p>Last updated: {new Date(policies.find(p => p.policyType === "terms")!.updatedAt).toLocaleDateString()}</p>
+            )}
+          </div>
+          <Button
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold"
+            onClick={() => savePolicy("terms", termsContent, setTermsSaving)}
+            disabled={termsSaving}
+            data-testid="button-save-terms-policy"
+          >
+            {termsSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {termsSaving ? "Saving..." : "Save Terms of Service"}
           </Button>
         </CardContent>
       </Card>

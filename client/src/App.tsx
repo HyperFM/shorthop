@@ -15,6 +15,7 @@ import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import RewardStore from "@/pages/RewardStore";
 import Privacy from "@/pages/Privacy";
+import TermsOfService from "@/pages/TermsOfService";
 import Support from "@/pages/Support";
 import Settings from "@/pages/Settings";
 import Community from "@/pages/Community";
@@ -80,6 +81,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/rewards" component={RewardStore} />
       <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={TermsOfService} />
       <Route path="/support" component={Support} />
       <Route path="/settings" component={Settings} />
       <Route path="/community" component={Community} />
