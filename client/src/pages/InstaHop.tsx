@@ -684,26 +684,6 @@ function InstaHopView({ user }: { user: User }) {
   }, [geo.latitude, geo.longitude]);
 
   const isDriverMode = mode === "drive";
-  const needsSetup = !user.stripeSetupCompleted;
-
-  const setupFeeMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/stripe/setup-fee", {});
-      return res.json();
-    },
-    onSuccess: (data: any) => {
-      if (data.alreadyCompleted) {
-        showFlash("✅", "Account already activated!", "success");
-        return;
-      }
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: () => {
-      showFlash("❌", "Failed to start setup", "error");
-    },
-  });
 
   function cancelMatching() {
     setIsMatching(false);
@@ -767,24 +747,6 @@ function InstaHopView({ user }: { user: User }) {
                     <GlowingCarousel user={user} />
                   </div>
                 </div>
-
-                {needsSetup && (
-                  <Card className="border-orange-500/40 bg-gradient-to-br from-orange-500/10 to-transparent mb-2" data-testid="card-setup-fee">
-                    <CardContent className="py-3 px-4 space-y-2">
-                      <p className="text-sm font-bold text-foreground">Activate Your Account</p>
-                      <p className="text-xs text-muted-foreground">$1 verification charge to activate ShortHop.</p>
-                      <Button
-                        className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs h-9"
-                        onClick={() => setupFeeMutation.mutate()}
-                        disabled={setupFeeMutation.isPending}
-                        data-testid="button-activate-account"
-                      >
-                        {setupFeeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                        Activate for $1
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
                   <div className="space-y-2">

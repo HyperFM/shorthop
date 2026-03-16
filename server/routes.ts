@@ -495,10 +495,6 @@ export async function registerRoutes(
       const currentUser = await storage.getUser(req.user.id);
       if (!currentUser) return res.status(401).json({ message: "Unauthorized" });
 
-      if (!currentUser.stripeSetupCompleted) {
-        return res.status(403).json({ message: "Please activate your account first ($1 setup fee)." });
-      }
-
       if (input.hopType === "flex_hop" && currentUser.subscription !== "flex_hop" && currentUser.subscription !== "power_hop") {
         return res.status(403).json({ message: "Flex Hop requires an active Flex Hop or Power Hop subscription." });
       }
@@ -542,6 +538,42 @@ export async function registerRoutes(
        if (!driver.driverVerified) return res.status(403).json({ message: "Driver not verified" });
        if (!driver.isActive) return res.status(403).json({ message: "Go active first to accept hops" });
        const hop = await storage.acceptHop(Number(req.params.id), req.user.id);
+       
+       if (hop.walkerId) {
+         const walker = await storage.getUser(hop.walkerId);
+         if (walker && !walker.stripeSetupCompleted) {
+           try {
+             const stripe = await getUncachableStripeClient();
+             const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+             const holdSession = await stripe.checkout.sessions.create({
+               payment_method_types: ['card'],
+               line_items: [{
+                 price_data: {
+                   currency: 'usd',
+                   product_data: {
+                     name: 'ShortHop Card Verification',
+                     description: 'Temporary $1 hold to verify your card is active.',
+                   },
+                   unit_amount: 100,
+                 },
+                 quantity: 1,
+               }],
+               mode: 'payment',
+               metadata: {
+                 userId: String(walker.id),
+                 hopId: String(hop.id),
+                 type: 'card_hold',
+               },
+               success_url: `https://${domain}/instahop?hold=success&session_id={CHECKOUT_SESSION_ID}`,
+               cancel_url: `https://${domain}/instahop?hold=cancelled`,
+             });
+             hop.cardHoldUrl = holdSession.url;
+           } catch (e: any) {
+             console.error('Card hold Stripe error:', e.message);
+           }
+         }
+       }
+       
        res.json(hop);
     } catch (e) {
        res.status(404).json({ message: "Hop not found" });

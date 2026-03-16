@@ -45,7 +45,7 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Data Validation**: Zod schemas.
 - **Database**: PostgreSQL with Drizzle ORM.
 - **Session Management**: PostgreSQL-backed sessions (`connect-pg-simple`) for 30-day persistence.
-- **Pricing Logic**: Drivers earn fixed $0.50/0.5mi ($1.00/mi). ShortHop charges riders internally at higher rate. No percentage fees. Early network rule: under 50 active drivers, payment deferred until after match. $1 Stripe setup fee for account activation.
+- **Pricing Logic**: Drivers earn fixed $0.50/0.5mi ($1.00/mi). ShortHop charges riders internally at higher rate. No percentage fees. Early network rule: under 50 active drivers, payment deferred until after match. $1 temporary card verification hold triggers when driver matches hop (on accept) to verify card is active and keep user attentive.
 - **Super Admin Role**: A single designated super-admin account (HyperFM).
 
 ### Bottom Navigation Tabs (Order)
