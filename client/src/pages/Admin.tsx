@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award, FileText, Save } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award, FileText, Save, Copy } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -1172,13 +1172,34 @@ function PoliciesTab() {
     }
   };
 
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showFlash("📋", `${label} copied to clipboard`, "success");
+    } catch {
+      showFlash("❌", "Failed to copy", "error");
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="admin-policies-tab">
       <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-transparent">
         <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Shield className="w-5 h-5 text-blue-600" />
-            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Privacy Policy</p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-600" />
+              <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Privacy Policy</p>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-100"
+              onClick={() => copyToClipboard(privacyContent, "Privacy Policy")}
+              data-testid="button-copy-privacy-policy"
+              title="Copy policy content"
+            >
+              <Copy className="w-4 h-4" />
+            </Button>
           </div>
           <Textarea
             placeholder="Enter privacy policy content..."
@@ -1206,9 +1227,21 @@ function PoliciesTab() {
 
       <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-transparent">
         <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-5 h-5 text-orange-600" />
-            <p className="text-xs font-bold text-orange-600 uppercase tracking-wider">Safety Policy</p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+              <p className="text-xs font-bold text-orange-600 uppercase tracking-wider">Safety Policy</p>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0 text-orange-600 hover:bg-orange-100"
+              onClick={() => copyToClipboard(safetyContent, "Safety Policy")}
+              data-testid="button-copy-safety-policy"
+              title="Copy policy content"
+            >
+              <Copy className="w-4 h-4" />
+            </Button>
           </div>
           <Textarea
             placeholder="Enter safety policy content..."
