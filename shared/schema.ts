@@ -61,6 +61,9 @@ export const users = pgTable("users", {
   profilePhoto: text("profile_photo"),
   profileVisibility: text("profile_visibility").default("public"),
   lifetimeSubscription: boolean("lifetime_subscription").default(false),
+  pricingPreference: text("pricing_preference").default("1.20"),
+  allowFreeRides: boolean("allow_free_rides").default(false),
+  allowFollowerFreeRides: boolean("allow_follower_free_rides").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -381,6 +384,19 @@ export const ambassadorRequests = pgTable("ambassador_requests", {
 export const insertAmbassadorRequestSchema = createInsertSchema(ambassadorRequests).omit({ id: true, createdAt: true, reviewedAt: true, status: true, adminNotes: true });
 export type AmbassadorRequest = typeof ambassadorRequests.$inferSelect;
 export type InsertAmbassadorRequest = z.infer<typeof insertAmbassadorRequestSchema>;
+
+export const freeRideList = pgTable("free_ride_list", {
+  id: serial("id").primaryKey(),
+  driverId: integer("driver_id").references(() => users.id).notNull(),
+  riderId: integer("rider_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniquePair: unique().on(table.driverId, table.riderId),
+}));
+
+export const insertFreeRideListSchema = createInsertSchema(freeRideList).omit({ id: true, createdAt: true });
+export type FreeRideEntry = typeof freeRideList.$inferSelect;
+export type InsertFreeRideEntry = z.infer<typeof insertFreeRideListSchema>;
 
 export const policies = pgTable("policies", {
   id: serial("id").primaryKey(),

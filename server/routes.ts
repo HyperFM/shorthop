@@ -989,7 +989,7 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const SUPPORTED_LANGUAGES = Object.keys(getLanguages());
-      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility'];
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility', 'pricingPreference', 'allowFreeRides', 'allowFollowerFreeRides'];
       const updates: Record<string, any> = {};
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -999,6 +999,19 @@ export async function registerRoutes(
       }
       if (updates.profileVisibility && !["public", "semi_private", "private"].includes(updates.profileVisibility)) {
         updates.profileVisibility = "public";
+      }
+      if (updates.pricingPreference !== undefined) {
+        const priceVal = parseFloat(updates.pricingPreference);
+        if (isNaN(priceVal) || priceVal < 0 || priceVal > 5) {
+          return res.status(400).json({ message: "Price must be between $0.00 and $5.00" });
+        }
+        updates.pricingPreference = priceVal.toFixed(2);
+      }
+      if (updates.allowFreeRides !== undefined) {
+        updates.allowFreeRides = !!updates.allowFreeRides;
+      }
+      if (updates.allowFollowerFreeRides !== undefined) {
+        updates.allowFollowerFreeRides = !!updates.allowFollowerFreeRides;
       }
       if (Object.keys(updates).length === 0) return res.status(400).json({ message: "No valid fields" });
       const user = await storage.updateUser(req.user.id, updates);
@@ -1012,6 +1025,46 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     await storage.dismissWelcome(req.user.id);
     res.json({ message: "Welcome dismissed" });
+  });
+
+  app.get('/api/free-ride-list', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const list = await storage.getFreeRideList(req.user.id);
+      res.json(list);
+    } catch {
+      res.status(500).json({ message: "Failed to fetch free ride list" });
+    }
+  });
+
+  app.post('/api/free-ride-list', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { username } = req.body;
+      if (!username) return res.status(400).json({ message: "Username required" });
+      const rider = await storage.getUserByUsername(username);
+      if (!rider) return res.status(404).json({ message: "User not found" });
+      if (rider.id === req.user.id) return res.status(400).json({ message: "Cannot add yourself" });
+      const entry = await storage.addFreeRideUser(req.user.id, rider.id);
+      res.json({ ...entry, username: rider.username });
+    } catch (e: any) {
+      if (e.message?.includes("duplicate") || e.code === '23505') {
+        return res.status(409).json({ message: "User already in free ride list" });
+      }
+      res.status(500).json({ message: "Failed to add user" });
+    }
+  });
+
+  app.delete('/api/free-ride-list/:riderId', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const riderId = parseInt(req.params.riderId);
+      if (isNaN(riderId)) return res.status(400).json({ message: "Invalid rider ID" });
+      await storage.removeFreeRideUser(req.user.id, riderId);
+      res.json({ message: "Removed" });
+    } catch {
+      res.status(500).json({ message: "Failed to remove user" });
+    }
   });
 
   // Network stats

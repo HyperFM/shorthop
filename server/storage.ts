@@ -62,6 +62,8 @@ import {
   policies,
   type Policy,
   type InsertPolicy,
+  freeRideList,
+  type FreeRideEntry,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -186,6 +188,10 @@ export interface IStorage {
   getPolicy(policyType: string): Promise<Policy | undefined>;
   updatePolicy(policyType: string, content: string): Promise<Policy>;
   getAllPolicies(): Promise<Policy[]>;
+
+  getFreeRideList(driverId: number): Promise<{ id: number; riderId: number; username: string; createdAt: Date | null }[]>;
+  addFreeRideUser(driverId: number, riderId: number): Promise<any>;
+  removeFreeRideUser(driverId: number, riderId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1213,6 +1219,31 @@ export class DatabaseStorage implements IStorage {
 
   async getAllPolicies(): Promise<Policy[]> {
     return db.select().from(policies);
+  }
+
+  async getFreeRideList(driverId: number): Promise<{ id: number; riderId: number; username: string; createdAt: Date | null }[]> {
+    const rows = await db
+      .select({
+        id: freeRideList.id,
+        riderId: freeRideList.riderId,
+        username: users.username,
+        createdAt: freeRideList.createdAt,
+      })
+      .from(freeRideList)
+      .innerJoin(users, eq(freeRideList.riderId, users.id))
+      .where(eq(freeRideList.driverId, driverId));
+    return rows;
+  }
+
+  async addFreeRideUser(driverId: number, riderId: number): Promise<any> {
+    const [entry] = await db.insert(freeRideList).values({ driverId, riderId }).returning();
+    return entry;
+  }
+
+  async removeFreeRideUser(driverId: number, riderId: number): Promise<void> {
+    await db.delete(freeRideList).where(
+      and(eq(freeRideList.driverId, driverId), eq(freeRideList.riderId, riderId))
+    );
   }
 
 }

@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { RideVibeSelector } from "@/components/RideVibeSelector";
+import { PricingPreferences } from "@/components/PricingPreferences";
 import { getDriverSoundDuration, setDriverSoundDuration, type DriverSoundDuration } from "@/lib/sounds";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -231,6 +232,8 @@ export default function Dashboard() {
             Full Settings <ChevronRight className="w-3 h-3" />
           </button>
         </div>
+
+        <PricingPreferences user={user} activeTab={activeTab} />
 
         <Card className="border-border/40" data-testid="card-tailor-vibe">
           <CardContent className="py-3 px-4 space-y-3">

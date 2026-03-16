@@ -1,0 +1,270 @@
+SHORT HOP FEATURE UPDATE
+Dynamic Pricing Slider + Recommended Pricing System
+
+OBJECTIVE
+Implement a user-controlled pricing system inside the Tailor Experience section that allows both Drivers and Hoppers to set their preferred price per 0.5 mile using a slider.
+
+The system should:
+• Default to a recommended price of $1.20 per 0.5 mile
+• Allow pricing from FREE up to a configurable maximum
+• Provide real-time guidance messaging based on selected price
+• Maintain ShortHop’s percentage-based platform fee
+• Allow drivers to offer free rides to specific people or followers
+
+
+----------------------------------------------------
+
+UI LOCATION
+
+Settings
+→ Tailor Experience
+
+Existing toggle already present:
+Driver | Hopper
+
+Below the role selection add a new section:
+
+Pricing Preferences
+
+
+----------------------------------------------------
+
+PRICING SLIDER
+
+Create a horizontal slider labeled:
+
+Price Per 0.5 Mile
+
+Slider range:
+$0.00 (FREE) → $5.00
+
+Default position:
+$1.20 per 0.5 mile
+
+Display example:
+
+FREE ─────────●──────── $5.00
+               $1.20
+
+Below the slider show live value:
+
+Your Price: $1.20 per 0.5 mile
+
+
+----------------------------------------------------
+
+RECOMMENDED PRICING GUIDANCE
+
+Display dynamic messaging depending on the selected price.
+
+Sweet Spot Range
+$0.90 – $1.40
+
+Message:
+Recommended
+
+Most ShortHop riders and drivers match fastest in this range.
+
+$1.20 per half mile is the most common price and usually leads to the quickest ride matches.
+
+
+----------------------------------------------------
+
+LOW PRICE RANGE
+
+$0.00 – $0.80
+
+Message:
+
+Low Price
+
+Lower prices can help you match faster and help more people get where they need to go.
+Many drivers choose this range when they are already headed the same direction.
+
+
+----------------------------------------------------
+
+FREE PRICE
+
+$0.00
+
+Message:
+
+Free Ride
+
+You are offering rides for free.
+This is great for helping others or giving rides to friends and regular riders.
+
+
+----------------------------------------------------
+
+HIGH PRICE RANGE
+
+Above $1.75
+
+Message:
+
+Higher Price
+
+This price is higher than most ShortHop rides.
+
+You may receive fewer ride matches unless riders nearby are willing to pay this rate.
+
+
+----------------------------------------------------
+
+MARKETPLACE PHILOSOPHY MESSAGE
+
+Small text under the slider:
+
+ShortHop recommends around $1 per half mile to keep rides affordable and easy to match.
+
+However, drivers and riders are always free to choose their own price.
+
+
+----------------------------------------------------
+
+PRICE LIMITS
+
+Minimum price:
+$0.00
+
+Maximum price:
+Configurable (default $5.00)
+
+Slider increments:
+$0.05
+
+
+----------------------------------------------------
+
+FREE RIDE SETTINGS
+
+Below the pricing slider add a new section:
+
+Free Ride Settings
+
+
+Toggle Option:
+
+Allow Free Rides For Everyone
+[ ON / OFF ]
+
+If ON:
+Drivers can match with riders for $0 rides.
+
+
+----------------------------------------------------
+
+FOLLOWER FREE RIDES
+
+Toggle Option:
+
+Allow Free Rides For Followers
+[ ON / OFF ]
+
+Description text:
+
+People you follow or connect with can ride with you for free.
+
+
+----------------------------------------------------
+
+MANUAL FREE RIDE LIST
+
+Add section:
+
+Free Ride List
++ Add Rider
+
+Drivers can manually add users.
+
+Those riders automatically see:
+
+Free Ride Available
+
+when requesting rides with that driver.
+
+
+----------------------------------------------------
+
+MATCHING LOGIC
+
+Drivers set:
+minimum price per 0.5 mile
+
+Riders set:
+maximum price per 0.5 mile
+
+Matching rule:
+
+IF rider_price >= driver_price
+MATCH
+
+
+Example:
+
+Driver minimum: $0.80
+Rider max: $1.20
+
+Match accepted.
+
+
+----------------------------------------------------
+
+PLATFORM FEE
+
+ShortHop keeps the same percentage fee regardless of price.
+
+Example display:
+
+Driver price: $1.20
+ShortHop fee (15%): $0.18
+Driver receives: $1.02
+
+
+Display earnings preview:
+
+Estimated Driver Earnings: $1.02
+ShortHop Service Fee: $0.18
+
+
+----------------------------------------------------
+
+OPTIONAL QUICK PRESETS
+
+Above the slider include quick buttons:
+
+Community Price
+$1.20
+
+Budget
+$0.75
+
+Fast Match
+$1.50
+
+Pressing a preset moves the slider automatically.
+
+
+----------------------------------------------------
+
+DATA MODEL CHANGES
+
+Add the following fields to user profile:
+
+pricingPreference
+minDriverPrice
+maxRiderPrice
+allowFreeRides
+allowFollowerFreeRides
+freeRideUserList[]
+
+
+----------------------------------------------------
+
+UX GOAL
+
+Users should feel like they are customizing their ride economy rather than being forced into fixed pricing.
+
+The system should gently guide users toward the recommended price of about $1 per half mile while still allowing full freedom.
