@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { RideVibeSelector } from "@/components/RideVibeSelector";
 import { PricingPreferences } from "@/components/PricingPreferences";
-import { getDriverSoundDuration, setDriverSoundDuration, type DriverSoundDuration } from "@/lib/sounds";
+import { getDriverSoundDuration, setDriverSoundDuration, type DriverSoundDuration, playDriverApproachingSound } from "@/lib/sounds";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
@@ -93,6 +93,7 @@ export default function Dashboard() {
     setSoundDuration(next);
     showFlash("🔔", `Alert sound: ${next === "full" ? "8 seconds" : "2 seconds"}`, "info");
     try { navigator.vibrate?.(20); } catch {}
+    playDriverApproachingSound();
   }
 
   const updatePreferences = useMutation({
