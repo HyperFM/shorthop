@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { api } from "@shared/routes";
 import { motion } from "framer-motion";
 import { Share2, Check, Copy, Eye } from "lucide-react";
+import { FlyersModal } from "@/components/FlyersModal";
 import type { User } from "@shared/routes";
 
 interface NetworkStats {
@@ -19,6 +20,7 @@ interface NetworkStats {
 
 export function NetworkProgress() {
   const [copied, setCopied] = useState(false);
+  const [flyersOpen, setFlyersOpen] = useState(false);
 
   const { data: user } = useQuery<User>({
     queryKey: [api.auth.me.path],
@@ -132,7 +134,7 @@ export function NetworkProgress() {
           )}
 
           {user?.referralCode && (
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
               <Button
                 size="sm"
                 variant="outline"
@@ -142,6 +144,16 @@ export function NetworkProgress() {
               >
                 {copied ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
                 {copied ? "Copied!" : "Invite friends to help grow!"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[11px] font-bold gap-1.5 rounded-full border-amber-300/30 bg-amber-50/5 hover:bg-amber-50/10 dark:border-amber-700/30 dark:bg-amber-950/5 dark:hover:bg-amber-950/10"
+                onClick={() => setFlyersOpen(true)}
+                data-testid="button-flyers"
+              >
+                📑
+                Flyers
               </Button>
               <Button
                 size="sm"
@@ -157,6 +169,8 @@ export function NetworkProgress() {
           )}
         </CardContent>
       </Card>
+
+      <FlyersModal isOpen={flyersOpen} onClose={() => setFlyersOpen(false)} />
     </motion.div>
   );
 }

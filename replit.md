@@ -48,6 +48,7 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Driver Availability API**: GET /api/driver-availability returns count, status (none/low/good), and smart message. Shown on InstaHop before requesting.
 - **Time Window System**: Each hop has a 30-minute match window (`timeWindowExpiry`). Drivers see only active-window hops. Countdown timer shown to hopper. Expired hops auto-cancel with payment release and notification.
 - **ID Verification Placeholder**: Coming Soon card in Settings below Legal Name field, announcing photo ID verification for trust badges.
+- **Flyers Feature**: Lexington ShortHop Network card includes a "Flyers" button (next to Connect) that opens a modal with downloadable marketing materials: Driver Flyer (JPG image), Hopper Flyer (editable DOCX template), and a "Download All" button for bulk downloads. Includes message: "Help grow ShortHop in your area. Print these for free at your local library and spread the word."
 
 ### System Design Choices
 - **Authentication**: Passport.js with a local strategy and session-based authentication.
@@ -58,7 +59,7 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Super Admin Role**: A single designated super-admin account (HyperFM).
 
 ### Bottom Navigation Tabs (Order)
-1. **Connect** (`/community`) — Live Activity, Lexington ShortHop Network, City Chat, Founders Lounge, VIP Hyper Line, community posts
+1. **Connect** (`/community`) — Live Activity, Lexington ShortHop Network (with Flyers modal), City Chat, Founders Lounge, VIP Hyper Line, community posts
 2. **Schedule** (`/schedule`) — Recurring trip scheduler
 3. **Center Tab** (`/instahop`) — Label always says "Hop"; icon changes: blue walking figure (hopper) or orange car (driver)
 4. **Tailor** (`/dashboard`) — Hopper/Driver switcher at top, Plan a Ride card (pickup, destination, date, time, submit for scheduled rides), Ride Vibe, Privacy Controls, Alert Preferences
