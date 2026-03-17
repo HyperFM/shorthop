@@ -50,7 +50,10 @@ export function useAcceptHop() {
         method: api.hops.accept.method,
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to accept hop");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to accept hop");
+      }
       return api.hops.accept.responses[200].parse(await res.json());
     },
     onSuccess: () => {

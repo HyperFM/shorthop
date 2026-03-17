@@ -359,6 +359,9 @@ function HopRequestCard({ hop, driverLat, driverLng, onNavigate }: {
           showFlash("✅", "Hop accepted! Hopper location not available for navigation.", "success");
         }
       },
+      onError: (err: any) => {
+        showFlash("⚠️", err?.message || "Couldn't accept hop", "error");
+      },
     });
   };
 
@@ -899,20 +902,46 @@ function InstaHopView({ user }: { user: User }) {
     }
 
     const token = import.meta.env.VITE_MAPBOX_TOKEN;
-    if (!token || !data.startLocation || !data.endLocation) {
+    if (!token || !data.endLocation) {
       showFlash("⚠️", "Need location data", "error");
       return;
     }
 
     try {
-      const startQuery = encodeURIComponent(data.startLocation + ", Lexington, KY");
-      const startRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${startQuery}.json?access_token=${token}&limit=1`);
-      const startJson = await startRes.json();
-      if (!startJson.features?.length) {
-        showFlash("⚠️", "Can't find pickup location", "error");
-        return;
+      let startLat: number;
+      let startLng: number;
+      let resolvedStartName = data.startLocation;
+
+      const useGps = !data.startLocation || data.startLocation.toLowerCase().includes("current");
+
+      if (useGps) {
+        if (!geo.latitude || !geo.longitude) {
+          showFlash("📍", "Enable location access to use current location", "error");
+          return;
+        }
+        startLat = geo.latitude;
+        startLng = geo.longitude;
+        try {
+          const revRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${startLng},${startLat}.json?access_token=${token}&limit=1&types=address`);
+          const revJson = await revRes.json();
+          if (revJson.features?.length) {
+            resolvedStartName = revJson.features[0].place_name?.split(",")[0] || "Current location";
+          } else {
+            resolvedStartName = "Current location";
+          }
+        } catch {
+          resolvedStartName = "Current location";
+        }
+      } else {
+        const startQuery = encodeURIComponent(data.startLocation + ", Lexington, KY");
+        const startRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${startQuery}.json?access_token=${token}&limit=1`);
+        const startJson = await startRes.json();
+        if (!startJson.features?.length) {
+          showFlash("⚠️", "Can't find pickup location", "error");
+          return;
+        }
+        [startLng, startLat] = startJson.features[0].center;
       }
-      const [startLng, startLat] = startJson.features[0].center;
 
       const endQuery = encodeURIComponent(data.endLocation + ", Lexington, KY");
       const endRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${endQuery}.json?access_token=${token}&limit=1`);
@@ -956,11 +985,16 @@ function InstaHopView({ user }: { user: User }) {
       }
 
       setIsMatching(true);
-      const hopData: any = { ...data, hopType: 'short_hop', distanceMiles };
-      hopData.startLat = String(startLat);
-      hopData.startLng = String(startLng);
-      hopData.endLat = String(endLat);
-      hopData.endLng = String(endLng);
+      const hopData: any = {
+        ...data,
+        startLocation: resolvedStartName,
+        hopType: 'short_hop',
+        distanceMiles,
+        startLat: String(startLat),
+        startLng: String(startLng),
+        endLat: String(endLat),
+        endLng: String(endLng),
+      };
 
       requestHop.mutate(hopData, {
         onSuccess: () => {
