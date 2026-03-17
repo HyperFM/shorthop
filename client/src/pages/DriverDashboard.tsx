@@ -528,62 +528,43 @@ export default function DriverDashboard({ user }: { user: User }) {
             </div>
           )}
 
-          <div className="space-y-4">
-            <p className="text-sm font-bold text-muted-foreground flex items-center gap-1.5">
-              ⚡ InstaHop Requests
-            </p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-bold text-muted-foreground">
+                ⚡ InstaHop Requests
+              </p>
+              {availableHops.length > 0 && (
+                <span className="text-xs font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2.5 py-1 rounded-full">
+                  {availableHops.length}
+                </span>
+              )}
+            </div>
             
             {availableHops.length === 0 ? (
-              <Card className="border-2 border-dashed border-secondary/20 bg-gradient-to-b from-secondary/5 to-transparent">
-                <CardContent className="p-8 text-center">
-                  <motion.span 
-                    animate={{ y: [0, -6, 0] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="text-3xl block mb-2"
-                  >
-                    🔍
-                  </motion.span>
-                  <p className="text-muted-foreground font-medium">No hops nearby yet.</p>
-                  <p className="text-xs text-muted-foreground mt-1">Check back soon for new requests.</p>
-                </CardContent>
-              </Card>
+              <p className="text-xs text-muted-foreground">No hops nearby yet</p>
             ) : (
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 {availableHops.map((hop, idx) => (
                   <motion.div
                     key={hop.id}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
+                    transition={{ delay: idx * 0.03 }}
                   >
-                    <Card className="hover:shadow-md transition-shadow border-primary/20" data-testid={`hop-request-${hop.id}`}>
-                      <CardContent className="p-4 space-y-3">
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <div className="flex flex-col items-center mt-1">
-                              <div className="w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-green-200" />
-                              <div className="w-0.5 h-8 bg-gradient-to-b from-green-400 to-blue-400" />
-                              <div className="w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-blue-200" />
-                            </div>
-                            <div className="flex-1 space-y-3">
-                              <div>
-                                <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Start</p>
-                                <p className="text-sm font-bold text-foreground" data-testid={`text-hop-start-${hop.id}`}>{hop.startLocation}</p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Finish</p>
-                                <p className="text-sm font-bold text-foreground" data-testid={`text-hop-end-${hop.id}`}>{hop.endLocation}</p>
-                              </div>
-                            </div>
-                          </div>
+                    <Card className="hover:shadow-sm transition-shadow border-primary/20" data-testid={`hop-request-${hop.id}`}>
+                      <CardContent className="p-2.5 flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-foreground truncate" data-testid={`text-hop-start-${hop.id}`}>{hop.startLocation}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">→ {hop.endLocation}</p>
                         </div>
                         <Button 
-                          className="w-full h-12 text-sm rounded-xl bg-gradient-to-r from-primary to-green-600 font-bold" 
+                          size="sm"
+                          className="h-7 text-xs rounded-lg bg-primary hover:bg-primary/90 font-bold shrink-0" 
                           onClick={() => acceptHop.mutate(hop.id)}
                           disabled={acceptHop.isPending}
                           data-testid={`button-accept-${hop.id}`}
                         >
-                          {acceptHop.isPending ? "Accepting..." : "Accept Hop"}
+                          {acceptHop.isPending ? "..." : "Accept"}
                         </Button>
                       </CardContent>
                     </Card>
