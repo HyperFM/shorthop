@@ -39,7 +39,7 @@ function getProfileTabColor(): string {
 
 const sideTabs = [
   { path: "/community", icon: Activity, label: "Connect" },
-  { path: "/schedule", icon: Calendar, label: "Schedule" },
+  { path: "/schedule", icon: Calendar, label: "Planned Hops" },
   { path: "/dashboard", customIcon: BowTieIcon, label: "Tailor" },
   { path: "/settings", icon: User, label: "Profile", isProfile: true },
 ];

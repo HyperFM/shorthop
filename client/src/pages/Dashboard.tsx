@@ -234,7 +234,35 @@ export default function Dashboard() {
           </button>
         </div>
 
-        <PricingPreferences user={user} activeTab={activeTab} />
+        {activeTab === "driver" && (
+          <PricingPreferences user={user} activeTab={activeTab} />
+        )}
+
+        {activeTab === "driver" && (
+          <Card className="border-border/40" data-testid="card-tailor-ride-style">
+            <CardContent className="py-3 px-4 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-green-500 shrink-0"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2" /><path d="M12 8v4l3 3" /></svg>
+                <p className="text-xs font-black text-foreground">Ride Style</p>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0"><path d="M3 9h18" /><path d="M9 3v18" /><path d="M3 3h18v18H3z" /></svg>
+                  <div>
+                    <Label htmlFor="toggle-detours" className="text-[11px] font-medium cursor-pointer">Enable Detours</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Allow small detours to pick up more hoppers</p>
+                  </div>
+                </div>
+                <Switch
+                  id="toggle-detours"
+                  data-testid="switch-enable-detours"
+                  checked={user.isFlexibleDriver || false}
+                  disabled
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="border-border/40" data-testid="card-tailor-vibe">
           <CardContent className="py-3 px-4 space-y-3">

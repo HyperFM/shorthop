@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -101,6 +101,13 @@ function Router() {
 
 function App() {
   const [splashDone, setSplashDone] = useState(false);
+
+  useEffect(() => {
+    try {
+      const count = parseInt(localStorage.getItem('sh_app_open_count') || '0', 10);
+      localStorage.setItem('sh_app_open_count', String(count + 1));
+    } catch {}
+  }, []);
 
   if (!splashDone) {
     return <SplashScreen onComplete={() => setSplashDone(true)} />;

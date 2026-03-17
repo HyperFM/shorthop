@@ -62,7 +62,16 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const [selectedCorridor, setSelectedCorridor] = useState<PickupSpot | null>(null);
   const [roadSideInfo, setRoadSideInfo] = useState<RoadSideInfo | null>(null);
   const [scheduleBannerDismissed, setScheduleBannerDismissed] = useState(() => {
-    try { return sessionStorage.getItem('schedule_banner_dismissed') === '1'; } catch { return false; }
+    try {
+      const dismissedAt = parseInt(localStorage.getItem('schedule_banner_dismiss_opens') || '0', 10);
+      if (dismissedAt > 0) {
+        const appOpens = parseInt(localStorage.getItem('sh_app_open_count') || '0', 10);
+        if (appOpens - dismissedAt < 5) return true;
+        localStorage.removeItem('schedule_banner_dismiss_opens');
+        return false;
+      }
+      return false;
+    } catch { return false; }
   });
 
   const { data: mySchedules = [] } = useQuery<any[]>({
@@ -367,7 +376,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-foreground">ShortHop works best with schedules</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Add your regular trips and we'll match you with people going the same way.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Add your regular trips in the scheduled routes section and we'll match you with people going the same way.</p>
                 <div className="flex gap-2 mt-3">
                   <Button
                     size="sm"
@@ -384,7 +393,10 @@ export default function WalkerDashboard({ user }: { user: User }) {
                     className="h-9 rounded-xl text-muted-foreground"
                     onClick={() => {
                       setScheduleBannerDismissed(true);
-                      try { sessionStorage.setItem('schedule_banner_dismissed', '1'); } catch {}
+                      try {
+                        const appOpens = parseInt(localStorage.getItem('sh_app_open_count') || '0', 10);
+                        localStorage.setItem('schedule_banner_dismiss_opens', String(appOpens));
+                      } catch {}
                     }}
                     data-testid="button-banner-dismiss"
                   >

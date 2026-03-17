@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Plus, Trash2, Clock, MapPin, ArrowLeftRight, ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { Calendar, Plus, Trash2, Clock, MapPin, ArrowLeftRight, ChevronDown, ChevronUp, Pencil, Route as RouteIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import type { Schedule } from "@shared/schema";
@@ -21,10 +22,11 @@ function formatDays(days: string[]): string {
   return days.join(", ");
 }
 
-function ScheduleForm({ onSave, initial, onCancel }: {
+function ScheduleForm({ onSave, initial, onCancel, isLongHop = false }: {
   onSave: (data: any) => void;
   initial?: Schedule;
   onCancel: () => void;
+  isLongHop?: boolean;
 }) {
   const [days, setDays] = useState<string[]>((initial?.days as string[]) || []);
   const [startLocation, setStartLocation] = useState(initial?.startLocation || "");
@@ -48,6 +50,12 @@ function ScheduleForm({ onSave, initial, onCancel }: {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {isLongHop && (
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200/50 dark:border-purple-700/30">
+          <RouteIcon className="w-4 h-4 text-purple-500" />
+          <p className="text-[11px] font-bold text-purple-600 dark:text-purple-400">Long Hop — for longer commutes (10+ miles)</p>
+        </div>
+      )}
       <div>
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Days</p>
         <div className="flex gap-1.5">
@@ -142,10 +150,44 @@ function ScheduleForm({ onSave, initial, onCancel }: {
   );
 }
 
+function ReadySetHop() {
+  const words = ["Ready", "Set", "Hop!"];
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % words.length);
+    }, 1200);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex items-center justify-center gap-3 py-4" data-testid="text-ready-set-hop">
+      {words.map((word, i) => (
+        <motion.span
+          key={word}
+          animate={{
+            scale: activeIndex === i ? 1.4 : 0.85,
+            opacity: activeIndex === i ? 1 : 0.35,
+            y: activeIndex === i ? -4 : 0,
+          }}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+          className={`text-2xl font-black tracking-tight ${
+            i === 0 ? "text-orange-500" : i === 1 ? "text-amber-500" : "text-green-500"
+          }`}
+        >
+          {word}
+        </motion.span>
+      ))}
+    </div>
+  );
+}
+
 export default function SchedulePage() {
   const { data: user } = useAuth();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
+  const [showLongHopForm, setShowLongHopForm] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -161,6 +203,7 @@ export default function SchedulePage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['/api/schedules'] });
       setShowForm(false);
+      setShowLongHopForm(false);
       showFlash("📅", "Schedule saved!", "success");
     },
   });
@@ -200,33 +243,48 @@ export default function SchedulePage() {
   if (!user) return null;
 
   return (
-    <div className="px-4 pt-3 pb-24 max-w-lg mx-auto">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-xl font-bold text-foreground" data-testid="text-schedule-title">My Schedule</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Set recurring trips for automatic matching</p>
-        </div>
-        {!showForm && !editingSchedule && (
-          <Button
-            onClick={() => setShowForm(true)}
-            size="sm"
-            className="rounded-xl gap-1.5 bg-primary text-white"
-            data-testid="button-add-schedule"
-          >
-            <Plus className="w-4 h-4" />
-            Add
-          </Button>
+    <div className="px-4 pt-1 pb-24 max-w-lg mx-auto">
+      <ReadySetHop />
+
+      <div className="mt-6 mb-4">
+        <h1 className="text-xl font-bold text-foreground text-center" data-testid="text-schedule-title">Planned Hops</h1>
+        <p className="text-xs text-muted-foreground text-center mt-1">Set recurring trips for automatic matching</p>
+      </div>
+
+      <div className="flex gap-2 mb-5">
+        {!showForm && !editingSchedule && !showLongHopForm && (
+          <>
+            <Button
+              onClick={() => { setShowForm(true); setShowLongHopForm(false); }}
+              className="flex-1 h-12 rounded-2xl gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-md shadow-orange-500/20"
+              data-testid="button-add-schedule"
+            >
+              <Calendar className="w-4 h-4" />
+              Schedule
+            </Button>
+            <Button
+              onClick={() => { setShowLongHopForm(true); setShowForm(false); }}
+              className="flex-1 h-12 rounded-2xl gap-2 bg-purple-500 hover:bg-purple-600 text-white font-bold shadow-md shadow-purple-500/20"
+              data-testid="button-add-long-hop"
+            >
+              <RouteIcon className="w-4 h-4" />
+              Long Hop
+            </Button>
+          </>
         )}
       </div>
 
-      {(showForm || editingSchedule) && (
+      <p className="text-[10px] text-muted-foreground text-center mb-4">Swipe up to see your scheduled hops</p>
+
+      {(showForm || showLongHopForm || editingSchedule) && (
         <Card className="mb-4 border-border/50 shadow-md rounded-2xl" data-testid="card-schedule-form">
           <CardContent className="p-4">
             <p className="text-sm font-bold text-foreground mb-3">
-              {editingSchedule ? "Edit Schedule" : "New Schedule"}
+              {editingSchedule ? "Edit Schedule" : showLongHopForm ? "New Long Hop" : "New Schedule"}
             </p>
             <ScheduleForm
               initial={editingSchedule || undefined}
+              isLongHop={showLongHopForm}
               onSave={(data) => {
                 if (editingSchedule) {
                   updateMutation.mutate({ id: editingSchedule.id, data });
@@ -236,6 +294,7 @@ export default function SchedulePage() {
               }}
               onCancel={() => {
                 setShowForm(false);
+                setShowLongHopForm(false);
                 setEditingSchedule(null);
               }}
             />
@@ -247,7 +306,7 @@ export default function SchedulePage() {
         <div className="flex items-center justify-center py-12">
           <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : mySchedules.length === 0 && !showForm ? (
+      ) : mySchedules.length === 0 && !showForm && !showLongHopForm ? (
         <Card className="border-border/50 shadow-sm rounded-2xl" data-testid="card-empty-schedules">
           <CardContent className="p-8 text-center">
             <div className="w-16 h-16 rounded-2xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center mx-auto mb-4">
