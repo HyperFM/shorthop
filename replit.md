@@ -43,7 +43,10 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Hopper Ride Preferences**: Tailor section includes Flexible Drop-off (exact vs close_enough), Allow Detour Drivers toggle, Shared Commute toggle, and Mode Lock (none/hopper_only/driver_only for subscribers). All persisted to DB via PUT /api/profile/preferences.
 - **Chat Reactions & Editing**: All chat types (Founder Chat, VIP Hyper Line, City Chat) support 5-emoji reactions (👍 ❤️ 😢 😮 😡) and message editing (own messages only, with edited timestamp). Reactions stored as JSON `{emoji: count}` in `reactions` column. Edit updates `editedAt` timestamp.
 - **Notification Reactions & Replies**: Users can react to notifications with 5 emojis and send a quick reply (500 char max). Reactions via POST /api/notifications/:id/react, replies via POST /api/notifications/:id/reply. Admin can view reactions/replies.
-- **Schedule Anytime & Payment Preference**: Ride planner supports "Request Anytime" toggle (no specific days/times, match whenever available). Payment preference selector (Card/Cash/Either) per schedule. Stored in `anytime` and `paymentPreference` columns.
+- **Schedule Anytime & Payment**: Ride planner supports "Request Anytime" toggle. All payments are Stripe-only (no cash). Stored in `anytime` and `paymentPreference` (default "stripe") columns.
+- **Prepaid Hop System**: All hops use Stripe PaymentIntent with `capture_method='manual'` (auth-hold). Flow: authorize → match → capture on accept → refund on cancel/timeout. Schema fields: `paymentIntentId`, `paymentStatus` (none/authorized/captured/refunded), `paymentAmountCents`, `departureTime`, `arrivalDeadline`, `timeWindowExpiry`. Auto-cancel interval (60s) cancels expired pending hops and releases payment holds. Rate: $1.00/mile, minimum $1.00.
+- **Driver Availability API**: GET /api/driver-availability returns count, status (none/low/good), and smart message. Shown on InstaHop before requesting.
+- **Time Window System**: Each hop has a 30-minute match window (`timeWindowExpiry`). Drivers see only active-window hops. Countdown timer shown to hopper. Expired hops auto-cancel with payment release and notification.
 - **ID Verification Placeholder**: Coming Soon card in Settings below Legal Name field, announcing photo ID verification for trust badges.
 
 ### System Design Choices
@@ -51,7 +54,7 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Data Validation**: Zod schemas.
 - **Database**: PostgreSQL with Drizzle ORM.
 - **Session Management**: PostgreSQL-backed sessions (`connect-pg-simple`) for 30-day persistence.
-- **Pricing Logic**: Drivers earn fixed $0.50/0.5mi ($1.00/mi). ShortHop charges riders internally at higher rate. No percentage fees. Early network rule: under 50 active drivers, payment deferred until after match. **$1 temporary card hold**: Triggered upfront before hop submission (distance < 10 miles only) to verify card is active. Instant hops blocked for 10+ mile trips - directs to Plan a Ride instead.
+- **Pricing Logic**: Drivers earn fixed $0.50/0.5mi ($1.00/mi). Rider rate: $1.00/mile, minimum $1.00 per hop. All payments via Stripe (no cash). Prepaid auth-hold captured on match. Tips allowed via Stripe. $1 card verification hold on first use. Instant hops blocked for 10+ mile trips - directs to Plan a Ride instead.
 - **Super Admin Role**: A single designated super-admin account (HyperFM).
 
 ### Bottom Navigation Tabs (Order)

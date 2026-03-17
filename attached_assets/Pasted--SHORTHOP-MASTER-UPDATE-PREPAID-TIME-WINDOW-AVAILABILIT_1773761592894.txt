@@ -1,0 +1,240 @@
+# 🚀 SHORTHOP MASTER UPDATE — PREPAID + TIME WINDOW + AVAILABILITY SYSTEM
+
+You are implementing a unified system that includes:
+- Required prepayment
+- Driver availability visibility
+- Time window enforcement
+- Auto-cancel + refund protection
+
+Follow ALL instructions in order. Do not skip. Do not redesign unrelated UI.
+
+---
+
+# 1. PREPAID HOP SYSTEM (MANDATORY)
+
+## BEFORE A HOP IS SUBMITTED:
+
+User MUST:
+- Select payment amount
+- Confirm payment method
+
+---
+
+## UI FLOW:
+
+1. User creates hop request  
+2. User selects payment:
+   - Default: “Free to $1”
+   - Allow custom input if needed  
+
+3. Show confirmation message:
+   “This amount will be held until matched with a driver”
+
+4. Require payment authorization:
+   - Card / Wallet
+
+---
+
+# 2. PAYMENT LOGIC
+
+- Payment is:
+  - Authorized immediately  
+  - Captured ONLY when driver accepts  
+
+- If no match:
+  → Automatically release payment  
+
+- If user cancels before match:
+  → Automatically release payment  
+
+---
+
+# 3. BLOCK FREE REQUESTS
+
+- DO NOT allow $0 requests  
+- Minimum default:
+  - ~$1 per 0.5 mile (or pricing logic)
+
+- Exception:
+  - Only allowed if part of future promo system
+
+---
+
+# 4. TIME WINDOW SYSTEM (REQUIRED)
+
+## USER INPUT:
+
+User MUST select:
+
+### A. Departure Time  
+Label:
+“When do you want to leave?”
+
+### B. Arrival Deadline (optional)  
+Label:
+“When do you need to arrive by?”
+
+---
+
+## SYSTEM CREATES TIME WINDOW:
+
+- Start Time = Departure Time  
+- End Time = Arrival Time  
+
+IF no arrival time:
+- Default = 30–60 minutes after departure  
+
+---
+
+# 5. MATCH ELIGIBILITY RULE
+
+A match is ONLY valid if:
+
+- Driver can reach pickup BEFORE departure time expires  
+AND  
+- Trip can complete BEFORE arrival deadline (if set)
+
+---
+
+# 6. AUTO CANCEL + REFUND SYSTEM
+
+IF no driver is matched within time window:
+
+→ Automatically cancel request  
+→ Automatically release full payment  
+
+---
+
+# 7. USER FEEDBACK (IMPORTANT)
+
+## While searching:
+- Show countdown:
+  “Matching for X minutes”
+
+## If canceled:
+- Show:
+  “No drivers were available in your time window — your payment has been released”
+
+---
+
+# 8. DRIVER AVAILABILITY SYSTEM
+
+## BEFORE REQUEST SUBMISSION:
+
+Display:
+
+- “X drivers nearby”
+OR
+- “No drivers active right now”
+
+---
+
+## STATUS TYPES:
+
+- Drivers nearby  
+- Drivers on schedule soon  
+- Low driver availability  
+- No drivers available  
+
+---
+
+# 9. SMART AVAILABILITY MESSAGING
+
+### If NO drivers:
+Show:
+“No drivers nearby yet — your request will wait for a match”
+
+### If LOW availability:
+Show:
+“Limited drivers — increasing your range or price may help”
+
+### If GOOD availability:
+Show:
+“Drivers nearby — high chance of quick match”
+
+---
+
+# 10. DRIVER INCENTIVE PROMPT
+
+Before submission, show:
+
+“Drivers are more likely to accept higher-paying hops”
+
+(Optional: visual likelihood indicator)
+
+---
+
+# 11. MATCH QUEUE BEHAVIOR
+
+- If no drivers available:
+  - Keep request active within time window  
+  - Notify user when drivers appear  
+
+- When driver becomes available:
+  - Auto-attempt match  
+
+---
+
+# 12. DRIVER SIDE FILTERING
+
+Drivers should ONLY see requests that:
+
+- Are within active time window  
+- Can realistically be completed on time  
+- Fit route + Flex Range rules  
+
+---
+
+# 13. LATE MATCH PREVENTION
+
+DO NOT allow:
+
+- Drivers to accept requests near expiration  
+- Matches that cannot be completed in time  
+
+---
+
+# 14. EDGE CASE HANDLING (CRITICAL)
+
+- User cancels before match:
+  → Refund immediately  
+
+- Driver accepts:
+  → Capture payment immediately  
+
+- Time expires AFTER driver accepts:
+  → DO NOT cancel ride  
+
+- Payment must NEVER be captured without driver acceptance  
+
+---
+
+# 15. UX REQUIREMENTS
+
+- Flow must feel:
+  - Fast  
+  - Simple  
+  - Not cluttered  
+
+- Clearly communicate:
+  - Payment is safe  
+  - Only charged when matched  
+
+- Time selection must be:
+  - Easy  
+  - Quick  
+  - Clear  
+
+- Countdown visible but not stressful  
+
+---
+
+# 16. DO NOT BREAK
+
+- Existing matching logic  
+- Flex Range system  
+- Insta-Hop functionality  
+
+---
+
+END OF MASTER UPDATE

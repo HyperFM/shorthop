@@ -100,6 +100,12 @@ export const api = {
         startLng: z.string().optional(),
         endLat: z.string().optional(),
         endLng: z.string().optional(),
+        paymentIntentId: z.string().optional(),
+        paymentStatus: z.string().optional(),
+        paymentAmountCents: z.number().optional(),
+        departureTime: z.string().optional(),
+        arrivalDeadline: z.string().optional(),
+        timeWindowExpiry: z.string().optional(),
       }),
       responses: {
         201: z.custom<typeof shortHops.$inferSelect>(),

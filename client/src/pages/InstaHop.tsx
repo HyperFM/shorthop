@@ -894,6 +894,44 @@ function InstaHopView({ user }: { user: User }) {
 
   const [cardHoldUrl, setCardHoldUrl] = useState<string | null>(null);
   const [tooFarForInstahop, setTooFarForInstahop] = useState(false);
+  const [prepaidInfo, setPrepaidInfo] = useState<{
+    amount: number;
+    paymentIntentId: string;
+    departureTime: string;
+    arrivalDeadline: string;
+    timeWindowExpiry: string;
+    distanceMiles: number;
+  } | null>(null);
+  const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
+  const [paymentRefunded, setPaymentRefunded] = useState(false);
+
+  const { data: driverAvailability } = useQuery<{ count: number; status: string; message: string }>({
+    queryKey: ['/api/driver-availability'],
+    refetchInterval: 30000,
+  });
+
+  useEffect(() => {
+    if (!prepaidInfo || !isMatching) {
+      setMatchCountdown(null);
+      return;
+    }
+    const expiryTime = new Date(prepaidInfo.timeWindowExpiry).getTime();
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((expiryTime - Date.now()) / 1000));
+      setMatchCountdown(remaining);
+      if (remaining <= 0) {
+        if (activeHop && activeHop.status === "requested") {
+          cancelHop.mutate(activeHop.id);
+        }
+        setIsMatching(false);
+        setPrepaidInfo(null);
+        setPaymentRefunded(true);
+        showFlash("⏰", "Time window expired — payment released, no charge", "info");
+        queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [prepaidInfo, isMatching]);
 
   const onSubmit = async (data: z.infer<typeof searchSchema>) => {
     if (mode === "walk") {
@@ -984,26 +1022,55 @@ function InstaHopView({ user }: { user: User }) {
         }
       }
 
-      setIsMatching(true);
-      const hopData: any = {
-        ...data,
-        startLocation: resolvedStartName,
-        hopType: 'short_hop',
-        distanceMiles,
-        startLat: String(startLat),
-        startLng: String(startLng),
-        endLat: String(endLat),
-        endLng: String(endLng),
-      };
+      setPaymentRefunded(false);
+      try {
+        const authRes = await apiRequest("POST", "/api/stripe/authorize-hop", {
+          distanceMiles,
+          departureTime: new Date(Date.now() + 5 * 60000).toISOString(),
+          arrivalDeadline: new Date(Date.now() + 50 * 60000).toISOString(),
+        });
+        const authData = await authRes.json();
 
-      requestHop.mutate(hopData, {
-        onSuccess: () => {
-          showFlash("⚡", mode === "drive" ? "Drive started!" : "InstaHop requested!", "success");
-        },
-        onError: () => {
-          setIsMatching(false);
-        }
-      });
+        setPrepaidInfo({
+          amount: authData.amount,
+          paymentIntentId: authData.paymentIntentId,
+          departureTime: authData.departureTime,
+          arrivalDeadline: authData.arrivalDeadline,
+          timeWindowExpiry: authData.timeWindowExpiry,
+          distanceMiles,
+        });
+
+        setIsMatching(true);
+        const hopData: any = {
+          ...data,
+          startLocation: resolvedStartName,
+          hopType: 'short_hop',
+          distanceMiles,
+          startLat: String(startLat),
+          startLng: String(startLng),
+          endLat: String(endLat),
+          endLng: String(endLng),
+          paymentIntentId: authData.paymentIntentId,
+          paymentStatus: "authorized",
+          paymentAmountCents: authData.amount,
+          departureTime: authData.departureTime,
+          arrivalDeadline: authData.arrivalDeadline,
+          timeWindowExpiry: authData.timeWindowExpiry,
+        };
+
+        requestHop.mutate(hopData, {
+          onSuccess: () => {
+            showFlash("⚡", "InstaHop requested! Payment authorized.", "success");
+          },
+          onError: () => {
+            setIsMatching(false);
+            setPrepaidInfo(null);
+          }
+        });
+      } catch (authErr: any) {
+        showFlash("❌", authErr.message || "Payment authorization failed", "error");
+        return;
+      }
     } catch (e) {
       showFlash("⚠️", "Error processing request", "error");
     }
@@ -1042,8 +1109,10 @@ function InstaHopView({ user }: { user: User }) {
 
   function cancelMatching() {
     setIsMatching(false);
+    setPrepaidInfo(null);
     if (activeHop && activeHop.status === "requested") {
       cancelHop.mutate(activeHop.id);
+      showFlash("✅", "Cancelled — payment authorization released", "info");
     }
   }
 
@@ -1147,6 +1216,84 @@ function InstaHopView({ user }: { user: User }) {
                       >
                         Go to Plan a Ride
                       </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {driverAvailability && !isMatching && mode === "hop" && (
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium mb-1 ${
+                    driverAvailability.status === "good" ? "bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border border-green-200/50 dark:border-green-700/30" :
+                    driverAvailability.status === "low" ? "bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-400 border border-yellow-200/50 dark:border-yellow-700/30" :
+                    "bg-gray-50 dark:bg-gray-950/20 text-muted-foreground border border-border/30"
+                  }`} data-testid="display-driver-availability">
+                    <Car className="w-3.5 h-3.5 shrink-0" />
+                    <span>{driverAvailability.message}</span>
+                    {driverAvailability.count > 0 && (
+                      <span className="ml-auto font-bold">{driverAvailability.count} active</span>
+                    )}
+                  </div>
+                )}
+
+                {isMatching && prepaidInfo && (
+                  <Card className="border-blue-500/40 bg-gradient-to-br from-blue-500/10 to-transparent mb-2" data-testid="card-matching-countdown">
+                    <CardContent className="py-3 px-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                          <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> Finding your driver...
+                        </p>
+                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400" data-testid="text-payment-amount">
+                          ${(prepaidInfo.amount / 100).toFixed(2)} authorized
+                        </span>
+                      </div>
+                      {matchCountdown !== null && (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Time remaining</span>
+                            <span className="font-mono font-bold text-foreground" data-testid="text-match-countdown">
+                              {Math.floor(matchCountdown / 60)}:{String(matchCountdown % 60).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <div className="w-full bg-muted/30 rounded-full h-1.5">
+                            <div
+                              className={`h-1.5 rounded-full transition-all ${matchCountdown < 120 ? 'bg-red-500' : matchCountdown < 300 ? 'bg-yellow-500' : 'bg-blue-500'}`}
+                              style={{ width: `${Math.min(100, (matchCountdown / 1800) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-muted-foreground">
+                        Your card is authorized, not charged. Only charged when matched. Auto-cancels if no match found.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs h-8"
+                        onClick={async () => {
+                          if (activeHop) {
+                            cancelHop.mutate(activeHop.id);
+                          }
+                          setIsMatching(false);
+                          setPrepaidInfo(null);
+                          showFlash("✅", "Cancelled — payment authorization released", "info");
+                        }}
+                        data-testid="button-cancel-matching"
+                      >
+                        Cancel & Release Hold
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {paymentRefunded && !isMatching && (
+                  <Card className="border-green-500/40 bg-gradient-to-br from-green-500/10 to-transparent mb-2" data-testid="card-payment-refunded">
+                    <CardContent className="py-3 px-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-foreground">Payment Released</p>
+                        <p className="text-xs text-muted-foreground">No charge — your authorization was released.</p>
+                      </div>
+                      <button onClick={() => setPaymentRefunded(false)} className="text-muted-foreground hover:text-foreground">
+                        <X className="w-4 h-4" />
+                      </button>
                     </CardContent>
                   </Card>
                 )}

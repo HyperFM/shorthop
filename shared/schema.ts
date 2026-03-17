@@ -43,6 +43,7 @@ export const users = pgTable("users", {
   paymentMethod: text("payment_method"),
   paymentHandle: text("payment_handle"),
   stripeAccountId: text("stripe_account_id"),
+  stripeCustomerId: text("stripe_customer_id"),
   stripePayoutsEnabled: boolean("stripe_payouts_enabled").default(false),
   driverConvoComfort: text("driver_convo_comfort").default("friendly_chat"),
   driverMusicPref: text("driver_music_pref"),
@@ -131,6 +132,12 @@ export const shortHops = pgTable("short_hops", {
   endLat: text("end_lat"),
   endLng: text("end_lng"),
   rideStartedAt: timestamp("ride_started_at"),
+  paymentIntentId: text("payment_intent_id"),
+  paymentStatus: text("payment_status").default("none"),
+  paymentAmountCents: integer("payment_amount_cents"),
+  departureTime: timestamp("departure_time"),
+  arrivalDeadline: timestamp("arrival_deadline"),
+  timeWindowExpiry: timestamp("time_window_expiry"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -376,7 +383,7 @@ export const schedules = pgTable("schedules", {
   active: boolean("active").default(true),
   corridor: text("corridor"),
   anytime: boolean("anytime").default(false),
-  paymentPreference: text("payment_preference").default("card"),
+  paymentPreference: text("payment_preference").default("stripe"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -11,8 +11,8 @@ import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
 import { db } from "./db";
-import { notifications, founderMessages, vipMessages } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { notifications, founderMessages, vipMessages, shortHops, users } from "@shared/schema";
+import { eq, and, lt, isNotNull } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
   if (!user) return user;
@@ -408,7 +408,13 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     
     if (req.user.isDriver) {
-      const availableHops = await storage.getAvailableHops();
+      const allAvailable = await storage.getAvailableHops();
+      const now = new Date();
+      const availableHops = allAvailable.filter(h => {
+        if (h.timeWindowExpiry && new Date(h.timeWindowExpiry) < now) return false;
+        if (h.departureTime && new Date(h.departureTime) > new Date(now.getTime() + 60 * 60000)) return false;
+        return true;
+      });
       const driverHops = await storage.getHopsForDriver(req.user.id);
       const availableIds = new Set(availableHops.map(h => h.id));
 
@@ -523,6 +529,12 @@ export async function registerRoutes(
         startLng: input.startLng || null,
         endLat: input.endLat || null,
         endLng: input.endLng || null,
+        paymentIntentId: input.paymentIntentId || null,
+        paymentStatus: input.paymentStatus || "none",
+        paymentAmountCents: input.paymentAmountCents || null,
+        departureTime: input.departureTime ? new Date(input.departureTime) : null,
+        arrivalDeadline: input.arrivalDeadline ? new Date(input.arrivalDeadline) : null,
+        timeWindowExpiry: input.timeWindowExpiry ? new Date(input.timeWindowExpiry) : null,
       });
       res.status(201).json(hop);
     } catch (err) {
@@ -540,7 +552,26 @@ export async function registerRoutes(
        if (driver.isDisabled) return res.status(403).json({ message: "Account disabled" });
        if (!driver.driverVerified) return res.status(403).json({ message: "Driver not verified" });
        if (!driver.isActive) return res.status(403).json({ message: "Go active first to accept hops" });
+
+       const existingHop = await storage.getHop(Number(req.params.id));
+       if (!existingHop) return res.status(404).json({ message: "Hop not found" });
+
+       if (existingHop.timeWindowExpiry && new Date(existingHop.timeWindowExpiry) < new Date()) {
+         return res.status(400).json({ message: "This hop's time window has expired" });
+       }
+
        const hop = await storage.acceptHop(Number(req.params.id), req.user.id);
+
+       if (hop.paymentIntentId && hop.paymentStatus === "authorized") {
+         try {
+           const stripe = await getUncachableStripeClient();
+           await stripe.paymentIntents.capture(hop.paymentIntentId);
+           await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, hop.id));
+         } catch (captureErr: any) {
+           console.error('Payment capture failed:', captureErr.message);
+         }
+       }
+
        res.json(hop);
     } catch (e) {
        res.status(404).json({ message: "Hop not found" });
@@ -595,8 +626,20 @@ export async function registerRoutes(
   app.post('/api/hops/:id/cancel', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
+      const existingHop = await storage.getHop(Number(req.params.id));
       const hop = await storage.cancelHop(Number(req.params.id), req.user.id);
-      res.json(hop);
+
+      if (existingHop?.paymentIntentId && (existingHop.paymentStatus === "authorized" || existingHop.paymentStatus === "requires_capture")) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          await stripe.paymentIntents.cancel(existingHop.paymentIntentId);
+          await db.update(shortHops).set({ paymentStatus: "refunded" }).where(eq(shortHops.id, hop.id));
+        } catch (cancelErr: any) {
+          console.error('Payment cancel failed:', cancelErr.message);
+        }
+      }
+
+      res.json({ ...hop, paymentRefunded: !!existingHop?.paymentIntentId });
     } catch (e: any) {
       res.status(400).json({ message: e.message || "Failed to cancel hop" });
     }
@@ -2398,7 +2441,87 @@ export async function registerRoutes(
     }
   });
 
-  // Stripe payment routes
+  app.get('/api/driver-availability', async (req, res) => {
+    try {
+      const activeDrivers = await storage.getActiveDrivers();
+      const count = activeDrivers.length;
+      let status: string;
+      let message: string;
+      if (count === 0) {
+        status = "none";
+        message = "No drivers active right now — your request will wait for a match";
+      } else if (count <= 3) {
+        status = "low";
+        message = "Limited drivers — increasing your price may help";
+      } else {
+        status = "good";
+        message = "Drivers nearby — high chance of quick match";
+      }
+      res.json({ count, status, message });
+    } catch {
+      res.json({ count: 0, status: "unknown", message: "Unable to check availability" });
+    }
+  });
+
+  app.post('/api/stripe/authorize-hop', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { distanceMiles, departureTime, arrivalDeadline } = req.body;
+      const distance = Number(distanceMiles);
+      if (!distance || distance <= 0 || distance > 100) {
+        return res.status(400).json({ message: "Invalid distance" });
+      }
+
+      const RIDER_RATE_PER_MILE_CENTS = 100;
+      const amountCents = Math.round(distance * RIDER_RATE_PER_MILE_CENTS);
+      const minChargeCents = 100;
+      const finalAmount = Math.max(amountCents, minChargeCents);
+
+      const user = await storage.getUser(req.user.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const stripe = await getUncachableStripeClient();
+
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          metadata: { userId: String(user.id), username: user.username },
+        });
+        customerId = customer.id;
+        await db.update(users).set({ stripeCustomerId: customerId }).where(eq(users.id, user.id));
+      }
+
+      const depTime = departureTime ? new Date(departureTime) : new Date(Date.now() + 5 * 60000);
+      const arrTime = arrivalDeadline ? new Date(arrivalDeadline) : new Date(depTime.getTime() + 45 * 60000);
+      const windowExpiry = new Date(depTime.getTime() + 30 * 60000);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: finalAmount,
+        currency: 'usd',
+        capture_method: 'manual',
+        customer: customerId,
+        metadata: {
+          userId: String(req.user.id),
+          distanceMiles: String(distance),
+          type: 'hop_authorization',
+        },
+        automatic_payment_methods: { enabled: true },
+      });
+
+      res.json({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+        amount: finalAmount,
+        departureTime: depTime.toISOString(),
+        arrivalDeadline: arrTime.toISOString(),
+        timeWindowExpiry: windowExpiry.toISOString(),
+      });
+    } catch (e: any) {
+      console.error('Stripe authorize-hop error:', e.message);
+      res.status(500).json({ message: "Failed to authorize payment" });
+    }
+  });
+
   app.post('/api/stripe/create-hop-payment', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
@@ -2408,17 +2531,11 @@ export async function registerRoutes(
       if (!distance || distance <= 0 || distance > 100) {
         return res.status(400).json({ message: "Invalid distance" });
       }
-      const activeDrivers = await storage.getActiveDrivers();
-      const earlyNetwork = activeDrivers.length < 50;
 
-      const RIDER_RATE_PER_MILE_CENTS = 300;
+      const RIDER_RATE_PER_MILE_CENTS = 100;
       const amountCents = Math.round(distance * RIDER_RATE_PER_MILE_CENTS);
-      const minChargeCents = 150;
-      const finalAmount = earlyNetwork ? 0 : Math.max(amountCents, minChargeCents);
-
-      if (earlyNetwork) {
-        return res.json({ earlyNetwork: true, message: "Payment deferred until after match (early network period)", amount: 0 });
-      }
+      const minChargeCents = 100;
+      const finalAmount = Math.max(amountCents, minChargeCents);
 
       const stripe = await getUncachableStripeClient();
       const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
@@ -2727,6 +2844,46 @@ export async function registerRoutes(
       res.json({ translated: text, from: from || "en", to });
     }
   });
+
+  setInterval(async () => {
+    try {
+      const expiredHops = await db.select().from(shortHops)
+        .where(and(
+          eq(shortHops.status, "requested"),
+          isNotNull(shortHops.timeWindowExpiry),
+          lt(shortHops.timeWindowExpiry, new Date())
+        ));
+
+      for (const hop of expiredHops) {
+        await db.update(shortHops)
+          .set({ status: "cancelled", paymentStatus: hop.paymentIntentId ? "refunded" : "none" })
+          .where(eq(shortHops.id, hop.id));
+
+        if (hop.paymentIntentId && hop.paymentStatus === "authorized") {
+          try {
+            const stripe = await getUncachableStripeClient();
+            await stripe.paymentIntents.cancel(hop.paymentIntentId);
+          } catch (e: any) {
+            console.error(`Auto-cancel PaymentIntent ${hop.paymentIntentId} failed:`, e.message);
+          }
+        }
+
+        if (hop.walkerId) {
+          await storage.createNotification({
+            userId: hop.walkerId,
+            type: "system",
+            title: "Hop Expired ⏰",
+            message: hop.paymentIntentId
+              ? "Your hop request expired without a match. Your payment authorization has been released — no charge."
+              : "Your hop request expired without a match. Try again when more drivers are available.",
+            isRead: false,
+          });
+        }
+      }
+    } catch (e: any) {
+      console.error('Auto-cancel interval error:', e.message);
+    }
+  }, 60000);
 
   return httpServer;
 }

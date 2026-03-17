@@ -35,7 +35,7 @@ function ScheduleForm({ onSave, initial, onCancel, isLongHop = false }: {
   const [timeEnd, setTimeEnd] = useState(initial?.timeEnd || "08:00");
   const [returnTrip, setReturnTrip] = useState(initial?.returnTrip || false);
   const [anytime, setAnytime] = useState((initial as any)?.anytime || false);
-  const [paymentPreference, setPaymentPreference] = useState((initial as any)?.paymentPreference || "card");
+  const [paymentPreference] = useState("stripe");
 
   const toggleDay = (day: string) => {
     setDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
@@ -159,28 +159,11 @@ function ScheduleForm({ onSave, initial, onCancel, isLongHop = false }: {
         <Switch checked={returnTrip} onCheckedChange={setReturnTrip} data-testid="switch-return-trip" />
       </div>
 
-      <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Preference</p>
-        <div className="flex gap-2">
-          {[
-            { value: "card", label: "Card", icon: "💳" },
-            { value: "cash", label: "Cash", icon: "💵" },
-            { value: "either", label: "Either", icon: "🤝" },
-          ].map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setPaymentPreference(opt.value)}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                paymentPreference === opt.value
-                  ? "bg-primary text-white shadow-md shadow-primary/25"
-                  : "bg-muted/40 text-muted-foreground hover:bg-muted/60"
-              }`}
-              data-testid={`payment-${opt.value}`}
-            >
-              <span>{opt.icon}</span> {opt.label}
-            </button>
-          ))}
+      <div className="flex items-center gap-2 px-2 py-2 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-700/30">
+        <span className="text-base">💳</span>
+        <div>
+          <p className="text-[11px] font-bold text-foreground">Payment via Stripe</p>
+          <p className="text-[10px] text-muted-foreground">All payments are securely processed through Stripe. Only charged when matched.</p>
         </div>
       </div>
 
@@ -404,12 +387,6 @@ export default function SchedulePage() {
                               <span className="text-[10px] text-muted-foreground">{schedule.timeStart}–{schedule.timeEnd}</span>
                             </>
                           )}
-                          {(schedule as any).paymentPreference && (schedule as any).paymentPreference !== "card" && (
-                            <>
-                              <span className="text-[10px] text-muted-foreground">•</span>
-                              <span className="text-[10px] text-muted-foreground">{(schedule as any).paymentPreference === "cash" ? "💵" : "🤝"}</span>
-                            </>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -450,11 +427,6 @@ export default function SchedulePage() {
                               ))}
                             </div>
                           </>
-                        )}
-                        {(schedule as any).paymentPreference && (schedule as any).paymentPreference !== "card" && (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{(schedule as any).paymentPreference === "cash" ? "💵 Cash preferred" : "🤝 Cash or Card"}</span>
-                          </div>
                         )}
                       </div>
                       <div className="flex items-center justify-between">
