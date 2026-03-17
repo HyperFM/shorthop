@@ -10,7 +10,7 @@ import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTr
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useHops, useRequestHop, useCancelHop } from "@/hooks/use-hops";
+import { useHops, useRequestHop, useCancelHop, useAcceptHop } from "@/hooks/use-hops";
 import { useGeolocation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
 import { WelcomeGlobe, hasSeenWelcomeGlobe } from "@/components/WelcomeGlobe";
@@ -298,9 +298,229 @@ function GlowingCarousel({ user }: { user: User }) {
   );
 }
 
+function useReverseGeocode(lat: string | null | undefined, lng: string | null | undefined) {
+  const token = import.meta.env.VITE_MAPBOX_TOKEN;
+  return useQuery<string>({
+    queryKey: ['/reverse-geocode', lat, lng],
+    queryFn: async () => {
+      if (!lat || !lng || !token) return "Unknown location";
+      const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&limit=1&types=address`);
+      const json = await res.json();
+      if (json.features?.length) {
+        const f = json.features[0];
+        const short = f.text + (f.address ? " " + f.address : "");
+        return short || f.place_name?.split(",")[0] || "Unknown location";
+      }
+      return "Unknown location";
+    },
+    enabled: !!lat && !!lng && !!token,
+    staleTime: 60000,
+  });
+}
+
+function calcDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3959;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function hasValidCoords(lat: any, lng: any): boolean {
+  if (!lat || !lng) return false;
+  const la = parseFloat(lat);
+  const ln = parseFloat(lng);
+  return isFinite(la) && isFinite(ln) && la !== 0 && ln !== 0;
+}
+
+function HopRequestCard({ hop, driverLat, driverLng, onNavigate }: {
+  hop: any;
+  driverLat: number | null;
+  driverLng: number | null;
+  onNavigate: (hop: any) => void;
+}) {
+  const acceptHop = useAcceptHop();
+  const hopHasCoords = hasValidCoords(hop.startLat, hop.startLng);
+  const { data: address, isLoading: addrLoading } = useReverseGeocode(
+    hopHasCoords ? hop.startLat : null,
+    hopHasCoords ? hop.startLng : null
+  );
+
+  const distance = (driverLat && driverLng && hopHasCoords)
+    ? calcDistance(driverLat, driverLng, parseFloat(hop.startLat), parseFloat(hop.startLng))
+    : null;
+
+  const handleAccept = () => {
+    acceptHop.mutate(hop.id, {
+      onSuccess: () => {
+        if (hopHasCoords) {
+          onNavigate(hop);
+        } else {
+          showFlash("✅", "Hop accepted! Hopper location not available for navigation.", "success");
+        }
+      },
+    });
+  };
+
+  return (
+    <Card className="border-primary/20" data-testid={`hop-request-${hop.id}`}>
+      <CardContent className="p-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-3 h-3 text-primary shrink-0" />
+              <p className="text-xs font-bold text-foreground truncate" data-testid={`text-hop-address-${hop.id}`}>
+                {addrLoading ? "Locating..." : (address || hop.startLocation)}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-[10px] text-muted-foreground truncate">→ {hop.endLocation}</p>
+              {distance !== null && (
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full shrink-0" data-testid={`text-hop-distance-${hop.id}`}>
+                  {distance < 0.1 ? "< 0.1 mi" : distance.toFixed(1) + " mi"}
+                </span>
+              )}
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="h-7 text-xs rounded-lg bg-primary hover:bg-primary/90 font-bold shrink-0"
+            onClick={handleAccept}
+            disabled={acceptHop.isPending}
+            data-testid={`button-accept-panel-${hop.id}`}
+          >
+            {acceptHop.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Accept"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
+  hop: any;
+  driverLat: number | null;
+  driverLng: number | null;
+  onClose: () => void;
+}) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const { data: address } = useReverseGeocode(hop.startLat, hop.startLng);
+
+  const hopLat = parseFloat(hop.startLat || "0");
+  const hopLng = parseFloat(hop.startLng || "0");
+  const coordsValid = isFinite(hopLat) && isFinite(hopLng) && hopLat !== 0 && hopLng !== 0;
+
+  const distance = (driverLat && driverLng && coordsValid)
+    ? calcDistance(driverLat, driverLng, hopLat, hopLng)
+    : null;
+
+  useEffect(() => {
+    if (!mapContainerRef.current || !driverLat || !driverLng || !coordsValid) return;
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (!token) return;
+
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: "mapbox://styles/mapbox/navigation-night-v1",
+      center: [(driverLng + hopLng) / 2, (driverLat + hopLat) / 2],
+      zoom: 13,
+    });
+    mapRef.current = map;
+
+    map.on("load", async () => {
+      new mapboxgl.Marker({ color: "#22c55e" })
+        .setLngLat([driverLng, driverLat])
+        .setPopup(new mapboxgl.Popup().setText("You"))
+        .addTo(map);
+
+      new mapboxgl.Marker({ color: "#f97316" })
+        .setLngLat([hopLng, hopLat])
+        .setPopup(new mapboxgl.Popup().setText("Hopper Pickup"))
+        .addTo(map);
+
+      try {
+        const res = await fetch(
+          `https://api.mapbox.com/directions/v5/mapbox/driving/${driverLng},${driverLat};${hopLng},${hopLat}?geometries=geojson&overview=full&steps=true&access_token=${token}`
+        );
+        const json = await res.json();
+        if (json.routes?.[0]) {
+          map.addSource("route", {
+            type: "geojson",
+            data: { type: "Feature", properties: {}, geometry: json.routes[0].geometry },
+          });
+          map.addLayer({
+            id: "route",
+            type: "line",
+            source: "route",
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#3b82f6", "line-width": 5, "line-opacity": 0.85 },
+          });
+
+          const coords = json.routes[0].geometry.coordinates;
+          const bounds = coords.reduce(
+            (b: mapboxgl.LngLatBounds, c: [number, number]) => b.extend(c),
+            new mapboxgl.LngLatBounds(coords[0], coords[0])
+          );
+          map.fitBounds(bounds, { padding: 60 });
+        }
+      } catch {}
+    });
+
+    return () => { map.remove(); };
+  }, [driverLat, driverLng, hopLat, hopLng]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-3"
+    >
+      <Card className="border-2 border-blue-400 bg-blue-50/30 dark:bg-blue-950/20 rounded-2xl overflow-hidden" data-testid="card-pickup-navigation">
+        <CardContent className="p-0">
+          <div className="p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <Navigation className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">Navigating to Hopper</p>
+                <p className="text-[10px] text-muted-foreground truncate max-w-[200px]" data-testid="text-nav-address">
+                  {address || hop.startLocation}
+                  {distance !== null && ` · ${distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi`}
+                </p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" className="text-xs rounded-lg" onClick={onClose} data-testid="button-close-nav">
+              <X className="w-3 h-3 mr-1" /> Close
+            </Button>
+          </div>
+          <div ref={mapContainerRef} className="w-full h-[250px]" data-testid="map-pickup-navigation" />
+          <div className="p-3 flex items-center gap-2">
+            <Button
+              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm rounded-xl"
+              onClick={() => {
+                if (hopLat && hopLng) {
+                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${hopLat},${hopLng}&travelmode=driving`, "_blank");
+                }
+              }}
+              data-testid="button-open-maps"
+            >
+              <Navigation className="w-4 h-4 mr-2" />
+              Open in Maps
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 function DriveNowPanel({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const geo = useGeolocation();
+  const [navigatingHop, setNavigatingHop] = useState<any>(null);
 
   const { data: driverStatus } = useQuery<DriverStatus>({
     queryKey: ['/api/driver/status'],
@@ -328,6 +548,37 @@ function DriveNowPanel({ user }: { user: User }) {
   const needsOnboarding = !driverStatus?.vehicleMake && !appStatus;
 
   const availableHops = hops?.filter(h => h.status === 'requested') || [];
+
+  useEffect(() => {
+    if (!geo.permitted) geo.requestPermission();
+  }, [geo.permitted]);
+
+  if (navigatingHop) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-base font-extrabold text-foreground/70 text-center flex-1" data-testid="text-driver-greeting">
+            happy driving,{" "}
+            <span className="text-foreground font-black">{user.username}</span>
+          </p>
+          <a
+            href="tel:8594202312"
+            className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all active:scale-95"
+            title="Call for help: (859) 420-2312"
+            data-testid="button-call-help"
+          >
+            <Phone className="w-5 h-5" />
+          </a>
+        </div>
+        <PickupNavigationView
+          hop={navigatingHop}
+          driverLat={geo.latitude}
+          driverLng={geo.longitude}
+          onClose={() => setNavigatingHop(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -449,17 +700,13 @@ function DriveNowPanel({ user }: { user: User }) {
           ) : (
             <div className="space-y-1.5">
               {availableHops.map((hop) => (
-                <Card key={hop.id} className="border-primary/20" data-testid={`hop-request-${hop.id}`}>
-                  <CardContent className="p-2.5 flex items-center justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-foreground truncate">{hop.startLocation}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">→ {hop.endLocation}</p>
-                    </div>
-                    <Button size="sm" className="h-7 text-xs rounded-lg bg-primary hover:bg-primary/90 font-bold shrink-0" data-testid={`button-accept-panel-${hop.id}`}>
-                      Accept
-                    </Button>
-                  </CardContent>
-                </Card>
+                <HopRequestCard
+                  key={hop.id}
+                  hop={hop}
+                  driverLat={geo.latitude}
+                  driverLng={geo.longitude}
+                  onNavigate={setNavigatingHop}
+                />
               ))}
             </div>
           )}
@@ -473,9 +720,14 @@ function DriveNowPanel({ user }: { user: User }) {
 
 const AUTO_NOTIF_KEY = "sh-driver-auto-notify";
 
+const DETOUR_DISMISS_KEY = "sh-detour-notice-dismissed";
+
 function DriverAutoNotificationsEffect({ hopsCount }: { hopsCount: number }) {
   const [enabled, setEnabled] = useState(() => {
     try { return localStorage.getItem(AUTO_NOTIF_KEY) === "true"; } catch { return false; }
+  });
+  const [detourDismissed, setDetourDismissed] = useState(() => {
+    try { return localStorage.getItem(DETOUR_DISMISS_KEY) === "true"; } catch { return false; }
   });
   const prevCountRef = useRef(hopsCount);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -513,19 +765,29 @@ function DriverAutoNotificationsEffect({ hopsCount }: { hopsCount: number }) {
     prevCountRef.current = hopsCount;
   }, [hopsCount, enabled]);
 
+  if (detourDismissed) return null;
+
   return (
-    <>
-      <Card className="border-border/50 bg-blue-50/30 dark:bg-blue-950/10 rounded-2xl" data-testid="card-detour-notice">
-        <CardContent className="p-3">
-          <div className="flex items-start gap-2.5">
-            <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0">💡</div>
-            <p className="text-[10px] leading-relaxed text-muted-foreground">
-              <span className="font-semibold text-foreground">Detours increase your chances of getting a hopper</span> along your route. You can take small detours and still head in the same direction—more flexibility means more hops!
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </>
+    <Card className="border-border/50 bg-blue-50/30 dark:bg-blue-950/10 rounded-2xl" data-testid="card-detour-notice">
+      <CardContent className="p-3">
+        <div className="flex items-start gap-2.5">
+          <div className="w-6 h-6 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0">💡</div>
+          <p className="text-[10px] leading-relaxed text-muted-foreground flex-1">
+            <span className="font-semibold text-foreground">Detours increase your chances of getting a hopper</span> along your route. You can take small detours and still head in the same direction—more flexibility means more hops!
+          </p>
+          <button
+            onClick={() => {
+              setDetourDismissed(true);
+              try { localStorage.setItem(DETOUR_DISMISS_KEY, "true"); } catch {}
+            }}
+            className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            data-testid="button-dismiss-detour"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
