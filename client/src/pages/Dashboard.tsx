@@ -235,10 +235,6 @@ export default function Dashboard() {
         </div>
 
         {activeTab === "driver" && (
-          <PricingPreferences user={user} activeTab={activeTab} />
-        )}
-
-        {activeTab === "driver" && (
           <Card className="border-border/40" data-testid="card-tailor-ride-style">
             <CardContent className="py-3 px-4 space-y-3">
               <div className="flex items-center gap-2.5">

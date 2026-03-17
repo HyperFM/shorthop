@@ -529,9 +529,9 @@ export default function DriverDashboard({ user }: { user: User }) {
           )}
 
           <div className="space-y-4">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              🗺️ Available Hop Requests
-            </h2>
+            <p className="text-sm font-bold text-muted-foreground flex items-center gap-1.5">
+              ⚡ InstaHop Requests
+            </p>
             
             {availableHops.length === 0 ? (
               <Card className="border-2 border-dashed border-secondary/20 bg-gradient-to-b from-secondary/5 to-transparent">
