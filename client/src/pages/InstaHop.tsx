@@ -365,6 +365,25 @@ function HopRequestCard({ hop, driverLat, driverLng, onNavigate }: {
     });
   };
 
+  const bearing = (driverLat && driverLng && hopHasCoords)
+    ? (() => {
+        const dLng = (parseFloat(hop.startLng) - driverLng) * Math.PI / 180;
+        const lat1 = driverLat * Math.PI / 180;
+        const lat2 = parseFloat(hop.startLat) * Math.PI / 180;
+        const y = Math.sin(dLng) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+        const deg = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        if (deg < 45 || deg >= 315) return "North";
+        if (deg < 135) return "East";
+        if (deg < 225) return "South";
+        return "West";
+      })()
+    : null;
+
+  const timeRemaining = hop.timeWindowExpiry
+    ? Math.max(0, Math.floor((new Date(hop.timeWindowExpiry).getTime() - Date.now()) / 60000))
+    : null;
+
   return (
     <Card className="border-primary/20" data-testid={`hop-request-${hop.id}`}>
       <CardContent className="p-2.5">
@@ -381,6 +400,18 @@ function HopRequestCard({ hop, driverLat, driverLng, onNavigate }: {
               {distance !== null && (
                 <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full shrink-0" data-testid={`text-hop-distance-${hop.id}`}>
                   {distance < 0.1 ? "< 0.1 mi" : distance.toFixed(1) + " mi"}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 mt-1">
+              {bearing && (
+                <span className="text-[9px] font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full" data-testid={`text-hop-direction-${hop.id}`}>
+                  ↑ Ahead of you · {bearing}
+                </span>
+              )}
+              {timeRemaining !== null && timeRemaining > 0 && (
+                <span className="text-[9px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">
+                  <Clock className="w-2.5 h-2.5 inline mr-0.5" />{timeRemaining}m left
                 </span>
               )}
             </div>
@@ -904,6 +935,7 @@ function InstaHopView({ user }: { user: User }) {
   } | null>(null);
   const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
   const [paymentRefunded, setPaymentRefunded] = useState(false);
+  const [departureMinutes, setDepartureMinutes] = useState(5);
 
   const { data: driverAvailability } = useQuery<{ count: number; status: string; message: string }>({
     queryKey: ['/api/driver-availability'],
@@ -1026,8 +1058,8 @@ function InstaHopView({ user }: { user: User }) {
       try {
         const authRes = await apiRequest("POST", "/api/stripe/authorize-hop", {
           distanceMiles,
-          departureTime: new Date(Date.now() + 5 * 60000).toISOString(),
-          arrivalDeadline: new Date(Date.now() + 50 * 60000).toISOString(),
+          departureTime: new Date(Date.now() + departureMinutes * 60000).toISOString(),
+          arrivalDeadline: new Date(Date.now() + (departureMinutes + 45) * 60000).toISOString(),
         });
         const authData = await authRes.json();
 
@@ -1323,6 +1355,30 @@ function InstaHopView({ user }: { user: User }) {
                       />
                     </div>
                   </div>
+
+                  {mode === "hop" && !isMatching && (
+                    <div className="flex items-center gap-2 px-1">
+                      <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-[11px] text-muted-foreground whitespace-nowrap">Depart in</span>
+                      <div className="flex gap-1">
+                        {[5, 10, 15, 30].map(min => (
+                          <button
+                            key={min}
+                            type="button"
+                            onClick={() => setDepartureMinutes(min)}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                              departureMinutes === min
+                                ? "bg-primary text-white shadow-sm"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                            }`}
+                            data-testid={`button-depart-${min}`}
+                          >
+                            {min}m
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2">
                     <motion.button

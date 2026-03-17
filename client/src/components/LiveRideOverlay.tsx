@@ -91,6 +91,12 @@ export function LiveRideOverlay({ driverName, destination, startLocation, rideSt
               <span className="truncate max-w-[120px]">{destination}</span>
             </div>
           </div>
+
+          <div className="mt-2 px-2 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200/30 dark:border-blue-700/20">
+            <p className="text-[10px] text-blue-700 dark:text-blue-400 font-medium" data-testid="text-dropoff-message">
+              Your driver will take you as close as possible along their route
+            </p>
+          </div>
         </CardContent>
       </Card>
     </motion.div>

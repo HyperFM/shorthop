@@ -1034,6 +1034,30 @@ export default function Admin() {
   );
 }
 
+type TransactionData = {
+  id: number;
+  type: "hop" | "donation";
+  date: string | null;
+  grossCents: number;
+  driverPayoutCents: number;
+  platformCutCents: number;
+  tipCents: number;
+  paymentStatus: string;
+  distance: number;
+  from: string | null;
+  to: string | null;
+};
+
+type TransactionSummary = {
+  totalGross: number;
+  totalDriverPayout: number;
+  totalPlatform: number;
+  totalTips: number;
+  totalDonations: number;
+  totalCashouts: number;
+  hopCount: number;
+};
+
 function PaymentsTab() {
   const { data: balance } = useQuery<{ available: { amount: number; currency: string }[]; pending: { amount: number; currency: string }[] }>({
     queryKey: ["/api/stripe/balance"],
@@ -1041,9 +1065,13 @@ function PaymentsTab() {
   const { data: account } = useQuery<{ id: string; payoutsEnabled: boolean; chargesEnabled: boolean; externalAccounts: { id: string; type: string; last4: string; bank_name?: string; brand?: string }[] }>({
     queryKey: ["/api/stripe/account"],
   });
+  const { data: txData } = useQuery<{ transactions: TransactionData[]; summary: TransactionSummary }>({
+    queryKey: ["/api/admin/transactions"],
+  });
 
   const availableUsd = balance?.available?.find(b => b.currency === "usd")?.amount || 0;
   const pendingUsd = balance?.pending?.find(b => b.currency === "usd")?.amount || 0;
+  const summary = txData?.summary;
 
   return (
     <div className="space-y-4">
@@ -1060,11 +1088,72 @@ function PaymentsTab() {
               <p className="text-2xl font-black text-foreground" data-testid="text-stripe-pending">${(pendingUsd / 100).toFixed(2)}</p>
             </div>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-3">
-            This is your platform earnings from hop payments. Stripe automatically deposits to your linked bank account.
-          </p>
         </CardContent>
       </Card>
+
+      {summary && (
+        <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-transparent">
+          <CardContent className="p-4">
+            <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">Revenue Summary</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-2.5 rounded-xl bg-muted/40">
+                <p className="text-[10px] text-muted-foreground">Gross Revenue</p>
+                <p className="text-lg font-black text-foreground" data-testid="text-total-gross">${((summary.totalGross) / 100).toFixed(2)}</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-muted/40">
+                <p className="text-[10px] text-muted-foreground">ShortHop Cut</p>
+                <p className="text-lg font-black text-green-600" data-testid="text-total-platform">${((summary.totalPlatform) / 100).toFixed(2)}</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-muted/40">
+                <p className="text-[10px] text-muted-foreground">Driver Payouts</p>
+                <p className="text-lg font-black text-orange-600" data-testid="text-total-driver">${((summary.totalDriverPayout) / 100).toFixed(2)}</p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-muted/40">
+                <p className="text-[10px] text-muted-foreground">Tips + Donations</p>
+                <p className="text-lg font-black text-blue-600" data-testid="text-total-tips">${((summary.totalTips + summary.totalDonations) / 100).toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">
+              <span>{summary.hopCount} completed hops</span>
+              <span>•</span>
+              <span>${(summary.totalCashouts).toFixed(2)} cashed out by drivers</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {txData && txData.transactions.length > 0 && (
+        <Card className="border-border/50">
+          <CardContent className="p-4">
+            <p className="text-xs font-bold text-foreground mb-3">Transaction Ledger</p>
+            <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+              {txData.transactions.slice(0, 50).map((tx) => (
+                <div key={`${tx.type}-${tx.id}`} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-xs" data-testid={`transaction-${tx.type}-${tx.id}`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${tx.type === "hop" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"}`}>
+                        {tx.type === "hop" ? "HOP" : "DONATION"}
+                      </span>
+                      <span className="text-muted-foreground truncate">{tx.from} → {tx.to}</span>
+                    </div>
+                    {tx.date && (
+                      <p className="text-[9px] text-muted-foreground mt-0.5">{new Date(tx.date).toLocaleDateString()} {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0 ml-2">
+                    <p className="font-bold text-foreground">${(tx.grossCents / 100).toFixed(2)}</p>
+                    {tx.type === "hop" && (
+                      <p className="text-[9px] text-muted-foreground">
+                        <span className="text-green-600">${(tx.platformCutCents / 100).toFixed(2)}</span> / <span className="text-orange-600">${(tx.driverPayoutCents / 100).toFixed(2)}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-border/50">
         <CardContent className="p-4">
@@ -1106,15 +1195,19 @@ function PaymentsTab() {
           <div className="space-y-2 text-xs text-muted-foreground">
             <div className="flex items-start gap-2">
               <span className="text-green-500 mt-0.5">1.</span>
-              <p>Hopper requests a ride → pays $2.50/mile via Stripe</p>
+              <p>Hopper requests a ride → payment authorized via Stripe (held, not charged)</p>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-green-500 mt-0.5">2.</span>
-              <p>Driver earns 1 Wheel/mile ($1 value) → cashes out to their payment method</p>
+              <p>Driver accepts → payment captured. Driver earns 1 Wheel/mile ($1 value)</p>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-green-500 mt-0.5">3.</span>
-              <p>ShortHop keeps $1.50/mile → deposited to your bank automatically</p>
+              <p>ShortHop platform cut deposited to your bank automatically</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">4.</span>
+              <p>No match within time window → auto-cancel, payment released, no charge</p>
             </div>
           </div>
         </CardContent>

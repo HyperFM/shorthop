@@ -11,8 +11,8 @@ import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
 import { db } from "./db";
-import { notifications, founderMessages, vipMessages, shortHops, users } from "@shared/schema";
-import { eq, and, lt, isNotNull } from "drizzle-orm";
+import { notifications, founderMessages, vipMessages, shortHops, users, donations } from "@shared/schema";
+import { eq, and, lt, isNotNull, desc } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
   if (!user) return user;
@@ -1837,6 +1837,80 @@ export async function registerRoutes(
       res.json(logs);
     } catch {
       res.status(500).json({ message: "Failed to get logs" });
+    }
+  });
+
+  app.get('/api/admin/transactions', requireAdmin, async (_req, res) => {
+    try {
+      const completedHops = await db.select().from(shortHops)
+        .where(eq(shortHops.status, "completed"))
+        .orderBy(desc(shortHops.createdAt))
+        .limit(100);
+
+      const allCashouts = await storage.getAllCashouts();
+      const allDonations = await db.select().from(donations).orderBy(desc(donations.createdAt)).limit(50);
+
+      const PLATFORM_RATE_PER_MILE = 150;
+      const DRIVER_RATE_PER_MILE = 100;
+
+      const hopTransactions = completedHops.map(hop => {
+        const miles = parseFloat(hop.distanceMiles?.toString() || "1");
+        const grossCents = hop.paymentAmountCents || Math.round(miles * (PLATFORM_RATE_PER_MILE + DRIVER_RATE_PER_MILE));
+        const driverPayoutCents = Math.round(miles * DRIVER_RATE_PER_MILE);
+        const platformCutCents = grossCents - driverPayoutCents;
+        return {
+          id: hop.id,
+          type: "hop" as const,
+          date: hop.createdAt,
+          grossCents,
+          driverPayoutCents,
+          platformCutCents,
+          tipCents: hop.tipCents || 0,
+          paymentStatus: hop.paymentStatus || "none",
+          distance: miles,
+          from: hop.startLocation,
+          to: hop.endLocation,
+        };
+      });
+
+      const donationTransactions = allDonations.map((d: any) => ({
+        id: d.id,
+        type: "donation" as const,
+        date: d.createdAt,
+        grossCents: d.amountCents,
+        driverPayoutCents: 0,
+        platformCutCents: d.amountCents,
+        tipCents: 0,
+        paymentStatus: "captured",
+        distance: 0,
+        from: d.message || "Community donation",
+        to: "ShortHop",
+      }));
+
+      const totalGross = hopTransactions.reduce((s, t) => s + t.grossCents, 0);
+      const totalDriverPayout = hopTransactions.reduce((s, t) => s + t.driverPayoutCents, 0);
+      const totalPlatform = hopTransactions.reduce((s, t) => s + t.platformCutCents, 0);
+      const totalTips = hopTransactions.reduce((s, t) => s + t.tipCents, 0);
+      const totalDonations = donationTransactions.reduce((s, t) => s + t.grossCents, 0);
+      const totalCashoutsAmount = allCashouts.reduce((s, c) => s + (c.amount || 0), 0);
+
+      res.json({
+        transactions: [...hopTransactions, ...donationTransactions].sort((a, b) =>
+          new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()
+        ),
+        summary: {
+          totalGross,
+          totalDriverPayout,
+          totalPlatform,
+          totalTips,
+          totalDonations,
+          totalCashouts: totalCashoutsAmount,
+          hopCount: hopTransactions.length,
+        },
+      });
+    } catch (e: any) {
+      console.error('Admin transactions error:', e.message);
+      res.status(500).json({ message: "Failed to get transactions" });
     }
   });
 

@@ -1,0 +1,395 @@
+# 🚀 SHORTHOP FINAL BUILD + VERIFICATION SCRIPT (COMPLETE)
+
+You are completing the ShortHop system to a fully functional, real-world ready state.
+
+This includes:
+- Matching system  
+- Flex Range system  
+- Prepaid rides  
+- Time window + auto cancel  
+- Driver availability  
+- Notifications  
+- Chat system  
+- UI/UX polish  
+- Payment routing + revenue handling  
+
+Follow ALL build instructions AND ensure ALL verification checks pass.
+
+DO NOT skip steps. DO NOT redesign unrelated UI.
+
+---
+
+# 🧠 CORE MATCHING SYSTEM (BUILD + VERIFY)
+
+### BUILD:
+- Drivers ONLY see hoppers going same direction  
+- Filter out off-route matches unless detours enabled  
+- Show label: “Ahead of you”  
+- Hopper sees:  
+  “Driver will take you as close as possible along their route”  
+
+### VERIFY:
+☐ Drivers only see aligned routes  
+☐ No off-route matches (unless allowed)  
+☐ “Ahead of you” appears  
+☐ Drop-off messaging is accurate  
+
+---
+
+# ⚙️ FLEX RANGE SYSTEM (BUILD + VERIFY)
+
+## BUILD:
+
+### Hopper:
+- Section: “Flex Range”  
+- Slider:  
+  “How far are you willing to walk?”  
+  Options: 0, 0.25, 0.5, 1 mile  
+
+### Driver:
+- Section: “Flex Range”  
+- Toggle: “Allow detours”  
+
+IF OFF:
+- Lock detour distance = 0  
+- Disable slider  
+
+IF ON:
+- Enable slider:  
+  “How far are you willing to detour?”  
+
+---
+
+## VERIFY:
+
+☐ Hopper slider exists + works  
+☐ Driver toggle exists  
+
+Detour OFF:
+☐ Slider disabled  
+☐ Only on-route matches  
+
+Detour ON:
+☐ Slider active  
+☐ Off-route matches allowed within range  
+
+---
+
+# 🔄 MATCHING LOGIC (BUILD + VERIFY)
+
+### BUILD:
+- Match valid ONLY if:  
+  - Hopper range allows  
+  - Driver range allows  
+
+- Prioritize:  
+  1. Zero deviation  
+  2. Lowest deviation  
+
+---
+
+### VERIFY:
+☐ Matches respect BOTH ranges  
+☐ Closest matches prioritized  
+☐ No random matches  
+
+---
+
+# 🎛️ TOGGLES (BUILD + VERIFY)
+
+### BUILD:
+
+- Shared Commute toggle:  
+  “Shared commutes increase your chances of being paired”  
+
+- Mode Lock toggle:  
+  - Disable Driver OR Hopper mode  
+
+---
+
+### VERIFY:
+
+☐ Shared commute toggle visible + message appears  
+☐ Mode lock works  
+☐ Dual switching prevented  
+
+---
+
+# 🗺️ DRIVER MAP EXPERIENCE (BUILD + VERIFY)
+
+### BUILD:
+- Show ONLY:  
+  - Hoppers ahead  
+  - On-route  
+
+- Show:  
+  - Distance  
+  - Direction  
+
+- Insta-Hop:  
+  - Real-time updates while driving  
+
+---
+
+### VERIFY:
+
+☐ Only valid hoppers appear  
+☐ Direction + distance visible  
+☐ Real-time updates work  
+
+---
+
+# 🔔 NOTIFICATION SYSTEM (BUILD + VERIFY)
+
+### BUILD:
+
+User:
+- Notifications on app open / connection  
+- Include:  
+  - Message  
+  - Reactions (👍 ❤️ 😢 😮 😡)  
+  - Reply field  
+
+Admin:
+- View all notifications  
+- See reactions + replies  
+- Respond  
+
+- Confirm button:  
+  - Fade animation  
+  - Logs interaction  
+
+- Founder-only permissions:  
+  - Interactive notifications  
+
+---
+
+### VERIFY:
+
+☐ Notifications appear correctly  
+☐ Reactions work  
+☐ Replies work  
+☐ Admin sees all interactions  
+☐ Confirm button works  
+☐ Founder restrictions enforced  
+
+---
+
+# 💬 CHAT SYSTEM (BUILD + VERIFY)
+
+### BUILD:
+- Group chats + DMs:  
+  - Reactions (👍 ❤️ 😢 😮 😡)  
+  - Reaction counts  
+  - Edit messages  
+
+---
+
+### VERIFY:
+
+☐ Reactions work in chats  
+☐ Counts update  
+☐ Edits update live  
+
+---
+
+# 📅 RIDE PLANNER (BUILD + VERIFY)
+
+### BUILD:
+- “Anytime” button:  
+  - No fixed time required  
+  - Wait until matched  
+
+- Payment preference:  
+  - Default: “Free to $1”  
+
+---
+
+### VERIFY:
+
+☐ Anytime option works  
+☐ Requests stay active  
+☐ Payment preference saved  
+
+---
+
+# 💳 PREPAID SYSTEM (BUILD + VERIFY)
+
+### BUILD:
+
+- Require payment BEFORE submission  
+- Show:  
+  “This amount will be held until matched”  
+
+- Payment flow:
+  - Authorized immediately  
+  - Captured ONLY on driver accept  
+
+- Block $0 requests  
+
+---
+
+### VERIFY:
+
+☐ Cannot submit without payment  
+☐ Payment is authorized only (not captured immediately)  
+☐ Captured ONLY after driver accepts  
+☐ Refund issued if no match  
+
+---
+
+# 💰 PAYMENT ROUTING + REVENUE CONTROL (CRITICAL)
+
+### BUILD:
+
+ALL financial flows MUST route correctly:
+
+- Ride payments (including platform cut) →  
+  MUST be routed to the account linked to HyperFM Admin
+
+- ShortHop platform cut →  
+  Automatically separated and sent to HyperFM Admin account  
+
+- Support / donation payments →  
+  MUST route directly to HyperFM Admin account  
+
+- Ensure:
+  - No funds are sent to unintended accounts  
+  - No fallback or default accounts override this  
+
+- Admin panel must:
+  - Display all transactions  
+  - Show:
+    - Gross amount  
+    - Driver payout  
+    - ShortHop cut  
+    - Donations  
+
+---
+
+### VERIFY:
+
+☐ All ride payments route correctly  
+☐ Platform cut is correctly separated  
+☐ Donations go to HyperFM Admin account  
+☐ No misrouted payments  
+☐ Admin dashboard reflects all transactions accurately  
+
+---
+
+# ⏱️ TIME WINDOW + AUTO CANCEL (BUILD + VERIFY)
+
+### BUILD:
+
+User selects:
+- Departure time  
+- Optional arrival time  
+
+System:
+- Creates valid time window  
+
+If no match:
+→ Auto cancel  
+→ Auto refund  
+
+---
+
+### VERIFY:
+
+☐ Time required before submit  
+☐ Countdown visible  
+☐ Auto cancel works  
+☐ Refund works  
+☐ No late matches allowed  
+
+---
+
+# 🚗 DRIVER AVAILABILITY (BUILD + VERIFY)
+
+### BUILD:
+
+Before request:
+- Show:
+  - “X drivers nearby”  
+  OR  
+  - Availability status  
+
+- Smart messages:
+  - No drivers  
+  - Low availability  
+  - High availability  
+
+---
+
+### VERIFY:
+
+☐ Availability shows correctly  
+☐ Messages adjust dynamically  
+
+---
+
+# 🧪 SMART TIPS (BUILD + VERIFY)
+
+### BUILD:
+- Show under Flex Range  
+
+---
+
+### VERIFY:
+
+☐ Tips appear  
+☐ Tips change based on conditions  
+
+---
+
+# 🎨 UI / UX QUALITY (VERIFY ONLY)
+
+☐ Clean layout  
+☐ No clutter  
+☐ Smooth toggles  
+☐ No duplicate controls  
+
+---
+
+# 🚧 FUTURE PLACEHOLDER
+
+☐ ID verification placeholder exists  
+
+---
+
+# 🔥 FINAL REAL-WORLD TEST (REQUIRED)
+
+### DRIVER FLOW:
+☐ Open app  
+☐ See valid hopper  
+☐ Accept ride  
+☐ Complete ride smoothly  
+
+---
+
+### HOPPER FLOW:
+☐ Request ride  
+☐ Pay  
+☐ Get matched  
+☐ Understand pickup + drop-off  
+
+---
+
+# 🚫 DO NOT BREAK
+
+- Matching logic  
+- Flex Range system  
+- Insta-Hop  
+
+---
+
+# ✅ FINAL REQUIREMENT
+
+System is ONLY considered complete when:
+- ALL checkboxes pass  
+- Payment routing is confirmed accurate  
+- Real-world test succeeds  
+
+---
+
+END OF S
