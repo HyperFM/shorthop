@@ -65,6 +65,8 @@ export const users = pgTable("users", {
   allowFreeRides: boolean("allow_free_rides").default(false),
   allowFollowerFreeRides: boolean("allow_follower_free_rides").default(false),
   stripeSetupCompleted: boolean("stripe_setup_completed").default(false),
+  hopperFlexRange: text("hopper_flex_range").default("0.25"),
+  driverFlexRange: text("driver_flex_range").default("0.5"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

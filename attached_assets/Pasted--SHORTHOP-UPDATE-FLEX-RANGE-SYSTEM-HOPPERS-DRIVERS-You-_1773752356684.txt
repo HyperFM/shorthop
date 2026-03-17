@@ -1,0 +1,170 @@
+# SHORTHOP UPDATE — FLEX RANGE SYSTEM (HOPPERS + DRIVERS)
+
+You are adding a new system called Flex Range to improve matching, efficiency, and user control.  
+This system applies to BOTH hoppers and drivers.
+
+Follow these instructions exactly.
+
+---
+
+## 1. CREATE NEW SECTION: FLEX RANGE
+
+Add a section called:
+
+Flex Range
+
+This section must exist in:
+- Hopper preferences (Tailor section— under ride style)
+- Drive preferences (Tailor section — under detours when toggle on )
+
+---
+
+## 2. HOPPER FLEX RANGE
+
+### UI ELEMENT:
+- Add a slider labeled:
+
+“How far are you willing to walk?”
+
+### OPTIONS:
+- 0 miles
+- 0.25 miles
+- 0.5 miles
+- 1 mile
+
+### FUNCTION:
+- This value determines how far a hopper can be from:
+  - Driver route
+  - Pickup point
+
+- If set to 0:
+  - Hopper must be directly on route
+
+---
+
+## 3. DRIVER FLEX RANGE
+
+### STEP 1: DETOUR TOGGLE
+
+Label:
+“Allow detours”
+
+#### IF TOGGLED OFF:
+- Driver ONLY matches with hoppers directly on route
+- Set detour distance = 0
+- Disable slider
+
+#### IF TOGGLED ON:
+- Enable detour slider
+
+---
+
+### STEP 2: DETOUR SLIDER
+
+Label:
+“How far are you willing to detour?”
+
+### OPTIONS:
+- 0 miles
+- 0.25 miles
+- 0.5 miles
+- 1 mile+
+
+### FUNCTION:
+- Determines maximum distance driver can leave route for:
+  - Pickup
+  - Drop-off
+
+---
+
+## 4. MATCHING LOGIC UPDATE
+
+Update matching system:
+
+### RULE 1:
+Match is valid ONLY if:
+- Hopper walking distance ≤ hopper Flex Range
+AND
+- Driver detour distance ≤ driver Flex Range
+
+---
+
+### RULE 2:
+If driver detours = OFF:
+- ONLY match hoppers within direct route proximity
+
+---
+
+### RULE 3:
+System prioritizes:
+1. Zero detour matches
+2. Lowest combined deviation (driver + hopper)
+
+---
+
+### RULE 4:
+If no drivers available:
+- Expand matches gradually within allowed ranges
+
+---
+
+## 5. SMART TIPS SYSTEM
+
+Add dynamic text under Flex Range called:
+
+Smart Tips
+
+---
+
+### HOPPER SMART TIPS (examples):
+
+- “You’re near a main road—great spot for quick matches”
+- “Increase your walking range to get matched faster”
+- “This area may have fewer drivers”
+
+---
+
+### DRIVER SMART TIPS (examples):
+
+- “Short detours can increase your earnings”
+- “Most riders nearby are within 0.25 miles”
+- “You’re on a high-demand route”
+
+---
+
+### LOGIC:
+- Tips should update based on:
+  - Location type (main road vs neighborhood)
+  - Nearby activity
+  - Match success likelihood
+
+---
+
+## 6. UI RULES
+
+- Keep layout clean and minimal
+- Show slider ONLY when relevant
+- Animate slider activation smoothly when toggle is turned ON
+- Smart Tips should feel helpful, not overwhelming
+
+---
+
+## 7. IMPORTANT BEHAVIOR
+
+- Drivers with detours OFF:
+  - System should prioritize hoppers willing to walk
+
+- Hoppers with low walking range:
+  - System should prioritize drivers with detours ON
+
+---
+
+## 8. DO NOT BREAK EXISTING FEATURES
+
+- Maintain current routing system
+- Integrate Flex Range INTO existing matching logic
+- Do not redesign unrelated UI
+
+---
+
+END OF UPDATE

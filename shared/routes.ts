@@ -269,6 +269,9 @@ export const api = {
       input: z.object({
         rideVibe: z.enum(["quiet", "friendly_chat", "community"]).optional(),
         tier: z.enum(["standard", "flexhop"]).optional(),
+        hopperFlexRange: z.enum(["0", "0.25", "0.5", "1"]).optional(),
+        driverFlexRange: z.enum(["0", "0.25", "0.5", "1"]).optional(),
+        isFlexibleDriver: z.boolean().optional(),
       }),
       responses: {
         200: z.custom<typeof users.$inferSelect>(),

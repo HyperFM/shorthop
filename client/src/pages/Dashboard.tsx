@@ -6,7 +6,7 @@ import DriverDashboard from "./DriverDashboard";
 import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
-import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield } from "lucide-react";
+import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { RideVibeSelector } from "@/components/RideVibeSelector";
 import { PricingPreferences } from "@/components/PricingPreferences";
+import { Slider } from "@/components/ui/slider";
 import { getDriverSoundDuration, setDriverSoundDuration, type DriverSoundDuration, playDriverApproachingSound } from "@/lib/sounds";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -64,6 +65,9 @@ export default function Dashboard() {
   const [subModal, setSubModal] = useState<"flex_hop" | "power_hop" | null>(null);
   const [soundDuration, setSoundDuration] = useState<DriverSoundDuration>(getDriverSoundDuration);
   const [rideVibe, setRideVibe] = useState(user?.rideVibe || "friendly_chat");
+  const [hopperFlexRange, setHopperFlexRange] = useState(user?.hopperFlexRange || "0.25");
+  const [driverFlexRange, setDriverFlexRange] = useState(user?.driverFlexRange || "0.5");
+  const [detourEnabled, setDetourEnabled] = useState(user?.isFlexibleDriver || false);
   const [prefs, setPrefs] = useState<NotificationPreferences>(loadPreferences);
   const [autoAlerts, setAutoAlerts] = useState(() => {
     try { return localStorage.getItem("sh-driver-auto-notify") === "true"; } catch { return false; }
@@ -83,6 +87,12 @@ export default function Dashboard() {
   }, [user?.rideVibe]);
 
   useEffect(() => {
+    if (user?.hopperFlexRange) setHopperFlexRange(user.hopperFlexRange);
+    if (user?.driverFlexRange) setDriverFlexRange(user.driverFlexRange);
+    if (user?.isFlexibleDriver !== undefined) setDetourEnabled(user.isFlexibleDriver || false);
+  }, [user?.hopperFlexRange, user?.driverFlexRange, user?.isFlexibleDriver]);
+
+  useEffect(() => {
     savePreferences(prefs);
   }, [prefs]);
 
@@ -100,7 +110,7 @@ export default function Dashboard() {
   }
 
   const updatePreferences = useMutation({
-    mutationFn: async (updates: { rideVibe?: string }) => {
+    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean }) => {
       const res = await apiRequest(api.profile.updatePreferences.method, api.profile.updatePreferences.path, updates);
       return res.json();
     },
@@ -237,6 +247,57 @@ export default function Dashboard() {
           </button>
         </div>
 
+        {activeTab === "hopper" && (
+          <Card className="border-border/40" data-testid="card-tailor-hopper-flex">
+            <CardContent className="py-3 px-4 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
+                <p className="text-xs font-black text-foreground">Flex Range</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium text-foreground mb-1">How far are you willing to walk?</p>
+                <p className="text-[10px] text-muted-foreground mb-3">
+                  {hopperFlexRange === "0" ? "You must be directly on route" : `Up to ${hopperFlexRange} mile${hopperFlexRange !== "1" && hopperFlexRange !== "0" ? "s" : ""}`}
+                </p>
+                <Slider
+                  data-testid="slider-hopper-flex-range"
+                  min={0}
+                  max={3}
+                  step={1}
+                  value={[["0", "0.25", "0.5", "1"].indexOf(hopperFlexRange)]}
+                  onValueChange={([idx]) => {
+                    const val = ["0", "0.25", "0.5", "1"][idx];
+                    setHopperFlexRange(val);
+                    updatePreferences.mutate({ hopperFlexRange: val as any });
+                  }}
+                />
+                <div className="flex justify-between mt-1">
+                  {["0", "0.25", "0.5", "1"].map((v) => (
+                    <span key={v} className={`text-[9px] ${hopperFlexRange === v ? "text-blue-500 font-bold" : "text-muted-foreground"}`}>
+                      {v === "0" ? "0 mi" : v === "1" ? "1 mi" : `${v} mi`}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="border-t border-border/20 pt-2">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Lightbulb className="w-3 h-3 text-yellow-500 shrink-0" />
+                  <p className="text-[10px] font-bold text-foreground">Smart Tips</p>
+                </div>
+                <p className="text-[9px] text-muted-foreground leading-relaxed" data-testid="text-hopper-smart-tip">
+                  {hopperFlexRange === "0"
+                    ? "You'll only match with drivers passing right by you. Try increasing your range for faster matches."
+                    : hopperFlexRange === "0.25"
+                    ? "Great for main roads — short walk for a quick pickup."
+                    : hopperFlexRange === "0.5"
+                    ? "Nice balance — you'll see more available drivers nearby."
+                    : "Maximum flexibility — you'll get the most match options."}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {activeTab === "driver" && (
           <Card className="border-border/40" data-testid="card-tailor-ride-style">
             <CardContent className="py-3 px-4 space-y-3">
@@ -246,19 +307,94 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-start gap-2.5">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0"><path d="M3 9h18" /><path d="M9 3v18" /><path d="M3 3h18v18H3z" /></svg>
+                  <Navigation className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                   <div>
-                    <Label htmlFor="toggle-detours" className="text-[11px] font-medium cursor-pointer">Enable Detours</Label>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Allow small detours to pick up more hoppers</p>
+                    <Label htmlFor="toggle-detours" className="text-[11px] font-medium cursor-pointer">Allow Detours</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Leave your route to pick up nearby hoppers</p>
                   </div>
                 </div>
                 <Switch
                   id="toggle-detours"
                   data-testid="switch-enable-detours"
-                  checked={user.isFlexibleDriver || false}
-                  disabled
+                  checked={detourEnabled}
+                  onCheckedChange={(checked) => {
+                    setDetourEnabled(checked);
+                    if (!checked) {
+                      setDriverFlexRange("0");
+                      updatePreferences.mutate({ isFlexibleDriver: false, driverFlexRange: "0" });
+                    } else {
+                      setDriverFlexRange("0.5");
+                      updatePreferences.mutate({ isFlexibleDriver: true, driverFlexRange: "0.5" });
+                    }
+                  }}
                 />
               </div>
+
+              {detourEnabled && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="border-t border-border/20 pt-2"
+                >
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <MapPin className="w-4 h-4 text-green-500 shrink-0" />
+                    <p className="text-xs font-black text-foreground">Flex Range</p>
+                  </div>
+                  <p className="text-[11px] font-medium text-foreground mb-1">How far are you willing to detour?</p>
+                  <p className="text-[10px] text-muted-foreground mb-3">
+                    {driverFlexRange === "0" ? "No detours — direct route only" : `Up to ${driverFlexRange} mile${driverFlexRange !== "1" ? "s" : ""}${driverFlexRange === "1" ? "+" : ""}`}
+                  </p>
+                  <Slider
+                    data-testid="slider-driver-flex-range"
+                    min={0}
+                    max={3}
+                    step={1}
+                    value={[["0", "0.25", "0.5", "1"].indexOf(driverFlexRange)]}
+                    onValueChange={([idx]) => {
+                      const val = ["0", "0.25", "0.5", "1"][idx];
+                      setDriverFlexRange(val);
+                      updatePreferences.mutate({ driverFlexRange: val as any });
+                    }}
+                  />
+                  <div className="flex justify-between mt-1">
+                    {["0", "0.25", "0.5", "1+"].map((v, i) => (
+                      <span key={v} className={`text-[9px] ${driverFlexRange === ["0", "0.25", "0.5", "1"][i] ? "text-green-500 font-bold" : "text-muted-foreground"}`}>
+                        {v === "0" ? "0 mi" : `${v} mi`}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="border-t border-border/20 pt-2 mt-3">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Lightbulb className="w-3 h-3 text-yellow-500 shrink-0" />
+                      <p className="text-[10px] font-bold text-foreground">Smart Tips</p>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground leading-relaxed" data-testid="text-driver-smart-tip">
+                      {driverFlexRange === "0"
+                        ? "You'll only match hoppers right on your route. Great for staying efficient."
+                        : driverFlexRange === "0.25"
+                        ? "Short detours can increase your earnings without much extra time."
+                        : driverFlexRange === "0.5"
+                        ? "Most riders nearby are within this range — solid pickup zone."
+                        : "Maximum reach — you'll see the most hop requests in your area."}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
+              {!detourEnabled && (
+                <div className="border-t border-border/20 pt-2">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Lightbulb className="w-3 h-3 text-yellow-500 shrink-0" />
+                    <p className="text-[10px] font-bold text-foreground">Smart Tips</p>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground leading-relaxed" data-testid="text-driver-smart-tip-off">
+                    Detours are off — you'll match hoppers willing to walk to your route. Turn on detours to see more requests.
+                  </p>
+                </div>
+              )}
+
               <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
                 <div className="flex items-start gap-2.5">
                   {autoAlerts ? <Bell className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> : <BellOff className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />}

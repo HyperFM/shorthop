@@ -959,7 +959,7 @@ export async function registerRoutes(
     try {
       const input = api.profile.updatePreferences.input.parse(req.body);
       const user = await storage.updateUserPreferences(req.user.id, input);
-      res.json(user);
+      res.json(sanitizeUser(user));
     } catch (err) {
       if (err instanceof z.ZodError) {
         res.status(400).json({ message: err.errors[0].message });

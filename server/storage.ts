@@ -72,7 +72,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User>;
   updateUserFlexibility(id: number, updates: any): Promise<User>;
-  updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string }): Promise<User>;
+  updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean }): Promise<User>;
   dismissWelcome(id: number): Promise<void>;
   getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; activeDrivers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }>;
   checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User>;
@@ -228,10 +228,13 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string }): Promise<User> {
+  async updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean }): Promise<User> {
     const setValues: any = {};
     if (updates.rideVibe) setValues.rideVibe = updates.rideVibe;
     if (updates.tier) setValues.tier = updates.tier;
+    if (updates.hopperFlexRange !== undefined) setValues.hopperFlexRange = updates.hopperFlexRange;
+    if (updates.driverFlexRange !== undefined) setValues.driverFlexRange = updates.driverFlexRange;
+    if (updates.isFlexibleDriver !== undefined) setValues.isFlexibleDriver = updates.isFlexibleDriver;
     const [user] = await db.update(users)
       .set(setValues)
       .where(eq(users.id, id))
