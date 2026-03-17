@@ -29,7 +29,7 @@ export function FlyersModal({ isOpen, onClose }: FlyersModalProps) {
       downloadFile("/driver-flyer.jpg", "ShortHop-Driver-Flyer.jpg");
       // Small delay between downloads
       setTimeout(() => {
-        downloadFile("/hopper-flyer.docx", "ShortHop-Hopper-Flyer.docx");
+        downloadFile("/hopper-flyer.pdf", "ShortHop-Hopper-Flyer.pdf");
       }, 500);
       
       // Show success message after a moment
@@ -107,7 +107,7 @@ export function FlyersModal({ isOpen, onClose }: FlyersModalProps) {
             {/* Hopper Flyers */}
             <motion.div whileHover={{ scale: 1.02 }} className="cursor-pointer">
               <button
-                onClick={() => downloadFile("/hopper-flyer.docx", "ShortHop-Hopper-Flyer.docx")}
+                onClick={() => downloadFile("/hopper-flyer.pdf", "ShortHop-Hopper-Flyer.pdf")}
                 className="w-full p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-200 dark:border-blue-800 hover:shadow-md transition-shadow"
                 data-testid="button-download-hopper-flyer"
               >
@@ -118,8 +118,8 @@ export function FlyersModal({ isOpen, onClose }: FlyersModalProps) {
                   <div className="text-left flex-1">
                     <p className="font-bold text-foreground">Hopper Flyers (Front & Back)</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Editable template for hoppers<br />
-                      <span className="text-[10px]">Microsoft Word Document</span>
+                      Print-ready flyer for hoppers<br />
+                      <span className="text-[10px]">PDF Document</span>
                     </p>
                   </div>
                   <Download className="w-5 h-5 text-muted-foreground shrink-0 mt-1" />
