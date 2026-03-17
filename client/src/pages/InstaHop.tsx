@@ -434,41 +434,63 @@ function DriveNowPanel({ user }: { user: User }) {
         </Card>
       )}
 
-      {isVerified && availableHops.length > 0 && (
-        <div className="text-xs text-muted-foreground text-center">
-          {availableHops.length} hop request{availableHops.length !== 1 ? 's' : ''} nearby
+      {isVerified && (
+        <div className="space-y-2 mt-1">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-bold text-muted-foreground">⚡ InstaHop Requests</p>
+            {availableHops.length > 0 && (
+              <span className="text-xs font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2.5 py-1 rounded-full">
+                {availableHops.length}
+              </span>
+            )}
+          </div>
+          {availableHops.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No hops nearby yet</p>
+          ) : (
+            <div className="space-y-1.5">
+              {availableHops.map((hop) => (
+                <Card key={hop.id} className="border-primary/20" data-testid={`hop-request-${hop.id}`}>
+                  <CardContent className="p-2.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-foreground truncate">{hop.startLocation}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">→ {hop.endLocation}</p>
+                    </div>
+                    <Button size="sm" className="h-7 text-xs rounded-lg bg-primary hover:bg-primary/90 font-bold shrink-0" data-testid={`button-accept-panel-${hop.id}`}>
+                      Accept
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {isVerified && <DriverAutoNotifications hopsCount={availableHops.length} />}
+      {isVerified && <DriverAutoNotificationsEffect hopsCount={availableHops.length} />}
     </div>
   );
 }
 
 const AUTO_NOTIF_KEY = "sh-driver-auto-notify";
 
-function DriverAutoNotifications({ hopsCount }: { hopsCount: number }) {
+function DriverAutoNotificationsEffect({ hopsCount }: { hopsCount: number }) {
   const [enabled, setEnabled] = useState(() => {
     try { return localStorage.getItem(AUTO_NOTIF_KEY) === "true"; } catch { return false; }
   });
   const prevCountRef = useRef(hopsCount);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const toggle = useCallback(async () => {
-    const next = !enabled;
-    if (next) {
-      if ("Notification" in window && Notification.permission !== "granted") {
-        const perm = await Notification.requestPermission();
-        if (perm !== "granted") {
-          showFlash("🔕", "Notifications blocked by browser", "error");
-          return;
-        }
-      }
+  useEffect(() => {
+    function onStorageChange() {
+      try { setEnabled(localStorage.getItem(AUTO_NOTIF_KEY) === "true"); } catch {}
     }
-    setEnabled(next);
-    try { localStorage.setItem(AUTO_NOTIF_KEY, String(next)); } catch {}
-    showFlash(next ? "🔔" : "🔕", next ? "Auto-notifications ON" : "Auto-notifications OFF", next ? "success" : "info");
-  }, [enabled]);
+    window.addEventListener("storage", onStorageChange);
+    window.addEventListener("sh-auto-alert-change", onStorageChange);
+    return () => {
+      window.removeEventListener("storage", onStorageChange);
+      window.removeEventListener("sh-auto-alert-change", onStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
@@ -493,31 +515,6 @@ function DriverAutoNotifications({ hopsCount }: { hopsCount: number }) {
 
   return (
     <>
-      <Card className={`border transition-colors rounded-2xl ${enabled ? 'border-orange-300 bg-orange-50/30 dark:bg-orange-950/10' : 'border-border/50'}`} data-testid="card-auto-notify">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${enabled ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-muted'}`}>
-                {enabled ? <Bell className="w-4 h-4 text-orange-500" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-bold">{enabled ? "Auto-Alerts ON" : "Auto-Alerts"}</p>
-                <p className="text-[10px] text-muted-foreground">Alert when pickup is on your route</p>
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant={enabled ? "default" : "outline"}
-              className="text-xs h-7 shrink-0"
-              onClick={toggle}
-              data-testid="button-toggle-auto-notify"
-            >
-              {enabled ? "ON" : "OFF"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card className="border-border/50 bg-blue-50/30 dark:bg-blue-950/10 rounded-2xl" data-testid="card-detour-notice">
         <CardContent className="p-3">
           <div className="flex items-start gap-2.5">

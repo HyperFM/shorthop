@@ -6,7 +6,7 @@ import DriverDashboard from "./DriverDashboard";
 import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
-import { Loader2, Bell, ChevronRight, Volume2, Eye, EyeOff, Shield } from "lucide-react";
+import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -65,6 +65,9 @@ export default function Dashboard() {
   const [soundDuration, setSoundDuration] = useState<DriverSoundDuration>(getDriverSoundDuration);
   const [rideVibe, setRideVibe] = useState(user?.rideVibe || "friendly_chat");
   const [prefs, setPrefs] = useState<NotificationPreferences>(loadPreferences);
+  const [autoAlerts, setAutoAlerts] = useState(() => {
+    try { return localStorage.getItem("sh-driver-auto-notify") === "true"; } catch { return false; }
+  });
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -254,6 +257,33 @@ export default function Dashboard() {
                   data-testid="switch-enable-detours"
                   checked={user.isFlexibleDriver || false}
                   disabled
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
+                <div className="flex items-start gap-2.5">
+                  {autoAlerts ? <Bell className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> : <BellOff className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />}
+                  <div>
+                    <Label htmlFor="toggle-auto-alerts" className="text-[11px] font-medium cursor-pointer">Auto-Alerts</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Alert when pickup is on your route</p>
+                  </div>
+                </div>
+                <Switch
+                  id="toggle-auto-alerts"
+                  data-testid="switch-auto-alerts"
+                  checked={autoAlerts}
+                  onCheckedChange={async (checked) => {
+                    if (checked && "Notification" in window && Notification.permission !== "granted") {
+                      const perm = await Notification.requestPermission();
+                      if (perm !== "granted") {
+                        showFlash("🔕", "Notifications blocked by browser", "error");
+                        return;
+                      }
+                    }
+                    setAutoAlerts(checked);
+                    try { localStorage.setItem("sh-driver-auto-notify", String(checked)); } catch {}
+                    window.dispatchEvent(new CustomEvent("sh-auto-alert-change"));
+                    showFlash(checked ? "🔔" : "🔕", checked ? "Auto-notifications ON" : "Auto-notifications OFF", checked ? "success" : "info");
+                  }}
                 />
               </div>
             </CardContent>

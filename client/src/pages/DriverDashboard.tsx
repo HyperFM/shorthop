@@ -528,51 +528,6 @@ export default function DriverDashboard({ user }: { user: User }) {
             </div>
           )}
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-bold text-muted-foreground">
-                ⚡ InstaHop Requests
-              </p>
-              {availableHops.length > 0 && (
-                <span className="text-xs font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2.5 py-1 rounded-full">
-                  {availableHops.length}
-                </span>
-              )}
-            </div>
-            
-            {availableHops.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No hops nearby yet</p>
-            ) : (
-              <div className="space-y-2">
-                {availableHops.map((hop, idx) => (
-                  <motion.div
-                    key={hop.id}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.03 }}
-                  >
-                    <Card className="hover:shadow-sm transition-shadow border-primary/20" data-testid={`hop-request-${hop.id}`}>
-                      <CardContent className="p-2.5 flex items-center justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-foreground truncate" data-testid={`text-hop-start-${hop.id}`}>{hop.startLocation}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">→ {hop.endLocation}</p>
-                        </div>
-                        <Button 
-                          size="sm"
-                          className="h-7 text-xs rounded-lg bg-primary hover:bg-primary/90 font-bold shrink-0" 
-                          onClick={() => acceptHop.mutate(hop.id)}
-                          disabled={acceptHop.isPending}
-                          data-testid={`button-accept-${hop.id}`}
-                        >
-                          {acceptHop.isPending ? "..." : "Accept"}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </div>
 
         </div>
       </div>
