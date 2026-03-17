@@ -40,6 +40,11 @@ The application features a mobile-first, app-like UI with a bottom tab navigatio
 - **Community Discovery**: Connect page has 3 tabs (Feed, Community, Friends). Community tab shows public/semi-private profiles with status-aware friend actions. Friends tab shows pending requests with accept/decline and a friends list.
 - **Profile Privacy**: 3-level profile visibility stored in DB (`profileVisibility` column): public (full profile in Community), semi_private (username+photo only), private (hidden). Selector in Settings profile card header.
 - **Flex Range System**: Both hoppers and drivers have configurable range settings stored in DB. Hopper: `hopperFlexRange` (0, 0.25, 0.5, 1 mile) — how far they'll walk to a pickup. Driver: `isFlexibleDriver` toggle + `driverFlexRange` (0, 0.25, 0.5, 1 mile) — how far they'll detour off route. UI in Tailor section with sliders and Smart Tips. Saved via PUT /api/profile/preferences. Matching logic priorities: 1) zero detour matches, 2) lowest combined deviation.
+- **Hopper Ride Preferences**: Tailor section includes Flexible Drop-off (exact vs close_enough), Allow Detour Drivers toggle, Shared Commute toggle, and Mode Lock (none/hopper_only/driver_only for subscribers). All persisted to DB via PUT /api/profile/preferences.
+- **Chat Reactions & Editing**: All chat types (Founder Chat, VIP Hyper Line, City Chat) support 5-emoji reactions (👍 ❤️ 😢 😮 😡) and message editing (own messages only, with edited timestamp). Reactions stored as JSON `{emoji: count}` in `reactions` column. Edit updates `editedAt` timestamp.
+- **Notification Reactions & Replies**: Users can react to notifications with 5 emojis and send a quick reply (500 char max). Reactions via POST /api/notifications/:id/react, replies via POST /api/notifications/:id/reply. Admin can view reactions/replies.
+- **Schedule Anytime & Payment Preference**: Ride planner supports "Request Anytime" toggle (no specific days/times, match whenever available). Payment preference selector (Card/Cash/Either) per schedule. Stored in `anytime` and `paymentPreference` columns.
+- **ID Verification Placeholder**: Coming Soon card in Settings below Legal Name field, announcing photo ID verification for trust badges.
 
 ### System Design Choices
 - **Authentication**: Passport.js with a local strategy and session-based authentication.

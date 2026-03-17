@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Plus, Trash2, Clock, MapPin, ArrowLeftRight, ChevronDown, ChevronUp, Pencil, Route as RouteIcon } from "lucide-react";
+import { Calendar, Plus, Trash2, Clock, MapPin, ArrowLeftRight, ChevronDown, ChevronUp, Pencil, Route as RouteIcon, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -34,6 +34,8 @@ function ScheduleForm({ onSave, initial, onCancel, isLongHop = false }: {
   const [timeStart, setTimeStart] = useState(initial?.timeStart || "07:30");
   const [timeEnd, setTimeEnd] = useState(initial?.timeEnd || "08:00");
   const [returnTrip, setReturnTrip] = useState(initial?.returnTrip || false);
+  const [anytime, setAnytime] = useState((initial as any)?.anytime || false);
+  const [paymentPreference, setPaymentPreference] = useState((initial as any)?.paymentPreference || "card");
 
   const toggleDay = (day: string) => {
     setDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
@@ -41,11 +43,15 @@ function ScheduleForm({ onSave, initial, onCancel, isLongHop = false }: {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (days.length === 0 || !startLocation || !destination) {
-      showFlash("⚠️", "Fill in all fields and select at least one day", "error");
+    if (!anytime && days.length === 0) {
+      showFlash("⚠️", "Select at least one day or enable Anytime", "error");
       return;
     }
-    onSave({ days, startLocation, destination, timeStart, timeEnd, returnTrip });
+    if (!startLocation || !destination) {
+      showFlash("⚠️", "Fill in start and destination", "error");
+      return;
+    }
+    onSave({ days: anytime ? [] : days, startLocation, destination, timeStart: anytime ? null : timeStart, timeEnd: anytime ? null : timeEnd, returnTrip, anytime, paymentPreference });
   };
 
   return (
@@ -56,6 +62,18 @@ function ScheduleForm({ onSave, initial, onCancel, isLongHop = false }: {
           <p className="text-[11px] font-bold text-purple-600 dark:text-purple-400">Long Hop — for longer commutes (10+ miles)</p>
         </div>
       )}
+      <div className="flex items-center justify-between py-2 px-1 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/50 dark:border-green-700/30">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-green-500" />
+          <div>
+            <span className="text-sm font-bold text-foreground">Request Anytime</span>
+            <p className="text-[10px] text-muted-foreground">Match whenever a driver is available</p>
+          </div>
+        </div>
+        <Switch checked={anytime} onCheckedChange={setAnytime} data-testid="switch-anytime" />
+      </div>
+
+      {!anytime && (
       <div>
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Days</p>
         <div className="flex gap-1.5">
@@ -76,6 +94,7 @@ function ScheduleForm({ onSave, initial, onCancel, isLongHop = false }: {
           ))}
         </div>
       </div>
+      )}
 
       <div className="space-y-2">
         <div className="flex items-center gap-3">
@@ -103,6 +122,7 @@ function ScheduleForm({ onSave, initial, onCancel, isLongHop = false }: {
         </div>
       </div>
 
+      {!anytime && (
       <div>
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Time Window</p>
         <div className="flex items-center gap-3">
@@ -129,6 +149,7 @@ function ScheduleForm({ onSave, initial, onCancel, isLongHop = false }: {
           </div>
         </div>
       </div>
+      )}
 
       <div className="flex items-center justify-between py-2 px-1">
         <div className="flex items-center gap-2">
@@ -136,6 +157,31 @@ function ScheduleForm({ onSave, initial, onCancel, isLongHop = false }: {
           <span className="text-sm text-foreground">Include return trip</span>
         </div>
         <Switch checked={returnTrip} onCheckedChange={setReturnTrip} data-testid="switch-return-trip" />
+      </div>
+
+      <div>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Preference</p>
+        <div className="flex gap-2">
+          {[
+            { value: "card", label: "Card", icon: "💳" },
+            { value: "cash", label: "Cash", icon: "💵" },
+            { value: "either", label: "Either", icon: "🤝" },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setPaymentPreference(opt.value)}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                paymentPreference === opt.value
+                  ? "bg-primary text-white shadow-md shadow-primary/25"
+                  : "bg-muted/40 text-muted-foreground hover:bg-muted/60"
+              }`}
+              data-testid={`payment-${opt.value}`}
+            >
+              <span>{opt.icon}</span> {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex gap-3 pt-1">
@@ -349,9 +395,21 @@ export default function SchedulePage() {
                           {schedule.startLocation} → {schedule.destination}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground">{formatDays(days)}</span>
-                          <span className="text-[10px] text-muted-foreground">•</span>
-                          <span className="text-[10px] text-muted-foreground">{schedule.timeStart}–{schedule.timeEnd}</span>
+                          {(schedule as any).anytime ? (
+                            <span className="text-[10px] text-green-600 font-bold">⚡ Anytime</span>
+                          ) : (
+                            <>
+                              <span className="text-[10px] text-muted-foreground">{formatDays(days)}</span>
+                              <span className="text-[10px] text-muted-foreground">•</span>
+                              <span className="text-[10px] text-muted-foreground">{schedule.timeStart}–{schedule.timeEnd}</span>
+                            </>
+                          )}
+                          {(schedule as any).paymentPreference && (schedule as any).paymentPreference !== "card" && (
+                            <>
+                              <span className="text-[10px] text-muted-foreground">•</span>
+                              <span className="text-[10px] text-muted-foreground">{(schedule as any).paymentPreference === "cash" ? "💵" : "🤝"}</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -375,15 +433,29 @@ export default function SchedulePage() {
                           <span className="text-foreground font-medium">→</span>
                           <span>{schedule.destination}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{schedule.timeStart} – {schedule.timeEnd}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {days.map(d => (
-                            <Badge key={d} variant="secondary" className="text-[10px] px-1.5 py-0">{d}</Badge>
-                          ))}
-                        </div>
+                        {(schedule as any).anytime ? (
+                          <div className="flex items-center gap-2 text-xs">
+                            <Sparkles className="w-3.5 h-3.5 text-green-500" />
+                            <span className="text-green-600 font-bold">Anytime — match whenever available</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>{schedule.timeStart} – {schedule.timeEnd}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {days.map(d => (
+                                <Badge key={d} variant="secondary" className="text-[10px] px-1.5 py-0">{d}</Badge>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {(schedule as any).paymentPreference && (schedule as any).paymentPreference !== "card" && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{(schedule as any).paymentPreference === "cash" ? "💵 Cash preferred" : "🤝 Cash or Card"}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">

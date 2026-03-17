@@ -422,6 +422,17 @@ export default function Settings() {
                 <p className="text-[9px] text-muted-foreground mt-0.5">Only visible to ShortHop for verification purposes</p>
               </div>
 
+              <div className="rounded-xl border border-amber-200/50 dark:border-amber-700/30 bg-amber-50/50 dark:bg-amber-950/10 p-3">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-amber-500 shrink-0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <Label className="text-xs font-bold">ID Verification</Label>
+                  <Badge className="text-[8px] bg-amber-100 text-amber-700 border-0 ml-auto" data-testid="badge-id-verification-coming-soon">Coming Soon</Badge>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed" data-testid="text-id-verification-info">
+                  Verified drivers and hoppers will get a trust badge on their profile. Photo ID verification is launching soon to help build trust in the community.
+                </p>
+              </div>
+
               <div>
                 <Label className="text-xs font-bold mb-1.5 block flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5 text-green-500" />

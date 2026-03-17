@@ -67,6 +67,10 @@ export const users = pgTable("users", {
   stripeSetupCompleted: boolean("stripe_setup_completed").default(false),
   hopperFlexRange: text("hopper_flex_range").default("0.25"),
   driverFlexRange: text("driver_flex_range").default("0.5"),
+  hopperDropoffFlex: text("hopper_dropoff_flex").default("exact"),
+  sharedCommute: boolean("shared_commute").default(false),
+  modeLock: text("mode_lock").default("none"),
+  allowDetourDrivers: boolean("allow_detour_drivers").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -163,6 +167,8 @@ export const notifications = pgTable("notifications", {
   title: text("title").notNull(),
   message: text("message").notNull(),
   isRead: boolean("is_read").default(false),
+  reactions: jsonb("reactions"),
+  reply: text("reply"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -320,6 +326,8 @@ export const founderMessages = pgTable("founder_messages", {
   userId: integer("user_id").references(() => users.id).notNull(),
   message: text("message").notNull(),
   isAdminReply: boolean("is_admin_reply").default(false),
+  reactions: jsonb("reactions"),
+  editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -332,6 +340,8 @@ export const vipMessages = pgTable("vip_messages", {
   userId: integer("user_id").references(() => users.id).notNull(),
   message: text("message").notNull(),
   isAdminReply: boolean("is_admin_reply").default(false),
+  reactions: jsonb("reactions"),
+  editedAt: timestamp("edited_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -360,11 +370,13 @@ export const schedules = pgTable("schedules", {
   days: jsonb("days").notNull(),
   startLocation: text("start_location").notNull(),
   destination: text("destination").notNull(),
-  timeStart: text("time_start").notNull(),
-  timeEnd: text("time_end").notNull(),
+  timeStart: text("time_start"),
+  timeEnd: text("time_end"),
   returnTrip: boolean("return_trip").default(false),
   active: boolean("active").default(true),
   corridor: text("corridor"),
+  anytime: boolean("anytime").default(false),
+  paymentPreference: text("payment_preference").default("card"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

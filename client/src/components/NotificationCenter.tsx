@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Check, CheckCheck } from "lucide-react";
+import { Bell, Check, CheckCheck, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,6 +14,9 @@ import {
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
 } from "@/hooks/use-notifications";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { showFlash } from "@/components/FlashNotification";
 import type { Notification } from "@shared/schema";
 
 function getNotificationIcon(type: string) {
@@ -43,6 +46,8 @@ function timeAgo(date: Date | string | null): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+const REACTION_EMOJIS = ["👍", "❤️", "😢", "😮", "😡"] as const;
+
 function NotificationItem({
   notification,
   onMarkRead,
@@ -50,38 +55,151 @@ function NotificationItem({
   notification: Notification;
   onMarkRead: (id: number) => void;
 }) {
+  const queryClient = useQueryClient();
+  const [showReactions, setShowReactions] = useState(false);
+  const [showReply, setShowReply] = useState(false);
+  const [replyText, setReplyText] = useState("");
+
+  const reactMutation = useMutation({
+    mutationFn: async (emoji: string) => {
+      await apiRequest("POST", `/api/notifications/${notification.id}/react`, { emoji });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      setShowReactions(false);
+      showFlash("✅", "Reaction added", "success");
+    },
+    onError: () => showFlash("❌", "Reaction failed", "error"),
+  });
+
+  const replyMutation = useMutation({
+    mutationFn: async (reply: string) => {
+      await apiRequest("POST", `/api/notifications/${notification.id}/reply`, { reply });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      setShowReply(false);
+      setReplyText("");
+      showFlash("✅", "Reply sent", "success");
+    },
+    onError: () => showFlash("❌", "Reply failed", "error"),
+  });
+
+  const reactions = (notification as any).reactions as Record<string, number> | null;
+  const reply = (notification as any).reply as string | null;
+
   return (
-    <button
+    <div
       data-testid={`notification-item-${notification.id}`}
-      className={`w-full text-left p-4 flex items-start gap-3 transition-colors min-h-[56px] active:bg-accent/50 ${
-        notification.isRead
-          ? "opacity-60"
-          : "bg-accent/30"
+      className={`w-full text-left p-4 transition-colors min-h-[56px] ${
+        notification.isRead ? "opacity-60" : "bg-accent/30"
       }`}
-      onClick={() => {
-        if (!notification.isRead) {
-          onMarkRead(notification.id);
-        }
-      }}
     >
-      <span className="text-lg flex-shrink-0 mt-0.5" aria-hidden="true">
-        {getNotificationIcon(notification.type)}
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-foreground truncate">
-          {notification.title}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-          {notification.message}
-        </p>
-        <p className="text-xs text-muted-foreground/70 mt-1" data-testid={`notification-time-${notification.id}`}>
-          {timeAgo(notification.createdAt)}
-        </p>
-      </div>
-      {!notification.isRead && (
-        <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
+      <button
+        className="w-full flex items-start gap-3 active:bg-accent/50"
+        onClick={() => {
+          if (!notification.isRead) {
+            onMarkRead(notification.id);
+          }
+        }}
+      >
+        <span className="text-lg flex-shrink-0 mt-0.5" aria-hidden="true">
+          {getNotificationIcon(notification.type)}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground truncate">
+            {notification.title}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+            {notification.message}
+          </p>
+          <p className="text-xs text-muted-foreground/70 mt-1" data-testid={`notification-time-${notification.id}`}>
+            {timeAgo(notification.createdAt)}
+          </p>
+        </div>
+        {!notification.isRead && (
+          <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
+        )}
+      </button>
+
+      {reactions && Object.keys(reactions).length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1.5 ml-8">
+          {Object.entries(reactions).map(([emoji, count]) => (
+            <span
+              key={emoji}
+              className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-muted/60"
+              data-testid={`notification-reaction-${emoji}-${notification.id}`}
+            >
+              {emoji} <span className="font-bold">{count as number}</span>
+            </span>
+          ))}
+        </div>
       )}
-    </button>
+
+      {reply && (
+        <div className="ml-8 mt-1.5 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50">
+          <p className="text-[10px] text-blue-700 dark:text-blue-300 font-medium">Your reply:</p>
+          <p className="text-[11px] text-foreground">{reply}</p>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 mt-1.5 ml-8">
+        <button
+          onClick={() => { setShowReactions(!showReactions); setShowReply(false); }}
+          className="text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+          data-testid={`button-notification-react-${notification.id}`}
+        >
+          {showReactions ? "×" : "😊"}
+        </button>
+        {!reply && (
+          <button
+            onClick={() => { setShowReply(!showReply); setShowReactions(false); }}
+            className="text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+            data-testid={`button-notification-reply-${notification.id}`}
+          >
+            {showReply ? "Cancel" : "Reply"}
+          </button>
+        )}
+      </div>
+
+      {showReactions && (
+        <div className="flex gap-1 mt-1 ml-8 px-1 py-0.5 rounded-full bg-muted/60 w-fit">
+          {REACTION_EMOJIS.map((emoji) => (
+            <button
+              key={emoji}
+              onClick={() => reactMutation.mutate(emoji)}
+              disabled={reactMutation.isPending}
+              className="text-sm hover:scale-125 transition-transform p-0.5"
+              data-testid={`button-notification-emoji-${emoji}-${notification.id}`}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showReply && !reply && (
+        <div className="flex gap-1 mt-1.5 ml-8">
+          <input
+            type="text"
+            placeholder="Quick reply..."
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            maxLength={500}
+            className="flex-1 text-[11px] px-2 py-1 rounded-md bg-muted/40 border border-border/50 text-foreground"
+            data-testid={`input-notification-reply-${notification.id}`}
+          />
+          <button
+            onClick={() => replyMutation.mutate(replyText)}
+            disabled={!replyText.trim() || replyMutation.isPending}
+            className="p-1 text-primary hover:text-primary/80"
+            data-testid={`button-send-notification-reply-${notification.id}`}
+          >
+            <Send className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

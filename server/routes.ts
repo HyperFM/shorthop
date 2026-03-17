@@ -10,6 +10,9 @@ import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
+import { db } from "./db";
+import { notifications, founderMessages, vipMessages } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
   if (!user) return user;
@@ -751,6 +754,38 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/notifications/:id/react', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const reaction = req.body.reaction || req.body.emoji;
+      if (!["👍", "❤️", "😢", "😮", "😡"].includes(reaction)) return res.status(400).json({ message: "Invalid reaction" });
+      const id = Number(req.params.id);
+      const [notif] = await db.select().from(notifications).where(eq(notifications.id, id));
+      if (!notif || notif.userId !== req.user.id) return res.status(404).json({ message: "Not found" });
+      const currentReactions = (notif.reactions as Record<string, number>) || {};
+      currentReactions[reaction] = (currentReactions[reaction] || 0) + 1;
+      const [updated] = await db.update(notifications).set({ reactions: currentReactions }).where(eq(notifications.id, id)).returning();
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to react" });
+    }
+  });
+
+  app.post('/api/notifications/:id/reply', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { reply } = req.body;
+      if (!reply || typeof reply !== "string") return res.status(400).json({ message: "Reply required" });
+      const id = Number(req.params.id);
+      const [notif] = await db.select().from(notifications).where(eq(notifications.id, id));
+      if (!notif || notif.userId !== req.user.id) return res.status(404).json({ message: "Not found" });
+      const [updated] = await db.update(notifications).set({ reply: reply.slice(0, 500) }).where(eq(notifications.id, id)).returning();
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ message: "Failed to reply" });
+    }
+  });
+
   // Driver flexibility settings
   app.put(api.driver.updateFlexibility.path, async (req, res) => {
     if (!req.isAuthenticated() || !req.user.isDriver) {
@@ -1278,20 +1313,26 @@ export async function registerRoutes(
   app.post('/api/schedules', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const { days, startLocation, destination, timeStart, timeEnd, returnTrip } = req.body;
-      if (!days || !startLocation || !destination || !timeStart || !timeEnd) {
+      const { days, startLocation, destination, timeStart, timeEnd, returnTrip, anytime, paymentPreference } = req.body;
+      const isAnytime = anytime === true;
+      if (!startLocation || !destination) {
         return res.status(400).json({ message: "Missing required fields" });
+      }
+      if (!isAnytime && (!days || !timeStart || !timeEnd)) {
+        return res.status(400).json({ message: "Missing required fields for scheduled hop" });
       }
       const schedule = await storage.createSchedule({
         userId: req.user.id,
-        days,
+        days: isAnytime ? [] : days,
         startLocation,
         destination,
-        timeStart,
-        timeEnd,
+        timeStart: isAnytime ? null : timeStart,
+        timeEnd: isAnytime ? null : timeEnd,
         returnTrip: returnTrip || false,
         active: true,
-      });
+        anytime: isAnytime,
+        paymentPreference: paymentPreference || "card",
+      } as any);
       res.json(schedule);
     } catch {
       res.status(500).json({ message: "Failed to create schedule" });
@@ -1301,7 +1342,7 @@ export async function registerRoutes(
   app.patch('/api/schedules/:id', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const { days, startLocation, destination, timeStart, timeEnd, returnTrip, active } = req.body;
+      const { days, startLocation, destination, timeStart, timeEnd, returnTrip, active, anytime, paymentPreference } = req.body;
       const updates: Record<string, any> = {};
       if (days !== undefined) updates.days = days;
       if (startLocation !== undefined) updates.startLocation = startLocation;
@@ -1310,6 +1351,8 @@ export async function registerRoutes(
       if (timeEnd !== undefined) updates.timeEnd = timeEnd;
       if (returnTrip !== undefined) updates.returnTrip = returnTrip;
       if (active !== undefined) updates.active = active;
+      if (anytime !== undefined) updates.anytime = anytime;
+      if (paymentPreference !== undefined) updates.paymentPreference = paymentPreference;
       const schedule = await storage.updateSchedule(parseInt(req.params.id), req.user.id, updates);
       if (!schedule) return res.status(404).json({ message: "Schedule not found" });
       res.json(schedule);
@@ -2055,6 +2098,62 @@ export async function registerRoutes(
     } catch {
       res.status(500).json({ message: "Failed to send message" });
     }
+  });
+
+  app.post('/api/founder-chat/:id/react', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const reaction = req.body.reaction || req.body.emoji;
+      if (!["👍", "❤️", "😢", "😮", "😡"].includes(reaction)) return res.status(400).json({ message: "Invalid reaction" });
+      const id = Number(req.params.id);
+      const [msg] = await db.select().from(founderMessages).where(eq(founderMessages.id, id));
+      if (!msg) return res.status(404).json({ message: "Not found" });
+      const currentReactions = (msg.reactions as Record<string, number>) || {};
+      currentReactions[reaction] = (currentReactions[reaction] || 0) + 1;
+      const [updated] = await db.update(founderMessages).set({ reactions: currentReactions }).where(eq(founderMessages.id, id)).returning();
+      res.json(updated);
+    } catch { res.status(500).json({ message: "Failed to react" }); }
+  });
+
+  app.patch('/api/founder-chat/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const id = Number(req.params.id);
+      const { message } = req.body;
+      if (!message || typeof message !== "string") return res.status(400).json({ message: "Message required" });
+      const [msg] = await db.select().from(founderMessages).where(eq(founderMessages.id, id));
+      if (!msg || msg.userId !== req.user.id) return res.status(403).json({ message: "Cannot edit" });
+      const [updated] = await db.update(founderMessages).set({ message: message.slice(0, 1000), editedAt: new Date() }).where(eq(founderMessages.id, id)).returning();
+      res.json(updated);
+    } catch { res.status(500).json({ message: "Failed to edit" }); }
+  });
+
+  app.post('/api/vip-chat/:id/react', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const reaction = req.body.reaction || req.body.emoji;
+      if (!["👍", "❤️", "😢", "😮", "😡"].includes(reaction)) return res.status(400).json({ message: "Invalid reaction" });
+      const id = Number(req.params.id);
+      const [msg] = await db.select().from(vipMessages).where(eq(vipMessages.id, id));
+      if (!msg) return res.status(404).json({ message: "Not found" });
+      const currentReactions = (msg.reactions as Record<string, number>) || {};
+      currentReactions[reaction] = (currentReactions[reaction] || 0) + 1;
+      const [updated] = await db.update(vipMessages).set({ reactions: currentReactions }).where(eq(vipMessages.id, id)).returning();
+      res.json(updated);
+    } catch { res.status(500).json({ message: "Failed to react" }); }
+  });
+
+  app.patch('/api/vip-chat/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const id = Number(req.params.id);
+      const { message } = req.body;
+      if (!message || typeof message !== "string") return res.status(400).json({ message: "Message required" });
+      const [msg] = await db.select().from(vipMessages).where(eq(vipMessages.id, id));
+      if (!msg || msg.userId !== req.user.id) return res.status(403).json({ message: "Cannot edit" });
+      const [updated] = await db.update(vipMessages).set({ message: message.slice(0, 1000), editedAt: new Date() }).where(eq(vipMessages.id, id)).returning();
+      res.json(updated);
+    } catch { res.status(500).json({ message: "Failed to edit" }); }
   });
 
   // Cashout history (all cashouts now go through Stripe)

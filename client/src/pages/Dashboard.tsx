@@ -68,6 +68,10 @@ export default function Dashboard() {
   const [hopperFlexRange, setHopperFlexRange] = useState(user?.hopperFlexRange || "0.25");
   const [driverFlexRange, setDriverFlexRange] = useState(user?.driverFlexRange || "0.5");
   const [detourEnabled, setDetourEnabled] = useState(user?.isFlexibleDriver || false);
+  const [hopperDropoffFlex, setHopperDropoffFlex] = useState(user?.hopperDropoffFlex || "exact");
+  const [sharedCommute, setSharedCommute] = useState(user?.sharedCommute || false);
+  const [modeLock, setModeLock] = useState(user?.modeLock || "none");
+  const [allowDetourDrivers, setAllowDetourDrivers] = useState(user?.allowDetourDrivers || false);
   const [prefs, setPrefs] = useState<NotificationPreferences>(loadPreferences);
   const [autoAlerts, setAutoAlerts] = useState(() => {
     try { return localStorage.getItem("sh-driver-auto-notify") === "true"; } catch { return false; }
@@ -90,7 +94,11 @@ export default function Dashboard() {
     if (user?.hopperFlexRange) setHopperFlexRange(user.hopperFlexRange);
     if (user?.driverFlexRange) setDriverFlexRange(user.driverFlexRange);
     if (user?.isFlexibleDriver !== undefined) setDetourEnabled(user.isFlexibleDriver || false);
-  }, [user?.hopperFlexRange, user?.driverFlexRange, user?.isFlexibleDriver]);
+    if (user?.hopperDropoffFlex) setHopperDropoffFlex(user.hopperDropoffFlex);
+    if (user?.sharedCommute !== undefined) setSharedCommute(user.sharedCommute || false);
+    if (user?.modeLock) setModeLock(user.modeLock);
+    if (user?.allowDetourDrivers !== undefined) setAllowDetourDrivers(user.allowDetourDrivers || false);
+  }, [user?.hopperFlexRange, user?.driverFlexRange, user?.isFlexibleDriver, user?.hopperDropoffFlex, user?.sharedCommute, user?.modeLock, user?.allowDetourDrivers]);
 
   useEffect(() => {
     savePreferences(prefs);
@@ -110,7 +118,7 @@ export default function Dashboard() {
   }
 
   const updatePreferences = useMutation({
-    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean }) => {
+    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean }) => {
       const res = await apiRequest(api.profile.updatePreferences.method, api.profile.updatePreferences.path, updates);
       return res.json();
     },
@@ -294,6 +302,105 @@ export default function Dashboard() {
                     : "Maximum flexibility — you'll get the most match options."}
                 </p>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === "hopper" && (
+          <Card className="border-border/40" data-testid="card-tailor-hopper-toggles">
+            <CardContent className="py-3 px-4 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-blue-500 shrink-0"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                <p className="text-xs font-black text-foreground">Ride Preferences</p>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div>
+                    <Label htmlFor="toggle-dropoff-flex" className="text-[11px] font-medium cursor-pointer">Flexible Drop-off</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {hopperDropoffFlex === "close_enough"
+                        ? "Driver will take you as close as possible along their route"
+                        : "Driver will aim for your exact destination"}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="toggle-dropoff-flex"
+                  data-testid="switch-dropoff-flex"
+                  checked={hopperDropoffFlex === "close_enough"}
+                  onCheckedChange={(checked) => {
+                    const val = checked ? "close_enough" : "exact";
+                    setHopperDropoffFlex(val);
+                    updatePreferences.mutate({ hopperDropoffFlex: val });
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
+                <div className="flex items-start gap-2.5">
+                  <Navigation className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div>
+                    <Label htmlFor="toggle-allow-detour-drivers" className="text-[11px] font-medium cursor-pointer">Allow Detour Drivers</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Match with drivers who detour off route for pickup</p>
+                  </div>
+                </div>
+                <Switch
+                  id="toggle-allow-detour-drivers"
+                  data-testid="switch-allow-detour-drivers"
+                  checked={allowDetourDrivers}
+                  onCheckedChange={(checked) => {
+                    setAllowDetourDrivers(checked);
+                    updatePreferences.mutate({ allowDetourDrivers: checked });
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
+                <div className="flex items-start gap-2.5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <div>
+                    <Label htmlFor="toggle-shared-commute" className="text-[11px] font-medium cursor-pointer">Shared Commute</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Shared commutes increase your chances of being paired</p>
+                  </div>
+                </div>
+                <Switch
+                  id="toggle-shared-commute"
+                  data-testid="switch-shared-commute"
+                  checked={sharedCommute}
+                  onCheckedChange={(checked) => {
+                    setSharedCommute(checked);
+                    updatePreferences.mutate({ sharedCommute: checked });
+                  }}
+                />
+              </div>
+
+              {user.subscription && (
+                <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
+                  <div className="flex items-start gap-2.5">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <div>
+                      <Label className="text-[11px] font-medium">Mode Lock</Label>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Lock yourself to one mode to avoid confusion</p>
+                    </div>
+                  </div>
+                  <select
+                    className="text-[10px] bg-muted/60 border border-border/50 rounded-md px-2 py-1 text-foreground"
+                    data-testid="select-mode-lock"
+                    value={modeLock}
+                    onChange={(e) => {
+                      const val = e.target.value as "none" | "hopper_only" | "driver_only";
+                      setModeLock(val);
+                      updatePreferences.mutate({ modeLock: val });
+                    }}
+                  >
+                    <option value="none">No Lock</option>
+                    <option value="hopper_only">Hopper Only</option>
+                    <option value="driver_only">Driver Only</option>
+                  </select>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

@@ -11,6 +11,7 @@ import { api } from "@shared/routes";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { NetworkProgress } from "@/components/NetworkProgress";
+import { ChatBubbleActions } from "@/components/ChatBubbleActions";
 
 function timeAgo(date: string | null): string {
   if (!date) return "";
@@ -30,6 +31,8 @@ type ChatMsg = {
   message: string;
   isAdminReply: boolean;
   createdAt: string;
+  reactions?: Record<string, number> | null;
+  editedAt?: string | null;
 };
 
 function TranslateButton({ text, light }: { text: string; light?: boolean }) {
@@ -175,6 +178,16 @@ function VipHyperChat({ user, onClose }: { user: any; onClose: () => void }) {
                   </p>
                   <TranslateButton text={m.message} light={!isAdmin} />
                 </div>
+                <ChatBubbleActions
+                  messageId={m.id}
+                  chatType="vip-chat"
+                  reactions={m.reactions}
+                  editedAt={m.editedAt}
+                  isOwnMessage={m.userId === user?.id}
+                  messageText={m.message}
+                  light={!isAdmin}
+                  queryKey="/api/vip-chat"
+                />
               </div>
             </div>
           );
@@ -293,6 +306,16 @@ function FoundersGroupChat({ user }: { user: any }) {
                     </p>
                     <TranslateButton text={m.message} light={isMe && !isAdmin} />
                   </div>
+                  <ChatBubbleActions
+                    messageId={m.id}
+                    chatType="founder-chat"
+                    reactions={m.reactions}
+                    editedAt={m.editedAt}
+                    isOwnMessage={isMe}
+                    messageText={m.message}
+                    light={isMe && !isAdmin}
+                    queryKey="/api/founder-chat"
+                  />
                 </div>
               </div>
             );
@@ -443,6 +466,16 @@ function CityChat({ user }: { user: any }) {
                   <p className={`text-[9px] mt-0.5 ${isMe ? "text-white/50" : "text-muted-foreground"}`}>
                     {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </p>
+                  <ChatBubbleActions
+                    messageId={m.id}
+                    chatType="founder-chat"
+                    reactions={m.reactions}
+                    editedAt={m.editedAt}
+                    isOwnMessage={isMe}
+                    messageText={m.message}
+                    light={isMe}
+                    queryKey="/api/founder-chat"
+                  />
                 </div>
               </div>
             );

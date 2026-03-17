@@ -272,6 +272,10 @@ export const api = {
         hopperFlexRange: z.enum(["0", "0.25", "0.5", "1"]).optional(),
         driverFlexRange: z.enum(["0", "0.25", "0.5", "1"]).optional(),
         isFlexibleDriver: z.boolean().optional(),
+        hopperDropoffFlex: z.enum(["exact", "close_enough"]).optional(),
+        sharedCommute: z.boolean().optional(),
+        modeLock: z.enum(["none", "hopper_only", "driver_only"]).optional(),
+        allowDetourDrivers: z.boolean().optional(),
       }),
       responses: {
         200: z.custom<typeof users.$inferSelect>(),

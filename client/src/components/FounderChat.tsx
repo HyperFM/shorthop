@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Crown, Send, Shield, Loader2, Languages } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
+import { ChatBubbleActions } from "@/components/ChatBubbleActions";
 
 function ChatTranslateButton({ text, light }: { text: string; light?: boolean }) {
   const { data: user } = useAuth();
@@ -56,6 +57,8 @@ type ChatMessage = {
   message: string;
   isAdminReply: boolean;
   createdAt: string;
+  reactions?: Record<string, number> | null;
+  editedAt?: string | null;
 };
 
 export function FounderChat({ isAdminView = false }: { isAdminView?: boolean }) {
@@ -152,6 +155,16 @@ export function FounderChat({ isAdminView = false }: { isAdminView?: boolean }) 
                     </p>
                     <ChatTranslateButton text={m.message} light={isMe && !isAdmin} />
                   </div>
+                  <ChatBubbleActions
+                    messageId={m.id}
+                    chatType="founder-chat"
+                    reactions={m.reactions}
+                    editedAt={m.editedAt}
+                    isOwnMessage={isMe}
+                    messageText={m.message}
+                    light={isMe && !isAdmin}
+                    queryKey="/api/founder-chat"
+                  />
                 </div>
               </div>
             );

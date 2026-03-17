@@ -1,0 +1,195 @@
+# SHORTHOP FINAL INTEGRATION SCRIPT (REPLIT AI)
+
+You are updating the ShortHop application to improve coherence, usability, and real-world functionality.  
+Follow these instructions EXACTLY in order. Do not skip steps. Do not redesign UI unless specified.
+
+---
+
+## 1. CORE MATCHING SYSTEM (HIGHEST PRIORITY)
+
+Implement a strict route-based matching logic:
+
+- Drivers should ONLY see hoppers if:
+  - The hopper is along the driver’s current route direction
+  - The pickup does NOT require leaving the route unless they are Insta driving with detours toggled on
+
+- Add logic:
+  - Calculate route alignment using direction + proximity
+  - Reject matches requiring detours (unless enabled in the tailor section)
+
+- Hopper display:
+  - Show message: “Driver will take you as close as possible along their route” if the hoppers  in their tailor section that they don’t mind how far they are from drop off as long as it’s close
+  - Do NOT promise exact destination unless aligned / or toggled by the hopper in their tailor section 
+
+(Hoppers also need to be able to set it in the tailor section how far they are willing to walk and be dropped off from their location) if they do walk they need gps tracking for the rest of the way I don’t mind routing them automatically to google or Apple Maps with their location and where they are headed if it’s (ABSOLUTELY Not possible to do this within the app because I would like the app to really be a more experience where they don’t really need to leave and go to other apps and they can do everything within the app and get from a to b)
+--
+
+## 2. RIDE TYPES SYSTEM
+
+Create two clearly defined ride flows:
+
+### Scheduled Ride:
+- Hopper selects:
+  - Time
+  - Route
+- Driver matches ONLY if already scheduled on similar route
+
+### Insta-Hop:
+- Hopper requests immediately
+- Match ONLY with:
+  - Drivers currently active and moving
+  - OR drivers marked as “live on route”
+
+---
+
+## 3. TOGGLES (USER CONTROL FEATURES)
+
+### A. Shared Commute Toggle
+- Add toggle switch
+- Display message:
+  “Shared commutes increase your chances of being paired”
+
+### B. Mode Lock Toggle (Flex-Hop Feature)
+- Allow user to disable:
+  - Driver mode OR Hopper mode
+- Prevent dual switching confusion
+
+### C. Detour Preference Toggle (Flex-Hop)
+- Hopper can enable:
+  “Allow detour drivers”
+- Default = OFF
+
+---
+
+## 4. DRIVER MAP LOGIC
+
+Update driver map behavior:
+
+- Show hoppers ONLY if:
+  - They are ahead of driver
+  - They are within route direction
+
+- Add UI indicators:
+  - “Ahead of you”
+  - Distance to pickup
+  - Route alignment confirmation
+
+---
+
+## 5. NOTIFICATION SYSTEM (FULL IMPLEMENTATION)
+
+### User Notifications:
+- Trigger instantly when:
+  - App opens
+  - Network connection is available
+
+- Notifications must include:
+  - Message content
+  - Reaction buttons:
+    👍 ❤️ 😢 😮 😡
+  - Reply field
+
+### Interaction Behavior:
+- Users can:
+  - React to notifications
+  - Reply to notifications
+
+---
+
+## 6. ADMIN PANEL (FOUNDER CONTROL)
+
+- Create admin notification dashboard:
+
+Admin can:
+- View all user notifications
+- See:
+  - Reactions
+  - Replies
+- Respond directly
+
+### Confirm Button:
+- When pressed:
+  - Notification fades out smoothly
+  - Logs interaction
+
+### Founder Permissions:
+- ONLY founders can:
+  - Send notifications with reactions enabled
+  - Receive replies
+
+---
+
+## 7. CHAT SYSTEM UPGRADE
+
+For both group chats and DMs:
+
+- Add:
+  - Message reactions:
+    👍 ❤️ 😢 😮 😡
+  - Reaction counters
+  - Edit message feature
+
+---
+
+## 8. RIDE PLANNER IMPROVEMENT
+
+### “Anytime” Button:
+- Add option:
+  - “Request anytime”
+- Behavior:
+  - Hopper waits until matched instead of selecting a time
+
+### Payment Preference:
+- Allow pre-selection before matching
+- Default:
+  “Free to $1”
+
+---
+
+## 9. FLEX-HOP FEATURE
+
+- Add option:
+  - Hopper can request ONLY drivers already on route
+- Ensure:
+  - No route deviation occurs
+
+---
+
+## 10. FUTURE FEATURE (DO NOT BLOCK CURRENT BUILD)
+
+- Add placeholder:
+  - ID verification system (to be implemented later)
+
+---
+
+## 11. UI/UX RULES (IMPORTANT)
+
+- Keep design:
+  - Clean
+  - Minimal
+  - Smooth transitions
+
+- DO NOT:
+  - Overcomplicate interface
+  - Add unnecessary steps
+
+- PRIORITIZE:
+  - Fast matching
+  - Clear information
+  - Low confusion
+
+---
+
+## 12. FINAL CHECK BEFORE DEPLOYMENT
+
+Ensure:
+- Drivers only see valid route matches
+- Insta-Hop works in real-time
+- Notifications are interactive
+- Toggles function correctly
+- Chat reactions + edits work
+- “Anytime” ride option works
+
+---
+
+END OF INSTRUCTION
