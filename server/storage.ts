@@ -64,6 +64,9 @@ import {
   type InsertPolicy,
   freeRideList,
   type FreeRideEntry,
+  savedRoutes,
+  type SavedRoute,
+  type InsertSavedRoute,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -72,7 +75,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User>;
   updateUserFlexibility(id: number, updates: any): Promise<User>;
-  updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean }): Promise<User>;
+  updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean }): Promise<User>;
   dismissWelcome(id: number): Promise<void>;
   getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; activeDrivers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }>;
   checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User>;
@@ -102,6 +105,12 @@ export interface IStorage {
   getWalkerRoutes(userId: number): Promise<WalkerRoute[]>;
   createWalkerRoute(route: InsertWalkerRoute): Promise<WalkerRoute>;
   deleteWalkerRoute(id: number, userId: number): Promise<void>;
+
+  getSavedRoutes(userId: number): Promise<SavedRoute[]>;
+  createSavedRoute(route: InsertSavedRoute): Promise<SavedRoute>;
+  updateSavedRoute(id: number, userId: number, updates: { name?: string; address?: string; lat?: string; lng?: string }): Promise<SavedRoute>;
+  deleteSavedRoute(id: number, userId: number): Promise<void>;
+  incrementSavedRouteConfirm(id: number, userId: number): Promise<void>;
 
   getRewards(): Promise<Reward[]>;
   redeemReward(userId: number, rewardId: number): Promise<{ code: string; reward: Reward }>;
@@ -228,7 +237,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean }): Promise<User> {
+  async updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean }): Promise<User> {
     const setValues: any = {};
     if (updates.rideVibe) setValues.rideVibe = updates.rideVibe;
     if (updates.tier) setValues.tier = updates.tier;
@@ -239,6 +248,7 @@ export class DatabaseStorage implements IStorage {
     if (updates.sharedCommute !== undefined) setValues.sharedCommute = updates.sharedCommute;
     if (updates.modeLock !== undefined) setValues.modeLock = updates.modeLock;
     if (updates.allowDetourDrivers !== undefined) setValues.allowDetourDrivers = updates.allowDetourDrivers;
+    if (updates.magicGpsEnabled !== undefined) setValues.magicGpsEnabled = updates.magicGpsEnabled;
     const [user] = await db.update(users)
       .set(setValues)
       .where(eq(users.id, id))
@@ -385,6 +395,34 @@ export class DatabaseStorage implements IStorage {
 
   async deleteWalkerRoute(id: number, userId: number): Promise<void> {
     await db.delete(walkerRoutes).where(and(eq(walkerRoutes.id, id), eq(walkerRoutes.userId, userId)));
+  }
+
+  async getSavedRoutes(userId: number): Promise<SavedRoute[]> {
+    return await db.select().from(savedRoutes).where(eq(savedRoutes.userId, userId)).orderBy(desc(savedRoutes.confirmCount));
+  }
+
+  async createSavedRoute(route: InsertSavedRoute): Promise<SavedRoute> {
+    const [created] = await db.insert(savedRoutes).values(route).returning();
+    return created;
+  }
+
+  async updateSavedRoute(id: number, userId: number, updates: { name?: string; address?: string; lat?: string; lng?: string }): Promise<SavedRoute> {
+    const setValues: any = {};
+    if (updates.name !== undefined) setValues.name = updates.name;
+    if (updates.address !== undefined) setValues.address = updates.address;
+    if (updates.lat !== undefined) setValues.lat = updates.lat;
+    if (updates.lng !== undefined) setValues.lng = updates.lng;
+    const [updated] = await db.update(savedRoutes).set(setValues).where(and(eq(savedRoutes.id, id), eq(savedRoutes.userId, userId))).returning();
+    if (!updated) throw new Error("Saved route not found");
+    return updated;
+  }
+
+  async deleteSavedRoute(id: number, userId: number): Promise<void> {
+    await db.delete(savedRoutes).where(and(eq(savedRoutes.id, id), eq(savedRoutes.userId, userId)));
+  }
+
+  async incrementSavedRouteConfirm(id: number, userId: number): Promise<void> {
+    await db.update(savedRoutes).set({ confirmCount: sql`${savedRoutes.confirmCount} + 1` }).where(and(eq(savedRoutes.id, id), eq(savedRoutes.userId, userId)));
   }
 
   async getRewards(): Promise<Reward[]> {

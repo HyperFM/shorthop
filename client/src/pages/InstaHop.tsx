@@ -13,6 +13,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useHops, useRequestHop, useCancelHop, useAcceptHop } from "@/hooks/use-hops";
 import { useGeolocation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
+import { useMagicGps, type SavedRouteMatch } from "@/hooks/use-magic-gps";
+import { MagicGpsSuggestion, MagicGpsActivation, MagicGpsStatus } from "@/components/MagicGpsNotification";
+import type { SavedRoute } from "@shared/schema";
 import { WelcomeGlobe, hasSeenWelcomeGlobe } from "@/components/WelcomeGlobe";
 import { Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -840,6 +843,52 @@ function InstaHopView({ user }: { user: User }) {
     } catch { return "hop"; }
   });
   const [isMatching, setIsMatching] = useState(false);
+  const [magicGpsSuggestion, setMagicGpsSuggestion] = useState<{
+    type: "route_match" | "driving_detected" | "walking_detected";
+    routeName?: string;
+    routeId?: number;
+  } | null>(null);
+  const [magicGpsActivation, setMagicGpsActivation] = useState<{ routeName: string } | null>(null);
+
+  const { data: magicGpsRoutes = [] } = useQuery<SavedRoute[]>({
+    queryKey: ['/api/saved-routes'],
+    enabled: !!user.magicGpsEnabled,
+  });
+
+  const handleMagicGpsSuggestion = useCallback((match: SavedRouteMatch | null, movementType: "walking" | "driving") => {
+    if (isMatching) return;
+    const isDriver = mode === "drive";
+
+    if (match) {
+      setMagicGpsSuggestion({
+        type: "route_match",
+        routeName: match.routeName,
+        routeId: match.routeId,
+      });
+    } else if (isDriver && movementType === "driving") {
+      setMagicGpsSuggestion({ type: "driving_detected" });
+    } else if (!isDriver && movementType === "walking") {
+      setMagicGpsSuggestion({ type: "walking_detected" });
+    }
+
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        const title = match
+          ? (isDriver ? "✨ MagicGPS Suggestion" : "👣 MagicGPS Suggestion")
+          : (isDriver ? "✨ MagicGPS Active" : "👣 MagicGPS Check-In");
+        const body = match
+          ? `Hey, are you headed to '${match.routeName}'?`
+          : (isDriver ? "Looks like you're headed somewhere... Turn this trip into earnings?" : "You headed somewhere? Need a hop?");
+        new Notification(title, { body, icon: "/favicon.png", tag: "magicgps" });
+      } catch {}
+    }
+  }, [isMatching, mode]);
+
+  const { gpsState, declineSuggestion } = useMagicGps({
+    enabled: !!user.magicGpsEnabled,
+    savedRoutes: magicGpsRoutes,
+    onSuggestion: handleMagicGpsSuggestion,
+  });
 
   useEffect(() => {
     function onModeChange(e: Event) {
@@ -1161,8 +1210,59 @@ function InstaHopView({ user }: { user: User }) {
         />
       )}
 
+      <AnimatePresence>
+        {magicGpsSuggestion && (
+          <MagicGpsSuggestion
+            type={magicGpsSuggestion.type}
+            routeName={magicGpsSuggestion.routeName}
+            isDriver={mode === "drive"}
+            onAccept={() => {
+              if (magicGpsSuggestion.type === "route_match" && magicGpsSuggestion.routeName) {
+                if (mode === "drive") {
+                  setMagicGpsActivation({ routeName: magicGpsSuggestion.routeName });
+                  if (magicGpsSuggestion.routeId) {
+                    apiRequest("POST", `/api/saved-routes/${magicGpsSuggestion.routeId}/confirm`).catch(() => {});
+                  }
+                } else {
+                  setLocation("/instahop");
+                  showFlash("🚗", "Looking for a hop...", "info");
+                }
+              } else if (magicGpsSuggestion.type === "driving_detected") {
+                setMagicGpsActivation({ routeName: "your destination" });
+              } else {
+                setLocation("/instahop");
+                showFlash("🚗", "Looking for a hop...", "info");
+              }
+              setMagicGpsSuggestion(null);
+            }}
+            onDismiss={() => {
+              setMagicGpsSuggestion(null);
+              declineSuggestion();
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {magicGpsActivation && (
+          <MagicGpsActivation
+            routeName={magicGpsActivation.routeName}
+            onActivate={() => {
+              showFlash("💰", "Auto-Hop activated! Searching for riders...", "success");
+            }}
+            onClose={() => setMagicGpsActivation(null)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
         <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} />
+
+        {user.magicGpsEnabled && !activeHop && (
+          <div className="absolute top-4 left-4 z-30">
+            <MagicGpsStatus isOn={true} movementType={gpsState.movementType} />
+          </div>
+        )}
 
         <div
           className="absolute bottom-0 left-0 right-0 bg-background/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 z-20"

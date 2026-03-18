@@ -72,6 +72,18 @@ export const users = pgTable("users", {
   sharedCommute: boolean("shared_commute").default(false),
   modeLock: text("mode_lock").default("none"),
   allowDetourDrivers: boolean("allow_detour_drivers").default(false),
+  magicGpsEnabled: boolean("magic_gps_enabled").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const savedRoutes = pgTable("saved_routes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  lat: text("lat"),
+  lng: text("lng"),
+  confirmCount: integer("confirm_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -251,9 +263,13 @@ export const insertHopBuddyRatingSchema = createInsertSchema(hopBuddyRatings).om
 export const insertFollowSchema = createInsertSchema(follows).omit({ id: true, createdAt: true });
 export const insertFriendshipSchema = createInsertSchema(friendships).omit({ id: true, createdAt: true });
 export const insertCommunityPostSchema = createInsertSchema(communityPosts).omit({ id: true, createdAt: true });
+export const insertSavedRouteSchema = createInsertSchema(savedRoutes).omit({ id: true, createdAt: true, confirmCount: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type SavedRoute = typeof savedRoutes.$inferSelect;
+export type InsertSavedRoute = z.infer<typeof insertSavedRouteSchema>;
 
 export type RoutineRoute = typeof routineRoutes.$inferSelect;
 export type InsertRoutineRoute = z.infer<typeof insertRoutineRouteSchema>;

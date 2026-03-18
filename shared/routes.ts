@@ -282,6 +282,7 @@ export const api = {
         sharedCommute: z.boolean().optional(),
         modeLock: z.enum(["none", "hopper_only", "driver_only"]).optional(),
         allowDetourDrivers: z.boolean().optional(),
+        magicGpsEnabled: z.boolean().optional(),
       }),
       responses: {
         200: z.custom<typeof users.$inferSelect>(),

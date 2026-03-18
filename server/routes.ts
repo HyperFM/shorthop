@@ -1840,6 +1840,61 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/saved-routes', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const routes = await storage.getSavedRoutes(req.user.id);
+      res.json(routes);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get saved routes" });
+    }
+  });
+
+  app.post('/api/saved-routes', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { name, address, lat, lng } = req.body;
+      if (!name || !address) return res.status(400).json({ message: "Name and address required" });
+      const route = await storage.createSavedRoute({ userId: req.user.id, name, address, lat, lng });
+      res.json(route);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to create saved route" });
+    }
+  });
+
+  app.put('/api/saved-routes/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const id = parseInt(req.params.id);
+      const route = await storage.updateSavedRoute(id, req.user.id, req.body);
+      res.json(route);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update saved route" });
+    }
+  });
+
+  app.delete('/api/saved-routes/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteSavedRoute(id, req.user.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete saved route" });
+    }
+  });
+
+  app.post('/api/saved-routes/:id/confirm', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const id = parseInt(req.params.id);
+      await storage.incrementSavedRouteConfirm(id, req.user!.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to confirm route" });
+    }
+  });
+
   app.get('/api/admin/transactions', requireAdmin, async (_req, res) => {
     try {
       const completedHops = await db.select().from(shortHops)

@@ -6,19 +6,22 @@ import DriverDashboard from "./DriverDashboard";
 import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
-import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb } from "lucide-react";
-import { motion } from "framer-motion";
+import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 import { RideVibeSelector } from "@/components/RideVibeSelector";
 import { PricingPreferences } from "@/components/PricingPreferences";
 import { Slider } from "@/components/ui/slider";
 import { getDriverSoundDuration, setDriverSoundDuration, type DriverSoundDuration, playDriverApproachingSound } from "@/lib/sounds";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
+import type { SavedRoute } from "@shared/schema";
 
 const NOTIF_STORAGE_KEY = "shorthop-notification-preferences";
 
@@ -76,6 +79,7 @@ export default function Dashboard() {
   const [autoAlerts, setAutoAlerts] = useState(() => {
     try { return localStorage.getItem("sh-driver-auto-notify") === "true"; } catch { return false; }
   });
+  const [magicGpsEnabled, setMagicGpsEnabled] = useState(user?.magicGpsEnabled || false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -98,7 +102,8 @@ export default function Dashboard() {
     if (user?.sharedCommute !== undefined) setSharedCommute(user.sharedCommute || false);
     if (user?.modeLock) setModeLock(user.modeLock);
     if (user?.allowDetourDrivers !== undefined) setAllowDetourDrivers(user.allowDetourDrivers || false);
-  }, [user?.hopperFlexRange, user?.driverFlexRange, user?.isFlexibleDriver, user?.hopperDropoffFlex, user?.sharedCommute, user?.modeLock, user?.allowDetourDrivers]);
+    if (user?.magicGpsEnabled !== undefined) setMagicGpsEnabled(user.magicGpsEnabled || false);
+  }, [user?.hopperFlexRange, user?.driverFlexRange, user?.isFlexibleDriver, user?.hopperDropoffFlex, user?.sharedCommute, user?.modeLock, user?.allowDetourDrivers, user?.magicGpsEnabled]);
 
   useEffect(() => {
     savePreferences(prefs);
@@ -118,7 +123,7 @@ export default function Dashboard() {
   }
 
   const updatePreferences = useMutation({
-    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean }) => {
+    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean }) => {
       const res = await apiRequest(api.profile.updatePreferences.method, api.profile.updatePreferences.path, updates);
       return res.json();
     },
@@ -405,6 +410,17 @@ export default function Dashboard() {
           </Card>
         )}
 
+        {activeTab === "hopper" && (
+          <MagicGpsSection
+            enabled={magicGpsEnabled}
+            isDriver={false}
+            onToggle={(checked) => {
+              setMagicGpsEnabled(checked);
+              updatePreferences.mutate({ magicGpsEnabled: checked });
+            }}
+          />
+        )}
+
         {activeTab === "driver" && (
           <Card className="border-border/40" data-testid="card-tailor-ride-style">
             <CardContent className="py-3 px-4 space-y-3">
@@ -533,6 +549,17 @@ export default function Dashboard() {
           </Card>
         )}
 
+        {activeTab === "driver" && (
+          <MagicGpsSection
+            enabled={magicGpsEnabled}
+            isDriver={true}
+            onToggle={(checked) => {
+              setMagicGpsEnabled(checked);
+              updatePreferences.mutate({ magicGpsEnabled: checked });
+            }}
+          />
+        )}
+
         <Card className="border-border/40" data-testid="card-tailor-vibe">
           <CardContent className="py-3 px-4 space-y-3">
             <div className="flex items-center gap-2.5">
@@ -625,5 +652,264 @@ export default function Dashboard() {
         </Card>
       </div>
     </>
+  );
+}
+
+function MagicGpsSection({ enabled, isDriver, onToggle }: { enabled: boolean; isDriver: boolean; onToggle: (checked: boolean) => void }) {
+  const [showAddRoute, setShowAddRoute] = useState(false);
+  const [newRouteName, setNewRouteName] = useState("");
+  const [newRouteAddress, setNewRouteAddress] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const queryClient = useQueryClient();
+
+  const { data: savedRoutes = [] } = useQuery<SavedRoute[]>({
+    queryKey: ['/api/saved-routes'],
+    enabled: enabled,
+  });
+
+  const geocodeAddress = async (address: string): Promise<{ lat: string; lng: string } | null> => {
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (!token) return null;
+    try {
+      const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${token}&limit=1&proximity=-84.5037,38.0406`);
+      const data = await res.json();
+      if (data.features?.length > 0) {
+        const [lng, lat] = data.features[0].center;
+        return { lat: String(lat), lng: String(lng) };
+      }
+    } catch {}
+    return null;
+  };
+
+  const createRoute = useMutation({
+    mutationFn: async () => {
+      const coords = await geocodeAddress(newRouteAddress);
+      const res = await apiRequest("POST", "/api/saved-routes", {
+        name: newRouteName,
+        address: newRouteAddress,
+        ...(coords || {}),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/saved-routes'] });
+      setNewRouteName("");
+      setNewRouteAddress("");
+      setShowAddRoute(false);
+      showFlash("📍", "Route saved!", "success");
+    },
+  });
+
+  const updateRoute = useMutation({
+    mutationFn: async ({ id, name, address }: { id: number; name: string; address: string }) => {
+      const coords = await geocodeAddress(address);
+      const res = await apiRequest("PUT", `/api/saved-routes/${id}`, {
+        name,
+        address,
+        ...(coords || {}),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/saved-routes'] });
+      setEditingId(null);
+      showFlash("✏️", "Route updated!", "success");
+    },
+  });
+
+  const deleteRoute = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/saved-routes/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/saved-routes'] });
+      showFlash("🗑️", "Route removed", "info");
+    },
+  });
+
+  return (
+    <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-transparent" data-testid="card-magic-gps">
+      <CardContent className="py-3 px-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <Sparkles className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
+            <div>
+              <Label htmlFor="toggle-magic-gps" className="text-[11px] font-medium cursor-pointer">✨ MagicGPS Detection</Label>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {isDriver
+                  ? "Detect movement and turn trips into earnings automatically"
+                  : "Detect when you're walking and offer help when needed"}
+              </p>
+            </div>
+          </div>
+          <Switch
+            id="toggle-magic-gps"
+            data-testid="switch-magic-gps"
+            checked={enabled}
+            onCheckedChange={async (checked) => {
+              if (checked && navigator.geolocation) {
+                try {
+                  const perm = await navigator.permissions.query({ name: "geolocation" });
+                  if (perm.state === "denied") {
+                    showFlash("📍", "Location access denied by browser", "error");
+                    return;
+                  }
+                  if (perm.state === "prompt") {
+                    navigator.geolocation.getCurrentPosition(() => {}, () => {});
+                  }
+                } catch {}
+                if ("Notification" in window && Notification.permission !== "granted") {
+                  await Notification.requestPermission();
+                }
+              }
+              onToggle(checked);
+              showFlash(checked ? "✨" : "💤", checked ? "MagicGPS On" : "MagicGPS Off", checked ? "success" : "info");
+            }}
+          />
+        </div>
+
+        <AnimatePresence>
+          {enabled && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="border-t border-amber-200/30 dark:border-amber-800/30 pt-3 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-amber-500" />
+                  <p className="text-[11px] font-bold text-foreground">Saved Routes</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-[10px] font-bold gap-1 rounded-full border-amber-300/50 px-2"
+                  onClick={() => setShowAddRoute(!showAddRoute)}
+                  data-testid="button-add-route"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add Common Route
+                </Button>
+              </div>
+
+              <AnimatePresence>
+                {showAddRoute && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-2 p-3 rounded-xl bg-muted/30 border border-border/50"
+                  >
+                    <Input
+                      placeholder="Name (e.g. Grandma's, Work, Home)"
+                      value={newRouteName}
+                      onChange={(e) => setNewRouteName(e.target.value)}
+                      className="h-8 text-xs rounded-lg"
+                      data-testid="input-route-name"
+                    />
+                    <Input
+                      placeholder="Address or location"
+                      value={newRouteAddress}
+                      onChange={(e) => setNewRouteAddress(e.target.value)}
+                      className="h-8 text-xs rounded-lg"
+                      data-testid="input-route-address"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="h-7 text-[10px] font-bold flex-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg"
+                        disabled={!newRouteName.trim() || !newRouteAddress.trim() || createRoute.isPending}
+                        onClick={() => createRoute.mutate()}
+                        data-testid="button-save-route"
+                      >
+                        {createRoute.isPending ? "Saving..." : "Save Route"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px] rounded-lg"
+                        onClick={() => { setShowAddRoute(false); setNewRouteName(""); setNewRouteAddress(""); }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {savedRoutes.length === 0 && !showAddRoute && (
+                <div className="text-center py-3">
+                  <p className="text-[10px] text-muted-foreground">No saved routes yet. Add common destinations for smarter suggestions.</p>
+                </div>
+              )}
+
+              {savedRoutes.map((route) => (
+                <div key={route.id} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-muted/30 border border-border/30" data-testid={`saved-route-${route.id}`}>
+                  {editingId === route.id ? (
+                    <div className="flex-1 space-y-1.5">
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="h-7 text-[11px] rounded-lg"
+                        data-testid={`input-edit-name-${route.id}`}
+                      />
+                      <Input
+                        value={editAddress}
+                        onChange={(e) => setEditAddress(e.target.value)}
+                        className="h-7 text-[11px] rounded-lg"
+                        data-testid={`input-edit-address-${route.id}`}
+                      />
+                      <div className="flex gap-1.5">
+                        <Button
+                          size="sm"
+                          className="h-6 text-[9px] font-bold flex-1 bg-amber-500 text-white rounded-lg"
+                          onClick={() => updateRoute.mutate({ id: route.id, name: editName, address: editAddress })}
+                          disabled={updateRoute.isPending}
+                        >
+                          Save
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-6 text-[9px] rounded-lg" onClick={() => setEditingId(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                        <MapPin className="w-4 h-4 text-amber-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-bold text-foreground truncate">{route.name}</p>
+                        <p className="text-[9px] text-muted-foreground truncate">{route.address}</p>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <button
+                          onClick={() => { setEditingId(route.id); setEditName(route.name); setEditAddress(route.address); }}
+                          className="w-6 h-6 rounded-md hover:bg-muted flex items-center justify-center"
+                          data-testid={`button-edit-route-${route.id}`}
+                        >
+                          <Pencil className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                        <button
+                          onClick={() => deleteRoute.mutate(route.id)}
+                          className="w-6 h-6 rounded-md hover:bg-red-100 dark:hover:bg-red-900/20 flex items-center justify-center"
+                          data-testid={`button-delete-route-${route.id}`}
+                        >
+                          <Trash2 className="w-3 h-3 text-red-500" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </CardContent>
+    </Card>
   );
 }
