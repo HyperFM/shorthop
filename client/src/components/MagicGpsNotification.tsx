@@ -217,28 +217,186 @@ export function MagicGpsActivation({ routeName, onActivate, onClose }: MagicGpsA
 interface MagicGpsStatusProps {
   isOn: boolean;
   movementType: "stationary" | "walking" | "driving" | null;
+  flowModeActive?: boolean;
 }
 
-export function MagicGpsStatus({ isOn, movementType }: MagicGpsStatusProps) {
+export function MagicGpsStatus({ isOn, movementType, flowModeActive }: MagicGpsStatusProps) {
   if (!isOn) return null;
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100/80 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700"
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${
+        flowModeActive
+          ? "bg-green-100/80 dark:bg-green-900/30 border-green-200 dark:border-green-700"
+          : "bg-amber-100/80 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700"
+      }`}
       data-testid="magic-gps-status"
     >
       <motion.div
         animate={{ scale: [1, 1.3, 1] }}
         transition={{ duration: 2, repeat: Infinity }}
-        className="w-1.5 h-1.5 rounded-full bg-amber-500"
+        className={`w-1.5 h-1.5 rounded-full ${flowModeActive ? "bg-green-500" : "bg-amber-500"}`}
       />
-      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400">
-        ✨ MagicGPS On
+      <span className={`text-[10px] font-bold ${flowModeActive ? "text-green-700 dark:text-green-400" : "text-amber-700 dark:text-amber-400"}`}>
+        {flowModeActive ? "🌊 Flow Mode" : "✨ MagicGPS On"}
       </span>
-      {movementType === "driving" && <span className="text-[9px] text-amber-600">🚗</span>}
-      {movementType === "walking" && <span className="text-[9px] text-amber-600">🚶</span>}
+      {movementType === "driving" && <span className="text-[9px]">🚗</span>}
+      {movementType === "walking" && <span className="text-[9px]">🚶</span>}
+    </motion.div>
+  );
+}
+
+interface FlowModeNotificationProps {
+  routeName: string;
+  onDismiss: () => void;
+}
+
+export function FlowModeNotification({ routeName, onDismiss }: FlowModeNotificationProps) {
+  return (
+    <motion.div
+      initial={{ y: -80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: -80, opacity: 0 }}
+      transition={{ type: "spring", damping: 25, stiffness: 300 }}
+      className="fixed top-0 left-0 right-0 z-[80] p-4 pt-[env(safe-area-inset-top,16px)]"
+      data-testid="flow-mode-notification"
+    >
+      <div className="max-w-md mx-auto rounded-2xl overflow-hidden shadow-2xl border border-green-200/50 dark:border-green-700/30 bg-background">
+        <div className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shrink-0 shadow-md">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-extrabold text-foreground">✨ Flow Mode Active</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Earning along your route to {routeName}</p>
+            </div>
+            <button onClick={onDismiss} className="p-1 rounded-full hover:bg-muted" data-testid="button-dismiss-flow-mode">
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+interface DriftCatchNotificationProps {
+  onRequestHop: () => void;
+  onDismiss: () => void;
+}
+
+export function DriftCatchNotification({ onRequestHop, onDismiss }: DriftCatchNotificationProps) {
+  return (
+    <motion.div
+      initial={{ y: -80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: -80, opacity: 0 }}
+      transition={{ type: "spring", damping: 25, stiffness: 300 }}
+      className="fixed top-0 left-0 right-0 z-[80] p-4 pt-[env(safe-area-inset-top,16px)]"
+      data-testid="drift-catch-notification"
+    >
+      <div className="max-w-md mx-auto rounded-2xl overflow-hidden shadow-2xl border border-blue-200/50 dark:border-blue-700/30 bg-background">
+        <div className="p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center shrink-0 shadow-md">
+              <Navigation className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-extrabold text-foreground">🧭 On the Move</p>
+              <p className="text-xs text-muted-foreground mt-1">You're on the move — want a quick hop?</p>
+            </div>
+            <button onClick={onDismiss} className="p-1 rounded-full hover:bg-muted" data-testid="button-dismiss-drift-catch">
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+          <div className="flex gap-2 mt-3">
+            <Button onClick={onRequestHop} size="sm" className="flex-1 h-9 font-bold rounded-xl text-white bg-gradient-to-r from-green-500 to-emerald-600" data-testid="button-drift-catch-hop">
+              Request a Hop
+            </Button>
+            <Button onClick={onDismiss} size="sm" variant="outline" className="flex-1 h-9 font-bold rounded-xl" data-testid="button-drift-catch-dismiss">
+              Keep Walking
+            </Button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+interface OnTheWayPingProps {
+  onRequestHop: () => void;
+  onDismiss: () => void;
+}
+
+export function OnTheWayPing({ onRequestHop, onDismiss }: OnTheWayPingProps) {
+  return (
+    <motion.div
+      initial={{ y: -80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: -80, opacity: 0 }}
+      transition={{ type: "spring", damping: 25, stiffness: 300 }}
+      className="fixed top-0 left-0 right-0 z-[80] p-4 pt-[env(safe-area-inset-top,16px)]"
+      data-testid="on-the-way-ping"
+    >
+      <div className="max-w-md mx-auto rounded-2xl overflow-hidden shadow-2xl border border-orange-200/50 dark:border-orange-700/30 bg-background">
+        <div className="p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shrink-0 shadow-md">
+              <MapPin className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-extrabold text-foreground">🚗 Someone's heading your way</p>
+              <p className="text-xs text-muted-foreground mt-1">Catch a hop without delay</p>
+            </div>
+            <button onClick={onDismiss} className="p-1 rounded-full hover:bg-muted" data-testid="button-dismiss-on-the-way">
+              <X className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </div>
+          <div className="flex gap-2 mt-3">
+            <Button onClick={onRequestHop} size="sm" className="flex-1 h-9 font-bold rounded-xl text-white bg-gradient-to-r from-orange-500 to-amber-600" data-testid="button-on-the-way-hop">
+              Request Ride
+            </Button>
+            <Button onClick={onDismiss} size="sm" variant="outline" className="flex-1 h-9 font-bold rounded-xl" data-testid="button-on-the-way-dismiss">
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+interface RepeatRouteProps {
+  routeName: string;
+  onActivate: () => void;
+  onDismiss: () => void;
+}
+
+export function RepeatRoutePrompt({ routeName, onActivate, onDismiss }: RepeatRouteProps) {
+  return (
+    <motion.div
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 20, opacity: 0 }}
+      transition={{ type: "spring", damping: 25, stiffness: 300 }}
+      className="flex items-center gap-3 p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-700/30 shadow-lg"
+      data-testid="repeat-route-prompt"
+    >
+      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
+        <MapPin className="w-4 h-4 text-white" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-bold text-foreground truncate">Go to {routeName} again?</p>
+      </div>
+      <Button onClick={onActivate} size="sm" className="h-8 text-[10px] font-bold rounded-xl text-white bg-gradient-to-r from-orange-500 to-amber-600 px-3" data-testid="button-repeat-route">
+        Let's Go
+      </Button>
+      <button onClick={onDismiss} className="p-1 rounded-full hover:bg-muted shrink-0" data-testid="button-dismiss-repeat">
+        <X className="w-3.5 h-3.5 text-muted-foreground" />
+      </button>
     </motion.div>
   );
 }

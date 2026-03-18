@@ -67,6 +67,13 @@ import {
   savedRoutes,
   type SavedRoute,
   type InsertSavedRoute,
+  commuteCircles,
+  commuteCircleMembers,
+  userActivityWindows,
+  type CommuteCircle,
+  type InsertCommuteCircle,
+  type CommuteCircleMember,
+  type UserActivityWindow,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -75,7 +82,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User>;
   updateUserFlexibility(id: number, updates: any): Promise<User>;
-  updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean }): Promise<User>;
+  updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean; flowModeEnabled?: boolean }): Promise<User>;
   dismissWelcome(id: number): Promise<void>;
   getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; activeDrivers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }>;
   checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User>;
@@ -111,6 +118,20 @@ export interface IStorage {
   updateSavedRoute(id: number, userId: number, updates: { name?: string; address?: string; lat?: string; lng?: string }): Promise<SavedRoute>;
   deleteSavedRoute(id: number, userId: number): Promise<void>;
   incrementSavedRouteConfirm(id: number, userId: number): Promise<void>;
+
+  getCommuteCircles(): Promise<CommuteCircle[]>;
+  getCommuteCircle(id: number): Promise<CommuteCircle | undefined>;
+  createCommuteCircle(circle: InsertCommuteCircle): Promise<CommuteCircle>;
+  deleteCommuteCircle(id: number, userId: number): Promise<void>;
+  getCircleMembers(circleId: number): Promise<CommuteCircleMember[]>;
+  joinCircle(circleId: number, userId: number): Promise<CommuteCircleMember>;
+  leaveCircle(circleId: number, userId: number): Promise<void>;
+  getUserCircles(userId: number): Promise<CommuteCircle[]>;
+  getCircleMemberUserIds(circleId: number): Promise<number[]>;
+  getSharedCircleUserIds(userId: number): Promise<number[]>;
+
+  getUserActivityWindows(userId: number): Promise<UserActivityWindow[]>;
+  upsertActivityWindow(userId: number, dayOfWeek: number, startHour: number, endHour: number): Promise<UserActivityWindow>;
 
   getRewards(): Promise<Reward[]>;
   redeemReward(userId: number, rewardId: number): Promise<{ code: string; reward: Reward }>;
@@ -237,7 +258,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean }): Promise<User> {
+  async updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean; flowModeEnabled?: boolean }): Promise<User> {
     const setValues: any = {};
     if (updates.rideVibe) setValues.rideVibe = updates.rideVibe;
     if (updates.tier) setValues.tier = updates.tier;
@@ -249,6 +270,7 @@ export class DatabaseStorage implements IStorage {
     if (updates.modeLock !== undefined) setValues.modeLock = updates.modeLock;
     if (updates.allowDetourDrivers !== undefined) setValues.allowDetourDrivers = updates.allowDetourDrivers;
     if (updates.magicGpsEnabled !== undefined) setValues.magicGpsEnabled = updates.magicGpsEnabled;
+    if (updates.flowModeEnabled !== undefined) setValues.flowModeEnabled = updates.flowModeEnabled;
     const [user] = await db.update(users)
       .set(setValues)
       .where(eq(users.id, id))
@@ -423,6 +445,87 @@ export class DatabaseStorage implements IStorage {
 
   async incrementSavedRouteConfirm(id: number, userId: number): Promise<void> {
     await db.update(savedRoutes).set({ confirmCount: sql`${savedRoutes.confirmCount} + 1` }).where(and(eq(savedRoutes.id, id), eq(savedRoutes.userId, userId)));
+  }
+
+  async getCommuteCircles(): Promise<CommuteCircle[]> {
+    return await db.select().from(commuteCircles).orderBy(desc(commuteCircles.createdAt));
+  }
+
+  async getCommuteCircle(id: number): Promise<CommuteCircle | undefined> {
+    const [circle] = await db.select().from(commuteCircles).where(eq(commuteCircles.id, id));
+    return circle;
+  }
+
+  async createCommuteCircle(circle: InsertCommuteCircle): Promise<CommuteCircle> {
+    const [created] = await db.insert(commuteCircles).values(circle).returning();
+    await db.insert(commuteCircleMembers).values({ circleId: created.id, userId: circle.creatorId });
+    return created;
+  }
+
+  async deleteCommuteCircle(id: number, userId: number): Promise<void> {
+    const [circle] = await db.select().from(commuteCircles).where(and(eq(commuteCircles.id, id), eq(commuteCircles.creatorId, userId)));
+    if (!circle) throw new Error("Not authorized to delete this circle");
+    await db.delete(commuteCircleMembers).where(eq(commuteCircleMembers.circleId, id));
+    await db.delete(commuteCircles).where(eq(commuteCircles.id, id));
+  }
+
+  async getCircleMembers(circleId: number): Promise<CommuteCircleMember[]> {
+    return await db.select().from(commuteCircleMembers).where(eq(commuteCircleMembers.circleId, circleId));
+  }
+
+  async joinCircle(circleId: number, userId: number): Promise<CommuteCircleMember> {
+    const existing = await db.select().from(commuteCircleMembers).where(and(eq(commuteCircleMembers.circleId, circleId), eq(commuteCircleMembers.userId, userId)));
+    if (existing.length > 0) return existing[0];
+    const [member] = await db.insert(commuteCircleMembers).values({ circleId, userId }).returning();
+    return member;
+  }
+
+  async leaveCircle(circleId: number, userId: number): Promise<void> {
+    await db.delete(commuteCircleMembers).where(and(eq(commuteCircleMembers.circleId, circleId), eq(commuteCircleMembers.userId, userId)));
+  }
+
+  async getUserCircles(userId: number): Promise<CommuteCircle[]> {
+    const memberships = await db.select().from(commuteCircleMembers).where(eq(commuteCircleMembers.userId, userId));
+    if (memberships.length === 0) return [];
+    const circleIds = memberships.map(m => m.circleId);
+    const circles = await db.select().from(commuteCircles).where(sql`${commuteCircles.id} IN (${sql.join(circleIds.map(id => sql`${id}`), sql`, `)})`);
+    return circles;
+  }
+
+  async getCircleMemberUserIds(circleId: number): Promise<number[]> {
+    const members = await db.select().from(commuteCircleMembers).where(eq(commuteCircleMembers.circleId, circleId));
+    return members.map(m => m.userId);
+  }
+
+  async getSharedCircleUserIds(userId: number): Promise<number[]> {
+    const userCircles = await db.select({ circleId: commuteCircleMembers.circleId })
+      .from(commuteCircleMembers).where(eq(commuteCircleMembers.userId, userId));
+    if (userCircles.length === 0) return [];
+    const circleIds = userCircles.map(c => c.circleId);
+    const peerMembers = await db.select({ userId: commuteCircleMembers.userId })
+      .from(commuteCircleMembers).where(
+        and(
+          sql`${commuteCircleMembers.circleId} IN (${sql.join(circleIds.map(id => sql`${id}`), sql`, `)})`,
+          sql`${commuteCircleMembers.userId} != ${userId}`
+        )
+      );
+    return [...new Set(peerMembers.map(m => m.userId))];
+  }
+
+  async getUserActivityWindows(userId: number): Promise<UserActivityWindow[]> {
+    return await db.select().from(userActivityWindows).where(eq(userActivityWindows.userId, userId));
+  }
+
+  async upsertActivityWindow(userId: number, dayOfWeek: number, startHour: number, endHour: number): Promise<UserActivityWindow> {
+    const existing = await db.select().from(userActivityWindows).where(
+      and(eq(userActivityWindows.userId, userId), eq(userActivityWindows.dayOfWeek, dayOfWeek), eq(userActivityWindows.startHour, startHour), eq(userActivityWindows.endHour, endHour))
+    );
+    if (existing.length > 0) {
+      const [updated] = await db.update(userActivityWindows).set({ count: sql`${userActivityWindows.count} + 1` }).where(eq(userActivityWindows.id, existing[0].id)).returning();
+      return updated;
+    }
+    const [created] = await db.insert(userActivityWindows).values({ userId, dayOfWeek, startHour, endHour }).returning();
+    return created;
   }
 
   async getRewards(): Promise<Reward[]> {

@@ -283,6 +283,7 @@ export const api = {
         modeLock: z.enum(["none", "hopper_only", "driver_only"]).optional(),
         allowDetourDrivers: z.boolean().optional(),
         magicGpsEnabled: z.boolean().optional(),
+        flowModeEnabled: z.boolean().optional(),
       }),
       responses: {
         200: z.custom<typeof users.$inferSelect>(),

@@ -8,6 +8,7 @@ export interface GpsState {
   movementType: "stationary" | "walking" | "driving" | null;
   isTracking: boolean;
   lastUpdate: number | null;
+  flowModeActive: boolean;
 }
 
 export interface SavedRouteMatch {
@@ -20,8 +21,11 @@ export interface SavedRouteMatch {
 
 interface UseMagicGpsOptions {
   enabled: boolean;
+  flowModeEnabled?: boolean;
   savedRoutes: Array<{ id: number; name: string; address: string; lat: string | null; lng: string | null; confirmCount: number | null }>;
   onSuggestion?: (match: SavedRouteMatch | null, movementType: "walking" | "driving") => void;
+  onFlowModeActivate?: (match: SavedRouteMatch) => void;
+  onDriftCatch?: () => void;
 }
 
 function calculateBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -39,7 +43,10 @@ function bearingDiff(a: number, b: number): number {
   return diff;
 }
 
-export function useMagicGps({ enabled, savedRoutes, onSuggestion }: UseMagicGpsOptions) {
+const FLOW_MODE_CONFIDENCE_THRESHOLD = 3;
+const DRIFT_CATCH_WALK_DURATION = 120000;
+
+export function useMagicGps({ enabled, flowModeEnabled, savedRoutes, onSuggestion, onFlowModeActivate, onDriftCatch }: UseMagicGpsOptions) {
   const [gpsState, setGpsState] = useState<GpsState>({
     speed: null,
     bearing: null,
@@ -48,6 +55,7 @@ export function useMagicGps({ enabled, savedRoutes, onSuggestion }: UseMagicGpsO
     movementType: null,
     isTracking: false,
     lastUpdate: null,
+    flowModeActive: false,
   });
 
   const watchIdRef = useRef<number | null>(null);
@@ -57,6 +65,9 @@ export function useMagicGps({ enabled, savedRoutes, onSuggestion }: UseMagicGpsO
   const stationaryStart = useRef<number | null>(null);
   const consistentDirectionStart = useRef<number | null>(null);
   const lastBearing = useRef<number | null>(null);
+  const walkingStartTime = useRef<number | null>(null);
+  const lastDriftCatchTime = useRef<number>(0);
+  const flowModeActivatedRef = useRef<boolean>(false);
 
   const checkRouteMatch = useCallback((bearing: number, lat: number, lng: number): SavedRouteMatch | null => {
     if (!savedRoutes.length) return null;
@@ -103,7 +114,8 @@ export function useMagicGps({ enabled, savedRoutes, onSuggestion }: UseMagicGpsO
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
       }
-      setGpsState(prev => ({ ...prev, isTracking: false, movementType: null }));
+      setGpsState(prev => ({ ...prev, isTracking: false, movementType: null, flowModeActive: false }));
+      flowModeActivatedRef.current = false;
       return;
     }
 
@@ -148,8 +160,23 @@ export function useMagicGps({ enabled, savedRoutes, onSuggestion }: UseMagicGpsO
           consistentDirectionStart.current = null;
           lastBearing.current = null;
         }
+        walkingStartTime.current = null;
       } else {
         stationaryStart.current = null;
+      }
+
+      if (movementType === "walking") {
+        if (!walkingStartTime.current) walkingStartTime.current = now;
+        const walkDuration = now - walkingStartTime.current;
+        if (walkDuration >= DRIFT_CATCH_WALK_DURATION && onDriftCatch) {
+          const timeSinceDriftCatch = now - lastDriftCatchTime.current;
+          if (timeSinceDriftCatch > 900000) {
+            onDriftCatch();
+            lastDriftCatchTime.current = now;
+          }
+        }
+      } else {
+        walkingStartTime.current = null;
       }
 
       if (bearing !== null && (movementType === "walking" || movementType === "driving")) {
@@ -162,19 +189,28 @@ export function useMagicGps({ enabled, savedRoutes, onSuggestion }: UseMagicGpsO
 
         const consistentDuration = consistentDirectionStart.current ? (now - consistentDirectionStart.current) / 1000 : 0;
 
-        if (consistentDuration >= 60 && onSuggestion) {
-          const timeSinceNotification = now - lastNotificationTime.current;
-          const timeSinceDecline = now - lastDeclineTime.current;
+        if (consistentDuration >= 60) {
+          const match = checkRouteMatch(bearing, latitude, longitude);
 
-          if (timeSinceNotification > 600000 && timeSinceDecline > 900000) {
-            const match = checkRouteMatch(bearing, latitude, longitude);
-            onSuggestion(match, movementType);
-            lastNotificationTime.current = now;
+          if (flowModeEnabled && match && (match.confidence >= 0.7 || (match.confidence >= 0.5 && (savedRoutes.find(r => r.id === match.routeId)?.confirmCount || 0) >= FLOW_MODE_CONFIDENCE_THRESHOLD))) {
+            if (!flowModeActivatedRef.current && onFlowModeActivate) {
+              flowModeActivatedRef.current = true;
+              onFlowModeActivate(match);
+              setGpsState(prev => ({ ...prev, flowModeActive: true }));
+            }
+          } else if (onSuggestion) {
+            const timeSinceNotification = now - lastNotificationTime.current;
+            const timeSinceDecline = now - lastDeclineTime.current;
+
+            if (timeSinceNotification > 600000 && timeSinceDecline > 900000) {
+              onSuggestion(match, movementType);
+              lastNotificationTime.current = now;
+            }
           }
         }
       }
 
-      setGpsState({
+      setGpsState(prev => ({
         speed: calculatedSpeed,
         bearing,
         lat: latitude,
@@ -182,7 +218,8 @@ export function useMagicGps({ enabled, savedRoutes, onSuggestion }: UseMagicGpsO
         movementType,
         isTracking: true,
         lastUpdate: now,
-      });
+        flowModeActive: prev.flowModeActive,
+      }));
     };
 
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -200,8 +237,9 @@ export function useMagicGps({ enabled, savedRoutes, onSuggestion }: UseMagicGpsO
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
       }
+      flowModeActivatedRef.current = false;
     };
-  }, [enabled, checkRouteMatch, onSuggestion]);
+  }, [enabled, flowModeEnabled, checkRouteMatch, onSuggestion, onFlowModeActivate, onDriftCatch, savedRoutes]);
 
   return { gpsState, declineSuggestion };
 }

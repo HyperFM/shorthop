@@ -22,6 +22,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import type { SavedRoute } from "@shared/schema";
+import { CommuteCircles } from "@/components/CommuteCircles";
 
 const NOTIF_STORAGE_KEY = "shorthop-notification-preferences";
 
@@ -80,6 +81,7 @@ export default function Dashboard() {
     try { return localStorage.getItem("sh-driver-auto-notify") === "true"; } catch { return false; }
   });
   const [magicGpsEnabled, setMagicGpsEnabled] = useState(user?.magicGpsEnabled || false);
+  const [flowModeEnabled, setFlowModeEnabled] = useState(user?.flowModeEnabled || false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -123,7 +125,7 @@ export default function Dashboard() {
   }
 
   const updatePreferences = useMutation({
-    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean }) => {
+    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean; flowModeEnabled?: boolean }) => {
       const res = await apiRequest(api.profile.updatePreferences.method, api.profile.updatePreferences.path, updates);
       return res.json();
     },
@@ -418,6 +420,11 @@ export default function Dashboard() {
               setMagicGpsEnabled(checked);
               updatePreferences.mutate({ magicGpsEnabled: checked });
             }}
+            flowModeEnabled={flowModeEnabled}
+            onFlowModeToggle={(checked) => {
+              setFlowModeEnabled(checked);
+              updatePreferences.mutate({ flowModeEnabled: checked });
+            }}
           />
         )}
 
@@ -557,7 +564,16 @@ export default function Dashboard() {
               setMagicGpsEnabled(checked);
               updatePreferences.mutate({ magicGpsEnabled: checked });
             }}
+            flowModeEnabled={flowModeEnabled}
+            onFlowModeToggle={(checked) => {
+              setFlowModeEnabled(checked);
+              updatePreferences.mutate({ flowModeEnabled: checked });
+            }}
           />
+        )}
+
+        {activeTab === "driver" && user && (
+          <CommuteCircles userId={user.id} />
         )}
 
         <Card className="border-border/40" data-testid="card-tailor-vibe">
@@ -655,7 +671,7 @@ export default function Dashboard() {
   );
 }
 
-function MagicGpsSection({ enabled, isDriver, onToggle }: { enabled: boolean; isDriver: boolean; onToggle: (checked: boolean) => void }) {
+function MagicGpsSection({ enabled, isDriver, onToggle, flowModeEnabled, onFlowModeToggle }: { enabled: boolean; isDriver: boolean; onToggle: (checked: boolean) => void; flowModeEnabled?: boolean; onFlowModeToggle?: (checked: boolean) => void }) {
   const [showAddRoute, setShowAddRoute] = useState(false);
   const [newRouteName, setNewRouteName] = useState("");
   const [newRouteAddress, setNewRouteAddress] = useState("");
@@ -779,6 +795,26 @@ function MagicGpsSection({ enabled, isDriver, onToggle }: { enabled: boolean; is
               transition={{ duration: 0.2 }}
               className="border-t border-amber-200/30 dark:border-amber-800/30 pt-3 space-y-3"
             >
+              {isDriver && onFlowModeToggle && (
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-green-50/50 dark:bg-green-900/10 border border-green-200/30 dark:border-green-800/20">
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 mt-0.5 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-3 h-3 text-white" />
+                    </div>
+                    <div>
+                      <Label htmlFor="toggle-flow-mode" className="text-[10px] font-bold cursor-pointer">🌊 Flow Mode</Label>
+                      <p className="text-[9px] text-muted-foreground">Auto-activate on confident routes</p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="toggle-flow-mode"
+                    data-testid="switch-flow-mode"
+                    checked={flowModeEnabled}
+                    onCheckedChange={onFlowModeToggle}
+                  />
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-3.5 h-3.5 text-amber-500" />

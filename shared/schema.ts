@@ -73,6 +73,10 @@ export const users = pgTable("users", {
   modeLock: text("mode_lock").default("none"),
   allowDetourDrivers: boolean("allow_detour_drivers").default(false),
   magicGpsEnabled: boolean("magic_gps_enabled").default(false),
+  flowModeEnabled: boolean("flow_mode_enabled").default(false),
+  confidenceScore: integer("confidence_score").default(0),
+  lastCompletedRouteId: integer("last_completed_route_id"),
+  lastCompletedRouteName: text("last_completed_route_name"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -150,6 +154,7 @@ export const shortHops = pgTable("short_hops", {
   departureTime: timestamp("departure_time"),
   arrivalDeadline: timestamp("arrival_deadline"),
   timeWindowExpiry: timestamp("time_window_expiry"),
+  microHop: boolean("micro_hop").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -446,6 +451,42 @@ export const policies = pgTable("policies", {
 export const insertPoliciesSchema = createInsertSchema(policies).omit({ id: true, updatedAt: true });
 export type Policy = typeof policies.$inferSelect;
 export type InsertPolicy = z.infer<typeof insertPoliciesSchema>;
+
+export const commuteCircles = pgTable("commute_circles", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  creatorId: integer("creator_id").references(() => users.id).notNull(),
+  corridor: text("corridor"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const commuteCircleMembers = pgTable("commute_circle_members", {
+  id: serial("id").primaryKey(),
+  circleId: integer("circle_id").references(() => commuteCircles.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const userActivityWindows = pgTable("user_activity_windows", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  dayOfWeek: integer("day_of_week").notNull(),
+  startHour: integer("start_hour").notNull(),
+  endHour: integer("end_hour").notNull(),
+  count: integer("count").default(1),
+});
+
+export const insertCommuteCircleSchema = createInsertSchema(commuteCircles).omit({ id: true, createdAt: true });
+export const insertCommuteCircleMemberSchema = createInsertSchema(commuteCircleMembers).omit({ id: true, joinedAt: true });
+export const insertActivityWindowSchema = createInsertSchema(userActivityWindows).omit({ id: true });
+
+export type CommuteCircle = typeof commuteCircles.$inferSelect;
+export type InsertCommuteCircle = z.infer<typeof insertCommuteCircleSchema>;
+export type CommuteCircleMember = typeof commuteCircleMembers.$inferSelect;
+export type InsertCommuteCircleMember = z.infer<typeof insertCommuteCircleMemberSchema>;
+export type UserActivityWindow = typeof userActivityWindows.$inferSelect;
+export type InsertActivityWindow = z.infer<typeof insertActivityWindowSchema>;
 
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

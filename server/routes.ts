@@ -420,11 +420,12 @@ export async function registerRoutes(
 
       const driverLoc = liveLocations.get(req.user.id);
       const driverRoutes = await storage.getRoutes(req.user.id);
+      const circleUserIds = await storage.getSharedCircleUserIds(req.user.id);
       let sortedAvailable = availableHops;
       if (driverLoc && Date.now() - driverLoc.updatedAt < 120000) {
         const driverDestinations = driverRoutes.map(r => ({
           start: r.startLocation?.toLowerCase() || "",
-          end: r.destination?.toLowerCase() || "",
+          end: r.endLocation?.toLowerCase() || "",
         }));
 
         function scoreHop(hop: typeof availableHops[0]): number {
@@ -458,6 +459,28 @@ export async function registerRoutes(
                 }
               }
             }
+
+            const driverBearing = Math.atan2(hopEndLng - driverLoc!.longitude, hopEndLat - driverLoc!.latitude);
+            const hopBearing = Math.atan2(
+              parseFloat(hop.endLng || "0") - hopStartLng,
+              parseFloat(hop.endLat || "0") - hopStartLat
+            );
+            const angleDiff = Math.abs(driverBearing - hopBearing);
+            const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
+            if (normalizedAngle < Math.PI / 4) {
+              directionBonus -= 4;
+            } else if (normalizedAngle < Math.PI / 2) {
+              directionBonus -= 2;
+            }
+          }
+
+          if (circleUserIds.includes(hop.walkerId)) {
+            directionBonus -= 8;
+          }
+
+          const isMicroHop = hop.microHop || (hop.distanceMiles && parseFloat(String(hop.distanceMiles)) <= 1);
+          if (isMicroHop) {
+            directionBonus -= 1;
           }
 
           return pickupDist + directionBonus;
@@ -515,6 +538,8 @@ export async function registerRoutes(
       const driverEarningsCents = Math.floor(miles * 100);
       const priceCents = driverEarningsCents;
 
+      const isMicroHop = req.body.microHop === true || (miles > 0 && miles <= 1);
+
       const hop = await storage.createHop({
         walkerId: req.user.id,
         driverId: null,
@@ -535,6 +560,7 @@ export async function registerRoutes(
         departureTime: input.departureTime ? new Date(input.departureTime) : null,
         arrivalDeadline: input.arrivalDeadline ? new Date(input.arrivalDeadline) : null,
         timeWindowExpiry: input.timeWindowExpiry ? new Date(input.timeWindowExpiry) : null,
+        microHop: isMicroHop,
       });
       res.status(201).json(hop);
     } catch (err) {
@@ -616,6 +642,22 @@ export async function registerRoutes(
            }
          }
        }
+
+       if (hop.endLocation) {
+         await db.update(users).set({
+           lastCompletedRouteId: hop.id,
+           lastCompletedRouteName: hop.endLocation,
+         }).where(eq(users.id, req.user.id));
+         if (hop.walkerId) {
+           await db.update(users).set({
+             lastCompletedRouteId: hop.id,
+             lastCompletedRouteName: hop.endLocation,
+           }).where(eq(users.id, hop.walkerId));
+         }
+       }
+
+       const now = new Date();
+       await storage.upsertActivityWindow(req.user.id, now.getDay(), now.getHours(), Math.min(now.getHours() + 1, 23));
 
        res.json(hop);
     } catch (e) {
@@ -1892,6 +1934,127 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Failed to confirm route" });
+    }
+  });
+
+  app.get('/api/commute-circles', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const circles = await storage.getCommuteCircles();
+      const userCircles = await storage.getUserCircles(req.user!.id);
+      const userCircleIds = new Set(userCircles.map(c => c.id));
+      const enriched = await Promise.all(circles.map(async (c) => {
+        const members = await storage.getCircleMembers(c.id);
+        return { ...c, memberCount: members.length, isMember: userCircleIds.has(c.id), isCreator: c.creatorId === req.user!.id };
+      }));
+      res.json(enriched);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to load circles" });
+    }
+  });
+
+  app.post('/api/commute-circles', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { name, description, corridor } = req.body;
+      if (!name) return res.status(400).json({ message: "Name required" });
+      const circle = await storage.createCommuteCircle({ name, description, corridor, creatorId: req.user!.id });
+      res.json(circle);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to create circle" });
+    }
+  });
+
+  app.post('/api/commute-circles/:id/join', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const id = parseInt(req.params.id);
+      const member = await storage.joinCircle(id, req.user!.id);
+      res.json(member);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to join circle" });
+    }
+  });
+
+  app.post('/api/commute-circles/:id/leave', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const id = parseInt(req.params.id);
+      await storage.leaveCircle(id, req.user!.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to leave circle" });
+    }
+  });
+
+  app.delete('/api/commute-circles/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteCommuteCircle(id, req.user!.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete circle" });
+    }
+  });
+
+  app.get('/api/commute-circles/:id/members', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const id = parseInt(req.params.id);
+      const members = await storage.getCircleMembers(id);
+      const memberUsers = await Promise.all(members.map(async (m) => {
+        const u = await storage.getUser(m.userId);
+        return { id: m.id, userId: m.userId, username: u?.username || "Unknown", joinedAt: m.joinedAt };
+      }));
+      res.json(memberUsers);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to load members" });
+    }
+  });
+
+  app.post('/api/activity-window', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { dayOfWeek, startHour, endHour } = req.body;
+      const window = await storage.upsertActivityWindow(req.user!.id, dayOfWeek, startHour, endHour);
+      res.json(window);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update activity window" });
+    }
+  });
+
+  app.get('/api/activity-windows', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const windows = await storage.getUserActivityWindows(req.user!.id);
+      res.json(windows);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to load activity windows" });
+    }
+  });
+
+  app.get('/api/on-the-way', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopperLoc = liveLocations.get(req.user!.id);
+      if (!hopperLoc || Date.now() - hopperLoc.updatedAt > 120000) {
+        return res.json({ driversNearby: false });
+      }
+
+      let nearbyCount = 0;
+      for (const [driverId, loc] of liveLocations.entries()) {
+        if (driverId === req.user!.id) continue;
+        if (Date.now() - loc.updatedAt > 120000) continue;
+        const dist = getDistance(hopperLoc.latitude, hopperLoc.longitude, loc.latitude, loc.longitude);
+        if (dist < 1.5) {
+          nearbyCount++;
+        }
+      }
+
+      res.json({ driversNearby: nearbyCount > 0, count: nearbyCount });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to check nearby drivers" });
     }
   });
 

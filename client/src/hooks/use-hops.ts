@@ -19,7 +19,7 @@ export function useRequestHop() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: { startLocation: string; endLocation: string; hopType: "walk" | "short_hop" | "flex_hop" | "full_ride" }) => {
+    mutationFn: async (data: { startLocation: string; endLocation: string; hopType: "walk" | "short_hop" | "flex_hop" | "full_ride"; microHop?: boolean }) => {
       const res = await fetch(api.hops.requestMovement.path, {
         method: api.hops.requestMovement.method,
         headers: { "Content-Type": "application/json" },

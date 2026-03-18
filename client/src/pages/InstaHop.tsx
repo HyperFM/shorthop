@@ -14,7 +14,7 @@ import { useHops, useRequestHop, useCancelHop, useAcceptHop } from "@/hooks/use-
 import { useGeolocation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
 import { useMagicGps, type SavedRouteMatch } from "@/hooks/use-magic-gps";
-import { MagicGpsSuggestion, MagicGpsActivation, MagicGpsStatus } from "@/components/MagicGpsNotification";
+import { MagicGpsSuggestion, MagicGpsActivation, MagicGpsStatus, FlowModeNotification, DriftCatchNotification, OnTheWayPing, RepeatRoutePrompt } from "@/components/MagicGpsNotification";
 import type { SavedRoute } from "@shared/schema";
 import { WelcomeGlobe, hasSeenWelcomeGlobe } from "@/components/WelcomeGlobe";
 import { Loader2 } from "lucide-react";
@@ -849,6 +849,10 @@ function InstaHopView({ user }: { user: User }) {
     routeId?: number;
   } | null>(null);
   const [magicGpsActivation, setMagicGpsActivation] = useState<{ routeName: string } | null>(null);
+  const [flowModeNotif, setFlowModeNotif] = useState<string | null>(null);
+  const [driftCatchVisible, setDriftCatchVisible] = useState(false);
+  const [repeatRouteVisible, setRepeatRouteVisible] = useState(true);
+  const [onTheWayPingVisible, setOnTheWayPingVisible] = useState(false);
 
   const { data: magicGpsRoutes = [] } = useQuery<SavedRoute[]>({
     queryKey: ['/api/saved-routes'],
@@ -884,10 +888,33 @@ function InstaHopView({ user }: { user: User }) {
     }
   }, [isMatching, mode]);
 
+  const handleFlowModeActivate = useCallback((match: SavedRouteMatch) => {
+    setFlowModeNotif(match.routeName);
+    showFlash("🌊", "Flow Mode activated silently", "success");
+    if (match.routeId) {
+      apiRequest("POST", `/api/saved-routes/${match.routeId}/confirm`).catch(() => {});
+    }
+    const now = new Date();
+    apiRequest("POST", "/api/activity-window", {
+      dayOfWeek: now.getDay(),
+      startHour: now.getHours(),
+      endHour: Math.min(now.getHours() + 1, 23),
+    }).catch(() => {});
+    setTimeout(() => setFlowModeNotif(null), 5000);
+  }, []);
+
+  const handleDriftCatch = useCallback(() => {
+    if (mode === "drive" || isMatching) return;
+    setDriftCatchVisible(true);
+  }, [mode, isMatching]);
+
   const { gpsState, declineSuggestion } = useMagicGps({
     enabled: !!user.magicGpsEnabled,
+    flowModeEnabled: !!user.flowModeEnabled,
     savedRoutes: magicGpsRoutes,
     onSuggestion: handleMagicGpsSuggestion,
+    onFlowModeActivate: handleFlowModeActivate,
+    onDriftCatch: handleDriftCatch,
   });
 
   useEffect(() => {
@@ -901,6 +928,24 @@ function InstaHopView({ user }: { user: User }) {
   }, [mode]);
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
+
+  useEffect(() => {
+    if (mode === "drive" || activeHop || !user.magicGpsEnabled) return;
+    const checkNearby = async () => {
+      try {
+        const res = await fetch("/api/on-the-way", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.driversNearby && !onTheWayPingVisible) {
+            setOnTheWayPingVisible(true);
+          }
+        }
+      } catch {}
+    };
+    const interval = setInterval(checkNearby, 30000);
+    checkNearby();
+    return () => clearInterval(interval);
+  }, [mode, activeHop, user.magicGpsEnabled, onTheWayPingVisible]);
 
   useEffect(() => {
     if (activeHop && activeHop.status === "matched") {
@@ -1255,12 +1300,42 @@ function InstaHopView({ user }: { user: User }) {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {flowModeNotif && (
+          <FlowModeNotification routeName={flowModeNotif} onDismiss={() => setFlowModeNotif(null)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {driftCatchVisible && (
+          <DriftCatchNotification
+            onRequestHop={() => {
+              setDriftCatchVisible(false);
+              showFlash("🚗", "Looking for a hop...", "info");
+            }}
+            onDismiss={() => setDriftCatchVisible(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {onTheWayPingVisible && !activeHop && (
+          <OnTheWayPing
+            onRequestHop={() => {
+              setOnTheWayPingVisible(false);
+              showFlash("🚗", "Looking for a hop...", "info");
+            }}
+            onDismiss={() => setOnTheWayPingVisible(false)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
         <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} />
 
         {user.magicGpsEnabled && !activeHop && (
           <div className="absolute top-4 left-4 z-30">
-            <MagicGpsStatus isOn={true} movementType={gpsState.movementType} />
+            <MagicGpsStatus isOn={true} movementType={gpsState.movementType} flowModeActive={gpsState.flowModeActive} />
           </div>
         )}
 
@@ -1274,6 +1349,21 @@ function InstaHopView({ user }: { user: User }) {
               <DriveNowPanel user={user} />
             ) : (
               <>
+                <AnimatePresence>
+                  {user.lastCompletedRouteName && repeatRouteVisible && !activeHop && user.magicGpsEnabled && (
+                    <div className="mb-2">
+                      <RepeatRoutePrompt
+                        routeName={user.lastCompletedRouteName}
+                        onActivate={() => {
+                          setRepeatRouteVisible(false);
+                          setMagicGpsActivation({ routeName: user.lastCompletedRouteName! });
+                          showFlash("🔁", `Route to ${user.lastCompletedRouteName} activated!`, "success");
+                        }}
+                        onDismiss={() => setRepeatRouteVisible(false)}
+                      />
+                    </div>
+                  )}
+                </AnimatePresence>
                 <div className="flex gap-2 mb-2 items-start">
                   <div className="flex-1 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-700/30 p-3">
                     <p className="text-[11px] font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1.5">

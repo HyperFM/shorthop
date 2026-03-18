@@ -1,0 +1,67 @@
+
+> rest-express@1.0.0 check
+> tsc
+
+client/src/components/BottomTabBar.tsx(111,16): error TS2604: JSX element type 'Icon' does not have any construct or call signatures.
+client/src/components/BottomTabBar.tsx(111,16): error TS2786: 'Icon' cannot be used as a JSX component.
+  Its type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> | undefined' is not a valid JSX element type.
+    Type 'undefined' is not assignable to type 'ElementType'.
+client/src/hooks/use-auth.ts(2,20): error TS2305: Module '"@shared/routes"' has no exported member 'LoginRequest'.
+client/src/hooks/use-auth.ts(2,39): error TS2305: Module '"@shared/routes"' has no exported member 'RegisterRequest'.
+client/src/hooks/use-hops.ts(2,30): error TS2305: Module '"@shared/routes"' has no exported member 'RequestHopRequest'.
+client/src/hooks/use-hops.ts(2,54): error TS2305: Module '"@shared/routes"' has no exported member 'CompleteHopRequest'.
+client/src/hooks/use-routes.ts(2,30): error TS2305: Module '"@shared/routes"' has no exported member 'CreateRouteRequest'.
+client/src/hooks/use-routes.ts(2,55): error TS2305: Module '"@shared/routes"' has no exported member 'UpdateRouteRequest'.
+client/src/hooks/use-routes.ts(47,39): error TS2339: Property 'update' does not exist on type '{ list: { method: "GET"; path: "/api/routes"; responses: { 200: ZodArray<ZodType<{ id: number; name: string; isActive: boolean | null; createdAt: Date | null; driverId: number; startLocation: string; endLocation: string; startTime: string; endTime: string; days: unknown; }, ZodTypeDef, { ...; }>, "many">; }; }; crea...'.
+client/src/hooks/use-routes.ts(49,28): error TS2339: Property 'update' does not exist on type '{ list: { method: "GET"; path: "/api/routes"; responses: { 200: ZodArray<ZodType<{ id: number; name: string; isActive: boolean | null; createdAt: Date | null; driverId: number; startLocation: string; endLocation: string; startTime: string; endTime: string; days: unknown; }, ZodTypeDef, { ...; }>, "many">; }; }; crea...'.
+client/src/hooks/use-routes.ts(55,25): error TS2339: Property 'update' does not exist on type '{ list: { method: "GET"; path: "/api/routes"; responses: { 200: ZodArray<ZodType<{ id: number; name: string; isActive: boolean | null; createdAt: Date | null; driverId: number; startLocation: string; endLocation: string; startTime: string; endTime: string; days: unknown; }, ZodTypeDef, { ...; }>, "many">; }; }; crea...'.
+client/src/pages/Admin.tsx(682,57): error TS2339: Property 'driverLicenseUrl' does not exist on type 'AdminUser'.
+client/src/pages/Admin.tsx(684,32): error TS2339: Property 'driverLicenseUrl' does not exist on type 'AdminUser'.
+client/src/pages/Admin.tsx(686,45): error TS2339: Property 'driverLicenseUrl' does not exist on type 'AdminUser'.
+client/src/pages/Admin.tsx(690,32): error TS2339: Property 'selfieUrl' does not exist on type 'AdminUser'.
+client/src/pages/Admin.tsx(692,45): error TS2339: Property 'selfieUrl' does not exist on type 'AdminUser'.
+client/src/pages/Auth.tsx(6,33): error TS2305: Module '"@shared/routes"' has no exported member 'LoginRequest'.
+client/src/pages/Auth.tsx(6,52): error TS2305: Module '"@shared/routes"' has no exported member 'RegisterRequest'.
+client/src/pages/Auth.tsx(70,67): error TS2322: Type 'boolean' is not assignable to type 'never'.
+client/src/pages/Community.tsx(545,45): error TS2802: Type 'Set<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/pages/Dashboard.tsx(194,11): error TS2322: Type '{ plan: "flex_hop" | "power_hop"; onClose: () => void; }' is not assignable to type 'IntrinsicAttributes & SubscriptionModalProps'.
+  Property 'onClose' does not exist on type 'IntrinsicAttributes & SubscriptionModalProps'.
+client/src/pages/Dashboard.tsx(426,42): error TS2353: Object literal may only specify known properties, and 'flowModeEnabled' does not exist in type '{ rideVibe?: string | undefined; hopperFlexRange?: string | undefined; driverFlexRange?: string | undefined; isFlexibleDriver?: boolean | undefined; hopperDropoffFlex?: string | undefined; sharedCommute?: boolean | undefined; modeLock?: string | undefined; allowDetourDrivers?: boolean | undefined; magicGpsEnabled?: ...'.
+client/src/pages/Dashboard.tsx(570,42): error TS2353: Object literal may only specify known properties, and 'flowModeEnabled' does not exist in type '{ rideVibe?: string | undefined; hopperFlexRange?: string | undefined; driverFlexRange?: string | undefined; isFlexibleDriver?: boolean | undefined; hopperDropoffFlex?: string | undefined; sharedCommute?: boolean | undefined; modeLock?: string | undefined; allowDetourDrivers?: boolean | undefined; magicGpsEnabled?: ...'.
+client/src/pages/Dashboard.tsx(576,12): error TS2741: Property 'userId' is missing in type '{}' but required in type 'CommuteCirclesProps'.
+client/src/pages/RewardStore.tsx(89,37): error TS18047: 'user.credits' is possibly 'null'.
+client/src/pages/RewardStore.tsx(89,113): error TS18047: 'user.credits' is possibly 'null'.
+client/src/pages/RewardStore.tsx(218,53): error TS18047: 'user.credits' is possibly 'null'.
+client/src/pages/RewardStore.tsx(223,16): error TS18047: 'user.credits' is possibly 'null'.
+client/src/pages/RewardStore.tsx(232,17): error TS18047: 'user.credits' is possibly 'null'.
+client/src/pages/RewardStore.tsx(251,23): error TS2322: Type 'number | null' is not assignable to type 'string | number | undefined'.
+  Type 'null' is not assignable to type 'string | number | undefined'.
+client/src/pages/WalkerDashboard.tsx(217,11): error TS18047: 'distFeet' is possibly 'null'.
+client/src/pages/WalkerDashboard.tsx(233,11): error TS18047: 'tracking.distance' is possibly 'null'.
+server/routes.ts(345,80): error TS2339: Property 'isAdmin' does not exist on type 'User'.
+server/routes.ts(347,16): error TS2339: Property 'isAdmin' does not exist on type 'User'.
+server/routes.ts(428,18): error TS2339: Property 'destination' does not exist on type '{ id: number; name: string; isActive: boolean | null; createdAt: Date | null; driverId: number; startLocation: string; endLocation: string; startTime: string; endTime: string; days: unknown; }'.
+server/routes.ts(431,18): error TS1252: Function declarations are not allowed inside blocks in strict mode when targeting 'ES5'. Modules are automatically in strict mode.
+server/routes.ts(481,51): error TS2339: Property 'miles' does not exist on type '{ id: number; createdAt: Date | null; status: string; driverId: number | null; startLocation: string; endLocation: string; walkerId: number; hopType: string; distanceMiles: string | null; ... 15 more ...; microHop: boolean | null; }'.
+server/routes.ts(481,75): error TS2339: Property 'miles' does not exist on type '{ id: number; createdAt: Date | null; status: string; driverId: number | null; startLocation: string; endLocation: string; walkerId: number; hopType: string; distanceMiles: string | null; ... 15 more ...; microHop: boolean | null; }'.
+server/routes.ts(1279,30): error TS2339: Property 'isFounder' does not exist on type 'User'.
+server/routes.ts(1279,48): error TS2339: Property 'subscription' does not exist on type 'User'.
+server/routes.ts(1279,84): error TS2339: Property 'subscription' does not exist on type 'User'.
+server/routes.ts(1483,39): error TS18047: 'other.timeStart' is possibly 'null'.
+server/routes.ts(1484,37): error TS18047: 'other.timeEnd' is possibly 'null'.
+server/routes.ts(1485,36): error TS18047: 'mine.timeStart' is possibly 'null'.
+server/routes.ts(1486,34): error TS18047: 'mine.timeEnd' is possibly 'null'.
+server/routes.ts(1843,80): error TS18048: 'req.user' is possibly 'undefined'.
+server/routes.ts(2046,37): error TS2802: Type 'MapIterator<[number, UserLocation]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/routes.ts(2418,32): error TS2339: Property 'isAdmin' does not exist on type 'User'.
+server/routes.ts(2420,21): error TS2339: Property 'isAdmin' does not exist on type 'User'.
+server/routes.ts(3066,37): error TS2304: Cannot find name 'User'.
+server/storage.ts(510,16): error TS2802: Type 'Set<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/storage.ts(538,18): error TS18047: 'user.credits' is possibly 'null'.
+server/storage.ts(551,23): error TS18047: 'user.credits' is possibly 'null'.
+server/storage.ts(571,18): error TS18047: 'user.credits' is possibly 'null'.
+server/storage.ts(573,23): error TS18047: 'user.credits' is possibly 'null'.
+server/storage.ts(1185,31): error TS2802: Type 'Map<number, { userId: number; lastMessage: string; lastAt: string; unread: number; }>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+server/storage.ts(1264,31): error TS18047: 's.timeStart' is possibly 'null'.
+server/storage.ts(1265,29): error TS18047: 's.timeEnd' is possibly 'null'.
+server/stripeClient.ts(21,41): error TS2353: Object literal may only specify known properties, and 'stripe' does not exist in type 'StripeSyncConfig'.

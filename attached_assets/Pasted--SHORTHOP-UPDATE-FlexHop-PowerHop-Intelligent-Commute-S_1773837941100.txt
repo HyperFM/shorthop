@@ -1,0 +1,226 @@
+# 🚀 SHORTHOP UPDATE: FlexHop / PowerHop Intelligent Commute System
+
+You are implementing an advanced system of passive, route-based ride matching features under:
+
+## 🔥 SYSTEM NAME
+FlexHop / PowerHop Intelligent Commute Layer
+
+This system enhances MagicGPS and introduces multiple passive earning + riding features based on real-world movement.
+
+---
+
+## 🧩 CORE FOUNDATION
+
+All features rely on:
+- MagicGPS Detection (movement + direction)
+- Route-based matching
+- Flex Range system
+- Auto-Hop activation
+
+These features must feel:
+- Effortless
+- Non-invasive
+- Timed correctly
+
+---
+
+# 🧠 FEATURE 1: FLOW MODE (AUTO PASSIVE EARNING)
+
+## Description:
+A smarter version of MagicGPS that reduces user input over time.
+
+## Behavior:
+- Detect repeated routes + confirmations
+- When confidence is high:
+  → Automatically activate Auto-Hop silently
+
+## Notification (Soft):
+"✨ Flow Mode Active  
+Earning along your route"
+
+## Rules:
+- No loud prompt required
+- User can tap to cancel
+- Only activates after repeated confirmations
+
+---
+
+# 🔁 FEATURE 2: ROUTE SYNC MATCHING
+
+## Description:
+Match users based on shared direction, not just pickup/dropoff points
+
+## Logic:
+- Compare driver route vector with hopper movement
+- Detect overlap zones
+- Prioritize matches that require minimal or zero detour
+
+## Result:
+- “On-the-way” pickups only
+- Faster matches
+- Higher acceptance rates
+
+---
+
+# 👥 FEATURE 3: COMMUTE CIRCLES
+
+## Description:
+Create micro-networks of users with similar routes
+
+## UI:
+- Create / Join Circle
+  - Examples:
+    - "Morning Work Run"
+    - "Night Shift Route"
+
+## Behavior:
+- Prioritize matches within circle
+- Show familiar users more often
+
+---
+
+# ⏱️ FEATURE 4: SOFT TIME WINDOWS
+
+## Description:
+Learn general activity windows (not strict schedules)
+
+## Example:
+- User active between 8:30–9:30 AM
+
+## Use:
+- Boost match predictions
+- Improve suggestion timing
+
+## Rule:
+- Time is a soft signal only (never required)
+
+---
+
+# 📍 FEATURE 5: ON-THE-WAY PING (HOPPER SIDE)
+
+## Trigger:
+When driver is actively moving with Auto-Hop ON
+
+## Hopper Notification:
+"🚗 Someone is already heading your way  
+Catch a hop without delay"
+
+## Actions:
+- [Request Ride]
+- [Dismiss]
+
+---
+
+# 🧭 FEATURE 6: DRIFT CATCH (HOPPER NUDGE)
+
+## Trigger:
+- Hopper walking consistently
+- No ride requested
+
+## Notification:
+"You’re on the move — want a quick hop?"
+
+## Goal:
+Convert passive walking into ride requests
+
+---
+
+# 💰 FEATURE 7: MICRO-HOP MODE
+
+## Description:
+Ultra-short distance rides
+
+## Range:
+- 0.3 – 1 mile
+
+## Behavior:
+- Instant match priority
+- Minimal decision friction
+- Fast pickup flow
+
+---
+
+# 🧠 FEATURE 8: CONFIDENCE SYSTEM (INTERNAL)
+
+## Tracks:
+- Route confirmations
+- Ride acceptance behavior
+- Feature usage frequency
+
+## Use:
+- Increase suggestion accuracy
+- Reduce unnecessary prompts
+
+## Visibility:
+- Hidden from users
+
+---
+
+# 🔁 FEATURE 9: ONE-TAP REPEAT ROUTES
+
+## Trigger:
+After completing a route (e.g. “Grandma’s”)
+
+## Next time:
+Show quick action:
+
+"Go to Grandma’s again?"
+
+## Action:
+- One tap → Auto-Hop activates instantly
+
+---
+
+# 🔗 INTEGRATION WITH MAGICGPS
+
+All features must connect with:
+
+- MagicGPS Detection
+- Smart Route Memory
+- Auto-Hop system
+
+MagicGPS acts as the trigger engine  
+FlexHop/PowerHop acts as the intelligence layer
+
+---
+
+# 🧠 PRIORITY LOGIC ORDER
+
+1. Smart Route Match (Saved Routes)
+2. Flow Mode (High confidence)
+3. Route Sync Matching
+4. On-the-Way Ping
+5. Drift Catch
+
+---
+
+# 🔐 SAFETY + CONTROL
+
+- All features optional (toggle-based)
+- Respect cooldown rules
+- No spam behavior
+- No external app tracking
+
+---
+
+# 🎯 GOAL
+
+Create a system where:
+
+- Users don’t need to open the app
+- Movement triggers opportunity
+- Drivers earn passively
+- Hoppers connect effortlessly
+- Matching feels natural and immediate
+
+---
+
+# 🔥 FUTURE READY (DO NOT IMPLEMENT)
+
+- AI predictive routing (no input required)
+- External app integrations (maps, delivery apps)
+- Dynamic pricing adjustments based on flow density
+
+---
+
+END OF UPDATE
