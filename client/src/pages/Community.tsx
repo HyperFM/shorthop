@@ -588,6 +588,11 @@ function CommunityProfiles({ user }: { user: any }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm font-bold" data-testid={`profile-username-${p.id}`}>{p.username}</span>
+                    {(p as any).idVerified && (
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0" data-testid={`badge-verified-${p.id}`} title="ID Verified">
+                        <Shield className="w-2.5 h-2.5 text-white" />
+                      </div>
+                    )}
                     {p.isFounder && (
                       <Badge className="text-[7px] bg-amber-100 text-amber-700 border-0 px-1 py-0" data-testid={`badge-founder-${p.id}`}>
                         <Crown className="w-2.5 h-2.5 mr-0.5" />

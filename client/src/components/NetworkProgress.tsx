@@ -46,7 +46,7 @@ export function NetworkProgress() {
       try {
         await navigator.share({
           title: "Join ShortHop!",
-          text: `Use my referral code "${user.referralCode}" to join ShortHop and we both earn bonus credits!`,
+          text: `Use my referral code "${user.referralCode}" to join ShortHop — you're already moving… you might as well get paid, or ride for as low as $1 per half mile.`,
         });
       } catch {}
     } else {

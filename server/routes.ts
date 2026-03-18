@@ -16,7 +16,7 @@ import { eq, and, lt, isNotNull, desc } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
   if (!user) return user;
-  const { password, ...safe } = user;
+  const { password, idPhoto, idSelfie, ...safe } = user;
   return safe;
 }
 
@@ -1093,7 +1093,7 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const SUPPORTED_LANGUAGES = Object.keys(getLanguages());
-      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility'];
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility', 'legalName'];
       const updates: Record<string, any> = {};
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -2031,6 +2031,127 @@ export async function registerRoutes(
       res.json(windows);
     } catch (err) {
       res.status(500).json({ message: "Failed to load activity windows" });
+    }
+  });
+
+  app.post('/api/id-verification/submit', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { idPhoto, idSelfie } = req.body;
+      if (!idPhoto || !idSelfie) {
+        return res.status(400).json({ message: "Both ID photo and selfie are required" });
+      }
+      if (idPhoto.length > 2000000 || idSelfie.length > 2000000) {
+        return res.status(400).json({ message: "Images too large. Please use smaller photos." });
+      }
+      const currentUser = await storage.getUser(req.user!.id);
+      if (currentUser?.idVerified) {
+        return res.status(400).json({ message: "Already verified" });
+      }
+      if (currentUser?.idVerificationStatus === "pending") {
+        return res.status(400).json({ message: "Verification already submitted and pending review" });
+      }
+      await db.update(users).set({
+        idPhoto,
+        idSelfie,
+        idVerificationStatus: "pending",
+        idSubmittedAt: new Date(),
+      }).where(eq(users.id, req.user!.id));
+      const todayCount = await storage.getNotificationCountToday(req.user!.id);
+      if (todayCount < 5) {
+        await storage.createNotification({
+          userId: req.user!.id,
+          type: "system",
+          title: "ID Verification Submitted ✅",
+          message: "Your ID verification is under review. You'll be notified once it's approved.",
+          isRead: false,
+        });
+      }
+      res.json({ status: "pending", message: "Verification submitted successfully" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to submit verification" });
+    }
+  });
+
+  app.get('/api/id-verification/status', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUser(req.user!.id);
+      res.json({
+        idVerified: user?.idVerified || false,
+        status: user?.idVerificationStatus || "none",
+        submittedAt: user?.idSubmittedAt || null,
+      });
+    } catch {
+      res.status(500).json({ message: "Failed to get verification status" });
+    }
+  });
+
+  app.get('/api/admin/id-verifications', requireAdmin, async (_req, res) => {
+    try {
+      const pending = await db.select({
+        id: users.id,
+        username: users.username,
+        legalName: users.legalName,
+        idPhoto: users.idPhoto,
+        idSelfie: users.idSelfie,
+        idVerificationStatus: users.idVerificationStatus,
+        idSubmittedAt: users.idSubmittedAt,
+        isDriver: users.isDriver,
+        profilePhoto: users.profilePhoto,
+      }).from(users).where(eq(users.idVerificationStatus, "pending")).orderBy(users.idSubmittedAt);
+      res.json(pending);
+    } catch {
+      res.status(500).json({ message: "Failed to load verifications" });
+    }
+  });
+
+  app.post('/api/admin/id-verifications/:id/approve', requireAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      await db.update(users).set({
+        idVerified: true,
+        idVerificationStatus: "approved",
+      }).where(eq(users.id, userId));
+      const todayCount = await storage.getNotificationCountToday(userId);
+      if (todayCount < 5) {
+        await storage.createNotification({
+          userId,
+          type: "system",
+          title: "ID Verified! 🛡️",
+          message: "Your identity has been verified. You now have a trust badge on your profile!",
+          isRead: false,
+        });
+      }
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to approve verification" });
+    }
+  });
+
+  app.post('/api/admin/id-verifications/:id/reject', requireAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      const reason = req.body.reason || "Photo did not meet verification requirements";
+      await db.update(users).set({
+        idVerified: false,
+        idVerificationStatus: "rejected",
+        idPhoto: null,
+        idSelfie: null,
+      }).where(eq(users.id, userId));
+      const todayCount = await storage.getNotificationCountToday(userId);
+      if (todayCount < 5) {
+        await storage.createNotification({
+          userId,
+          type: "system",
+          title: "ID Verification Update",
+          message: `Your verification was not approved: ${reason}. Please try again with a clearer photo.`,
+          isRead: false,
+        });
+      }
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to reject verification" });
     }
   });
 

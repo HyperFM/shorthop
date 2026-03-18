@@ -32,6 +32,256 @@ const FUN_PROMPTS = [
   "The last thing that made me laugh was...",
 ];
 
+function IdVerificationSection({ user }: { user: any }) {
+  const [showModal, setShowModal] = useState(false);
+  const [idPhoto, setIdPhoto] = useState<string | null>(null);
+  const [idSelfie, setIdSelfie] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const idInputRef = useRef<HTMLInputElement>(null);
+  const selfieInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+
+  const status = user?.idVerificationStatus || "none";
+  const isVerified = user?.idVerified === true;
+
+  const resizeImage = (file: File, maxSize: number = 600): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let w = img.width, h = img.height;
+          if (w > maxSize || h > maxSize) {
+            if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+            else { w = Math.round(w * maxSize / h); h = maxSize; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", 0.7));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleIdPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const resized = await resizeImage(file);
+      setIdPhoto(resized);
+    } catch {
+      showFlash("❌", "Failed to process image", "error");
+    }
+  };
+
+  const handleSelfie = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const resized = await resizeImage(file);
+      setIdSelfie(resized);
+    } catch {
+      showFlash("❌", "Failed to process image", "error");
+    }
+  };
+
+  const submitVerification = async () => {
+    if (!idPhoto || !idSelfie) {
+      showFlash("⚠️", "Please upload both your ID and selfie", "error");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await apiRequest("POST", "/api/id-verification/submit", { idPhoto, idSelfie });
+      if (!res.ok) {
+        const data = await res.json();
+        showFlash("❌", data.message || "Submission failed", "error");
+        return;
+      }
+      showFlash("✅", "Verification submitted! We'll review it shortly.", "success");
+      setShowModal(false);
+      setIdPhoto(null);
+      setIdSelfie(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+    } catch {
+      showFlash("❌", "Failed to submit verification", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (isVerified) {
+    return (
+      <div className="rounded-xl border border-green-200/50 dark:border-green-700/30 bg-green-50/50 dark:bg-green-950/10 p-3" data-testid="id-verification-verified">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shrink-0">
+            <Shield className="w-3.5 h-3.5 text-white" />
+          </div>
+          <Label className="text-xs font-bold text-green-700 dark:text-green-400">ID Verified</Label>
+          <Badge className="text-[8px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-0 ml-auto" data-testid="badge-id-verified">Verified</Badge>
+        </div>
+        <p className="text-[10px] text-muted-foreground leading-relaxed mt-1.5" data-testid="text-id-verified-info">
+          Your identity has been verified. You have a trust badge on your profile.
+        </p>
+      </div>
+    );
+  }
+
+  if (status === "pending") {
+    return (
+      <div className="rounded-xl border border-amber-200/50 dark:border-amber-700/30 bg-amber-50/50 dark:bg-amber-950/10 p-3" data-testid="id-verification-pending">
+        <div className="flex items-center gap-2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-amber-500 shrink-0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <Label className="text-xs font-bold">ID Verification</Label>
+          <Badge className="text-[8px] bg-amber-100 text-amber-700 border-0 ml-auto" data-testid="badge-id-verification-pending">Under Review</Badge>
+        </div>
+        <p className="text-[10px] text-muted-foreground leading-relaxed mt-1.5" data-testid="text-id-verification-pending">
+          Your ID verification is being reviewed. You'll be notified once approved.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="rounded-xl border border-blue-200/50 dark:border-blue-700/30 bg-blue-50/50 dark:bg-blue-950/10 p-3" data-testid="id-verification-section">
+        <div className="flex items-center gap-2 mb-1.5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-blue-500 shrink-0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <Label className="text-xs font-bold">ID Verification</Label>
+          {status === "rejected" && (
+            <Badge className="text-[8px] bg-red-100 text-red-700 border-0 ml-auto" data-testid="badge-id-verification-rejected">Resubmit</Badge>
+          )}
+        </div>
+        <p className="text-[10px] text-muted-foreground leading-relaxed" data-testid="text-id-verification-info">
+          {status === "rejected"
+            ? "Your previous submission wasn't approved. Please try again with clearer photos."
+            : "Get a trust badge on your profile by verifying your identity. Upload a photo of your ID and a selfie."}
+        </p>
+        <Button
+          size="sm"
+          className="mt-2 h-8 text-[11px] font-bold rounded-xl w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+          onClick={() => setShowModal(true)}
+          data-testid="button-start-verification"
+        >
+          <Shield className="w-3.5 h-3.5 mr-1.5" />
+          {status === "rejected" ? "Try Again" : "Verify My ID"}
+        </Button>
+      </div>
+
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="max-w-sm mx-auto rounded-2xl" data-testid="dialog-id-verification">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-500" />
+              ID Verification
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Upload a clear photo of your government-issued ID and a selfie. Your photos are securely stored and only reviewed by ShortHop admins.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <Label className="text-[11px] font-bold mb-1.5 block">Step 1: Photo of your ID</Label>
+                <input
+                  ref={idInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleIdPhoto}
+                  data-testid="input-id-photo"
+                />
+                {idPhoto ? (
+                  <div className="relative rounded-xl overflow-hidden border border-green-300/50 bg-green-50/30">
+                    <img src={idPhoto} alt="ID Photo" className="w-full h-32 object-cover" data-testid="img-id-preview" />
+                    <button
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center"
+                      onClick={() => setIdPhoto(null)}
+                      data-testid="button-remove-id-photo"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    <div className="absolute bottom-1 left-1">
+                      <Badge className="text-[8px] bg-green-500 text-white border-0">Uploaded</Badge>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    className="w-full h-24 rounded-xl border-2 border-dashed border-blue-300/50 dark:border-blue-700/30 bg-blue-50/30 dark:bg-blue-950/10 flex flex-col items-center justify-center gap-1.5 hover:bg-blue-50/60 transition-colors"
+                    onClick={() => idInputRef.current?.click()}
+                    data-testid="button-upload-id"
+                  >
+                    <Camera className="w-5 h-5 text-blue-400" />
+                    <span className="text-[10px] text-muted-foreground font-medium">Tap to upload ID photo</span>
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-[11px] font-bold mb-1.5 block">Step 2: Take a selfie</Label>
+                <input
+                  ref={selfieInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  className="hidden"
+                  onChange={handleSelfie}
+                  data-testid="input-selfie-photo"
+                />
+                {idSelfie ? (
+                  <div className="relative rounded-xl overflow-hidden border border-green-300/50 bg-green-50/30">
+                    <img src={idSelfie} alt="Selfie" className="w-full h-32 object-cover" data-testid="img-selfie-preview" />
+                    <button
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center"
+                      onClick={() => setIdSelfie(null)}
+                      data-testid="button-remove-selfie"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    <div className="absolute bottom-1 left-1">
+                      <Badge className="text-[8px] bg-green-500 text-white border-0">Uploaded</Badge>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    className="w-full h-24 rounded-xl border-2 border-dashed border-blue-300/50 dark:border-blue-700/30 bg-blue-50/30 dark:bg-blue-950/10 flex flex-col items-center justify-center gap-1.5 hover:bg-blue-50/60 transition-colors"
+                    onClick={() => selfieInputRef.current?.click()}
+                    data-testid="button-upload-selfie"
+                  >
+                    <Camera className="w-5 h-5 text-blue-400" />
+                    <span className="text-[10px] text-muted-foreground font-medium">Tap to take a selfie</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <Button
+              className="w-full h-10 font-bold rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+              onClick={submitVerification}
+              disabled={!idPhoto || !idSelfie || submitting}
+              data-testid="button-submit-verification"
+            >
+              {submitting ? "Submitting..." : "Submit for Verification"}
+            </Button>
+
+            <p className="text-[9px] text-muted-foreground text-center">
+              Your photos are encrypted and only used for identity verification. They will not be shared publicly.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export default function Settings() {
   const { data: user } = useAuth();
   const [, setLocation] = useLocation();
@@ -151,7 +401,7 @@ export default function Settings() {
     if (!user?.referralCode) return;
     const shareData = {
       title: "Join ShortHop!",
-      text: `Use my referral code "${user.referralCode}" to join ShortHop and we both earn bonus credits!`,
+      text: `Use my referral code "${user.referralCode}" to join ShortHop — you're already moving… you might as well get paid, or ride for as low as $1 per half mile.`,
       url: window.location.origin + "/auth?tab=register",
     };
     if (navigator.share) {
@@ -375,6 +625,11 @@ export default function Settings() {
                   <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
                     <Camera className="w-3 h-3 text-white" />
                   </div>
+                  {(user as any)?.idVerified && (
+                    <div className="absolute top-0 right-0 w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md border-2 border-white dark:border-background" data-testid="badge-verified-checkmark" title="ID Verified">
+                      <Check className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
                 </div>
                 <input
                   ref={fileInputRef}
@@ -422,16 +677,7 @@ export default function Settings() {
                 <p className="text-[9px] text-muted-foreground mt-0.5">Only visible to ShortHop for verification purposes</p>
               </div>
 
-              <div className="rounded-xl border border-amber-200/50 dark:border-amber-700/30 bg-amber-50/50 dark:bg-amber-950/10 p-3">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-amber-500 shrink-0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  <Label className="text-xs font-bold">ID Verification</Label>
-                  <Badge className="text-[8px] bg-amber-100 text-amber-700 border-0 ml-auto" data-testid="badge-id-verification-coming-soon">Coming Soon</Badge>
-                </div>
-                <p className="text-[10px] text-muted-foreground leading-relaxed" data-testid="text-id-verification-info">
-                  Verified drivers and hoppers will get a trust badge on their profile. Photo ID verification is launching soon to help build trust in the community.
-                </p>
-              </div>
+              <IdVerificationSection user={user} />
 
               <div>
                 <Label className="text-xs font-bold mb-1.5 block flex items-center gap-1.5">

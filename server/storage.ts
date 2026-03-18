@@ -163,7 +163,7 @@ export interface IStorage {
   getFriends(userId: number): Promise<{ id: number; friendId: number; username: string; profilePhoto: string | null }[]>;
   getFriendCount(userId: number): Promise<number>;
   getFriendshipStatus(userId: number, otherUserId: number): Promise<string | null>;
-  getPublicProfiles(currentUserId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number }[]>;
+  getPublicProfiles(currentUserId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number; idVerified: boolean | null }[]>;
 
   getCommunityPosts(): Promise<{ id: number; userId: number; content: string; createdAt: Date | null; username: string }[]>;
   createCommunityPost(post: InsertCommunityPost): Promise<CommunityPost>;
@@ -799,7 +799,7 @@ export class DatabaseStorage implements IStorage {
     return f.status;
   }
 
-  async getPublicProfiles(currentUserId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number }[]> {
+  async getPublicProfiles(currentUserId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number; idVerified: boolean | null }[]> {
     const allUsers = await db.select({
       id: users.id,
       username: users.username,
@@ -811,6 +811,7 @@ export class DatabaseStorage implements IStorage {
       founderBadge: users.founderBadge,
       subscription: users.subscription,
       totalHops: users.totalHops,
+      idVerified: users.idVerified,
     }).from(users)
       .where(and(
         sql`${users.id} != ${currentUserId}`,

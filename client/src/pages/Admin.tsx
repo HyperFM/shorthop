@@ -126,7 +126,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors" | "policies";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors" | "policies" | "verify";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
@@ -147,6 +147,10 @@ export default function Admin() {
   const { data: allUsers } = useQuery<AdminUser[]>({ queryKey: ["/api/admin/users"], enabled: tab === "users" });
   const { data: applications } = useQuery<DriverApp[]>({ queryKey: ["/api/admin/applications"], enabled: tab === "applications" || tab === "overview" });
   const { data: activeDrivers } = useQuery<AdminUser[]>({ queryKey: ["/api/admin/drivers"], enabled: tab === "drivers" });
+  const { data: idVerifications } = useQuery<Array<{ id: number; username: string; legalName: string | null; idPhoto: string | null; idSelfie: string | null; idVerificationStatus: string; idSubmittedAt: string | null; isDriver: boolean | null; profilePhoto: string | null }>>({
+    queryKey: ["/api/admin/id-verifications"],
+    enabled: tab === "verify" || tab === "overview",
+  });
   const { data: logs } = useQuery<RideLog[]>({ queryKey: ["/api/admin/logs"], enabled: tab === "logs" });
   const { data: inbox } = useQuery<ContactMsg[]>({ queryKey: ["/api/admin/inbox"], enabled: tab === "inbox" || tab === "overview" });
   const { data: reportsList } = useQuery<ReportItem[]>({ queryKey: ["/api/admin/reports"], enabled: tab === "reports" || tab === "overview" });
@@ -312,6 +316,7 @@ export default function Admin() {
     { key: "dms", label: "DMs", icon: Star, badge: vipConvos?.reduce((sum, c) => sum + c.unread, 0) || 0 },
     { key: "payments", label: "Payments", icon: DollarSign },
     { key: "ambassadors", label: "Ambassadors", icon: Award },
+    { key: "verify", label: "Verify ID", icon: Shield, badge: idVerifications?.length || 0 },
     { key: "policies", label: "Policies", icon: FileText },
   ];
 
@@ -1027,6 +1032,96 @@ export default function Admin() {
       {tab === "ambassadors" && (
         <AmbassadorsTab />
       )}
+      {tab === "verify" && (
+        <Card className="border-border/40">
+          <CardContent className="py-3 px-4 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="w-4 h-4 text-blue-500" />
+              <p className="text-sm font-bold">ID Verification Queue</p>
+              {idVerifications && idVerifications.length > 0 && (
+                <Badge className="text-[8px] ml-auto bg-blue-100 text-blue-700 border-0">{idVerifications.length} pending</Badge>
+              )}
+            </div>
+            {(!idVerifications || idVerifications.length === 0) ? (
+              <p className="text-xs text-muted-foreground text-center py-6">No pending verifications</p>
+            ) : (
+              <div className="space-y-3">
+                {idVerifications.map((v) => (
+                  <div key={v.id} className="rounded-xl border border-border/40 p-3 space-y-2" data-testid={`verify-card-${v.id}`}>
+                    <div className="flex items-center gap-2">
+                      {v.profilePhoto ? (
+                        <img src={v.profilePhoto} alt="" className="w-8 h-8 rounded-full object-cover border border-border/40" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold">{v.username[0]?.toUpperCase()}</div>
+                      )}
+                      <div>
+                        <p className="text-xs font-bold">{v.username}</p>
+                        {v.legalName && <p className="text-[10px] text-muted-foreground">{v.legalName}</p>}
+                      </div>
+                      <Badge className="text-[8px] ml-auto border-0" variant={v.isDriver ? "default" : "secondary"}>
+                        {v.isDriver ? "Driver" : "Hopper"}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {v.idPhoto && (
+                        <div className="rounded-lg overflow-hidden border border-border/30">
+                          <p className="text-[8px] font-bold text-center bg-muted/50 py-0.5">ID Photo</p>
+                          <img src={v.idPhoto} alt="ID" className="w-full h-24 object-cover" />
+                        </div>
+                      )}
+                      {v.idSelfie && (
+                        <div className="rounded-lg overflow-hidden border border-border/30">
+                          <p className="text-[8px] font-bold text-center bg-muted/50 py-0.5">Selfie</p>
+                          <img src={v.idSelfie} alt="Selfie" className="w-full h-24 object-cover" />
+                        </div>
+                      )}
+                    </div>
+                    {v.idSubmittedAt && (
+                      <p className="text-[9px] text-muted-foreground">Submitted: {new Date(v.idSubmittedAt).toLocaleDateString()}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 h-8 text-[10px] font-bold rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+                        data-testid={`button-approve-verify-${v.id}`}
+                        onClick={async () => {
+                          try {
+                            await apiRequest("POST", `/api/admin/id-verifications/${v.id}/approve`);
+                            queryClient.invalidateQueries({ queryKey: ["/api/admin/id-verifications"] });
+                            showFlash("✅", `${v.username} verified!`, "success");
+                          } catch {
+                            showFlash("❌", "Failed to approve", "error");
+                          }
+                        }}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 h-8 text-[10px] font-bold rounded-xl border-red-300/50 text-red-600"
+                        data-testid={`button-reject-verify-${v.id}`}
+                        onClick={async () => {
+                          try {
+                            await apiRequest("POST", `/api/admin/id-verifications/${v.id}/reject`, { reason: "Photo quality insufficient" });
+                            queryClient.invalidateQueries({ queryKey: ["/api/admin/id-verifications"] });
+                            showFlash("❌", `${v.username} rejected`, "info");
+                          } catch {
+                            showFlash("❌", "Failed to reject", "error");
+                          }
+                        }}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {tab === "policies" && (
         <PoliciesTab />
       )}
