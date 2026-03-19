@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -8,8 +8,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { NavBar } from "@/components/NavBar";
 import { BottomTabBar } from "@/components/BottomTabBar";
-import { SplashScreen } from "@/components/SplashScreen";
-
 import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
@@ -101,23 +99,18 @@ function Router() {
 
 declare global {
   interface Window {
-    __dismissPreloader?: () => void;
+    __splashReady?: () => void;
   }
 }
 
 function App() {
-  const [splashDone, setSplashDone] = useState(false);
-
   useEffect(() => {
     try {
       const count = parseInt(localStorage.getItem('sh_app_open_count') || '0', 10);
       localStorage.setItem('sh_app_open_count', String(count + 1));
     } catch {}
+    window.__splashReady?.();
   }, []);
-
-  if (!splashDone) {
-    return <SplashScreen onComplete={() => setSplashDone(true)} />;
-  }
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -15,14 +15,19 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/app-icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#2a9d5c" />
+    <meta name="theme-color" content="#000000" />
     <style>
       html, body {
         margin: 0;
         padding: 0;
-        background: #1a2e23;
         min-height: 100vh;
         min-height: 100dvh;
+      }
+
+      body.sh-splash-active {
+        overflow: hidden !important;
+        background: #000 !important;
+        background-color: #000 !important;
       }
 
       [class*="share-your-feedback"],
@@ -43,68 +48,28 @@
         left: -9999px !important;
       }
 
-      #sh-preloader {
+      #sh-splash {
         position: fixed;
         inset: 0;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: #1a2e23;
-        transition: opacity 0.5s ease-out;
-      }
-
-      #sh-preloader.fade-out {
-        opacity: 0;
-        pointer-events: none;
-      }
-
-      #sh-preloader .logo-ring {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        border: 3px solid rgba(42, 157, 92, 0.2);
-        border-top-color: #2a9d5c;
-        animation: preloader-spin 0.8s linear infinite;
+        z-index: 99999;
+        background: #000;
         display: flex;
         align-items: center;
         justify-content: center;
       }
 
-      #sh-preloader .logo-inner {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        overflow: hidden;
-        background: #223d2e;
-      }
-
-      #sh-preloader .logo-inner img {
+      #sh-splash video {
         width: 100%;
         height: 100%;
         object-fit: cover;
       }
 
-      #sh-preloader .brand-text {
-        margin-top: 20px;
-        font-family: 'Outfit', -apple-system, sans-serif;
-        font-weight: 700;
-        font-size: 22px;
-        color: #f9fafb;
-        letter-spacing: -0.5px;
+      #sh-splash.fade-out {
+        animation: splashFade 0.45s ease-out forwards;
       }
 
-      #sh-preloader .tagline {
-        margin-top: 6px;
-        font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.45);
-        letter-spacing: 0.5px;
-      }
-
-      @keyframes preloader-spin {
-        to { transform: rotate(360deg); }
+      @keyframes splashFade {
+        to { opacity: 0; }
       }
     </style>
     <meta property="og:title" content="ShortHop" />
@@ -115,22 +80,59 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fira+Code:wght@300..700&family=Geist+Mono:wght@100..900&family=Geist:wght@100..900&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Outfit:wght@100..900&family=Oxanium:wght@200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
   </head>
-  <body>
-    <div id="sh-preloader">
-      <div class="logo-ring">
-        <div class="logo-inner">
-          <img src="/app-icon-192.png" alt="" />
-        </div>
-      </div>
-      <div class="brand-text">ShortHop</div>
-      <div class="tagline">Shared routes. Real connections.</div>
+  <body class="sh-splash-active">
+    <div id="sh-splash">
+      <video id="sh-splash-video" autoplay muted playsinline preload="auto">
+        <source src="/splash.mp4" type="video/mp4" />
+        <source src="/splash.mov" type="video/quicktime" />
+      </video>
     </div>
     <div id="root"></div>
+    <script>
+      (function() {
+        var vid = document.getElementById('sh-splash-video');
+        var splash = document.getElementById('sh-splash');
+        var appReady = false;
+        var videoEnded = false;
+        var dismissed = false;
+
+        function dismiss() {
+          if (dismissed) return;
+          if (!appReady || !videoEnded) return;
+          dismissed = true;
+          splash.classList.add('fade-out');
+          setTimeout(function() {
+            splash.remove();
+            document.body.classList.remove('sh-splash-active');
+          }, 500);
+        }
+
+        vid.addEventListener('ended', function() {
+          videoEnded = true;
+          dismiss();
+        });
+
+        vid.addEventListener('error', function() {
+          videoEnded = true;
+          dismiss();
+        });
+
+        setTimeout(function() {
+          videoEnded = true;
+          dismiss();
+        }, 6000);
+
+        window.__splashReady = function() {
+          appReady = true;
+          dismiss();
+        };
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').catch(function() {});
         });
       }
     </script>
