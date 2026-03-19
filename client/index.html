@@ -114,6 +114,7 @@
         <source src="/splash.mp4" type="video/mp4" />
         <source src="/splash.mov" type="video/quicktime" />
       </video>
+      <div id="sh-splash-overlay" style="position:absolute;inset:0;z-index:3;background:transparent;"></div>
     </div>
     <div id="root"></div>
     <script>
@@ -126,7 +127,8 @@
 
         vid.play().catch(function() {});
 
-        splash.addEventListener('click', function() {
+        var overlay = document.getElementById('sh-splash-overlay');
+        overlay.addEventListener('click', function() {
           vid.currentTime = 0;
           vid.muted = false;
           vid.play().catch(function() {});
