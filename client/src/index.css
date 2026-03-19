@@ -117,13 +117,12 @@ div[data-testid*="feedback-widget"],
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
     font-family: var(--font-body);
   }
 
-  body.sh-splash-active {
-    background: #000 !important;
-    background-color: #000 !important;
+  body.sh-splash-done {
+    @apply bg-background;
   }
 
   h1, h2, h3, h4, h5, h6 {
