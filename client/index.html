@@ -100,18 +100,31 @@
         var videoEnded = false;
         var dismissed = false;
 
+        var isInstalled = window.navigator.standalone === true ||
+          window.matchMedia('(display-mode: standalone)').matches ||
+          window.matchMedia('(display-mode: fullscreen)').matches;
+
         var isMuted = false;
-        vid.play().then(function() {
+
+        if (isInstalled) {
           vid.muted = false;
-        }).catch(function() {
-          vid.muted = true;
-          isMuted = true;
-          vid.play().catch(function() {});
-        });
+          vid.play().catch(function() {
+            vid.muted = true;
+            vid.play().catch(function() {});
+          });
+        } else {
+          vid.play().then(function() {
+            vid.muted = false;
+          }).catch(function() {
+            vid.muted = true;
+            isMuted = true;
+            vid.play().catch(function() {});
+          });
+        }
 
         splash.style.cursor = 'pointer';
         splash.addEventListener('click', function() {
-          if (isMuted) {
+          if (isMuted || vid.muted) {
             vid.muted = false;
             isMuted = false;
           }
