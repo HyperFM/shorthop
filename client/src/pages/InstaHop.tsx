@@ -16,7 +16,6 @@ import { showFlash } from "@/components/FlashNotification";
 import { useMagicGps, type SavedRouteMatch } from "@/hooks/use-magic-gps";
 import { MagicGpsSuggestion, MagicGpsActivation, MagicGpsStatus, FlowModeNotification, DriftCatchNotification, OnTheWayPing, RepeatRoutePrompt } from "@/components/MagicGpsNotification";
 import type { SavedRoute } from "@shared/schema";
-import { WelcomeGlobe, hasSeenWelcomeGlobe } from "@/components/WelcomeGlobe";
 import { Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import mapboxgl from "mapbox-gl";
@@ -991,8 +990,7 @@ function InstaHopView({ user }: { user: User }) {
   const requestHop = useRequestHop();
   const cancelHop = useCancelHop();
   const geo = useGeolocation();
-  const [showGlobe, setShowGlobe] = useState(() => !hasSeenWelcomeGlobe());
-  const [greetingVisible, setGreetingVisible] = useState(() => hasSeenWelcomeGlobe());
+  const [greetingVisible, setGreetingVisible] = useState(true);
   const [mode, setMode] = useState<HopMode>(() => {
     try {
       return localStorage.getItem("sh-active-tab") === "driver" ? "drive" : "hop";
@@ -1482,17 +1480,6 @@ function InstaHopView({ user }: { user: User }) {
 
   return (
     <>
-      {showGlobe && (
-        <WelcomeGlobe
-          username={user.username}
-          isReturning={true}
-          onDismiss={() => {
-            setShowGlobe(false);
-            setTimeout(() => setGreetingVisible(true), 80);
-          }}
-        />
-      )}
-
       <AnimatePresence>
         {magicGpsSuggestion && (
           <MagicGpsSuggestion
