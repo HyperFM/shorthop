@@ -8,6 +8,9 @@ import { motion } from "framer-motion";
 import { Share2, Check, Copy, Eye } from "lucide-react";
 import { FlyersModal } from "@/components/FlyersModal";
 import type { User } from "@shared/routes";
+import driverIconUrl from "@assets/Untitled_design_1773938700510.png";
+import hopperIconUrl from "@assets/Untitled_design_1773938781771.png";
+import driverWithHopperIconUrl from "@assets/Untitled_design_1773938803778.png";
 
 interface NetworkStats {
   totalUsers: number;
@@ -84,7 +87,7 @@ export function NetworkProgress() {
               whileHover={{ scale: 1.05 }}
               className="text-center p-3 rounded-2xl bg-gradient-to-b from-secondary/10 to-secondary/5 border border-secondary/20"
             >
-              <span className="text-2xl block mb-1">🚗</span>
+              <img src={driverIconUrl} alt="Driver" className="w-8 h-8 mx-auto mb-1 object-contain" />
               <p className="text-2xl font-black text-foreground" data-testid="text-driver-count">{stats.totalDrivers}</p>
               <p className="text-[11px] text-muted-foreground font-bold uppercase">Drivers</p>
             </motion.div>
@@ -92,7 +95,7 @@ export function NetworkProgress() {
               whileHover={{ scale: 1.05 }}
               className="text-center p-3 rounded-2xl bg-gradient-to-b from-primary/10 to-primary/5 border border-primary/20"
             >
-              <span className="text-2xl block mb-1">🏃</span>
+              <img src={hopperIconUrl} alt="Hopper" className="w-8 h-8 mx-auto mb-1 object-contain" />
               <p className="text-2xl font-black text-foreground" data-testid="text-hopper-count">{stats.totalHoppers}</p>
               <p className="text-[11px] text-muted-foreground font-bold uppercase">Hoppers</p>
             </motion.div>
@@ -100,7 +103,7 @@ export function NetworkProgress() {
               whileHover={{ scale: 1.05 }}
               className="text-center p-3 rounded-2xl bg-gradient-to-b from-accent/10 to-accent/5 border border-accent/20"
             >
-              <span className="text-2xl block mb-1">✨</span>
+              <img src={driverWithHopperIconUrl} alt="Total" className="w-8 h-8 mx-auto mb-1 object-contain" />
               <p className="text-2xl font-black text-foreground" data-testid="text-total-count">{stats.totalUsers}</p>
               <p className="text-[11px] text-muted-foreground font-bold uppercase">Total</p>
             </motion.div>
