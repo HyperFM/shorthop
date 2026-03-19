@@ -63,6 +63,22 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
+        pointer-events: none;
+      }
+
+      #sh-splash video::-webkit-media-controls,
+      #sh-splash video::-webkit-media-controls-enclosure,
+      #sh-splash video::-webkit-media-controls-panel,
+      #sh-splash video::-webkit-media-controls-play-button,
+      #sh-splash video::-webkit-media-controls-start-playback-button,
+      #sh-splash video::-webkit-media-controls-overlay-play-button {
+        display: none !important;
+        -webkit-appearance: none !important;
+        opacity: 0 !important;
+      }
+
+      #sh-splash video::-moz-media-controls {
+        display: none !important;
       }
 
       #sh-splash.fade-out {
