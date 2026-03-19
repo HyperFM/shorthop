@@ -93,9 +93,9 @@ div[data-testid*="feedback-widget"],
     --secondary-foreground: 0 0% 100%;
     --secondary-border: 24 95% 52%;
 
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 65%;
-    --muted-border: 0 0% 25%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 150 15% 40%;
+    --muted-border: 0 0% 85%;
 
     --accent: 200 80% 58%;
     --accent-foreground: 0 0% 100%;
@@ -108,23 +108,21 @@ div[data-testid*="feedback-widget"],
     --popover: 0 0% 100%;
     --popover-foreground: 160 30% 15%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 152 70% 50%;
-
-    --elevate-1: rgba(255, 255, 255, 0.04);
-    --elevate-2: rgba(255, 255, 255, 0.08);
-  }
-
-  .dark .shadcn-card,
-  .dark [data-slot="card"],
-  .dark [class*="bg-card"],
-  .dark [class*="bg-white"] {
-    --foreground: 160 30% 15%;
-    --muted-foreground: 150 15% 45%;
-    --muted: 150 20% 94%;
     --border: 150 15% 88%;
     --input: 150 15% 88%;
+    --ring: 152 70% 50%;
+
+    --elevate-1: rgba(0, 0, 0, 0.03);
+    --elevate-2: rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .text-muted-foreground {
+    color: hsl(0 0% 65%);
+  }
+  .dark .shadcn-card .text-muted-foreground,
+  .dark [class*="bg-card"] .text-muted-foreground,
+  .dark [class*="bg-white"] .text-muted-foreground {
+    color: hsl(150 15% 40%);
   }
 
   body {
