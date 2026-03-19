@@ -102,7 +102,7 @@
       <div id="sh-splash-icon" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;z-index:1;">
         <img src="/app-icon-192.png" alt="ShortHop" style="width:120px;height:120px;object-fit:contain;" />
       </div>
-      <video id="sh-splash-video" autoplay playsinline preload="auto" style="position:relative;z-index:2;">
+      <video id="sh-splash-video" autoplay muted playsinline preload="auto" style="position:relative;z-index:2;">
         <source src="/splash.mp4" type="video/mp4" />
         <source src="/splash.mov" type="video/quicktime" />
       </video>
@@ -117,34 +117,11 @@
         var videoEnded = false;
         var dismissed = false;
 
-        var isInstalled = window.navigator.standalone === true ||
-          window.matchMedia('(display-mode: standalone)').matches ||
-          window.matchMedia('(display-mode: fullscreen)').matches;
-
-        var isMuted = false;
-
-        if (isInstalled) {
-          vid.muted = false;
-          vid.play().catch(function() {
-            vid.muted = true;
-            vid.play().catch(function() {});
-          });
-        } else {
-          vid.play().then(function() {
-            vid.muted = false;
-          }).catch(function() {
-            vid.muted = true;
-            isMuted = true;
-            vid.play().catch(function() {});
-          });
-        }
+        vid.play().catch(function() {});
 
         var tapLayer = document.getElementById('sh-splash-tap');
         tapLayer.addEventListener('click', function() {
-          if (isMuted || vid.muted) {
-            vid.muted = false;
-            isMuted = false;
-          }
+          vid.muted = false;
         }, { once: true });
 
         function dismiss() {
