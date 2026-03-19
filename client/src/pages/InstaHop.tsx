@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useHops, useRequestHop, useCancelHop, useAcceptHop } from "@/hooks/use-hops";
-import { useGeolocation } from "@/hooks/use-location";
+import { useGeolocation, useLiveLocationBroadcast, useHopTracking } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
 import { useMagicGps, type SavedRouteMatch } from "@/hooks/use-magic-gps";
 import { MagicGpsSuggestion, MagicGpsActivation, MagicGpsStatus, FlowModeNotification, DriftCatchNotification, OnTheWayPing, RepeatRoutePrompt } from "@/components/MagicGpsNotification";
@@ -145,18 +145,36 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute }: { 
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const destMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const [mapError, setMapError] = useState(false);
+  const mapErrorRef = useRef(false);
 
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (!mapContainerRef.current || mapRef.current || mapErrorRef.current) return;
 
     const center: [number, number] = latitude && longitude ? [longitude, latitude] : LEX_CENTER;
 
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center,
-      zoom: 15,
-      attributionControl: false,
+    let map: mapboxgl.Map;
+    try {
+      map = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: "mapbox://styles/mapbox/streets-v12",
+        center,
+        zoom: 15,
+        attributionControl: false,
+      });
+    } catch (e) {
+      console.warn("Map init failed (WebGL not available):", e);
+      mapErrorRef.current = true;
+      setMapError(true);
+      return;
+    }
+
+    map.on("error", (e: any) => {
+      if (e?.error?.message?.includes("WebGL")) {
+        mapErrorRef.current = true;
+        setMapError(true);
+        map.remove();
+      }
     });
 
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-left");
@@ -248,6 +266,17 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute }: { 
       map.once("style.load", addOrUpdateRoute);
     }
   }, [walkingRoute]);
+
+  if (mapError) {
+    return (
+      <div className="absolute inset-0 z-0 bg-gradient-to-b from-green-100 to-green-50 dark:from-green-950/20 dark:to-background flex items-center justify-center" data-testid="map-view">
+        <div className="text-center opacity-50">
+          <MapPin className="w-12 h-12 mx-auto mb-2 text-primary" />
+          <p className="text-xs text-muted-foreground">Lexington, KY</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 z-0" data-testid="map-view">
@@ -448,26 +477,50 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const { data: address } = useReverseGeocode(hop.startLat, hop.startLng);
+  const [turnSteps, setTurnSteps] = useState<{ instruction: string; distance: string }[]>([]);
+  const [navMapError, setNavMapError] = useState(false);
+  const navMapErrorRef = useRef(false);
+  const queryClient = useQueryClient();
 
   const hopLat = parseFloat(hop.startLat || "0");
   const hopLng = parseFloat(hop.startLng || "0");
+  const endLat = parseFloat(hop.endLat || "0");
+  const endLng = parseFloat(hop.endLng || "0");
   const coordsValid = isFinite(hopLat) && isFinite(hopLng) && hopLat !== 0 && hopLng !== 0;
+  const hasDropoff = isFinite(endLat) && isFinite(endLng) && endLat !== 0 && endLng !== 0;
 
   const distance = (driverLat && driverLng && coordsValid)
     ? calcDistance(driverLat, driverLng, hopLat, hopLng)
     : null;
 
   useEffect(() => {
-    if (!mapContainerRef.current || !driverLat || !driverLng || !coordsValid) return;
+    if (!mapContainerRef.current || !driverLat || !driverLng || !coordsValid || navMapErrorRef.current) return;
     const token = import.meta.env.VITE_MAPBOX_TOKEN;
     if (!token) return;
 
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style: "mapbox://styles/mapbox/navigation-night-v1",
-      center: [(driverLng + hopLng) / 2, (driverLat + hopLat) / 2],
-      zoom: 13,
+    let map: mapboxgl.Map;
+    try {
+      map = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: "mapbox://styles/mapbox/navigation-night-v1",
+        center: [(driverLng + hopLng) / 2, (driverLat + hopLat) / 2],
+        zoom: 13,
+      });
+    } catch (e) {
+      console.warn("Nav map init failed:", e);
+      navMapErrorRef.current = true;
+      setNavMapError(true);
+      return;
+    }
+
+    map.on("error", (e: any) => {
+      if (e?.error?.message?.includes("WebGL")) {
+        navMapErrorRef.current = true;
+        setNavMapError(true);
+        map.remove();
+      }
     });
+
     mapRef.current = map;
 
     map.on("load", async () => {
@@ -478,12 +531,22 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
 
       new mapboxgl.Marker({ color: "#f97316" })
         .setLngLat([hopLng, hopLat])
-        .setPopup(new mapboxgl.Popup().setText("Hopper Pickup"))
+        .setPopup(new mapboxgl.Popup().setText("Pickup"))
         .addTo(map);
 
+      if (hasDropoff) {
+        new mapboxgl.Marker({ color: "#ef4444" })
+          .setLngLat([endLng, endLat])
+          .setPopup(new mapboxgl.Popup().setText("Dropoff"))
+          .addTo(map);
+      }
+
       try {
+        const waypoints = hasDropoff
+          ? `${driverLng},${driverLat};${hopLng},${hopLat};${endLng},${endLat}`
+          : `${driverLng},${driverLat};${hopLng},${hopLat}`;
         const res = await fetch(
-          `https://api.mapbox.com/directions/v5/mapbox/driving/${driverLng},${driverLat};${hopLng},${hopLat}?geometries=geojson&overview=full&steps=true&access_token=${token}`
+          `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&steps=true&access_token=${token}`
         );
         const json = await res.json();
         if (json.routes?.[0]) {
@@ -505,12 +568,23 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
             new mapboxgl.LngLatBounds(coords[0], coords[0])
           );
           map.fitBounds(bounds, { padding: 60 });
+
+          const steps: { instruction: string; distance: string }[] = [];
+          for (const leg of json.routes[0].legs) {
+            for (const step of leg.steps) {
+              if (step.maneuver?.instruction) {
+                const dist = step.distance < 160 ? `${Math.round(step.distance)}m` : `${(step.distance / 1609.34).toFixed(1)} mi`;
+                steps.push({ instruction: step.maneuver.instruction, distance: dist });
+              }
+            }
+          }
+          setTurnSteps(steps.slice(0, 8));
         }
       } catch {}
     });
 
     return () => { map.remove(); };
-  }, [driverLat, driverLng, hopLat, hopLng]);
+  }, [driverLat, driverLng, hopLat, hopLng, endLat, endLng]);
 
   return (
     <motion.div
@@ -526,7 +600,9 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
                 <Navigation className="w-4 h-4 text-white" />
               </div>
               <div>
-                <p className="text-sm font-bold text-foreground">Navigating to Hopper</p>
+                <p className="text-sm font-bold text-foreground">
+                  {hop.status === "in_ride" ? "Navigating to Dropoff" : "Navigating to Pickup"}
+                </p>
                 <p className="text-[10px] text-muted-foreground truncate max-w-[200px]" data-testid="text-nav-address">
                   {address || hop.startLocation}
                   {distance !== null && ` · ${distance < 0.1 ? "< 0.1" : distance.toFixed(1)} mi`}
@@ -537,20 +613,82 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
               <X className="w-3 h-3 mr-1" /> Close
             </Button>
           </div>
-          <div ref={mapContainerRef} className="w-full h-[250px]" data-testid="map-pickup-navigation" />
-          <div className="p-3 flex items-center gap-2">
-            <Button
-              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm rounded-xl"
-              onClick={() => {
-                if (hopLat && hopLng) {
-                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${hopLat},${hopLng}&travelmode=driving`, "_blank");
-                }
-              }}
-              data-testid="button-open-maps"
-            >
-              <Navigation className="w-4 h-4 mr-2" />
-              Open in Maps
-            </Button>
+          {navMapError ? (
+            <div className="w-full h-[250px] bg-gradient-to-b from-blue-900/30 to-background flex items-center justify-center" data-testid="map-pickup-navigation">
+              <div className="text-center opacity-60">
+                <Navigation className="w-10 h-10 mx-auto mb-2 text-blue-400" />
+                <p className="text-xs text-muted-foreground">Use "Open in Maps" below</p>
+              </div>
+            </div>
+          ) : (
+            <div ref={mapContainerRef} className="w-full h-[250px]" data-testid="map-pickup-navigation" />
+          )}
+
+          {turnSteps.length > 0 && (
+            <div className="px-3 py-2 max-h-[120px] overflow-y-auto" data-testid="turn-by-turn-steps">
+              {turnSteps.map((step, i) => (
+                <div key={i} className="flex items-start gap-2 py-1 border-b border-border/20 last:border-0">
+                  <span className="text-[10px] font-bold text-primary bg-primary/10 w-5 h-5 rounded-full flex items-center justify-center shrink-0">{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-foreground leading-tight">{step.instruction}</p>
+                    <p className="text-[9px] text-muted-foreground">{step.distance}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <Button
+                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-sm rounded-xl"
+                onClick={() => {
+                  const dest = hop.status === "in_ride" && hasDropoff
+                    ? `${endLat},${endLng}`
+                    : `${hopLat},${hopLng}`;
+                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`, "_blank");
+                }}
+                data-testid="button-open-maps"
+              >
+                <Navigation className="w-4 h-4 mr-2" />
+                Open in Maps
+              </Button>
+            </div>
+            {hop.status === "matched" && (
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl"
+                onClick={async () => {
+                  try {
+                    await apiRequest("POST", `/api/hops/${hop.id}/start-ride`);
+                    queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                    showFlash("🚗", "Ride started!", "success");
+                  } catch {
+                    showFlash("⚠️", "Couldn't start ride", "error");
+                  }
+                }}
+                data-testid="button-driver-start-ride"
+              >
+                Hopper Picked Up - Start Ride
+              </Button>
+            )}
+            {hop.status === "in_ride" && (
+              <Button
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm rounded-xl"
+                onClick={async () => {
+                  try {
+                    await apiRequest("POST", `/api/hops/${hop.id}/complete`, {});
+                    queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                    showFlash("✅", "Ride completed!", "success");
+                    onClose();
+                  } catch {
+                    showFlash("⚠️", "Couldn't complete ride", "error");
+                  }
+                }}
+                data-testid="button-complete-ride"
+              >
+                Complete Ride
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -590,10 +728,19 @@ function DriveNowPanel({ user }: { user: User }) {
   const needsOnboarding = !driverStatus?.vehicleMake && !appStatus;
 
   const availableHops = hops?.filter(h => h.status === 'requested') || [];
+  const activeDriverHop = hops?.find(h => h.status === 'matched' || h.status === 'in_ride');
+
+  useLiveLocationBroadcast(isActiveNow || !!activeDriverHop);
 
   useEffect(() => {
     if (!geo.permitted) geo.requestPermission();
   }, [geo.permitted]);
+
+  useEffect(() => {
+    if (activeDriverHop && !navigatingHop) {
+      setNavigatingHop(activeDriverHop);
+    }
+  }, [activeDriverHop]);
 
   if (navigatingHop) {
     return (
@@ -938,6 +1085,54 @@ function InstaHopView({ user }: { user: User }) {
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
 
+  const [proximityAlerted, setProximityAlerted] = useState<{ pickup: boolean; dropoff: boolean }>({ pickup: false, dropoff: false });
+  const proximityAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const hasActiveRide = !!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"));
+  useLiveLocationBroadcast(hasActiveRide || mode === "drive");
+  const tracking = useHopTracking(activeHop?.id, hasActiveRide);
+
+  useEffect(() => {
+    if (!hasActiveRide || !tracking.available || !tracking.distance) return;
+
+    if (tracking.distance <= 0.1 && !proximityAlerted.pickup && tracking.hopStatus === "matched") {
+      setProximityAlerted(prev => ({ ...prev, pickup: true }));
+      if (!proximityAudioRef.current) {
+        proximityAudioRef.current = new Audio("/driver-approaching-alert.m4a");
+        proximityAudioRef.current.volume = 0.9;
+      }
+      proximityAudioRef.current.currentTime = 0;
+      proximityAudioRef.current.play().catch(() => {});
+      showFlash("🚗", "Your driver is approaching!", "success");
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Short Hop", { body: "Your driver is approaching the pickup!", icon: "/favicon.png", tag: "sh-proximity" });
+      }
+    }
+
+    if (tracking.hopStatus === "in_ride" && tracking.dropoffLat && tracking.dropoffLng && tracking.partnerLat && tracking.partnerLng) {
+      const distToDropoff = calcDistance(tracking.partnerLat, tracking.partnerLng, tracking.dropoffLat, tracking.dropoffLng);
+      if (distToDropoff <= 0.1 && !proximityAlerted.dropoff) {
+        setProximityAlerted(prev => ({ ...prev, dropoff: true }));
+        if (!proximityAudioRef.current) {
+          proximityAudioRef.current = new Audio("/driver-approaching-alert.m4a");
+          proximityAudioRef.current.volume = 0.9;
+        }
+        proximityAudioRef.current.currentTime = 0;
+        proximityAudioRef.current.play().catch(() => {});
+        showFlash("📍", "Approaching your destination!", "success");
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("Short Hop", { body: "Almost at your destination!", icon: "/favicon.png", tag: "sh-proximity-dropoff" });
+        }
+      }
+    }
+  }, [hasActiveRide, tracking, proximityAlerted]);
+
+  useEffect(() => {
+    if (!hasActiveRide) {
+      setProximityAlerted({ pickup: false, dropoff: false });
+    }
+  }, [hasActiveRide]);
+
   useEffect(() => {
     if (mode === "drive" || activeHop || !user.magicGpsEnabled) return;
     const checkNearby = async () => {
@@ -1028,6 +1223,18 @@ function InstaHopView({ user }: { user: User }) {
 
   const [cardHoldUrl, setCardHoldUrl] = useState<string | null>(null);
   const [tooFarForInstahop, setTooFarForInstahop] = useState(false);
+  const [pricePreview, setPricePreview] = useState<{
+    distanceMiles: number;
+    etaMinutes: number;
+    priceCents: number;
+    startLat: number;
+    startLng: number;
+    endLat: number;
+    endLng: number;
+    startName: string;
+    endName: string;
+    routeGeometry: any;
+  } | null>(null);
   const [prepaidInfo, setPrepaidInfo] = useState<{
     amount: number;
     paymentIntentId: string;
@@ -1126,15 +1333,17 @@ function InstaHopView({ user }: { user: User }) {
       const [endLng, endLat] = endJson.features[0].center;
 
       const directionsRes = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${startLng},${startLat};${endLng},${endLat}?geometries=geojson&access_token=${token}`
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${startLng},${startLat};${endLng},${endLat}?geometries=geojson&steps=true&access_token=${token}`
       );
       const directionsJson = await directionsRes.json();
       if (!directionsJson.routes?.length) {
-        showFlash("⚠️", "Can't calculate distance", "error");
+        showFlash("⚠️", "Can't calculate route", "error");
         return;
       }
 
-      const distanceMiles = directionsJson.routes[0].distance / 1609.34;
+      const route = directionsJson.routes[0];
+      const distanceMiles = route.distance / 1609.34;
+      const etaMinutes = Math.round(route.duration / 60);
 
       if (distanceMiles > 10) {
         setTooFarForInstahop(true);
@@ -1142,72 +1351,92 @@ function InstaHopView({ user }: { user: User }) {
         return;
       }
 
-      if (!user.stripeSetupCompleted) {
-        try {
-          const setupRes = await apiRequest("POST", "/api/stripe/setup-fee", {});
-          const setupJson = await setupRes.json();
-          if (setupJson.url) {
-            setCardHoldUrl(setupJson.url);
-            showFlash("💳", "Verify your card is active before continuing", "info");
-            return;
-          }
-        } catch (e) {
-          showFlash("❌", "Card verification failed", "error");
+      const priceCents = Math.max(Math.round(distanceMiles * 100), 100);
+
+      setPricePreview({
+        distanceMiles,
+        etaMinutes,
+        priceCents,
+        startLat,
+        startLng,
+        endLat,
+        endLng,
+        startName: resolvedStartName,
+        endName: data.endLocation,
+        routeGeometry: route.geometry,
+      });
+    } catch (e) {
+      showFlash("⚠️", "Error calculating route", "error");
+    }
+  };
+
+  const confirmAndPay = async () => {
+    if (!pricePreview) return;
+    const data = form.getValues();
+
+    if (!user.stripeSetupCompleted) {
+      try {
+        const setupRes = await apiRequest("POST", "/api/stripe/setup-fee", {});
+        const setupJson = await setupRes.json();
+        if (setupJson.url) {
+          setCardHoldUrl(setupJson.url);
+          showFlash("💳", "Verify your card is active before continuing", "info");
           return;
         }
-      }
-
-      setPaymentRefunded(false);
-      try {
-        const authRes = await apiRequest("POST", "/api/stripe/authorize-hop", {
-          distanceMiles,
-          departureTime: new Date(Date.now() + departureMinutes * 60000).toISOString(),
-          arrivalDeadline: new Date(Date.now() + (departureMinutes + 45) * 60000).toISOString(),
-        });
-        const authData = await authRes.json();
-
-        setPrepaidInfo({
-          amount: authData.amount,
-          paymentIntentId: authData.paymentIntentId,
-          departureTime: authData.departureTime,
-          arrivalDeadline: authData.arrivalDeadline,
-          timeWindowExpiry: authData.timeWindowExpiry,
-          distanceMiles,
-        });
-
-        setIsMatching(true);
-        const hopData: any = {
-          ...data,
-          startLocation: resolvedStartName,
-          hopType: 'short_hop',
-          distanceMiles,
-          startLat: String(startLat),
-          startLng: String(startLng),
-          endLat: String(endLat),
-          endLng: String(endLng),
-          paymentIntentId: authData.paymentIntentId,
-          paymentStatus: "authorized",
-          paymentAmountCents: authData.amount,
-          departureTime: authData.departureTime,
-          arrivalDeadline: authData.arrivalDeadline,
-          timeWindowExpiry: authData.timeWindowExpiry,
-        };
-
-        requestHop.mutate(hopData, {
-          onSuccess: () => {
-            showFlash("⚡", "InstaHop requested! Payment authorized.", "success");
-          },
-          onError: () => {
-            setIsMatching(false);
-            setPrepaidInfo(null);
-          }
-        });
-      } catch (authErr: any) {
-        showFlash("❌", authErr.message || "Payment authorization failed", "error");
+      } catch (e) {
+        showFlash("❌", "Card verification failed", "error");
         return;
       }
-    } catch (e) {
-      showFlash("⚠️", "Error processing request", "error");
+    }
+
+    setPaymentRefunded(false);
+    try {
+      const authRes = await apiRequest("POST", "/api/stripe/authorize-hop", {
+        distanceMiles: pricePreview.distanceMiles,
+        departureTime: new Date(Date.now() + departureMinutes * 60000).toISOString(),
+        arrivalDeadline: new Date(Date.now() + (departureMinutes + 45) * 60000).toISOString(),
+      });
+      const authData = await authRes.json();
+
+      setPrepaidInfo({
+        amount: authData.amount,
+        paymentIntentId: authData.paymentIntentId,
+        departureTime: authData.departureTime,
+        arrivalDeadline: authData.arrivalDeadline,
+        timeWindowExpiry: authData.timeWindowExpiry,
+        distanceMiles: pricePreview.distanceMiles,
+      });
+
+      setIsMatching(true);
+      setPricePreview(null);
+      const hopData: any = {
+        ...data,
+        startLocation: pricePreview.startName,
+        hopType: 'short_hop',
+        distanceMiles: pricePreview.distanceMiles,
+        startLat: String(pricePreview.startLat),
+        startLng: String(pricePreview.startLng),
+        endLat: String(pricePreview.endLat),
+        endLng: String(pricePreview.endLng),
+        paymentIntentId: authData.paymentIntentId,
+        paymentStatus: "authorized",
+        paymentAmountCents: authData.amount,
+        departureTime: authData.departureTime,
+        arrivalDeadline: authData.arrivalDeadline,
+        timeWindowExpiry: authData.timeWindowExpiry,
+      };
+
+      requestHop.mutate(hopData, {
+        onSuccess: () => {
+          showFlash("⚡", "Paid & requesting your hop!", "success");
+        },
+        onError: () => {
+          setIsMatching(false);
+          setPrepaidInfo(null);
+        }
+      });
+    } catch (authErr: any) {
+      showFlash("❌", authErr.message || "Payment failed", "error");
     }
   };
 
@@ -1451,7 +1680,119 @@ function InstaHopView({ user }: { user: User }) {
                   </Card>
                 )}
 
-                {driverAvailability && !isMatching && mode === "hop" && (
+                {pricePreview && !isMatching && (
+                  <Card className="border-green-500/40 bg-gradient-to-br from-green-500/5 to-transparent mb-2" data-testid="card-price-preview">
+                    <CardContent className="py-3 px-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold text-foreground">Trip Summary</p>
+                        <button onClick={() => setPricePreview(null)} className="text-muted-foreground hover:text-foreground" data-testid="button-close-preview">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500" />
+                          <p className="text-xs text-muted-foreground truncate">{pricePreview.startName || "Current location"}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-sm bg-orange-500" />
+                          <p className="text-xs text-muted-foreground truncate">{pricePreview.endName}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between bg-muted/30 rounded-xl p-3">
+                        <div className="text-center">
+                          <p className="text-lg font-black text-foreground" data-testid="text-preview-distance">{pricePreview.distanceMiles.toFixed(1)} mi</p>
+                          <p className="text-[10px] text-muted-foreground">distance</p>
+                        </div>
+                        <div className="w-px h-8 bg-border" />
+                        <div className="text-center">
+                          <p className="text-lg font-black text-foreground" data-testid="text-preview-eta">{pricePreview.etaMinutes} min</p>
+                          <p className="text-[10px] text-muted-foreground">est. time</p>
+                        </div>
+                        <div className="w-px h-8 bg-border" />
+                        <div className="text-center">
+                          <p className="text-lg font-black text-green-600 dark:text-green-400" data-testid="text-preview-price">${(pricePreview.priceCents / 100).toFixed(2)}</p>
+                          <p className="text-[10px] text-muted-foreground">total</p>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground text-center">$1.00/mile · $1.00 minimum · charged immediately</p>
+                      <Button
+                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm h-11 rounded-xl"
+                        onClick={confirmAndPay}
+                        disabled={requestHop.isPending}
+                        data-testid="button-confirm-pay"
+                      >
+                        {requestHop.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Zap className="w-4 h-4 mr-2" />
+                        )}
+                        Confirm & Pay ${(pricePreview.priceCents / 100).toFixed(2)}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {hasActiveRide && (
+                  <Card className="border-primary/40 bg-gradient-to-br from-primary/5 to-transparent mb-2" data-testid="card-active-ride">
+                    <CardContent className="py-3 px-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                          {activeHop?.status === "matched" ? (
+                            <>
+                              <Car className="w-4 h-4 text-primary" />
+                              Driver on the way
+                            </>
+                          ) : (
+                            <>
+                              <Navigation className="w-4 h-4 text-green-500" />
+                              In Ride
+                            </>
+                          )}
+                        </p>
+                        {tracking.available && tracking.distance !== null && (
+                          <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full" data-testid="text-tracking-distance">
+                            {tracking.distance < 0.1 ? "< 0.1 mi" : `${tracking.distance.toFixed(1)} mi`} away
+                          </span>
+                        )}
+                      </div>
+
+                      {tracking.pickupSide && activeHop?.status === "matched" && (
+                        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg p-2 border border-blue-200/50 dark:border-blue-700/30" data-testid="display-pickup-side">
+                          <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                          <p className="text-[11px] font-semibold text-blue-700 dark:text-blue-400">{tracking.pickupSide}</p>
+                        </div>
+                      )}
+
+                      {tracking.available && tracking.direction && (
+                        <p className="text-xs text-muted-foreground">
+                          Driver heading {tracking.direction} toward you
+                        </p>
+                      )}
+
+                      {activeHop?.status === "matched" && (
+                        <Button
+                          size="sm"
+                          className="w-full text-xs h-8 bg-green-600 hover:bg-green-700 text-white"
+                          onClick={async () => {
+                            try {
+                              await apiRequest("POST", `/api/hops/${activeHop.id}/start-ride`);
+                              queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                              showFlash("🚗", "Ride started!", "success");
+                            } catch {
+                              showFlash("⚠️", "Couldn't start ride", "error");
+                            }
+                          }}
+                          data-testid="button-start-ride"
+                        >
+                          Confirm Pickup - Start Ride
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {driverAvailability && !isMatching && !pricePreview && !hasActiveRide && mode === "hop" && (
                   <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium mb-1 ${
                     driverAvailability.status === "good" ? "bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border border-green-200/50 dark:border-green-700/30" :
                     driverAvailability.status === "low" ? "bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-400 border border-yellow-200/50 dark:border-yellow-700/30" :
@@ -1493,7 +1834,7 @@ function InstaHopView({ user }: { user: User }) {
                         </div>
                       )}
                       <p className="text-[10px] text-muted-foreground">
-                        Your card is authorized, not charged. Only charged when matched. Auto-cancels if no match found.
+                        Payment confirmed. Searching for your driver. Refunded if no match found.
                       </p>
                       <Button
                         variant="outline"
@@ -1509,7 +1850,7 @@ function InstaHopView({ user }: { user: User }) {
                         }}
                         data-testid="button-cancel-matching"
                       >
-                        Cancel & Release Hold
+                        Cancel & Refund
                       </Button>
                     </CardContent>
                   </Card>
@@ -1519,8 +1860,8 @@ function InstaHopView({ user }: { user: User }) {
                   <Card className="border-green-500/40 bg-gradient-to-br from-green-500/10 to-transparent mb-2" data-testid="card-payment-refunded">
                     <CardContent className="py-3 px-4 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-bold text-foreground">Payment Released</p>
-                        <p className="text-xs text-muted-foreground">No charge — your authorization was released.</p>
+                        <p className="text-sm font-bold text-foreground">Payment Refunded</p>
+                        <p className="text-xs text-muted-foreground">No match found — your payment has been refunded.</p>
                       </div>
                       <button onClick={() => setPaymentRefunded(false)} className="text-muted-foreground hover:text-foreground">
                         <X className="w-4 h-4" />

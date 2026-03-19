@@ -412,6 +412,7 @@ export async function registerRoutes(
       const now = new Date();
       const driverUser = await storage.getUser(req.user.id);
       const driverSeats = driverUser?.availableSeats || 1;
+      const driverDetourPref = driverUser?.allowDetourDrivers || "both";
       const availableHops = allAvailable.filter(h => {
         if (h.timeWindowExpiry && new Date(h.timeWindowExpiry) < now) return false;
         if (h.departureTime && new Date(h.departureTime) > new Date(now.getTime() + 60 * 60000)) return false;
@@ -597,13 +598,7 @@ export async function registerRoutes(
        const hop = await storage.acceptHop(Number(req.params.id), req.user.id);
 
        if (hop.paymentIntentId && hop.paymentStatus === "authorized") {
-         try {
-           const stripe = await getUncachableStripeClient();
-           await stripe.paymentIntents.capture(hop.paymentIntentId);
-           await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, hop.id));
-         } catch (captureErr: any) {
-           console.error('Payment capture failed:', captureErr.message);
-         }
+         await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, hop.id));
        }
 
        res.json(hop);
@@ -615,11 +610,22 @@ export async function registerRoutes(
   app.post(api.hops.complete.path, async (req, res) => {
     if (!req.isAuthenticated() || !req.user.isDriver) return res.status(401).json({ message: "Unauthorized" });
     try {
-       const input = api.hops.complete.input.parse(req.body);
        const existingHops = await storage.getHopsForDriver(req.user.id);
        const targetHop = existingHops.find(h => h.id === Number(req.params.id) && (h.status === "matched" || h.status === "in_ride"));
        if (!targetHop) return res.status(403).json({ message: "Not authorized to complete this hop" });
-       const hop = await storage.completeHop(Number(req.params.id), input.distanceMiles);
+
+       let distanceMiles = targetHop.distanceMiles || "1";
+       if (targetHop.startLat && targetHop.startLng && targetHop.endLat && targetHop.endLng) {
+         const calcDist = getDistance(
+           parseFloat(String(targetHop.startLat)),
+           parseFloat(String(targetHop.startLng)),
+           parseFloat(String(targetHop.endLat)),
+           parseFloat(String(targetHop.endLng))
+         );
+         distanceMiles = String(Math.max(0.1, Math.round(calcDist * 10) / 10));
+       }
+
+       const hop = await storage.completeHop(Number(req.params.id), distanceMiles);
 
        const driverStreak = await storage.updateHopStreak(req.user.id);
        for (const badge of driverStreak.newBadges) {
@@ -1411,8 +1417,8 @@ export async function registerRoutes(
       const hopId = Number(req.params.id);
       const walkerHops = await storage.getHopsForWalker(req.user.id);
       const driverHops = await storage.getHopsForDriver(req.user.id);
-      const hop = [...walkerHops, ...driverHops].find(h => h.id === hopId && h.status === 'matched');
-      if (!hop) return res.status(404).json({ message: "No active matched hop" });
+      const hop = [...walkerHops, ...driverHops].find(h => h.id === hopId && (h.status === 'matched' || h.status === 'in_ride'));
+      if (!hop) return res.status(404).json({ message: "No active hop" });
 
       const isWalker = hop.walkerId === req.user.id;
       const partnerId = isWalker ? hop.driverId : hop.walkerId;
@@ -1432,6 +1438,23 @@ export async function registerRoutes(
         direction = getBearing(myLoc.latitude, myLoc.longitude, partnerLoc.latitude, partnerLoc.longitude);
       }
 
+      let pickupSide: string | null = null;
+      if (isWalker && hop.startLat && hop.startLng && hop.endLat && hop.endLng) {
+        const driverBearingDeg = (() => {
+          const lat1 = partnerLoc.latitude * Math.PI / 180;
+          const lat2 = parseFloat(String(hop.startLat)) * Math.PI / 180;
+          const dLon = (parseFloat(String(hop.startLng)) - partnerLoc.longitude) * Math.PI / 180;
+          const y = Math.sin(dLon) * Math.cos(lat2);
+          const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+          return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        })();
+
+        if (driverBearingDeg >= 315 || driverBearingDeg < 45) pickupSide = "Stand on the EAST side of the road (driver coming from south)";
+        else if (driverBearingDeg >= 45 && driverBearingDeg < 135) pickupSide = "Stand on the SOUTH side of the road (driver coming from west)";
+        else if (driverBearingDeg >= 135 && driverBearingDeg < 225) pickupSide = "Stand on the WEST side of the road (driver coming from north)";
+        else pickupSide = "Stand on the NORTH side of the road (driver coming from east)";
+      }
+
       res.json({
         available: true,
         distance: distance !== null ? Math.round(distance * 100) / 100 : null,
@@ -1440,6 +1463,12 @@ export async function registerRoutes(
         updatedAt: partnerLoc.updatedAt,
         partnerLat: partnerLoc.latitude,
         partnerLng: partnerLoc.longitude,
+        pickupSide,
+        hopStatus: hop.status,
+        pickupLat: hop.startLat ? parseFloat(String(hop.startLat)) : null,
+        pickupLng: hop.startLng ? parseFloat(String(hop.startLng)) : null,
+        dropoffLat: hop.endLat ? parseFloat(String(hop.endLat)) : null,
+        dropoffLng: hop.endLng ? parseFloat(String(hop.endLng)) : null,
       });
     } catch {
       res.status(500).json({ message: "Tracking error" });
@@ -3045,14 +3074,14 @@ export async function registerRoutes(
       const paymentIntent = await stripe.paymentIntents.create({
         amount: finalAmount,
         currency: 'usd',
-        capture_method: 'manual',
         customer: customerId,
+        confirm: true,
         metadata: {
           userId: String(req.user.id),
           distanceMiles: String(distance),
-          type: 'hop_authorization',
+          type: 'hop_payment',
         },
-        automatic_payment_methods: { enabled: true },
+        automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
       });
 
       res.json({

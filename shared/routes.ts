@@ -124,7 +124,7 @@ export const api = {
       method: 'POST' as const,
       path: '/api/hops/:id/complete' as const,
       input: z.object({
-        distanceMiles: z.string(),
+        distanceMiles: z.string().optional(),
       }),
       responses: {
         200: z.custom<typeof shortHops.$inferSelect>(),
