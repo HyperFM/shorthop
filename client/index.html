@@ -59,34 +59,13 @@
         justify-content: center;
       }
 
-      #sh-splash video {
+      #sh-splash-canvas {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        object-fit: cover;
         z-index: 2;
-        display: block;
-      }
-
-      video::-webkit-media-controls {
-        display: none !important;
-      }
-      video::-webkit-media-controls-enclosure {
-        display: none !important;
-      }
-      video::-webkit-media-controls-panel {
-        display: none !important;
-      }
-      video::-webkit-media-controls-play-button {
-        display: none !important;
-      }
-      video::-webkit-media-controls-start-playback-button {
-        display: none !important;
-      }
-      video::-webkit-media-controls-overlay-play-button {
-        display: none !important;
       }
 
       #sh-splash.fade-out {
@@ -110,39 +89,67 @@
       <div id="sh-splash-icon" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;z-index:1;">
         <img src="/app-icon-192.png" alt="ShortHop" style="width:120px;height:120px;object-fit:contain;" />
       </div>
-      <video id="sh-splash-video" autoplay muted playsinline preload="auto">
-        <source src="/splash.mp4" type="video/mp4" />
-        <source src="/splash.mov" type="video/quicktime" />
-      </video>
-      <div id="sh-splash-overlay" style="position:absolute;inset:0;z-index:3;background:#000;"></div>
+      <canvas id="sh-splash-canvas"></canvas>
     </div>
     <div id="root"></div>
     <script>
       (function() {
-        var vid = document.getElementById('sh-splash-video');
         var splash = document.getElementById('sh-splash');
+        var canvas = document.getElementById('sh-splash-canvas');
+        var ctx = canvas.getContext('2d');
         var appReady = false;
         var videoEnded = false;
         var dismissed = false;
+        var drawing = false;
 
-        var overlay = document.getElementById('sh-splash-overlay');
+        var vid = document.createElement('video');
+        vid.muted = true;
+        vid.playsInline = true;
+        vid.preload = 'auto';
+        vid.setAttribute('playsinline', '');
+        vid.setAttribute('webkit-playsinline', '');
+        vid.src = '/splash.mp4';
+
+        function sizeCanvas() {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
+        sizeCanvas();
+        window.addEventListener('resize', sizeCanvas);
+
+        function paint() {
+          if (!drawing) return;
+          var cw = canvas.width, ch = canvas.height;
+          var vw = vid.videoWidth || cw, vh = vid.videoHeight || ch;
+          var scale = Math.max(cw / vw, ch / vh);
+          var dw = vw * scale, dh = vh * scale;
+          ctx.drawImage(vid, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+          requestAnimationFrame(paint);
+        }
 
         vid.addEventListener('playing', function() {
-          overlay.style.background = 'transparent';
+          if (!drawing) {
+            drawing = true;
+            paint();
+          }
         });
 
         vid.play().catch(function() {});
 
-        overlay.addEventListener('click', function() {
+        splash.addEventListener('click', function() {
           vid.currentTime = 0;
           vid.muted = false;
-          vid.play().catch(function() {});
+          vid.play().catch(function() {
+            drawing = true;
+            paint();
+          });
         }, { once: true });
 
         function dismiss() {
           if (dismissed) return;
           if (!appReady || !videoEnded) return;
           dismissed = true;
+          drawing = false;
           splash.classList.add('fade-out');
           setTimeout(function() {
             splash.remove();
@@ -163,7 +170,7 @@
         setTimeout(function() {
           videoEnded = true;
           dismiss();
-        }, 4000);
+        }, 6000);
 
         window.__splashReady = function() {
           appReady = true;
