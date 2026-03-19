@@ -7,6 +7,10 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const doneRef = useRef(false);
   const unmutedRef = useRef(false);
 
+  useEffect(() => {
+    window.__dismissPreloader?.();
+  }, []);
+
   const handleFinish = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
@@ -57,7 +61,8 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-[200] bg-black flex items-center justify-center"
+      className="fixed inset-0 z-[200] flex items-center justify-center"
+      style={{ background: "#1a2e23" }}
       animate={{ opacity: fadingOut ? 0 : 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       data-testid="splash-screen"

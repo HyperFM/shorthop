@@ -99,6 +99,12 @@ function Router() {
   );
 }
 
+declare global {
+  interface Window {
+    __dismissPreloader?: () => void;
+  }
+}
+
 function App() {
   const [splashDone, setSplashDone] = useState(false);
 
