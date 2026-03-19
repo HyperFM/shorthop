@@ -49,25 +49,6 @@
         left: -9999px !important;
       }
 
-      #sh-splash {
-        position: fixed;
-        inset: 0;
-        z-index: 99999;
-        background: #000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      #sh-splash-canvas {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 2;
-      }
-
       #sh-splash.fade-out {
         animation: splashFade 0.45s ease-out forwards;
       }
@@ -84,100 +65,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300..800&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
   </head>
-  <body class="sh-splash-active">
-    <div id="sh-splash">
-      <div id="sh-splash-icon" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;z-index:1;">
-        <img src="/app-icon-192.png" alt="ShortHop" style="width:120px;height:120px;object-fit:contain;" />
-      </div>
-      <canvas id="sh-splash-canvas"></canvas>
-    </div>
+  <body>
     <div id="root"></div>
-    <script>
-      (function() {
-        var splash = document.getElementById('sh-splash');
-        var canvas = document.getElementById('sh-splash-canvas');
-        var ctx = canvas.getContext('2d');
-        var appReady = false;
-        var videoEnded = false;
-        var dismissed = false;
-        var drawing = false;
-
-        var vid = document.createElement('video');
-        vid.muted = true;
-        vid.playsInline = true;
-        vid.preload = 'auto';
-        vid.setAttribute('playsinline', '');
-        vid.setAttribute('webkit-playsinline', '');
-        vid.src = '/splash.mp4';
-
-        function sizeCanvas() {
-          canvas.width = window.innerWidth;
-          canvas.height = window.innerHeight;
-        }
-        sizeCanvas();
-        window.addEventListener('resize', sizeCanvas);
-
-        function paint() {
-          if (!drawing) return;
-          var cw = canvas.width, ch = canvas.height;
-          var vw = vid.videoWidth || cw, vh = vid.videoHeight || ch;
-          var scale = Math.max(cw / vw, ch / vh);
-          var dw = vw * scale, dh = vh * scale;
-          ctx.drawImage(vid, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
-          requestAnimationFrame(paint);
-        }
-
-        vid.addEventListener('playing', function() {
-          if (!drawing) {
-            drawing = true;
-            paint();
-          }
-        });
-
-        vid.play().catch(function() {});
-
-        splash.addEventListener('click', function() {
-          vid.currentTime = 0;
-          vid.muted = false;
-          vid.play().catch(function() {
-            drawing = true;
-            paint();
-          });
-        }, { once: true });
-
-        function dismiss() {
-          if (dismissed) return;
-          if (!appReady || !videoEnded) return;
-          dismissed = true;
-          drawing = false;
-          splash.classList.add('fade-out');
-          setTimeout(function() {
-            splash.remove();
-            document.body.classList.remove('sh-splash-active');
-          }, 500);
-        }
-
-        vid.addEventListener('ended', function() {
-          videoEnded = true;
-          dismiss();
-        });
-
-        vid.addEventListener('error', function() {
-          videoEnded = true;
-          dismiss();
-        });
-
-        setTimeout(function() {
-          videoEnded = true;
-          dismiss();
-        }, 6000);
-
-        window.__splashReady = function() {
-          appReady = true;
-          dismiss();
-        };
-      })();
-    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
