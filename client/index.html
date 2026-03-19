@@ -59,10 +59,12 @@
         justify-content: center;
       }
 
-      #sh-splash video {
+      #sh-splash canvas {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        position: absolute;
+        inset: 0;
+        z-index: 2;
       }
 
       #sh-splash.fade-out {
@@ -86,19 +88,47 @@
       <div id="sh-splash-icon" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;z-index:1;">
         <img src="/app-icon-192.png" alt="ShortHop" style="width:120px;height:120px;object-fit:contain;" />
       </div>
-      <video id="sh-splash-video" autoplay muted playsinline preload="auto" style="position:relative;z-index:2;">
-        <source src="/splash.mp4" type="video/mp4" />
-        <source src="/splash.mov" type="video/quicktime" />
-      </video>
+      <canvas id="sh-splash-canvas"></canvas>
     </div>
     <div id="root"></div>
     <script>
       (function() {
-        var vid = document.getElementById('sh-splash-video');
         var splash = document.getElementById('sh-splash');
+        var canvas = document.getElementById('sh-splash-canvas');
+        var ctx = canvas.getContext('2d');
         var appReady = false;
         var videoEnded = false;
         var dismissed = false;
+
+        var vid = document.createElement('video');
+        vid.muted = true;
+        vid.playsInline = true;
+        vid.preload = 'auto';
+        vid.src = '/splash.mp4';
+
+        function sizeCanvas() {
+          var dpr = window.devicePixelRatio || 1;
+          canvas.width = window.innerWidth * dpr;
+          canvas.height = window.innerHeight * dpr;
+        }
+        sizeCanvas();
+
+        function drawFrame() {
+          if (vid.paused || vid.ended) return;
+          var cw = canvas.width, ch = canvas.height;
+          var vw = vid.videoWidth, vh = vid.videoHeight;
+          if (vw && vh) {
+            var scale = Math.max(cw / vw, ch / vh);
+            var dw = vw * scale, dh = vh * scale;
+            ctx.drawImage(vid, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+          }
+          requestAnimationFrame(drawFrame);
+        }
+
+        vid.addEventListener('playing', function() {
+          sizeCanvas();
+          drawFrame();
+        });
 
         vid.play().catch(function() {});
 
