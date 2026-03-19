@@ -63,22 +63,6 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        pointer-events: none;
-      }
-
-      #sh-splash video::-webkit-media-controls,
-      #sh-splash video::-webkit-media-controls-enclosure,
-      #sh-splash video::-webkit-media-controls-panel,
-      #sh-splash video::-webkit-media-controls-play-button,
-      #sh-splash video::-webkit-media-controls-start-playback-button,
-      #sh-splash video::-webkit-media-controls-overlay-play-button {
-        display: none !important;
-        -webkit-appearance: none !important;
-        opacity: 0 !important;
-      }
-
-      #sh-splash video::-moz-media-controls {
-        display: none !important;
       }
 
       #sh-splash.fade-out {
@@ -106,7 +90,6 @@
         <source src="/splash.mp4" type="video/mp4" />
         <source src="/splash.mov" type="video/quicktime" />
       </video>
-      <div id="sh-splash-tap" style="position:absolute;inset:0;z-index:3;"></div>
     </div>
     <div id="root"></div>
     <script>
@@ -117,35 +100,10 @@
         var videoEnded = false;
         var dismissed = false;
 
-        var isInstalled = window.navigator.standalone === true ||
-          window.matchMedia('(display-mode: standalone)').matches ||
-          window.matchMedia('(display-mode: fullscreen)').matches;
-
-        var isMuted = false;
-
-        if (isInstalled) {
-          vid.muted = false;
-          vid.play().catch(function() {
-            vid.muted = true;
-            vid.play().catch(function() {});
-          });
-        } else {
-          vid.play().then(function() {
-            vid.muted = false;
-          }).catch(function() {
-            vid.muted = true;
-            isMuted = true;
-            vid.play().catch(function() {});
-          });
-        }
-
-        var tapLayer = document.getElementById('sh-splash-tap');
-        tapLayer.addEventListener('click', function() {
-          if (isMuted || vid.muted) {
-            vid.muted = false;
-            isMuted = false;
-          }
-        }, { once: true });
+        vid.play().catch(function() {
+          vid.muted = true;
+          vid.play().catch(function() {});
+        });
 
         function dismiss() {
           if (dismissed) return;

@@ -29,7 +29,7 @@ const LANGUAGES = [
 const HOME_TRANSLATIONS: Record<string, Record<string, string>> = {
   en: {
     tagline: "Shared routes. Real connections.",
-    title_pre: "A Jump, Skip, and a",
+    title_pre: "Jump, Skip, and a",
     title_hop: "Hop.",
     walking: "Walking is the best option for your physical and financial health.",
     hop_moves: "A Hop moves you affordably forward.",
