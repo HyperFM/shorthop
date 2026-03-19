@@ -100,9 +100,15 @@
         var videoEnded = false;
         var dismissed = false;
 
-        vid.play().catch(function() {
+        vid.play().then(function() {
+          vid.muted = false;
+        }).catch(function() {
           vid.muted = true;
-          vid.play().catch(function() {});
+          vid.play().then(function() {
+            setTimeout(function() {
+              try { vid.muted = false; } catch(e) {}
+            }, 50);
+          }).catch(function() {});
         });
 
         function dismiss() {
