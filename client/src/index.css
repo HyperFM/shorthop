@@ -117,6 +117,7 @@ div[data-testid*="feedback-widget"],
   }
 
   .dark .shadcn-card {
+    --foreground: 160 30% 15%;
     --muted-foreground: 150 15% 40%;
   }
 
