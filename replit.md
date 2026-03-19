@@ -13,11 +13,11 @@ The application employs a mobile-first, app-like UI with bottom tab navigation, 
 
 ### Technical Implementations
 - **User Tiers**: Includes "Standard ShortHop" (free), "FlexHop" (premium subscription), and "Power Hop" (unlimited rides) with server-side Stripe enforcement.
-- **Ride Matching & Preferences**: Features "Ride Vibe" preferences, a "Hop Buddy" rating system, mutual "Trusted Hoppers," and direction-based hop matching using combined scores of pickup proximity and route alignment. Hopper and driver flexibility ranges are configurable. "First Hop Assist" prioritizes new users.
+- **Ride Matching & Preferences**: Features "Ride Vibe" preferences, a "Hop Buddy" rating system, mutual "Trusted Hoppers," and direction-based hop matching using combined scores of pickup proximity and route alignment. Hopper and driver flexibility ranges are configurable. "First Hop Assist" prioritizes new users. Driver Matching Style selector with three options: "All Drivers" (walker mode), "Direct Route Only" (non-detour), "Detour Drivers Only" — stored as `allowDetourDrivers` text field (values: "both", "non_detour_only", "detour_only").
 - **Scheduling**: Users can create, edit, and manage recurring trip schedules with "Smart Route Matching" for schedule overlaps.
 - **Live Ride Features**: Automatic ride detection transitions through states, live ride visualization shows progress, and drop-off proximity notifications alert users near their destination.
 - **Notifications**: In-app center, flash notifications, and browser API integration with user-configurable toggles. Notifications support reactions and quick replies.
-- **Community & Social**: A "Network" page for community posts, a Friends System with mutual follow requests, and configurable profile privacy (public, semi_private, private). Chat messages support emoji reactions and editing.
+- **Community & Social**: A "Network" page for community posts, a Friends System with mutual follow requests and friend request notifications, and configurable profile privacy (public, semi_private, private). Chat messages support emoji reactions and editing. Direct messaging between friends via chat bubble icons on the Friends tab. Admin (HyperFM) can message any user regardless of friend status.
 - **Driver Management**: Driver onboarding and verification via a multi-step wizard, "GO ACTIVE / GO OFFLINE" toggle, routine route support, and a "Wheels" reward system with a Reward Store.
 - **Admin Panel**: Restricted access for a super-admin (HyperFM) to manage users, drivers, and reports.
 - **PWA Support**: `manifest.json` and service worker for "Add to Home Screen" and offline caching.

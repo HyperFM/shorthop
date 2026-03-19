@@ -142,6 +142,8 @@ export default function Admin() {
   const [userSearch, setUserSearch] = useState("");
   const [confirmApp, setConfirmApp] = useState<{ appId: number; status: "approved" | "rejected"; username: string } | null>(null);
   const [rejectNotes, setRejectNotes] = useState("");
+  const [adminDmTarget, setAdminDmTarget] = useState<{ id: number; username: string; profilePhoto: string | null } | null>(null);
+  const [adminDmMsg, setAdminDmMsg] = useState("");
 
   const { data: stats } = useQuery<AdminStats>({ queryKey: ["/api/admin/stats"] });
   const { data: allUsers } = useQuery<AdminUser[]>({ queryKey: ["/api/admin/users"], enabled: tab === "users" });
@@ -277,6 +279,32 @@ export default function Admin() {
     },
     onError: () => {
       showFlash("❌", "Failed to grant Wheels", "error");
+    },
+  });
+
+  const { data: adminDmMessages = [] } = useQuery<any[]>({
+    queryKey: ["/api/dm", adminDmTarget?.id],
+    queryFn: async () => {
+      if (!adminDmTarget) return [];
+      const res = await fetch(`/api/dm/${adminDmTarget.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!adminDmTarget,
+    refetchInterval: adminDmTarget ? 4000 : false,
+  });
+
+  const sendAdminDm = useMutation({
+    mutationFn: async ({ userId, message }: { userId: number; message: string }) => {
+      const res = await apiRequest("POST", `/api/dm/${userId}`, { message });
+      return res.json();
+    },
+    onSuccess: () => {
+      setAdminDmMsg("");
+      if (adminDmTarget) queryClient.invalidateQueries({ queryKey: ["/api/dm", adminDmTarget.id] });
+    },
+    onError: () => {
+      showFlash("❌", "Failed to send message", "error");
     },
   });
 
@@ -606,6 +634,13 @@ export default function Admin() {
                           <Shield className="w-3.5 h-3.5 mr-2" />
                           Block User
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setAdminDmTarget({ id: u.id, username: u.username, profilePhoto: (u as any).profilePhoto || null })}
+                          data-testid={`button-message-${u.id}`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 mr-2" />
+                          Message User
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => {
@@ -778,6 +813,50 @@ export default function Admin() {
               {confirmApp?.status === "approved" ? "✓ Approve" : "✗ Reject"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!adminDmTarget} onOpenChange={(open) => { if (!open) { setAdminDmTarget(null); setAdminDmMsg(""); } }}>
+        <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Message {adminDmTarget?.username}
+            </DialogTitle>
+            <DialogDescription>Send a direct message as admin</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-2 max-h-[40vh] p-2">
+            {adminDmMessages.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">No messages yet</p>
+            ) : (
+              adminDmMessages.map((m: any) => {
+                const isMine = m.sender_id === user?.id;
+                return (
+                  <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${isMine ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted rounded-bl-md"}`}>
+                      <p className="break-words">{m.message}</p>
+                      <p className={`text-[9px] mt-1 ${isMine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+                        {m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <form className="flex gap-2 pt-2 border-t" onSubmit={(e) => { e.preventDefault(); if (adminDmTarget && adminDmMsg.trim()) sendAdminDm.mutate({ userId: adminDmTarget.id, message: adminDmMsg.trim() }); }}>
+            <Input
+              value={adminDmMsg}
+              onChange={(e) => setAdminDmMsg(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-1 text-sm"
+              data-testid="input-admin-dm"
+              maxLength={500}
+            />
+            <Button type="submit" size="sm" disabled={!adminDmMsg.trim() || sendAdminDm.isPending} data-testid="button-send-admin-dm">
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
         </DialogContent>
       </Dialog>
 

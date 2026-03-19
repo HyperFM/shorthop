@@ -71,7 +71,7 @@ export const users = pgTable("users", {
   hopperDropoffFlex: text("hopper_dropoff_flex").default("exact"),
   sharedCommute: boolean("shared_commute").default(false),
   modeLock: text("mode_lock").default("none"),
-  allowDetourDrivers: boolean("allow_detour_drivers").default(false),
+  allowDetourDrivers: text("allow_detour_drivers").default("both"),
   isFirstTenDriver: boolean("is_first_ten_driver").default(false),
   driverApprovalSeen: boolean("driver_approval_seen").default(false),
   seatsNeeded: integer("seats_needed").default(1),
@@ -193,6 +193,15 @@ export const userRedemptions = pgTable("user_redemptions", {
   rewardId: integer("reward_id").references(() => rewards.id).notNull(),
   code: text("code").notNull(),
   redeemedAt: timestamp("redeemed_at").defaultNow(),
+});
+
+export const directMessages = pgTable("direct_messages", {
+  id: serial("id").primaryKey(),
+  senderId: integer("sender_id").references(() => users.id).notNull(),
+  receiverId: integer("receiver_id").references(() => users.id).notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const notifications = pgTable("notifications", {

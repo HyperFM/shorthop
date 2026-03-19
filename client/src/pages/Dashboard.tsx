@@ -75,7 +75,7 @@ export default function Dashboard() {
   const [hopperDropoffFlex, setHopperDropoffFlex] = useState(user?.hopperDropoffFlex || "exact");
   const [sharedCommute, setSharedCommute] = useState(user?.sharedCommute || false);
   const [modeLock, setModeLock] = useState(user?.modeLock || "none");
-  const [allowDetourDrivers, setAllowDetourDrivers] = useState(user?.allowDetourDrivers || false);
+  const [allowDetourDrivers, setAllowDetourDrivers] = useState(user?.allowDetourDrivers || "both");
   const [prefs, setPrefs] = useState<NotificationPreferences>(loadPreferences);
   const [autoAlerts, setAutoAlerts] = useState(() => {
     try { return localStorage.getItem("sh-driver-auto-notify") === "true"; } catch { return false; }
@@ -110,7 +110,7 @@ export default function Dashboard() {
     if (user?.hopperDropoffFlex) setHopperDropoffFlex(user.hopperDropoffFlex);
     if (user?.sharedCommute !== undefined) setSharedCommute(user.sharedCommute || false);
     if (user?.modeLock) setModeLock(user.modeLock);
-    if (user?.allowDetourDrivers !== undefined) setAllowDetourDrivers(user.allowDetourDrivers || false);
+    if (user?.allowDetourDrivers !== undefined) setAllowDetourDrivers(user.allowDetourDrivers || "both");
     if (user?.magicGpsEnabled !== undefined) setMagicGpsEnabled(user.magicGpsEnabled || false);
   }, [user?.hopperFlexRange, user?.driverFlexRange, user?.isFlexibleDriver, user?.hopperDropoffFlex, user?.sharedCommute, user?.modeLock, user?.allowDetourDrivers, user?.magicGpsEnabled]);
 
@@ -132,7 +132,7 @@ export default function Dashboard() {
   }
 
   const updatePreferences = useMutation({
-    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean; flowModeEnabled?: boolean; seatsNeeded?: number; availableSeats?: number }) => {
+    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: string; magicGpsEnabled?: boolean; flowModeEnabled?: boolean; seatsNeeded?: number; availableSeats?: number }) => {
       const res = await apiRequest(api.profile.updatePreferences.method, api.profile.updatePreferences.path, updates);
       return res.json();
     },
@@ -352,23 +352,39 @@ export default function Dashboard() {
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
+              <div className="border-t border-border/20 pt-2 space-y-2">
                 <div className="flex items-start gap-2.5">
                   <Navigation className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                   <div>
-                    <Label htmlFor="toggle-allow-detour-drivers" className="text-[11px] font-medium cursor-pointer">Allow Detour Drivers</Label>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Match with drivers who detour off route for pickup</p>
+                    <Label className="text-[11px] font-medium">Driver Matching Style</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Choose which drivers you'd like to match with</p>
                   </div>
                 </div>
-                <Switch
-                  id="toggle-allow-detour-drivers"
-                  data-testid="switch-allow-detour-drivers"
-                  checked={allowDetourDrivers}
-                  onCheckedChange={(checked) => {
-                    setAllowDetourDrivers(checked);
-                    updatePreferences.mutate({ allowDetourDrivers: checked });
-                  }}
-                />
+                <div className="space-y-1.5 pl-6">
+                  {[
+                    { value: "both", label: "All Drivers", desc: "I'm a big walker, only hop when necessary" },
+                    { value: "non_detour_only", label: "Direct Route Only", desc: "Only match with drivers already heading my way" },
+                    { value: "detour_only", label: "Detour Drivers Only", desc: "Match with drivers willing to swing by for me" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setAllowDetourDrivers(opt.value);
+                        updatePreferences.mutate({ allowDetourDrivers: opt.value as any });
+                      }}
+                      className={`w-full text-left p-2.5 rounded-xl border transition-all ${allowDetourDrivers === opt.value ? "border-primary bg-primary/5 shadow-sm" : "border-border/30 hover:border-border/50"}`}
+                      data-testid={`detour-option-${opt.value}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${allowDetourDrivers === opt.value ? "border-primary" : "border-muted-foreground/30"}`}>
+                          {allowDetourDrivers === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                        </div>
+                        <span className="text-[11px] font-semibold">{opt.label}</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 pl-5.5">{opt.desc}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">

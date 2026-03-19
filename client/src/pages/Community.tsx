@@ -519,7 +519,7 @@ type ProfileData = {
   friendCount: number;
 };
 
-function CommunityProfiles({ user }: { user: any }) {
+function CommunityProfiles({ user, onOpenDM }: { user: any; onOpenDM?: (target: { id: number; username: string; profilePhoto: string | null }) => void }) {
   const { data: profiles = [], isLoading } = useQuery<ProfileData[]>({
     queryKey: ["/api/community/profiles"],
   });
@@ -615,32 +615,44 @@ function CommunityProfiles({ user }: { user: any }) {
                     )}
                   </div>
                 </div>
-                {friendIds.has(p.id) ? (
-                  <Badge variant="secondary" className="text-[9px] h-8 px-3">
-                    <UserCheck className="w-3 h-3 mr-1" />
-                    Friends
-                  </Badge>
-                ) : pendingSentIds.has(p.id) ? (
-                  <Badge variant="outline" className="text-[9px] h-8 px-3 text-muted-foreground">
-                    Pending
-                  </Badge>
-                ) : pendingReceivedIds.has(p.id) ? (
-                  <Badge variant="outline" className="text-[9px] h-8 px-3 text-blue-500 border-blue-200">
-                    Respond
-                  </Badge>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-xs h-8 px-3"
-                    onClick={() => sendRequest.mutate(p.id)}
-                    disabled={sendRequest.isPending}
-                    data-testid={`button-add-friend-${p.id}`}
-                  >
-                    <UserPlus className="w-3.5 h-3.5 mr-1" />
-                    Add
-                  </Button>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {(friendIds.has(p.id) || user?.username?.toLowerCase() === "hyperfm") && onOpenDM && (
+                    <button
+                      onClick={() => onOpenDM({ id: p.id, username: p.username, profilePhoto: p.profilePhoto })}
+                      className="p-1.5 rounded-full hover:bg-primary/10 transition-colors"
+                      data-testid={`button-dm-profile-${p.id}`}
+                      title={`Message ${p.username}`}
+                    >
+                      <MessageCircle className="w-4.5 h-4.5 text-primary" />
+                    </button>
+                  )}
+                  {friendIds.has(p.id) ? (
+                    <Badge variant="secondary" className="text-[9px] h-8 px-3">
+                      <UserCheck className="w-3 h-3 mr-1" />
+                      Friends
+                    </Badge>
+                  ) : pendingSentIds.has(p.id) ? (
+                    <Badge variant="outline" className="text-[9px] h-8 px-3 text-muted-foreground">
+                      Pending
+                    </Badge>
+                  ) : pendingReceivedIds.has(p.id) ? (
+                    <Badge variant="outline" className="text-[9px] h-8 px-3 text-blue-500 border-blue-200">
+                      Respond
+                    </Badge>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-8 px-3"
+                      onClick={() => sendRequest.mutate(p.id)}
+                      disabled={sendRequest.isPending}
+                      data-testid={`button-add-friend-${p.id}`}
+                    >
+                      <UserPlus className="w-3.5 h-3.5 mr-1" />
+                      Add
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -658,13 +670,106 @@ type FriendRequestData = {
   createdAt: string | null;
 };
 
+function DMChat({ user, friendId, friendName, friendPhoto, onClose }: { user: any; friendId: number; friendName: string; friendPhoto: string | null; onClose: () => void }) {
+  const [msg, setMsg] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const { data: messages = [], isLoading: loadingMsgs } = useQuery<any[]>({
+    queryKey: ["/api/dm", friendId],
+    queryFn: async () => {
+      const res = await fetch(`/api/dm/${friendId}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchInterval: 4000,
+  });
+
+  const sendMsg = useMutation({
+    mutationFn: async (text: string) => {
+      const res = await apiRequest("POST", `/api/dm/${friendId}`, { message: text });
+      return res.json();
+    },
+    onSuccess: () => {
+      setMsg("");
+      queryClient.invalidateQueries({ queryKey: ["/api/dm", friendId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dm/unread/count"] });
+    },
+  });
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  return (
+    <div className="fixed inset-0 bg-background/95 z-50 flex flex-col" data-testid="dm-chat-view">
+      <div className="flex items-center gap-3 p-3 border-b border-border/30 bg-card">
+        <Button size="sm" variant="ghost" onClick={onClose} data-testid="button-close-dm" className="h-8 w-8 p-0">
+          <X className="w-4 h-4" />
+        </Button>
+        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
+          {friendPhoto ? <img src={friendPhoto} alt={friendName} className="w-full h-full object-cover" /> : friendName[0].toUpperCase()}
+        </div>
+        <p className="text-sm font-bold">{friendName}</p>
+      </div>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2">
+        {loadingMsgs ? (
+          <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+        ) : messages.length === 0 ? (
+          <div className="text-center py-12">
+            <MessageCircle className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-xs text-muted-foreground">Start a conversation with {friendName}</p>
+          </div>
+        ) : (
+          messages.map((m: any) => {
+            const isMine = m.sender_id === user.id;
+            return (
+              <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${isMine ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted rounded-bl-md"}`} data-testid={`dm-message-${m.id}`}>
+                  <p className="break-words">{m.message}</p>
+                  <p className={`text-[9px] mt-1 ${isMine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{timeAgo(m.created_at)}</p>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+      <div className="p-3 border-t border-border/30 bg-card">
+        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (msg.trim()) sendMsg.mutate(msg.trim()); }}>
+          <Input
+            value={msg}
+            onChange={(e) => setMsg(e.target.value)}
+            placeholder={`Message ${friendName}...`}
+            className="flex-1 text-sm"
+            data-testid="input-dm-message"
+            maxLength={500}
+          />
+          <Button type="submit" size="sm" disabled={!msg.trim() || sendMsg.isPending} data-testid="button-send-dm" className="h-9 px-3">
+            <Send className="w-4 h-4" />
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function FriendRequestsTab({ user }: { user: any }) {
+  const [dmTarget, setDmTarget] = useState<{ id: number; username: string; profilePhoto: string | null } | null>(null);
   const { data: requests = [], isLoading } = useQuery<FriendRequestData[]>({
     queryKey: ["/api/friends/requests"],
   });
 
   const { data: friends = [] } = useQuery<{ id: number; friendId: number; username: string; profilePhoto: string | null }[]>({
     queryKey: ["/api/friends"],
+  });
+
+  const { data: unreadData } = useQuery<{ count: number }>({
+    queryKey: ["/api/dm/unread/count"],
+    queryFn: async () => {
+      const res = await fetch("/api/dm/unread/count");
+      if (!res.ok) return { count: 0 };
+      return res.json();
+    },
+    refetchInterval: 10000,
   });
 
   const respond = useMutation({
@@ -683,6 +788,10 @@ function FriendRequestsTab({ user }: { user: any }) {
     },
   });
 
+  if (dmTarget) {
+    return <DMChat user={user} friendId={dmTarget.id} friendName={dmTarget.username} friendPhoto={dmTarget.profilePhoto} onClose={() => setDmTarget(null)} />;
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -690,6 +799,8 @@ function FriendRequestsTab({ user }: { user: any }) {
       </div>
     );
   }
+
+  const isAdmin = user?.username?.toLowerCase() === "hyperfm";
 
   return (
     <div className="space-y-6">
@@ -763,8 +874,16 @@ function FriendRequestsTab({ user }: { user: any }) {
                       f.username[0].toUpperCase()
                     )}
                   </div>
-                  <p className="text-sm font-semibold" data-testid={`friend-username-${f.friendId}`}>{f.username}</p>
-                  <Badge variant="secondary" className="ml-auto text-[9px]">
+                  <p className="text-sm font-semibold flex-1" data-testid={`friend-username-${f.friendId}`}>{f.username}</p>
+                  <button
+                    onClick={() => setDmTarget({ id: f.friendId, username: f.username, profilePhoto: f.profilePhoto })}
+                    className="relative p-1.5 rounded-full hover:bg-primary/10 transition-colors"
+                    data-testid={`button-dm-${f.friendId}`}
+                    title={`Message ${f.username}`}
+                  >
+                    <MessageCircle className="w-5 h-5 text-primary" />
+                  </button>
+                  <Badge variant="secondary" className="text-[9px]">
                     <UserCheck className="w-3 h-3 mr-0.5" />
                     Friends
                   </Badge>
@@ -802,6 +921,7 @@ export default function Community() {
   const [customDonate, setCustomDonate] = useState("");
   const [showCustomDonate, setShowCustomDonate] = useState(false);
   const [connectTab, setConnectTab] = useState<"feed" | "community" | "requests">("feed");
+  const [globalDmTarget, setGlobalDmTarget] = useState<{ id: number; username: string; profilePhoto: string | null } | null>(null);
 
   const { data: requestCount } = useQuery<{ id: number }[]>({
     queryKey: ["/api/friends/requests"],
@@ -924,8 +1044,12 @@ export default function Community() {
         ))}
       </div>
 
+      {globalDmTarget && user && (
+        <DMChat user={user} friendId={globalDmTarget.id} friendName={globalDmTarget.username} friendPhoto={globalDmTarget.profilePhoto} onClose={() => setGlobalDmTarget(null)} />
+      )}
+
       {connectTab === "community" && user && (
-        <CommunityProfiles user={user} />
+        <CommunityProfiles user={user} onOpenDM={(t) => setGlobalDmTarget(t)} />
       )}
 
       {connectTab === "requests" && user && (

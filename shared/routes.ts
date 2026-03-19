@@ -281,7 +281,7 @@ export const api = {
         hopperDropoffFlex: z.enum(["exact", "close_enough"]).optional(),
         sharedCommute: z.boolean().optional(),
         modeLock: z.enum(["none", "hopper_only", "driver_only"]).optional(),
-        allowDetourDrivers: z.boolean().optional(),
+        allowDetourDrivers: z.enum(["both", "detour_only", "non_detour_only"]).optional(),
         magicGpsEnabled: z.boolean().optional(),
         flowModeEnabled: z.boolean().optional(),
         seatsNeeded: z.number().int().min(1).max(6).optional(),

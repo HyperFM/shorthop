@@ -840,7 +840,7 @@ export async function registerRoutes(
   app.post(api.notifications.markRead.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const notif = await storage.markNotificationRead(Number(req.params.id));
+      const notif = await storage.markNotificationRead(Number(req.params.id), req.user.id);
       res.json(notif);
     } catch (e) {
       res.status(404).json({ message: "Notification not found" });
@@ -974,6 +974,17 @@ export async function registerRoutes(
     if (!addresseeId || isNaN(addresseeId) || addresseeId === req.user.id) return res.status(400).json({ message: "Invalid request" });
     try {
       const result = await storage.sendFriendRequest(req.user.id, addresseeId);
+      const sender = await storage.getUser(req.user.id);
+      const todayCount = await storage.getNotificationCountToday(addresseeId);
+      if (todayCount < 10) {
+        await storage.createNotification({
+          userId: addresseeId,
+          type: "friend_request",
+          title: "New Friend Request 👋",
+          message: `${sender?.username || "Someone"} wants to connect with you on ShortHop!`,
+          isRead: false,
+        });
+      }
       res.status(201).json(result);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -1008,6 +1019,80 @@ export async function registerRoutes(
       res.json(friends);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch friends" });
+    }
+  });
+
+  // Direct Messages
+  app.get("/api/dm/unread/count", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const count = await storage.getUnreadDMCount(req.user.id);
+      res.json({ count });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch unread count" });
+    }
+  });
+
+  app.get("/api/dm/conversations", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const conversations = await storage.getDMConversations(req.user.id);
+      res.json(conversations);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+
+  app.get("/api/dm/:userId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const otherUserId = Number(req.params.userId);
+    if (!otherUserId || isNaN(otherUserId)) return res.status(400).json({ message: "Invalid user" });
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      const otherUser = await storage.getUser(otherUserId);
+      const isAdmin = currentUser?.username?.toLowerCase() === "hyperfm";
+      const otherIsAdmin = otherUser?.username?.toLowerCase() === "hyperfm";
+      if (!isAdmin && !otherIsAdmin) {
+        const areFriends = await storage.areFriends(req.user.id, otherUserId);
+        if (!areFriends) return res.status(403).json({ message: "You can only message friends" });
+      }
+      const messages = await storage.getDMMessages(req.user.id, otherUserId);
+      await storage.markDMsRead(req.user.id, otherUserId);
+      res.json(messages);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/dm/:userId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const receiverId = Number(req.params.userId);
+    if (!receiverId || isNaN(receiverId)) return res.status(400).json({ message: "Invalid user" });
+    const { message } = req.body;
+    if (!message || typeof message !== "string" || !message.trim()) return res.status(400).json({ message: "Message required" });
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      const receiverUser = await storage.getUser(receiverId);
+      const isAdmin = currentUser?.username?.toLowerCase() === "hyperfm";
+      const receiverIsAdmin = receiverUser?.username?.toLowerCase() === "hyperfm";
+      if (!isAdmin && !receiverIsAdmin) {
+        const areFriends = await storage.areFriends(req.user.id, receiverId);
+        if (!areFriends) return res.status(403).json({ message: "You can only message friends" });
+      }
+      const dm = await storage.sendDM(req.user.id, receiverId, message.trim());
+      const todayCount = await storage.getNotificationCountToday(receiverId);
+      if (todayCount < 15) {
+        await storage.createNotification({
+          userId: receiverId,
+          type: "direct_message",
+          title: "New Message 💬",
+          message: `${currentUser?.username || "Someone"} sent you a message`,
+          isRead: false,
+        });
+      }
+      res.status(201).json(dm);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to send message" });
     }
   });
 

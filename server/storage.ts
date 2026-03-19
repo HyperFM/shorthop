@@ -148,7 +148,7 @@ export interface IStorage {
 
   createNotification(notification: InsertNotification): Promise<Notification>;
   getUserNotifications(userId: number): Promise<Notification[]>;
-  markNotificationRead(id: number): Promise<Notification>;
+  markNotificationRead(id: number, userId: number): Promise<Notification>;
   markAllNotificationsRead(userId: number): Promise<void>;
 
   createRating(rating: InsertHopBuddyRating): Promise<HopBuddyRating>;
@@ -163,6 +163,12 @@ export interface IStorage {
   getFriends(userId: number): Promise<{ id: number; friendId: number; username: string; profilePhoto: string | null }[]>;
   getFriendCount(userId: number): Promise<number>;
   getFriendshipStatus(userId: number, otherUserId: number): Promise<string | null>;
+  areFriends(userId: number, otherUserId: number): Promise<boolean>;
+  getDMConversations(userId: number): Promise<any[]>;
+  getDMMessages(userId: number, otherUserId: number): Promise<any[]>;
+  markDMsRead(userId: number, senderId: number): Promise<void>;
+  sendDM(senderId: number, receiverId: number, message: string): Promise<any>;
+  getUnreadDMCount(userId: number): Promise<number>;
   getPublicProfiles(currentUserId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number; idVerified: boolean | null }[]>;
 
   getCommunityPosts(): Promise<{ id: number; userId: number; content: string; createdAt: Date | null; username: string }[]>;
@@ -649,10 +655,10 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(notifications.createdAt));
   }
 
-  async markNotificationRead(id: number): Promise<Notification> {
+  async markNotificationRead(id: number, userId: number): Promise<Notification> {
     const [n] = await db.update(notifications)
       .set({ isRead: true })
-      .where(eq(notifications.id, id))
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)))
       .returning();
     if (!n) throw new Error("Notification not found");
     return n;
@@ -799,6 +805,78 @@ export class DatabaseStorage implements IStorage {
     if (f.status === "pending" && f.requesterId === userId) return "pending_sent";
     if (f.status === "pending" && f.addresseeId === userId) return "pending_received";
     return f.status;
+  }
+
+  async areFriends(userId: number, otherUserId: number): Promise<boolean> {
+    const result = await db.select().from(friendships).where(
+      and(
+        or(
+          and(eq(friendships.requesterId, userId), eq(friendships.addresseeId, otherUserId)),
+          and(eq(friendships.requesterId, otherUserId), eq(friendships.addresseeId, userId))
+        ),
+        eq(friendships.status, "accepted")
+      )
+    );
+    return result.length > 0;
+  }
+
+  async getDMConversations(userId: number): Promise<any[]> {
+    const rows = await db.execute(sql`
+      SELECT DISTINCT ON (other_id) other_id, username, profile_photo, last_message, last_time, unread_count
+      FROM (
+        SELECT
+          CASE WHEN dm.sender_id = ${userId} THEN dm.receiver_id ELSE dm.sender_id END AS other_id,
+          u.username,
+          u.profile_photo,
+          dm.message AS last_message,
+          dm.created_at AS last_time,
+          CASE WHEN dm.sender_id != ${userId} AND dm.is_read = false THEN 1 ELSE 0 END AS unread_flag
+        FROM direct_messages dm
+        JOIN users u ON u.id = CASE WHEN dm.sender_id = ${userId} THEN dm.receiver_id ELSE dm.sender_id END
+        WHERE dm.sender_id = ${userId} OR dm.receiver_id = ${userId}
+        ORDER BY dm.created_at DESC
+      ) sub
+      CROSS JOIN LATERAL (
+        SELECT COUNT(*) AS unread_count FROM direct_messages
+        WHERE sender_id = sub.other_id AND receiver_id = ${userId} AND is_read = false
+      ) uc
+      ORDER BY other_id, last_time DESC
+    `);
+    return (rows as any).rows || rows;
+  }
+
+  async getDMMessages(userId: number, otherUserId: number): Promise<any[]> {
+    const rows = await db.execute(sql`
+      SELECT dm.id, dm.sender_id, dm.receiver_id, dm.message, dm.is_read, dm.created_at,
+             u.username AS sender_username
+      FROM direct_messages dm
+      JOIN users u ON u.id = dm.sender_id
+      WHERE (dm.sender_id = ${userId} AND dm.receiver_id = ${otherUserId})
+         OR (dm.sender_id = ${otherUserId} AND dm.receiver_id = ${userId})
+      ORDER BY dm.created_at ASC
+    `);
+    return (rows as any).rows || rows;
+  }
+
+  async markDMsRead(userId: number, senderId: number): Promise<void> {
+    await db.execute(sql`
+      UPDATE direct_messages SET is_read = true
+      WHERE sender_id = ${senderId} AND receiver_id = ${userId} AND is_read = false
+    `);
+  }
+
+  async sendDM(senderId: number, receiverId: number, message: string): Promise<any> {
+    const rows = await db.execute(sql`
+      INSERT INTO direct_messages (sender_id, receiver_id, message) VALUES (${senderId}, ${receiverId}, ${message}) RETURNING *
+    `);
+    return ((rows as any).rows || rows)[0];
+  }
+
+  async getUnreadDMCount(userId: number): Promise<number> {
+    const rows = await db.execute(sql`
+      SELECT COUNT(*) AS count FROM direct_messages WHERE receiver_id = ${userId} AND is_read = false
+    `);
+    return Number(((rows as any).rows || rows)[0]?.count || 0);
   }
 
   async getPublicProfiles(currentUserId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number; idVerified: boolean | null }[]> {
