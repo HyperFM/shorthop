@@ -102,10 +102,11 @@
       <div id="sh-splash-icon" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;z-index:1;">
         <img src="/app-icon-192.png" alt="ShortHop" style="width:120px;height:120px;object-fit:contain;" />
       </div>
-      <video id="sh-splash-video" autoplay playsinline preload="auto" style="position:relative;z-index:2;pointer-events:none;">
+      <video id="sh-splash-video" autoplay playsinline preload="auto" style="position:relative;z-index:2;">
         <source src="/splash.mp4" type="video/mp4" />
         <source src="/splash.mov" type="video/quicktime" />
       </video>
+      <div id="sh-splash-tap" style="position:absolute;inset:0;z-index:3;"></div>
     </div>
     <div id="root"></div>
     <script>
@@ -138,7 +139,8 @@
           });
         }
 
-        splash.addEventListener('click', function() {
+        var tapLayer = document.getElementById('sh-splash-tap');
+        tapLayer.addEventListener('click', function() {
           if (isMuted || vid.muted) {
             vid.muted = false;
             isMuted = false;
