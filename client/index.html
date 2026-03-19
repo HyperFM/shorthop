@@ -25,12 +25,6 @@
         min-height: 100dvh;
       }
 
-      body.sh-splash-active {
-        overflow: hidden !important;
-        background: #000 !important;
-        background-color: #000 !important;
-      }
-
       [class*="share-your-feedback"],
       [class*="feedback"],
       iframe[src*="feedback"],
@@ -49,13 +43,6 @@
         left: -9999px !important;
       }
 
-      #sh-splash.fade-out {
-        animation: splashFade 0.45s ease-out forwards;
-      }
-
-      @keyframes splashFade {
-        to { opacity: 0; }
-      }
     </style>
     <meta property="og:title" content="ShortHop" />
     <meta property="og:description" content="Shared routes. Real connections. A micro-rideshare for Lexington, KY." />
@@ -66,6 +53,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300..800&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
   </head>
   <body>
+    <video id="introVideo" autoplay muted playsinline>
+      <source src="/intro.mp4" type="video/mp4">
+    </video>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
