@@ -87,7 +87,7 @@ export function NetworkProgress() {
               whileHover={{ scale: 1.05 }}
               className="text-center p-3 rounded-2xl bg-gradient-to-b from-secondary/10 to-secondary/5 border border-secondary/20"
             >
-              <img src={driverIconUrl} alt="Driver" className="w-8 h-8 mx-auto mb-1 object-contain" />
+              <img src={driverIconUrl} alt="Driver" className="w-9 h-9 mx-auto mb-1 object-contain" />
               <p className="text-2xl font-black text-foreground" data-testid="text-driver-count">{stats.totalDrivers}</p>
               <p className="text-[11px] text-muted-foreground font-bold uppercase">Drivers</p>
             </motion.div>
@@ -103,7 +103,7 @@ export function NetworkProgress() {
               whileHover={{ scale: 1.05 }}
               className="text-center p-3 rounded-2xl bg-gradient-to-b from-accent/10 to-accent/5 border border-accent/20"
             >
-              <img src={driverWithHopperIconUrl} alt="Total" className="w-8 h-8 mx-auto mb-1 object-contain" />
+              <img src={driverWithHopperIconUrl} alt="Total" className="w-9 h-9 mx-auto mb-1 object-contain" />
               <p className="text-2xl font-black text-foreground" data-testid="text-total-count">{stats.totalUsers}</p>
               <p className="text-[11px] text-muted-foreground font-bold uppercase">Total</p>
             </motion.div>
