@@ -43,7 +43,26 @@
         left: -9999px !important;
       }
 
+      #sh-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #sh-splash img {
+        max-width: 60%;
+        max-height: 50%;
+        object-fit: contain;
+      }
+      #sh-splash.fade-out {
+        opacity: 0;
+        transition: opacity 0.5s ease-out;
+      }
     </style>
+    <link rel="preload" as="image" href="/splash.jpeg" />
     <meta property="og:title" content="ShortHop" />
     <meta property="og:description" content="Shared routes. Real connections. A micro-rideshare for Lexington, KY." />
     <meta property="og:image" content="/app-icon.png" />
@@ -53,7 +72,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300..800&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
   </head>
   <body>
+    <div id="sh-splash">
+      <img src="/splash.jpeg" alt="ShortHop" />
+    </div>
     <div id="root"></div>
+    <script>
+      (function() {
+        var splash = document.getElementById('sh-splash');
+        setTimeout(function() {
+          splash.classList.add('fade-out');
+          setTimeout(function() { splash.remove(); }, 600);
+        }, 10000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
