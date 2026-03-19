@@ -1,84 +1,77 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { motion } from "framer-motion";
+
+const SESSION_KEY = "sh_splash_shown";
+
+export function hasSplashBeenShown(): boolean {
+  try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch { return true; }
+}
 
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [fadingOut, setFadingOut] = useState(false);
   const doneRef = useRef(false);
-  const unmutedRef = useRef(false);
-
-  useEffect(() => {
-    window.__dismissPreloader?.();
-  }, []);
 
   const handleFinish = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
+    try { sessionStorage.setItem(SESSION_KEY, "1"); } catch {}
     setFadingOut(true);
-    setTimeout(onComplete, 600);
+    setTimeout(onComplete, 500);
   }, [onComplete]);
 
   useEffect(() => {
-    const fallback = setTimeout(handleFinish, 8000);
+    const fallback = setTimeout(handleFinish, 6000);
     return () => clearTimeout(fallback);
   }, [handleFinish]);
 
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
-
-    vid.muted = false;
-    const attempt = vid.play();
-    if (attempt) {
-      attempt.then(() => {
-        unmutedRef.current = true;
-      }).catch(() => {
-        vid.muted = true;
-        vid.play().catch(() => handleFinish());
-      });
-    }
-  }, [handleFinish]);
-
-  useEffect(() => {
-    const handleInteraction = () => {
-      const vid = videoRef.current;
-      if (!vid || unmutedRef.current || doneRef.current) return;
-      unmutedRef.current = true;
-      vid.muted = false;
-      vid.currentTime = 0;
-      vid.play().catch(() => {});
-    };
-
-    window.addEventListener("touchstart", handleInteraction, { once: true });
-    window.addEventListener("click", handleInteraction, { once: true });
-    window.addEventListener("keydown", handleInteraction, { once: true });
-    return () => {
-      window.removeEventListener("touchstart", handleInteraction);
-      window.removeEventListener("click", handleInteraction);
-      window.removeEventListener("keydown", handleInteraction);
-    };
+    vid.play().catch(() => {});
   }, []);
 
+  const handleTap = () => {
+    const vid = videoRef.current;
+    if (!vid || doneRef.current) return;
+    vid.currentTime = 0;
+    vid.muted = false;
+    vid.play().catch(() => {});
+  };
+
   return (
-    <motion.div
-      className="fixed inset-0 z-[200] flex items-center justify-center"
-      style={{ background: "#1a2e23" }}
-      animate={{ opacity: fadingOut ? 0 : 1 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+    <div
+      onClick={handleTap}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 99999,
+        background: "#000",
+        opacity: fadingOut ? 0 : 1,
+        transition: "opacity 0.4s ease-out",
+        pointerEvents: fadingOut ? "none" : "auto",
+      }}
       data-testid="splash-screen"
     >
       <video
         ref={videoRef}
-        className="w-full h-full object-cover"
+        muted
         playsInline
+        autoPlay
         preload="auto"
         onEnded={handleFinish}
         onError={handleFinish}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+        }}
         data-testid="splash-video"
       >
-        <source src="/splash-screen.mp4" type="video/mp4" />
-        <source src="/splash-screen.mov" type="video/quicktime" />
+        <source src="/intro.mp4" type="video/mp4" />
       </video>
-    </motion.div>
+    </div>
   );
 }
