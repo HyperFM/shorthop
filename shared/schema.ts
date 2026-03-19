@@ -72,6 +72,10 @@ export const users = pgTable("users", {
   sharedCommute: boolean("shared_commute").default(false),
   modeLock: text("mode_lock").default("none"),
   allowDetourDrivers: boolean("allow_detour_drivers").default(false),
+  isFirstTenDriver: boolean("is_first_ten_driver").default(false),
+  driverApprovalSeen: boolean("driver_approval_seen").default(false),
+  seatsNeeded: integer("seats_needed").default(1),
+  availableSeats: integer("available_seats").default(1),
   legalName: text("legal_name"),
   idVerified: boolean("id_verified").default(false),
   idVerificationStatus: text("id_verification_status").default("none"),
@@ -161,6 +165,7 @@ export const shortHops = pgTable("short_hops", {
   arrivalDeadline: timestamp("arrival_deadline"),
   timeWindowExpiry: timestamp("time_window_expiry"),
   microHop: boolean("micro_hop").default(false),
+  seatsNeeded: integer("seats_needed").default(1),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -791,12 +791,34 @@ export default function Admin() {
               <CardContent className="p-3">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-bold">{d.username}</p>
                     <p className="text-[10px] text-muted-foreground">
                       {d.vehicleColor} {d.vehicleMake} {d.vehicleModel} · {d.licensePlate}
                     </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {(d as any).availableSeats && (
+                        <Badge className="text-[8px] border-0 bg-blue-100 text-blue-700">{(d as any).availableSeats} seat{(d as any).availableSeats > 1 ? "s" : ""}</Badge>
+                      )}
+                    </div>
                   </div>
+                  <Button
+                    size="sm"
+                    variant={(d as any).isFirstTenDriver ? "default" : "outline"}
+                    className={`h-6 px-2 text-[8px] rounded-lg ${(d as any).isFirstTenDriver ? "bg-amber-500 hover:bg-amber-600 text-white border-0" : "border-amber-300/50 text-amber-600"}`}
+                    data-testid={`button-first-ten-${d.id}`}
+                    onClick={async () => {
+                      try {
+                        await apiRequest("POST", `/api/admin/users/${d.id}/first-ten-driver`, { value: !(d as any).isFirstTenDriver });
+                        queryClient.invalidateQueries({ queryKey: ["/api/admin/drivers"] });
+                        showFlash("⭐", `${d.username} ${(d as any).isFirstTenDriver ? "removed from" : "added to"} First 10`, "success");
+                      } catch {
+                        showFlash("❌", "Failed to toggle", "error");
+                      }
+                    }}
+                  >
+                    {(d as any).isFirstTenDriver ? "★ First 10" : "First 10"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

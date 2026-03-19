@@ -417,6 +417,11 @@ function HopRequestCard({ hop, driverLat, driverLng, onNavigate }: {
                   <Clock className="w-2.5 h-2.5 inline mr-0.5" />{timeRemaining}m left
                 </span>
               )}
+              {(hop.seatsNeeded || 1) > 1 && (
+                <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full" data-testid={`text-hop-seats-${hop.id}`}>
+                  {hop.seatsNeeded} seats
+                </span>
+              )}
             </div>
           </div>
           <Button
@@ -705,7 +710,11 @@ function DriveNowPanel({ user }: { user: User }) {
                 </div>
                 <div>
                   <p className="text-sm font-bold">{isActiveNow ? "You're Active" : "Go Active"}</p>
-                  <p className="text-[10px] text-muted-foreground">{isActiveNow ? "Accepting hop requests" : "Tap to start driving"}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {isActiveNow
+                      ? `Accepting hop requests · ${(user as any)?.availableSeats || 1} seat${((user as any)?.availableSeats || 1) > 1 ? "s" : ""} open`
+                      : "Tap to start driving"}
+                  </p>
                 </div>
               </div>
               <Button

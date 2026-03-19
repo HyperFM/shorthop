@@ -410,9 +410,12 @@ export async function registerRoutes(
     if (req.user.isDriver) {
       const allAvailable = await storage.getAvailableHops();
       const now = new Date();
+      const driverUser = await storage.getUser(req.user.id);
+      const driverSeats = driverUser?.availableSeats || 1;
       const availableHops = allAvailable.filter(h => {
         if (h.timeWindowExpiry && new Date(h.timeWindowExpiry) < now) return false;
         if (h.departureTime && new Date(h.departureTime) > new Date(now.getTime() + 60 * 60000)) return false;
+        if ((h.seatsNeeded || 1) > driverSeats) return false;
         return true;
       });
       const driverHops = await storage.getHopsForDriver(req.user.id);
@@ -561,6 +564,7 @@ export async function registerRoutes(
         arrivalDeadline: input.arrivalDeadline ? new Date(input.arrivalDeadline) : null,
         timeWindowExpiry: input.timeWindowExpiry ? new Date(input.timeWindowExpiry) : null,
         microHop: isMicroHop,
+        seatsNeeded: currentUser.seatsNeeded || 1,
       });
       res.status(201).json(hop);
     } catch (err) {
@@ -584,6 +588,10 @@ export async function registerRoutes(
 
        if (existingHop.timeWindowExpiry && new Date(existingHop.timeWindowExpiry) < new Date()) {
          return res.status(400).json({ message: "This hop's time window has expired" });
+       }
+
+       if ((existingHop.seatsNeeded || 1) > (driver.availableSeats || 1)) {
+         return res.status(400).json({ message: `This rider needs ${existingHop.seatsNeeded} seats but you only have ${driver.availableSeats || 1} available` });
        }
 
        const hop = await storage.acceptHop(Number(req.params.id), req.user.id);
@@ -1818,6 +1826,8 @@ export async function registerRoutes(
         vehicleColor: d.vehicleColor,
         licensePlate: d.licensePlate,
         credits: d.credits,
+        isFirstTenDriver: d.isFirstTenDriver,
+        availableSeats: d.availableSeats,
       })));
     } catch {
       res.status(500).json({ message: "Failed to get drivers" });
@@ -1842,18 +1852,37 @@ export async function registerRoutes(
       }
       const application = await storage.reviewDriverApplication(appId, status, req.user.id, notes);
 
-      const notifTitle = status === "approved" ? "Driver Approved! 🎉" : "Application Update";
-      const notifMsg = status === "approved"
-        ? "Your driver application has been approved! You can now go active and accept hop requests."
-        : `Your driver application was not approved. ${notes || "Please contact support for more info."}`;
+      if (status === "approved") {
+        const approvedCount = await db.select({ count: sql<number>`count(*)` }).from(users).where(eq(users.driverVerified, true));
+        const totalApproved = Number(approvedCount[0]?.count || 0);
+        const isFirstTen = totalApproved <= 10;
 
-      await storage.createNotification({
-        userId: application.userId,
-        type: "driver_mode",
-        title: notifTitle,
-        message: notifMsg,
-        isRead: false,
-      });
+        if (isFirstTen) {
+          await db.update(users).set({ isFirstTenDriver: true }).where(eq(users.id, application.userId));
+        }
+
+        const firstTenLine = isFirstTen
+          ? "\n\nYou're also part of our first 10 drivers, helping shape how this system grows in Lexington."
+          : "";
+
+        const approvalMsg = `🎉 You're approved as a ShortHop driver.${firstTenLine}\n\nTo make sure your experience is smooth, you'll have direct access to the founder during this early phase. If anything feels off, confusing, or could be improved—even slightly—reach out anytime.\n\nYou're not just driving, you're helping build this.`;
+
+        await storage.createNotification({
+          userId: application.userId,
+          type: "driver_mode",
+          title: "Driver Approved! 🎉",
+          message: approvalMsg,
+          isRead: false,
+        });
+      } else {
+        await storage.createNotification({
+          userId: application.userId,
+          type: "driver_mode",
+          title: "Application Update",
+          message: `Your driver application was not approved. ${notes || "Please contact support for more info."}`,
+          isRead: false,
+        });
+      }
 
       res.json(application);
     } catch {
@@ -1869,6 +1898,27 @@ export async function registerRoutes(
       res.json(user);
     } catch {
       res.status(500).json({ message: "Failed to disable user" });
+    }
+  });
+
+  app.post('/api/admin/users/:id/first-ten-driver', requireAdmin, async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      const { value } = req.body;
+      await db.update(users).set({ isFirstTenDriver: !!value }).where(eq(users.id, userId));
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to toggle first ten driver" });
+    }
+  });
+
+  app.post('/api/user/driver-approval-seen', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      await db.update(users).set({ driverApprovalSeen: true }).where(eq(users.id, req.user.id));
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to mark approval seen" });
     }
   });
 

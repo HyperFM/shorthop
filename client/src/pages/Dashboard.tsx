@@ -6,7 +6,7 @@ import DriverDashboard from "./DriverDashboard";
 import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
-import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil } from "lucide-react";
+import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil, Users, Phone, MessageCircle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -82,6 +82,7 @@ export default function Dashboard() {
   });
   const [magicGpsEnabled, setMagicGpsEnabled] = useState(user?.magicGpsEnabled || false);
   const [flowModeEnabled, setFlowModeEnabled] = useState(user?.flowModeEnabled || false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -91,6 +92,12 @@ export default function Dashboard() {
     window.addEventListener("sh-sound-duration-change", onDurationChange);
     return () => window.removeEventListener("sh-sound-duration-change", onDurationChange);
   }, []);
+
+  useEffect(() => {
+    if (user?.isDriver && user?.driverVerified && !(user as any)?.driverApprovalSeen) {
+      setShowApprovalModal(true);
+    }
+  }, [user?.isDriver, user?.driverVerified, (user as any)?.driverApprovalSeen]);
 
   useEffect(() => {
     if (user?.rideVibe) setRideVibe(user.rideVibe);
@@ -125,7 +132,7 @@ export default function Dashboard() {
   }
 
   const updatePreferences = useMutation({
-    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean; flowModeEnabled?: boolean }) => {
+    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean; flowModeEnabled?: boolean; seatsNeeded?: number; availableSeats?: number }) => {
       const res = await apiRequest(api.profile.updatePreferences.method, api.profile.updatePreferences.path, updates);
       return res.json();
     },
@@ -366,6 +373,45 @@ export default function Dashboard() {
 
               <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
                 <div className="flex items-start gap-2.5">
+                  <Users className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div>
+                    <Label className="text-[11px] font-medium">Seats Needed</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">How many seats do you need for this hop?</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5" data-testid="stepper-seats-needed">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                    data-testid="button-seats-needed-minus"
+                    disabled={(user as any)?.seatsNeeded <= 1}
+                    onClick={() => {
+                      const current = (user as any)?.seatsNeeded || 1;
+                      if (current > 1) updatePreferences.mutate({ seatsNeeded: current - 1 });
+                    }}
+                  >
+                    −
+                  </Button>
+                  <span className="text-sm font-bold w-5 text-center" data-testid="text-seats-needed-value">{(user as any)?.seatsNeeded || 1}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                    data-testid="button-seats-needed-plus"
+                    disabled={(user as any)?.seatsNeeded >= 6}
+                    onClick={() => {
+                      const current = (user as any)?.seatsNeeded || 1;
+                      if (current < 6) updatePreferences.mutate({ seatsNeeded: current + 1 });
+                    }}
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
+                <div className="flex items-start gap-2.5">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                   <div>
                     <Label htmlFor="toggle-shared-commute" className="text-[11px] font-medium cursor-pointer">Shared Commute</Label>
@@ -527,6 +573,45 @@ export default function Dashboard() {
 
               <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
                 <div className="flex items-start gap-2.5">
+                  <Users className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div>
+                    <Label className="text-[11px] font-medium">Available Seats</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">How many empty seats for riders?</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5" data-testid="stepper-available-seats">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                    data-testid="button-available-seats-minus"
+                    disabled={(user as any)?.availableSeats <= 1}
+                    onClick={() => {
+                      const current = (user as any)?.availableSeats || 1;
+                      if (current > 1) updatePreferences.mutate({ availableSeats: current - 1 });
+                    }}
+                  >
+                    −
+                  </Button>
+                  <span className="text-sm font-bold w-5 text-center" data-testid="text-available-seats-value">{(user as any)?.availableSeats || 1}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                    data-testid="button-available-seats-plus"
+                    disabled={(user as any)?.availableSeats >= 6}
+                    onClick={() => {
+                      const current = (user as any)?.availableSeats || 1;
+                      if (current < 6) updatePreferences.mutate({ availableSeats: current + 1 });
+                    }}
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
+                <div className="flex items-start gap-2.5">
                   {autoAlerts ? <Bell className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> : <BellOff className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />}
                   <div>
                     <Label htmlFor="toggle-auto-alerts" className="text-[11px] font-medium cursor-pointer">Auto-Alerts</Label>
@@ -667,6 +752,84 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <AnimatePresence>
+        {showApprovalModal && user?.isDriver && user?.driverVerified && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            data-testid="modal-driver-approval"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-background border border-border/40 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-xl"
+            >
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 mx-auto rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg">
+                  <span className="text-2xl">🎉</span>
+                </div>
+                <h2 className="text-lg font-black text-foreground" data-testid="text-approval-title">You're Approved!</h2>
+              </div>
+
+              <div className="space-y-3 text-center">
+                <p className="text-sm text-foreground leading-relaxed">You're approved as a ShortHop driver.</p>
+                {(user as any)?.isFirstTenDriver && (
+                  <p className="text-sm text-foreground leading-relaxed font-semibold" data-testid="text-first-ten">
+                    You're also part of our first 10 drivers, helping shape how this system grows in Lexington.
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  To make sure your experience is smooth, you'll have direct access to the founder during this early phase. If anything feels off, confusing, or could be improved—even slightly—reach out anytime.
+                </p>
+                <p className="text-xs font-bold text-foreground">You're not just driving, you're helping build this.</p>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1 h-10 rounded-xl text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+                  data-testid="button-contact-founder"
+                  onClick={() => {
+                    window.location.href = "tel:+18594202312";
+                  }}
+                >
+                  <Phone className="w-3.5 h-3.5 mr-1.5" />
+                  Call Founder
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 h-10 rounded-xl text-xs font-bold"
+                  data-testid="button-message-founder"
+                  onClick={() => {
+                    window.location.href = "sms:+18594202312";
+                  }}
+                >
+                  <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
+                  Text Founder
+                </Button>
+              </div>
+
+              <Button
+                variant="ghost"
+                className="w-full h-9 rounded-xl text-xs text-muted-foreground"
+                data-testid="button-dismiss-approval"
+                onClick={async () => {
+                  setShowApprovalModal(false);
+                  try {
+                    await apiRequest("POST", "/api/user/driver-approval-seen");
+                    queryClient.invalidateQueries({ queryKey: [api.auth.me.path] });
+                  } catch {}
+                }}
+              >
+                Got it — let's go!
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
