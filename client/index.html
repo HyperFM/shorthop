@@ -100,16 +100,22 @@
         var videoEnded = false;
         var dismissed = false;
 
+        var isMuted = false;
         vid.play().then(function() {
           vid.muted = false;
         }).catch(function() {
           vid.muted = true;
-          vid.play().then(function() {
-            setTimeout(function() {
-              try { vid.muted = false; } catch(e) {}
-            }, 50);
-          }).catch(function() {});
+          isMuted = true;
+          vid.play().catch(function() {});
         });
+
+        splash.style.cursor = 'pointer';
+        splash.addEventListener('click', function() {
+          if (isMuted) {
+            vid.muted = false;
+            isMuted = false;
+          }
+        }, { once: true });
 
         function dismiss() {
           if (dismissed) return;
