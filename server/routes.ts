@@ -287,7 +287,7 @@ export async function registerRoutes(
       }
       const userReferralCode = "SH" + username.slice(0, 4).toUpperCase() + Math.random().toString(36).slice(2, 8).toUpperCase();
       let user = await storage.createUser({
-        username, password, isDriver: !!isDriver,
+        username, password, isDriver: false,
         city: city?.trim() || null,
         phone: phone?.trim() || null,
         notificationsEnabled: !!notificationsEnabled,
@@ -1632,7 +1632,6 @@ export async function registerRoutes(
         driverLicenseUrl: driverLicenseUrl || null,
         selfieUrl: selfieUrl || null,
         agreedToTerms: agreedToTerms || false,
-        isDriver: true,
       });
       res.json(updated);
     } catch {
