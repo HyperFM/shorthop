@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { FlashNotificationContainer } from "@/components/FlashNotification";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import NotFound from "@/pages/not-found";
 import { NavBar } from "@/components/NavBar";
 import { BottomTabBar } from "@/components/BottomTabBar";
@@ -114,16 +115,18 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <OrangeGlow />
-        <Toaster />
-        <FlashNotificationContainer />
-        <NavBar />
-        <main className="min-h-screen pb-32">
-          <Router />
-        </main>
-        <BottomTabBar />
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <OrangeGlow />
+          <Toaster />
+          <FlashNotificationContainer />
+          <NavBar />
+          <main className="min-h-screen pb-32">
+            <Router />
+          </main>
+          <BottomTabBar />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

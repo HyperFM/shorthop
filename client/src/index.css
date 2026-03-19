@@ -78,42 +78,46 @@ div[data-testid*="feedback-widget"],
   }
 
   .dark {
-    --background: 160 30% 10%;
-    --foreground: 40 33% 98%;
+    --background: 0 0% 5%;
+    --foreground: 0 0% 93%;
 
-    --card: 160 25% 14%;
-    --card-foreground: 40 33% 98%;
-    --card-border: 160 20% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 160 30% 15%;
+    --card-border: 150 15% 88%;
 
-    --primary: 152 60% 48%;
-    --primary-foreground: 160 30% 10%;
-    --primary-border: 152 60% 40%;
+    --primary: 152 70% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-border: 152 70% 42%;
 
-    --secondary: 24 85% 65%;
-    --secondary-foreground: 160 30% 10%;
-    --secondary-border: 24 85% 55%;
+    --secondary: 24 95% 62%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-border: 24 95% 52%;
 
-    --muted: 160 20% 18%;
-    --muted-foreground: 150 15% 70%;
-    --muted-border: 160 20% 25%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 65%;
+    --muted-border: 0 0% 85%;
 
-    --accent: 200 70% 55%;
-    --accent-foreground: 160 30% 10%;
-    --accent-border: 200 70% 45%;
+    --accent: 200 80% 58%;
+    --accent-foreground: 0 0% 100%;
+    --accent-border: 200 80% 48%;
 
-    --destructive: 0 70% 60%;
+    --destructive: 0 84% 62%;
     --destructive-foreground: 0 0% 100%;
-    --destructive-border: 0 70% 50%;
+    --destructive-border: 0 84% 52%;
 
-    --popover: 160 25% 14%;
-    --popover-foreground: 40 33% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 30% 15%;
 
-    --border: 160 20% 20%;
-    --input: 160 20% 20%;
-    --ring: 152 60% 48%;
-    
-    --elevate-1: rgba(255, 255, 255, 0.04);
-    --elevate-2: rgba(255, 255, 255, 0.08);
+    --border: 150 15% 88%;
+    --input: 150 15% 88%;
+    --ring: 152 70% 50%;
+
+    --elevate-1: rgba(0, 0, 0, 0.03);
+    --elevate-2: rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .shadcn-card {
+    --muted-foreground: 150 15% 40%;
   }
 
   body {

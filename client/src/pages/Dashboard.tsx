@@ -6,7 +6,8 @@ import DriverDashboard from "./DriverDashboard";
 import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
-import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil, Users, Phone, MessageCircle, X } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil, Users, Phone, MessageCircle, X, Sun, Moon, Monitor } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -56,6 +57,59 @@ function loadPreferences(): NotificationPreferences {
 
 function savePreferences(prefs: NotificationPreferences) {
   localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(prefs));
+}
+
+function ThemeToggle() {
+  const { mode, setMode } = useTheme();
+  const options: { value: "light" | "dark" | "auto"; label: string; icon: typeof Sun }[] = [
+    { value: "light", label: "Light", icon: Sun },
+    { value: "dark", label: "Dark", icon: Moon },
+    { value: "auto", label: "Auto", icon: Monitor },
+  ];
+
+  return (
+    <Card className="border-border/40" data-testid="card-theme-toggle">
+      <CardContent className="py-3 px-4">
+        <div className="flex items-center gap-2.5 mb-3">
+          <Sun className="w-4 h-4 text-amber-500 shrink-0" />
+          <p className="text-xs font-black text-foreground">Appearance</p>
+        </div>
+        <div className="flex gap-2">
+          {options.map((opt) => {
+            const Icon = opt.icon;
+            const active = mode === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  setMode(opt.value);
+                  showFlash(
+                    opt.value === "light" ? "☀️" : opt.value === "dark" ? "🌙" : "🔄",
+                    `${opt.label} mode${opt.value === "auto" ? " (follows sunrise/sunset)" : ""}`,
+                    "success"
+                  );
+                }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold transition-all ${
+                  active
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                }`}
+                data-testid={`button-theme-${opt.value}`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+        {mode === "auto" && (
+          <p className="text-[10px] text-muted-foreground mt-2 text-center">
+            Automatically switches based on sunrise and sunset at your location
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function Dashboard() {
@@ -268,6 +322,8 @@ export default function Dashboard() {
             Full Settings <ChevronRight className="w-3 h-3" />
           </button>
         </div>
+
+        <ThemeToggle />
 
         {activeTab === "hopper" && (
           <Card className="border-border/40" data-testid="card-tailor-hopper-flex">
