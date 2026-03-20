@@ -12,9 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useHops, useCancelHop } from "@/hooks/use-hops";
 import { HopBuddyRating } from "@/components/HopBuddyRating";
-import { useGeolocation, useLiveLocationBroadcast, useHopTracking, usePickupGuidance } from "@/hooks/use-location";
-import { PickupMapVisual } from "@/components/PickupMapVisual";
-import { CorridorNavigation } from "@/components/CorridorNavigation";
+import { useGeolocation, useLiveLocationBroadcast, useHopTracking } from "@/hooks/use-location";
 import { MatchInsightBubble } from "@/components/MatchInsightBubble";
 import { InterestTags, SharedInterestsBadge } from "@/components/InterestBubbles";
 import { SmartMatchCard } from "@/components/SmartMatchCard";
@@ -25,7 +23,6 @@ import type { RoadSideInfo } from "@/components/RoadSideGuide";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { playDriverApproachingSound } from "@/lib/sounds";
-import type { PickupSpot } from "@/hooks/use-location";
 import type { User } from "@shared/routes";
 
 type DriverInfo = {
@@ -59,7 +56,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const [ratingHop, setRatingHop] = useState<{ tripId: number; driverId: number; driverName: string } | null>(null);
   const lastCompletedRef = useRef<number | null>(null);
   const [showInsightBubble, setShowInsightBubble] = useState(false);
-  const [selectedCorridor, setSelectedCorridor] = useState<PickupSpot | null>(null);
   const [roadSideInfo, setRoadSideInfo] = useState<RoadSideInfo | null>(null);
   const [scheduleBannerDismissed, setScheduleBannerDismissed] = useState(() => {
     try {
@@ -127,7 +123,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const [showCelebration, setShowCelebration] = useState(false);
   const [matchedElapsed, setMatchedElapsed] = useState(0);
   const matchedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const autoStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   const startRideMutation = useMutation({
     mutationFn: async (hopId: number) => {
@@ -156,7 +152,31 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const hasActiveHop = !!activeHop;
   useLiveLocationBroadcast(hasActiveHop);
   const tracking = useHopTracking(activeHop?.id, activeHop?.status === 'matched' || activeHop?.status === 'in_ride');
-  const { spots: pickupSpots } = usePickupGuidance(geo.latitude, geo.longitude);
+  const prevDistRef = useRef<number | null>(null);
+  const [isConverging, setIsConverging] = useState(false);
+  const [isTravelingTogether, setIsTravelingTogether] = useState(false);
+
+  useEffect(() => {
+    if (tracking.distance !== null && tracking.distance !== undefined) {
+      if (prevDistRef.current !== null) {
+        const delta = prevDistRef.current - tracking.distance;
+        if (Math.abs(delta) > 0.005) {
+          const closing = delta > 0;
+          setIsConverging(closing);
+          if (closing && tracking.distance < 0.05) {
+            setIsTravelingTogether(true);
+          }
+        }
+      }
+      prevDistRef.current = tracking.distance;
+    }
+  }, [tracking.distance]);
+
+  useEffect(() => {
+    prevDistRef.current = null;
+    setIsConverging(false);
+    setIsTravelingTogether(false);
+  }, [activeHop?.id, activeHop?.status]);
 
 
   useEffect(() => {
@@ -166,10 +186,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
       }
       playDriverApproachingSound();
       setShowInsightBubble(true);
-      const spot = pickupSpots[0] ?? null;
-      const corridor = spot
-        ? { name: spot.name, lat: spot.lat, lng: spot.lng, trafficFlow: spot.trafficFlow, corridorType: spot.corridorType }
-        : findCorridorByName(activeHop?.startLocation || "");
+      const corridor = findCorridorByName(activeHop?.startLocation || "");
       const info = buildRoadSideInfo(
         corridor,
         geo.latitude,
@@ -212,23 +229,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const dropoffSoundPlayedRef = useRef(false);
 
   useEffect(() => {
-    if (activeHop?.status === 'matched' && tracking?.distance !== undefined) {
-      const distFeet = tracking.distance;
-      if (distFeet < 150) {
-        if (!autoStartTimerRef.current) {
-          autoStartTimerRef.current = setTimeout(() => {
-            startRideMutation.mutate(activeHop.id);
-            autoStartTimerRef.current = null;
-          }, 5000);
-        }
-      } else {
-        if (autoStartTimerRef.current) {
-          clearTimeout(autoStartTimerRef.current);
-          autoStartTimerRef.current = null;
-        }
-      }
-    }
-
     if (activeHop?.status === 'in_ride' && tracking?.distance !== undefined) {
       if (tracking.distance > 0.5) {
         if (!autoCompleteTimerRef.current) {
@@ -262,10 +262,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
     }
 
     return () => {
-      if (autoStartTimerRef.current) {
-        clearTimeout(autoStartTimerRef.current);
-        autoStartTimerRef.current = null;
-      }
       if (autoCompleteTimerRef.current) {
         clearTimeout(autoCompleteTimerRef.current);
         autoCompleteTimerRef.current = null;
@@ -324,29 +320,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
 
   const networkLoaded = !!networkStats;
   const driversInCity = networkStats?.activeDrivers ?? 0;
-
-  useEffect(() => {
-    if (activeHop?.status === 'matched' && pickupSpots.length > 0 && !selectedCorridor) {
-      setSelectedCorridor(pickupSpots[0]);
-    }
-  }, [activeHop?.status, pickupSpots]);
-
-  if (selectedCorridor) {
-    const navLat = geo.latitude ?? selectedCorridor.lat;
-    const navLng = geo.longitude ?? selectedCorridor.lng;
-    return (
-      <CorridorNavigation
-        spot={selectedCorridor}
-        userLat={navLat}
-        userLng={navLng}
-        tracking={tracking}
-        driverLat={tracking.partnerLat}
-        driverLng={tracking.partnerLng}
-        hopStatus={activeHop?.status}
-        onBack={() => setSelectedCorridor(null)}
-      />
-    );
-  }
 
   return (
     <div className="px-4 pt-3 pb-4 max-w-lg mx-auto">
@@ -575,16 +548,38 @@ export default function WalkerDashboard({ user }: { user: User }) {
               )}
 
               {activeHop.status === 'matched' && tracking.available && tracking.distance !== null && (
-                <div className="flex items-center gap-2 bg-green-500/10 rounded-lg p-2.5" data-testid="tracking-distance">
-                  <Compass className="w-3.5 h-3.5 text-green-600" />
-                  <span className="text-xs font-bold text-foreground">
-                    {tracking.distance < 0.1 ? 'Almost here!' : `${tracking.distance} mi ${tracking.direction || 'away'}`}
-                  </span>
-                  <motion.span
-                    className="w-2 h-2 rounded-full bg-green-500 ml-auto"
-                    animate={{ scale: [1, 1.3, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  />
+                <div className="space-y-2">
+                  {isConverging && (
+                    <div className="flex items-center gap-2 bg-green-500/10 rounded-lg p-2.5" data-testid="tracking-driver-approaching">
+                      <Compass className="w-3.5 h-3.5 text-green-600" />
+                      <span className="text-xs font-bold text-foreground">
+                        Driver on the way — {tracking.distance < 0.1 ? 'almost here!' : `${tracking.distance} mi ${tracking.direction || 'away'}`}
+                      </span>
+                      <motion.span
+                        className="w-2 h-2 rounded-full bg-green-500 ml-auto"
+                        animate={{ scale: [1, 1.3, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      />
+                    </div>
+                  )}
+                  {!isConverging && (
+                    <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-2.5" data-testid="tracking-distance">
+                      <Compass className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        Waiting for driver — {tracking.distance < 0.1 ? 'nearby' : `${tracking.distance} mi ${tracking.direction || 'away'}`}
+                      </span>
+                    </div>
+                  )}
+                  {isConverging && isTravelingTogether && (
+                    <Button
+                      className="w-full h-11 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold text-sm shadow-lg shadow-green-500/20"
+                      onClick={() => startRideMutation.mutate(activeHop.id)}
+                      disabled={startRideMutation.isPending}
+                      data-testid="button-together"
+                    >
+                      {startRideMutation.isPending ? 'Confirming...' : 'Together'}
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -631,54 +626,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
         </CardContent>
       </Card>
 
-      {activeHop?.status === 'matched' && (
-        <div className="mb-3">
-          <PickupMapVisual
-            spots={pickupSpots}
-            hasLocation={geo.permitted && geo.latitude !== null}
-            userLat={geo.latitude}
-            userLng={geo.longitude}
-            tracking={tracking}
-            driverLat={tracking.partnerLat}
-            driverLng={tracking.partnerLng}
-          />
-        </div>
-      )}
-
-      {pickupSpots.length > 0 && activeHop && (
-        <Card className="mb-3 border-border/50 shadow-sm rounded-2xl" data-testid="card-pickup-corridors">
-          <CardContent className="p-3">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Nearest Roads</p>
-            <div className="space-y-1.5">
-              {pickupSpots.map((spot, i) => (
-                <button
-                  key={`${spot.name}-${i}`}
-                  type="button"
-                  className="w-full flex items-center justify-between py-2 px-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 active:bg-muted/60 transition-colors text-left"
-                  onClick={() => setSelectedCorridor(spot)}
-                  data-testid={`pickup-spot-${i}`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Navigation className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-foreground truncate">{spot.name}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{spot.corridorType || 'busy road'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                    {spot.distance != null && (
-                      <span className="text-[10px] font-bold text-primary">
-                        {spot.distance < 0.1 ? 'Right here' : `${spot.distance.toFixed(1)} mi`}
-                      </span>
-                    )}
-                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
 
       <Dialog open={streakOpen} onOpenChange={setStreakOpen}>

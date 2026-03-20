@@ -140,6 +140,42 @@ export default function DriverDashboard({ user }: { user: User }) {
   const geo = useGeolocation();
   const tracking = useHopTracking(currentActiveHop?.id, !!(currentActiveHop && (currentActiveHop.status === 'matched' || currentActiveHop.status === 'in_ride')));
   const driverDropoffSoundRef = useRef(false);
+  const driverPrevDistRef = useRef<number | null>(null);
+  const [driverIsConverging, setDriverIsConverging] = useState(false);
+  const [driverIsTravelingTogether, setDriverIsTravelingTogether] = useState(false);
+
+  useEffect(() => {
+    if (tracking.distance !== null && tracking.distance !== undefined) {
+      if (driverPrevDistRef.current !== null) {
+        const delta = driverPrevDistRef.current - tracking.distance;
+        if (Math.abs(delta) > 0.005) {
+          const closing = delta > 0;
+          setDriverIsConverging(closing);
+          if (closing && tracking.distance < 0.05) {
+            setDriverIsTravelingTogether(true);
+          }
+        }
+      }
+      driverPrevDistRef.current = tracking.distance;
+    }
+  }, [tracking.distance]);
+
+  useEffect(() => {
+    driverPrevDistRef.current = null;
+    setDriverIsConverging(false);
+    setDriverIsTravelingTogether(false);
+  }, [currentActiveHop?.id, currentActiveHop?.status]);
+
+  const startRideAsDriver = useMutation({
+    mutationFn: async (hopId: number) => {
+      const res = await apiRequest("POST", `/api/hops/${hopId}/start-ride`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+      showFlash("🚗", "Ride started!", "success");
+    },
+  });
 
   useEffect(() => {
     if (currentActiveHop?.status === 'matched') {
@@ -384,6 +420,37 @@ export default function DriverDashboard({ user }: { user: User }) {
                         const info = buildRoadSideInfo(corridor, null, null, hop.startLocation, hop.endLocation);
                         return info ? <DriverRoadSideNotice key={hop.id} info={info} minutesAway={5} /> : null;
                       })()}
+
+                      {hop.status === 'matched' && tracking.available && tracking.distance !== null && (
+                        <div className="space-y-2">
+                          {driverIsConverging && (
+                            <div className="flex items-center gap-2 bg-green-500/10 rounded-lg p-2.5" data-testid="driver-tracking-approaching">
+                              <LocateFixed className="w-3.5 h-3.5 text-green-600" />
+                              <span className="text-xs font-bold text-foreground">
+                                Heading to hopper — {tracking.distance < 0.1 ? 'almost there!' : `${tracking.distance} mi away`}
+                              </span>
+                            </div>
+                          )}
+                          {!driverIsConverging && (
+                            <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-2.5" data-testid="driver-tracking-distance">
+                              <LocateFixed className="w-3.5 h-3.5 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">
+                                Hopper is {tracking.distance < 0.1 ? 'nearby' : `${tracking.distance} mi away`}
+                              </span>
+                            </div>
+                          )}
+                          {driverIsConverging && driverIsTravelingTogether && (
+                            <Button
+                              className="w-full h-11 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold text-sm shadow-lg shadow-green-500/20"
+                              onClick={() => startRideAsDriver.mutate(hop.id)}
+                              disabled={startRideAsDriver.isPending}
+                              data-testid="button-driver-together"
+                            >
+                              {startRideAsDriver.isPending ? 'Confirming...' : 'Together'}
+                            </Button>
+                          )}
+                        </div>
+                      )}
                       
                       <Dialog open={completeHopId === hop.id} onOpenChange={(open) => !open && setCompleteHopId(null)}>
                         <DialogTrigger asChild>
