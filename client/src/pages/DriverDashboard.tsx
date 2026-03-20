@@ -269,7 +269,13 @@ export default function DriverDashboard({ user }: { user: User }) {
                       ? 'bg-red-500 hover:bg-red-600 text-white'
                       : 'bg-gradient-to-r from-green-500 to-green-600 text-white'
                   }`}
-                  onClick={() => toggleActive.mutate(!isActiveNow)}
+                  onClick={() => {
+                    if (isActiveNow) {
+                      toggleActive.mutate(false);
+                    } else {
+                      setLocation("/instahop?mode=drive");
+                    }
+                  }}
                   disabled={toggleActive.isPending}
                   data-testid="button-toggle-active"
                 >

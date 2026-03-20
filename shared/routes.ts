@@ -286,6 +286,7 @@ export const api = {
         flowModeEnabled: z.boolean().optional(),
         seatsNeeded: z.number().int().min(1).max(6).optional(),
         availableSeats: z.number().int().min(1).max(6).optional(),
+        littleEarly: z.boolean().optional(),
       }),
       responses: {
         200: z.custom<typeof users.$inferSelect>(),

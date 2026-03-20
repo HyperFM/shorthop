@@ -1,0 +1,98 @@
+Make the following updates. Do NOT modify anything outside of what is listed.
+
+-----------------------------------
+DRIVER - GO ACTIVE BUTTON (TAILOR SECTION)
+-----------------------------------
+
+1. When the driver taps "Go Active":
+- Immediately redirect them to the DRIVER MIDDLE PANEL
+- This must behave exactly like the hopper "Insta Hop" button
+
+-----------------------------------
+DRIVER MIDDLE PANEL (REQUIRED INPUT FLOW)
+-----------------------------------
+
+Before a driver can become ACTIVE, they MUST complete the following:
+
+1. DESTINATION (REQUIRED)
+- Add input field: "Where are you headed?"
+- Driver CANNOT go active without entering a destination
+
+2. ROUTE GENERATION
+- When destination is selected:
+  - Automatically generate route using default map routing
+  - Select BEST route based on:
+    - shortest time
+    - most efficient path
+  - Display ONLY ONE route
+  - Do NOT show alternate routes or extra map layers
+
+3. DEPARTURE TIME (REQUIRED)
+- Ask: "How long until you’re heading out?"
+
+- Provide the following options:
+  - Leaving now
+  - 5 min
+  - 10 min
+  - 15 min
+  - 30 min
+  - 45 min
+  - 1 hr
+  - Custom time (input format: xx:xx AM/PM)
+
+- Store this value to:
+  - Determine how long the system has to match a hopper
+  - Estimate when the driver will pass key route points using GPS + route timing
+  - Notify potential hoppers who accept early/late timing flexibility
+
+4. PREFERENCES
+- Include existing driver preferences
+- Must be set or confirmed before activation
+
+-----------------------------------
+HOPPER PANEL UPDATE (TIME OPTIONS)
+-----------------------------------
+
+1. Update hopper departure time selections to MATCH driver options:
+  - Leaving now
+  - 5 min
+  - 10 min
+  - 15 min
+  - 30 min
+  - 45 min
+  - 1 hr
+  - Custom time (xx:xx AM/PM)
+
+-----------------------------------
+HOPPER TAILOR SECTION (NEW TOGGLE)
+-----------------------------------
+
+1. Add a toggle option:
+- Label: "Little Early"
+
+2. Function:
+- Allows hopper to accept rides that arrive slightly earlier than their selected time
+
+3. This toggle should:
+- ONLY exist in hopper tailor section
+- Be OFF by default
+- Be stored as a preference for matching logic
+
+-----------------------------------
+ACTIVATION RULE
+-----------------------------------
+
+Driver can ONLY become ACTIVE when ALL are complete:
+- Destination entered
+- Route generated
+- Departure time selected
+- Preferences confirmed
+
+If any are incomplete:
+- Prevent activation or disable "Go Active"
+
+-----------------------------------
+
+Do not redesign UI.
+Do not add extra steps.
+Only enforce this structured activation flow and preference update.

@@ -695,11 +695,30 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
   );
 }
 
+const DEPARTURE_OPTIONS = [
+  { value: 0, label: "Now" },
+  { value: 5, label: "5m" },
+  { value: 10, label: "10m" },
+  { value: 15, label: "15m" },
+  { value: 30, label: "30m" },
+  { value: 45, label: "45m" },
+  { value: 60, label: "1hr" },
+  { value: -1, label: "Custom" },
+];
+
 function DriveNowPanel({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const geo = useGeolocation();
   const [navigatingHop, setNavigatingHop] = useState<any>(null);
+  const [driverDestInput, setDriverDestInput] = useState("");
+  const [driverDepartureMin, setDriverDepartureMin] = useState<number | null>(null);
+  const [customTimeInput, setCustomTimeInput] = useState("");
+  const [showCustomTime, setShowCustomTime] = useState(false);
+  const [routeGenerated, setRouteGenerated] = useState(false);
+  const [routeInfo, setRouteInfo] = useState<{ distance: string; eta: string } | null>(null);
+  const [prefsConfirmed, setPrefsConfirmed] = useState(false);
+  const [activating, setActivating] = useState(false);
 
   const { data: driverStatus } = useQuery<DriverStatus>({
     queryKey: ['/api/driver/status'],
@@ -740,6 +759,99 @@ function DriveNowPanel({ user }: { user: User }) {
       setNavigatingHop(activeDriverHop);
     }
   }, [activeDriverHop]);
+
+  const generateRoute = async () => {
+    if (!driverDestInput.trim()) return;
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (!token || !geo.latitude || !geo.longitude) {
+      showFlash("📍", "Enable location access", "error");
+      return;
+    }
+    try {
+      const endQuery = encodeURIComponent(driverDestInput + ", Lexington, KY");
+      const endRes = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${endQuery}.json?access_token=${token}&limit=1`);
+      const endJson = await endRes.json();
+      if (!endJson.features?.length) {
+        showFlash("⚠️", "Can't find destination", "error");
+        return;
+      }
+      const [endLng, endLat] = endJson.features[0].center;
+      const directionsRes = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${geo.longitude},${geo.latitude};${endLng},${endLat}?geometries=geojson&access_token=${token}`
+      );
+      const directionsJson = await directionsRes.json();
+      if (!directionsJson.routes?.length) {
+        showFlash("⚠️", "Can't calculate route", "error");
+        return;
+      }
+      const route = directionsJson.routes[0];
+      const distMiles = (route.distance / 1609.34).toFixed(1);
+      const etaMins = Math.round(route.duration / 60);
+      setRouteInfo({ distance: `${distMiles} mi`, eta: `${etaMins} min` });
+      setRouteGenerated(true);
+      showFlash("🗺️", `Route: ${distMiles} mi · ${etaMins} min`, "success");
+    } catch {
+      showFlash("⚠️", "Error calculating route", "error");
+    }
+  };
+
+  useEffect(() => {
+    if (driverDestInput.trim().length > 2) {
+      const timer = setTimeout(generateRoute, 800);
+      return () => clearTimeout(timer);
+    } else {
+      setRouteGenerated(false);
+      setRouteInfo(null);
+    }
+  }, [driverDestInput, geo.latitude, geo.longitude]);
+
+  const canGoActive = driverDestInput.trim().length > 0 && routeGenerated && driverDepartureMin !== null && prefsConfirmed;
+
+  const handleGoActive = async () => {
+    if (!canGoActive) return;
+    setActivating(true);
+    try {
+      toggleActive.mutate(true);
+    } finally {
+      setActivating(false);
+    }
+  };
+
+  const handleSelectDeparture = (val: number) => {
+    if (val === -1) {
+      setShowCustomTime(true);
+      setDriverDepartureMin(null);
+    } else {
+      setShowCustomTime(false);
+      setDriverDepartureMin(val);
+    }
+  };
+
+  const handleCustomTimeConfirm = () => {
+    if (!customTimeInput.trim()) return;
+    const match = customTimeInput.trim().match(/^(\d{1,2}):?(\d{2})?\s*(am|pm)?$/i);
+    if (!match) {
+      showFlash("⚠️", "Use format like 3:30 PM or 15:30", "error");
+      return;
+    }
+    let h = parseInt(match[1], 10);
+    const m = match[2] ? parseInt(match[2], 10) : 0;
+    const meridiem = match[3]?.toUpperCase();
+    if (meridiem === "PM" && h !== 12) h += 12;
+    if (meridiem === "AM" && h === 12) h = 0;
+    if (h < 0 || h > 23 || m < 0 || m > 59) {
+      showFlash("⚠️", "Invalid time", "error");
+      return;
+    }
+    const now = new Date();
+    const target = new Date();
+    target.setHours(h, m, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    const diffMin = Math.round((target.getTime() - now.getTime()) / 60000);
+    setDriverDepartureMin(diffMin);
+    setShowCustomTime(false);
+    showFlash("⏰", `Departing at ${customTimeInput.trim()}`, "success");
+  };
 
   if (navigatingHop) {
     return (
@@ -844,37 +956,134 @@ function DriveNowPanel({ user }: { user: User }) {
         </Card>
       )}
 
-      {isVerified && (
-        <Card className={`border-2 transition-colors rounded-2xl ${isActiveNow ? 'border-green-400 bg-green-50/30 dark:bg-green-950/20' : 'border-border/50'}`} data-testid="card-active-toggle">
+      {isVerified && isActiveNow && (
+        <Card className="border-2 border-green-400 bg-green-50/30 dark:bg-green-950/20 rounded-2xl" data-testid="card-active-toggle">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
-                  isActiveNow ? 'bg-gradient-to-br from-green-400 to-green-600' : 'bg-muted'
-                }`}>
-                  <Power className={`w-5 h-5 ${isActiveNow ? 'text-white' : 'text-muted-foreground'}`} />
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br from-green-400 to-green-600">
+                  <Power className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold">{isActiveNow ? "You're Active" : "Go Active"}</p>
+                  <p className="text-sm font-bold">You're Active</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {isActiveNow
-                      ? `Accepting hop requests · ${(user as any)?.availableSeats || 1} seat${((user as any)?.availableSeats || 1) > 1 ? "s" : ""} open`
-                      : "Tap to start driving"}
+                    Accepting hop requests · {(user as any)?.availableSeats || 1} seat{((user as any)?.availableSeats || 1) > 1 ? "s" : ""} open
                   </p>
                 </div>
               </div>
               <Button
                 size="sm"
-                variant={isActiveNow ? "destructive" : "default"}
-                onClick={() => toggleActive.mutate(!isActiveNow)}
+                variant="destructive"
+                onClick={() => toggleActive.mutate(false)}
                 disabled={toggleActive.isPending}
                 data-testid="button-toggle-active"
               >
-                {isActiveNow ? "Stop" : "Start"}
+                Stop
               </Button>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {isVerified && !isActiveNow && (
+        <div className="space-y-2">
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
+            <Input
+              placeholder="Where are you headed?"
+              className="h-11 text-sm rounded-xl bg-muted/40 border-border/50 pl-9 focus:bg-background font-semibold"
+              value={driverDestInput}
+              onChange={(e) => setDriverDestInput(e.target.value)}
+              data-testid="input-driver-destination"
+            />
+          </div>
+
+          {routeGenerated && routeInfo && (
+            <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/20 rounded-lg p-2 border border-green-200/50 dark:border-green-700/30">
+              <Navigation className="w-3.5 h-3.5 text-green-600 shrink-0" />
+              <span className="text-[11px] font-bold text-green-700 dark:text-green-400">Route: {routeInfo.distance} · {routeInfo.eta}</span>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span className="text-[11px] text-muted-foreground">How long until you head out?</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {DEPARTURE_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => handleSelectDeparture(opt.value)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                    (opt.value === -1 && showCustomTime) || (opt.value !== -1 && driverDepartureMin === opt.value)
+                      ? "bg-primary text-white shadow-sm"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  }`}
+                  data-testid={`button-driver-depart-${opt.value}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {showCustomTime && (
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="e.g. 3:30 PM"
+                  className="h-8 text-xs rounded-lg flex-1"
+                  value={customTimeInput}
+                  onChange={(e) => setCustomTimeInput(e.target.value)}
+                  data-testid="input-driver-custom-time"
+                />
+                <Button size="sm" className="h-8 text-xs rounded-lg" onClick={handleCustomTimeConfirm} data-testid="button-driver-custom-time-confirm">
+                  Set
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPrefsConfirmed(!prefsConfirmed)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all w-full ${
+                prefsConfirmed
+                  ? "bg-green-50 dark:bg-green-950/20 border border-green-300 dark:border-green-700/40 text-green-700 dark:text-green-400"
+                  : "bg-muted/30 border border-border/50 text-muted-foreground hover:bg-muted/50"
+              }`}
+              data-testid="button-confirm-prefs"
+            >
+              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${prefsConfirmed ? "border-green-500 bg-green-500" : "border-muted-foreground/30"}`}>
+                {prefsConfirmed && <svg viewBox="0 0 12 12" className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
+              </div>
+              Preferences confirmed
+            </button>
+          </div>
+
+          <Button
+            className={`w-full h-12 rounded-2xl font-black text-base shadow-xl transition-all ${
+              canGoActive
+                ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-green-500/25"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            }`}
+            onClick={handleGoActive}
+            disabled={!canGoActive || activating || toggleActive.isPending}
+            data-testid="button-driver-go-active"
+          >
+            {activating || toggleActive.isPending ? (
+              <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Activating...</>
+            ) : (
+              <><Power className="w-5 h-5 mr-2" /> GO ACTIVE</>
+            )}
+          </Button>
+
+          {!canGoActive && driverDestInput.trim().length > 0 && (
+            <p className="text-[10px] text-muted-foreground text-center">
+              {!routeGenerated ? "Calculating route..." : !driverDepartureMin && driverDepartureMin !== 0 ? "Select departure time" : !prefsConfirmed ? "Confirm your preferences" : ""}
+            </p>
+          )}
+        </div>
       )}
 
       {isVerified && (
@@ -993,6 +1202,10 @@ function InstaHopView({ user }: { user: User }) {
   const [greetingVisible, setGreetingVisible] = useState(true);
   const [mode, setMode] = useState<HopMode>(() => {
     try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlMode = urlParams.get("mode");
+      if (urlMode === "drive") return "drive";
+      if (urlMode === "hop") return "hop";
       return localStorage.getItem("sh-active-tab") === "driver" ? "drive" : "hop";
     } catch { return "hop"; }
   });
@@ -1243,7 +1456,7 @@ function InstaHopView({ user }: { user: User }) {
   } | null>(null);
   const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
   const [paymentRefunded, setPaymentRefunded] = useState(false);
-  const [departureMinutes, setDepartureMinutes] = useState(5);
+  const [departureMinutes, setDepartureMinutes] = useState(0);
 
   const { data: driverAvailability } = useQuery<{ count: number; status: string; message: string }>({
     queryKey: ['/api/driver-availability'],
@@ -1887,20 +2100,20 @@ function InstaHopView({ user }: { user: User }) {
                     <div className="flex items-center gap-2 px-1">
                       <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                       <span className="text-[11px] text-muted-foreground whitespace-nowrap">Depart in</span>
-                      <div className="flex gap-1">
-                        {[5, 10, 15, 30].map(min => (
+                      <div className="flex flex-wrap gap-1">
+                        {DEPARTURE_OPTIONS.filter(o => o.value !== -1).map(opt => (
                           <button
-                            key={min}
+                            key={opt.value}
                             type="button"
-                            onClick={() => setDepartureMinutes(min)}
+                            onClick={() => setDepartureMinutes(opt.value)}
                             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                              departureMinutes === min
+                              departureMinutes === opt.value
                                 ? "bg-primary text-white shadow-sm"
                                 : "bg-muted/50 text-muted-foreground hover:bg-muted"
                             }`}
-                            data-testid={`button-depart-${min}`}
+                            data-testid={`button-depart-${opt.value}`}
                           >
-                            {min}m
+                            {opt.label}
                           </button>
                         ))}
                       </div>

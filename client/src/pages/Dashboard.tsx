@@ -7,7 +7,7 @@ import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
 import { useTheme } from "@/components/ThemeProvider";
-import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil, Users, Phone, MessageCircle, X, Sun, Moon, Monitor } from "lucide-react";
+import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil, Users, Phone, MessageCircle, X, Sun, Moon, Monitor, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -134,6 +134,7 @@ export default function Dashboard() {
   const [autoAlerts, setAutoAlerts] = useState(() => {
     try { return localStorage.getItem("sh-driver-auto-notify") === "true"; } catch { return false; }
   });
+  const [littleEarly, setLittleEarly] = useState((user as any)?.littleEarly || false);
   const [magicGpsEnabled, setMagicGpsEnabled] = useState(user?.magicGpsEnabled || false);
   const [flowModeEnabled, setFlowModeEnabled] = useState(user?.flowModeEnabled || false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -166,7 +167,8 @@ export default function Dashboard() {
     if (user?.modeLock) setModeLock(user.modeLock);
     if (user?.allowDetourDrivers !== undefined) setAllowDetourDrivers(user.allowDetourDrivers || "both");
     if (user?.magicGpsEnabled !== undefined) setMagicGpsEnabled(user.magicGpsEnabled || false);
-  }, [user?.hopperFlexRange, user?.driverFlexRange, user?.isFlexibleDriver, user?.hopperDropoffFlex, user?.sharedCommute, user?.modeLock, user?.allowDetourDrivers, user?.magicGpsEnabled]);
+    if ((user as any)?.littleEarly !== undefined) setLittleEarly((user as any).littleEarly || false);
+  }, [user?.hopperFlexRange, user?.driverFlexRange, user?.isFlexibleDriver, user?.hopperDropoffFlex, user?.sharedCommute, user?.modeLock, user?.allowDetourDrivers, user?.magicGpsEnabled, (user as any)?.littleEarly]);
 
   useEffect(() => {
     savePreferences(prefs);
@@ -186,7 +188,7 @@ export default function Dashboard() {
   }
 
   const updatePreferences = useMutation({
-    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: string; magicGpsEnabled?: boolean; flowModeEnabled?: boolean; seatsNeeded?: number; availableSeats?: number }) => {
+    mutationFn: async (updates: { rideVibe?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: string; magicGpsEnabled?: boolean; flowModeEnabled?: boolean; seatsNeeded?: number; availableSeats?: number; littleEarly?: boolean }) => {
       const res = await apiRequest(api.profile.updatePreferences.method, api.profile.updatePreferences.path, updates);
       return res.json();
     },
@@ -497,6 +499,25 @@ export default function Dashboard() {
                   onCheckedChange={(checked) => {
                     setSharedCommute(checked);
                     updatePreferences.mutate({ sharedCommute: checked });
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
+                <div className="flex items-start gap-2.5">
+                  <Clock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div>
+                    <Label htmlFor="toggle-little-early" className="text-[11px] font-medium cursor-pointer">Little Early</Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Show up a few minutes early to pickup spots</p>
+                  </div>
+                </div>
+                <Switch
+                  id="toggle-little-early"
+                  data-testid="switch-little-early"
+                  checked={littleEarly}
+                  onCheckedChange={(checked) => {
+                    setLittleEarly(checked);
+                    updatePreferences.mutate({ littleEarly: checked });
                   }}
                 />
               </div>

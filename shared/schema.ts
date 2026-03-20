@@ -84,6 +84,7 @@ export const users = pgTable("users", {
   idSubmittedAt: timestamp("id_submitted_at"),
   magicGpsEnabled: boolean("magic_gps_enabled").default(false),
   flowModeEnabled: boolean("flow_mode_enabled").default(false),
+  littleEarly: boolean("little_early").default(false),
   confidenceScore: integer("confidence_score").default(0),
   lastCompletedRouteId: integer("last_completed_route_id"),
   lastCompletedRouteName: text("last_completed_route_name"),
