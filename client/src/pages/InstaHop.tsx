@@ -1188,6 +1188,15 @@ function InstaHopView({ user }: { user: User }) {
   const cancelHop = useCancelHop();
   const geo = useGeolocation();
   const [greetingVisible, setGreetingVisible] = useState(true);
+
+  const updatePreferences = useMutation({
+    mutationFn: async (updates: { seatsNeeded?: number }) => {
+      await apiRequest("PATCH", "/api/user/preferences", updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+    },
+  });
   const [mode, setMode] = useState<HopMode>(() => {
     try {
       const urlParams = new URLSearchParams(window.location.search);
@@ -1209,7 +1218,7 @@ function InstaHopView({ user }: { user: User }) {
   const [repeatRouteVisible, setRepeatRouteVisible] = useState(true);
   const [onTheWayPingVisible, setOnTheWayPingVisible] = useState(false);
 
-  const magicGpsActiveForHopper = mode !== "drive" && !!user.magicGpsEnabled;
+  const magicGpsActiveForHopper = false;
 
   const { data: magicGpsRoutes = [] } = useQuery<SavedRoute[]>({
     queryKey: ['/api/saved-routes'],
@@ -1335,7 +1344,7 @@ function InstaHopView({ user }: { user: User }) {
   }, [hasActiveRide]);
 
   useEffect(() => {
-    if (mode === "drive" || activeHop || !user.magicGpsEnabled) return;
+    if (mode === "drive" || activeHop || !user.magicGpsEnabled || !magicGpsActiveForHopper) return;
     const checkNearby = async () => {
       try {
         const res = await fetch("/api/on-the-way", { credentials: "include" });
@@ -1761,11 +1770,6 @@ function InstaHopView({ user }: { user: User }) {
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
         <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} />
 
-        {user.magicGpsEnabled && !activeHop && (
-          <div className="absolute top-4 left-4 z-30">
-            <MagicGpsStatus isOn={true} movementType={gpsState.movementType} flowModeActive={gpsState.flowModeActive} />
-          </div>
-        )}
 
         <div
           className="absolute bottom-0 left-0 right-0 bg-background/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 z-20"
@@ -1777,29 +1781,7 @@ function InstaHopView({ user }: { user: User }) {
               <DriveNowPanel user={user} />
             ) : (
               <>
-                <AnimatePresence>
-                  {user.lastCompletedRouteName && repeatRouteVisible && !activeHop && user.magicGpsEnabled && (
-                    <div className="mb-2">
-                      <RepeatRoutePrompt
-                        routeName={user.lastCompletedRouteName}
-                        onActivate={() => {
-                          setRepeatRouteVisible(false);
-                          setMagicGpsActivation({ routeName: user.lastCompletedRouteName! });
-                          showFlash("🔁", `Route to ${user.lastCompletedRouteName} activated!`, "success");
-                        }}
-                        onDismiss={() => setRepeatRouteVisible(false)}
-                      />
-                    </div>
-                  )}
-                </AnimatePresence>
                 <div className="flex gap-2 mb-2 items-start">
-                  <div className="flex-1 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-700/30 p-3">
-                    <p className="text-[11px] font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
-                      <Shield className="w-3.5 h-3.5" />
-                      🚦 Stay aware and cross safely at marked intersections
-                    </p>
-                  </div>
-
                   <div className="flex-1">
                     <AnimatePresence>
                       {greetingVisible && (
@@ -2087,25 +2069,64 @@ function InstaHopView({ user }: { user: User }) {
                   </div>
 
                   {mode === "hop" && !isMatching && (
-                    <div className="flex items-center gap-2 px-1">
-                      <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <span className="text-[11px] text-muted-foreground whitespace-nowrap">Depart in</span>
-                      <div className="flex flex-wrap gap-1">
-                        {DEPARTURE_OPTIONS.filter(o => o.value !== -1).map(opt => (
-                          <button
-                            key={opt.value}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 px-1">
+                        <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <span className="text-[11px] text-muted-foreground whitespace-nowrap">Depart in</span>
+                        <div className="flex flex-wrap gap-1">
+                          {DEPARTURE_OPTIONS.filter(o => o.value !== -1).map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setDepartureMinutes(opt.value)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                                departureMinutes === opt.value
+                                  ? "bg-primary text-white shadow-sm"
+                                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                              }`}
+                              data-testid={`button-depart-${opt.value}`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 px-1">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-[11px] text-muted-foreground">Seats</span>
+                        </div>
+                        <div className="flex items-center gap-1.5" data-testid="stepper-hopper-seats">
+                          <Button
                             type="button"
-                            onClick={() => setDepartureMinutes(opt.value)}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                              departureMinutes === opt.value
-                                ? "bg-primary text-white shadow-sm"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                            }`}
-                            data-testid={`button-depart-${opt.value}`}
+                            size="sm"
+                            variant="outline"
+                            className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                            data-testid="button-hopper-seats-minus"
+                            disabled={(user as any)?.seatsNeeded <= 1}
+                            onClick={() => {
+                              const current = (user as any)?.seatsNeeded || 1;
+                              if (current > 1) updatePreferences.mutate({ seatsNeeded: current - 1 });
+                            }}
                           >
-                            {opt.label}
-                          </button>
-                        ))}
+                            −
+                          </Button>
+                          <span className="text-sm font-bold w-5 text-center" data-testid="text-hopper-seats-value">{(user as any)?.seatsNeeded || 1}</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                            data-testid="button-hopper-seats-plus"
+                            disabled={(user as any)?.seatsNeeded >= 6}
+                            onClick={() => {
+                              const current = (user as any)?.seatsNeeded || 1;
+                              if (current < 6) updatePreferences.mutate({ seatsNeeded: current + 1 });
+                            }}
+                          >
+                            +
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2130,7 +2151,7 @@ function InstaHopView({ user }: { user: User }) {
                       ) : (
                         <>
                           <Zap className="w-5 h-5" />
-                          {requestHop.isPending ? 'Finding...' : 'InstaHop'}
+                          {requestHop.isPending ? 'Finding...' : 'Request Ride'}
                         </>
                       )}
                     </motion.button>

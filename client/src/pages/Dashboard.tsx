@@ -328,52 +328,16 @@ export default function Dashboard() {
         <ThemeToggle />
 
         {activeTab === "hopper" && (
-          <Card className="border-border/40" data-testid="card-tailor-hopper-flex">
+          <Card className="border-border/40 opacity-60" data-testid="card-tailor-hopper-flex">
             <CardContent className="py-3 px-4 space-y-3">
               <div className="flex items-center gap-2.5">
-                <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
-                <p className="text-xs font-black text-foreground">Flex Range</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-medium text-foreground mb-1">How far are you willing to walk?</p>
-                <p className="text-[10px] text-muted-foreground mb-3">
-                  {hopperFlexRange === "0" ? "You must be directly on route" : `Up to ${hopperFlexRange} mile${hopperFlexRange !== "1" && hopperFlexRange !== "0" ? "s" : ""}`}
-                </p>
-                <Slider
-                  data-testid="slider-hopper-flex-range"
-                  min={0}
-                  max={3}
-                  step={1}
-                  value={[["0", "0.25", "0.5", "1"].indexOf(hopperFlexRange)]}
-                  onValueChange={([idx]) => {
-                    const val = ["0", "0.25", "0.5", "1"][idx];
-                    setHopperFlexRange(val);
-                    updatePreferences.mutate({ hopperFlexRange: val as any });
-                  }}
-                />
-                <div className="flex justify-between mt-1">
-                  {["0", "0.25", "0.5", "1"].map((v) => (
-                    <span key={v} className={`text-[9px] ${hopperFlexRange === v ? "text-blue-500 font-bold" : "text-muted-foreground"}`}>
-                      {v === "0" ? "0 mi" : v === "1" ? "1 mi" : `${v} mi`}
-                    </span>
-                  ))}
+                <MapPin className="w-4 h-4 text-blue-500/50 shrink-0" />
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-black text-foreground/60">Flex Range</p>
+                  <Lock className="w-3 h-3 text-muted-foreground/50" />
                 </div>
               </div>
-              <div className="border-t border-border/20 pt-2">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Lightbulb className="w-3 h-3 text-yellow-500 shrink-0" />
-                  <p className="text-[10px] font-bold text-foreground">Smart Tips</p>
-                </div>
-                <p className="text-[9px] text-muted-foreground leading-relaxed" data-testid="text-hopper-smart-tip">
-                  {hopperFlexRange === "0"
-                    ? "You'll only match with drivers passing right by you. Try increasing your range for faster matches."
-                    : hopperFlexRange === "0.25"
-                    ? "Great for main roads — short walk for a quick pickup."
-                    : hopperFlexRange === "0.5"
-                    ? "Nice balance — you'll see more available drivers nearby."
-                    : "Maximum flexibility — you'll get the most match options."}
-                </p>
-              </div>
+              <p className="text-[10px] text-muted-foreground/60">How far are you willing to walk? — Coming Soon</p>
             </CardContent>
           </Card>
         )}
@@ -386,172 +350,89 @@ export default function Dashboard() {
                 <p className="text-xs font-black text-foreground">Ride Preferences</p>
               </div>
 
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3 opacity-60">
                 <div className="flex items-start gap-2.5">
-                  <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <Navigation className="w-4 h-4 mt-0.5 text-muted-foreground/50 shrink-0" />
                   <div>
-                    <Label htmlFor="toggle-dropoff-flex" className="text-[11px] font-medium cursor-pointer">Flexible Drop-off</Label>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {hopperDropoffFlex === "close_enough"
-                        ? "Driver will take you as close as possible along their route"
-                        : "Driver will aim for your exact destination"}
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  id="toggle-dropoff-flex"
-                  data-testid="switch-dropoff-flex"
-                  checked={hopperDropoffFlex === "close_enough"}
-                  onCheckedChange={(checked) => {
-                    const val = checked ? "close_enough" : "exact";
-                    setHopperDropoffFlex(val);
-                    updatePreferences.mutate({ hopperDropoffFlex: val });
-                  }}
-                />
-              </div>
-
-              <div className="border-t border-border/20 pt-2 space-y-2">
-                <div className="flex items-start gap-2.5">
-                  <Navigation className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                  <div>
-                    <Label className="text-[11px] font-medium">Driver Matching Style</Label>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Choose which drivers you'd like to match with</p>
-                  </div>
-                </div>
-                <div className="space-y-1.5 pl-6">
-                  {[
-                    { value: "both", label: "All Drivers", desc: "I'm a big walker, only hop when necessary" },
-                    { value: "non_detour_only", label: "Direct Route Only", desc: "Only match with drivers already heading my way" },
-                    { value: "detour_only", label: "Detour Drivers Only", desc: "Match with drivers willing to swing by for me" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        setAllowDetourDrivers(opt.value);
-                        updatePreferences.mutate({ allowDetourDrivers: opt.value as any });
-                      }}
-                      className={`w-full text-left p-2.5 rounded-xl border transition-all ${allowDetourDrivers === opt.value ? "border-primary bg-primary/5 shadow-sm" : "border-border/30 hover:border-border/50"}`}
-                      data-testid={`detour-option-${opt.value}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${allowDetourDrivers === opt.value ? "border-primary" : "border-muted-foreground/30"}`}>
-                          {allowDetourDrivers === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                        </div>
-                        <span className="text-[11px] font-semibold">{opt.label}</span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 pl-5.5">{opt.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
-                <div className="flex items-start gap-2.5">
-                  <Users className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                  <div>
-                    <Label className="text-[11px] font-medium">Seats Needed</Label>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">How many seats do you need for this hop?</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5" data-testid="stepper-seats-needed">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
-                    data-testid="button-seats-needed-minus"
-                    disabled={(user as any)?.seatsNeeded <= 1}
-                    onClick={() => {
-                      const current = (user as any)?.seatsNeeded || 1;
-                      if (current > 1) updatePreferences.mutate({ seatsNeeded: current - 1 });
-                    }}
-                  >
-                    −
-                  </Button>
-                  <span className="text-sm font-bold w-5 text-center" data-testid="text-seats-needed-value">{(user as any)?.seatsNeeded || 1}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
-                    data-testid="button-seats-needed-plus"
-                    disabled={(user as any)?.seatsNeeded >= 6}
-                    onClick={() => {
-                      const current = (user as any)?.seatsNeeded || 1;
-                      if (current < 6) updatePreferences.mutate({ seatsNeeded: current + 1 });
-                    }}
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
-                <div className="flex items-start gap-2.5">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  <div>
-                    <Label htmlFor="toggle-shared-commute" className="text-[11px] font-medium cursor-pointer">Shared Commute</Label>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Shared commutes increase your chances of being paired</p>
-                  </div>
-                </div>
-                <Switch
-                  id="toggle-shared-commute"
-                  data-testid="switch-shared-commute"
-                  checked={sharedCommute}
-                  onCheckedChange={(checked) => {
-                    setSharedCommute(checked);
-                    updatePreferences.mutate({ sharedCommute: checked });
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
-                <div className="flex items-start gap-2.5">
-                  <Clock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                  <div>
-                    <Label htmlFor="toggle-little-early" className="text-[11px] font-medium cursor-pointer">Little Early</Label>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Show up a few minutes early to pickup spots</p>
-                  </div>
-                </div>
-                <Switch
-                  id="toggle-little-early"
-                  data-testid="switch-little-early"
-                  checked={littleEarly}
-                  onCheckedChange={(checked) => {
-                    setLittleEarly(checked);
-                    updatePreferences.mutate({ littleEarly: checked });
-                  }}
-                />
-              </div>
-
-              {user.subscription && (
-                <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
-                  <div className="flex items-start gap-2.5">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <div>
-                      <Label className="text-[11px] font-medium">Mode Lock</Label>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Lock yourself to one mode to avoid confusion</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-medium text-foreground/60">Driver Matching Style</span>
+                      <Lock className="w-3 h-3 text-muted-foreground/50" />
                     </div>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">Choose which drivers to match with — Coming Soon</p>
                   </div>
-                  <select
-                    className="text-[10px] bg-muted/60 border border-border/50 rounded-md px-2 py-1 text-foreground"
-                    data-testid="select-mode-lock"
-                    value={modeLock}
-                    onChange={(e) => {
-                      const val = e.target.value as "none" | "hopper_only" | "driver_only";
-                      setModeLock(val);
-                      updatePreferences.mutate({ modeLock: val });
-                    }}
-                  >
-                    <option value="none">No Lock</option>
-                    <option value="hopper_only">Hopper Only</option>
-                    <option value="driver_only">Driver Only</option>
-                  </select>
                 </div>
-              )}
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2 opacity-60">
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground/50 shrink-0" />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-medium text-foreground/60">Flexible Drop-off</span>
+                      <Lock className="w-3 h-3 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">Let driver drop you close to destination — Coming Soon</p>
+                  </div>
+                </div>
+                <Switch checked={false} disabled className="pointer-events-none opacity-50" />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2 opacity-60">
+                <div className="flex items-start gap-2.5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 text-muted-foreground/50 shrink-0"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-medium text-foreground/60">Shared Commute</span>
+                      <Lock className="w-3 h-3 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">Shared commutes increase pairing chances — Coming Soon</p>
+                  </div>
+                </div>
+                <Switch checked={false} disabled className="pointer-events-none opacity-50" />
+              </div>
+
+              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2 opacity-60">
+                <div className="flex items-start gap-2.5">
+                  <Clock className="w-4 h-4 mt-0.5 text-muted-foreground/50 shrink-0" />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-medium text-foreground/60">Little Early</span>
+                      <Lock className="w-3 h-3 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">Show up early to pickup spots — Coming Soon</p>
+                  </div>
+                </div>
+                <Switch checked={false} disabled className="pointer-events-none opacity-50" />
+              </div>
+
             </CardContent>
           </Card>
         )}
 
         {activeTab === "hopper" && (
+          <Card className="border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent opacity-60" data-testid="card-magic-gps-hopper-locked">
+            <CardContent className="py-3 px-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 mt-0.5 text-amber-500/50 shrink-0" />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-medium text-foreground/60">✨ MagicGPS Detection</span>
+                      <Lock className="w-3 h-3 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">Detect when you're walking and offer help when needed</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-semibold text-amber-600/60 dark:text-amber-400/60">Coming Soon</span>
+                  <Switch checked={false} disabled className="pointer-events-none opacity-50" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {false && activeTab === "hopper" && (
           <MagicGpsSection
             enabled={magicGpsEnabled}
             isDriver={false}

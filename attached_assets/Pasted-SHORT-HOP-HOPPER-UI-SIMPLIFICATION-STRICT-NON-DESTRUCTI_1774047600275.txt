@@ -1,0 +1,154 @@
+SHORT HOP — HOPPER UI SIMPLIFICATION (STRICT NON-DESTRUCTIVE UPDATE)
+
+This is a visual simplification update only for the hopper experience.  
+Do NOT redesign, remove pages, or restructure navigation.
+
+---
+
+## 🚨 IMPORTANT RULES
+
+- Do NOT delete screens or navigation
+- Do NOT rebuild layout structure
+- Only modify the specific elements listed below
+- Keep all existing logic unless explicitly disabled
+
+---
+
+## 🎯 GOAL
+
+Make requesting a ride feel:
+- fast
+- obvious
+- effortless
+
+Reduce decision-making and remove distractions.
+
+---
+
+## ✏️ REQUIRED CHANGES (ONLY THESE)
+
+### 1. ➕ Move “Seats Needed” to main hopper panel
+
+- Take existing Seats Needed (+ / - stepper) from toggles/tailor section
+- Place it directly on the main hopper screen
+
+Requirements:
+- Small, compact design
+- Place near destination input or time selector
+- Reuse existing component (no redesign)
+
+---
+
+### 2. ❌ Remove InstaHop (FROM HOPPER MAIN SCREEN ONLY)
+
+- Remove InstaHop button from main hopper screen
+- Do NOT delete feature from app entirely
+
+---
+
+### 3. ❌ Remove “Intersections” button
+
+- Remove from main UI (not needed for core flow)
+
+---
+
+### 4. 🔒 Disable MagicGPS Detection (Hopper Side)
+
+- Keep visible in settings/tailor
+- Toggle OFF
+- Non-interactive
+- Add lock icon 🔒
+- Label: “Coming Soon”
+
+IMPORTANT:
+- No background tracking
+- No prediction logic running
+
+---
+
+### 5. 🔒 Disable Predicted Destination Prompt
+
+(Example: “Go to [address] again?”)
+
+- Treat this as part of MagicGPS
+- Disable completely
+- Do NOT show on hopper screen
+
+---
+
+### 6. 🔒 Lock Advanced Ride Preferences
+
+Keep visible but disable interaction:
+
+#### Lock the following:
+- Flex Range → 🔒 Coming Soon  
+- Driver Matching Style → 🔒 Coming Soon  
+- Shared Commute → 🔒 Coming Soon  
+- Little Early → 🔒 Coming Soon  
+- Flexible Drop-off → 🔒 Coming Soon  
+
+Behavior:
+- Dimmed appearance
+- Non-clickable
+- Lock icon 🔒
+- No logic active
+
+---
+
+### 7. ❌ Mode Lock
+
+- Remove or hide from hopper UI (not needed for V1)
+
+---
+
+### 8. 🚶 Contextual Safety Prompt (IMPORTANT)
+
+For the “crossing safety” popup:
+
+- REMOVE it from always-visible state
+- ONLY show when:
+  - user is actively walking
+  - AND near a road crossing or pickup path
+
+Otherwise:
+- do not display at all
+
+---
+
+## 🎨 LOCKED FEATURE STYLE
+
+For all locked items:
+- Slightly dimmed (NOT blurred)
+- Non-clickable
+- Lock icon visible
+- “Coming Soon” label
+
+---
+
+## 🚫 DO NOT TOUCH
+
+- Map behavior
+- “Auto current location”
+- Destination input (“Where to?”)
+- Time selector (Now, 5m, etc.)
+- Status message (“No drivers active…”)
+- Navigation tabs
+
+---
+
+## ✅ RESULT
+
+Hopper flow should feel like:
+
+1. Open app  
+2. Confirm pickup (auto-filled)  
+3. Enter destination  
+4. Select time  
+5. Adjust seats if needed  
+6. Request ride  
+
+No confusion. No extra decisions.
+
+---
+
+End of update.
