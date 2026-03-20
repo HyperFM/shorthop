@@ -412,105 +412,92 @@ export async function registerRoutes(
       const now = new Date();
       const driverUser = await storage.getUser(req.user.id);
       const driverSeats = driverUser?.availableSeats || 1;
-      const driverDetourPref = driverUser?.allowDetourDrivers || "both";
-      const availableHops = allAvailable.filter(h => {
-        if (h.timeWindowExpiry && new Date(h.timeWindowExpiry) < now) return false;
-        if (h.departureTime && new Date(h.departureTime) > new Date(now.getTime() + 60 * 60000)) return false;
-        if ((h.seatsNeeded || 1) > driverSeats) return false;
-        return true;
-      });
-      const driverHops = await storage.getHopsForDriver(req.user.id);
-      const availableIds = new Set(availableHops.map(h => h.id));
 
       const driverLoc = liveLocations.get(req.user.id);
       const driverRoutes = await storage.getRoutes(req.user.id);
-      const circleUserIds = await storage.getSharedCircleUserIds(req.user.id);
-      let sortedAvailable = availableHops;
-      if (driverLoc && Date.now() - driverLoc.updatedAt < 120000) {
-        const driverDestinations = driverRoutes.map(r => ({
-          start: r.startLocation?.toLowerCase() || "",
-          end: r.endLocation?.toLowerCase() || "",
-        }));
+      const MAX_DEVIATION_MILES = 0.5;
+      const MAX_TIME_DIFF_MS = 30 * 60 * 1000;
 
-        function scoreHop(hop: typeof availableHops[0]): number {
-          const hopStartLat = parseFloat(hop.startLat || "0");
-          const hopStartLng = parseFloat(hop.startLng || "0");
-          if (!hopStartLat) return 999;
+      const matchedHops = allAvailable.filter(h => {
+        if (h.timeWindowExpiry && new Date(h.timeWindowExpiry) < now) return false;
+        if ((h.seatsNeeded || 1) > driverSeats) return false;
 
-          const pickupDist = getDistance(driverLoc!.latitude, driverLoc!.longitude, hopStartLat, hopStartLng);
-
-          let directionBonus = 0;
-          const hopDest = (hop.endLocation || "").toLowerCase();
-          const hopStart = (hop.startLocation || "").toLowerCase();
-          for (const route of driverDestinations) {
-            if (route.end && hopDest && (route.end.includes(hopDest) || hopDest.includes(route.end))) {
-              directionBonus = -5;
-              break;
-            }
-            if (route.start && hopStart && (route.start.includes(hopStart) || hopStart.includes(route.start))) {
-              directionBonus = Math.min(directionBonus, -2);
-            }
-          }
-
-          const hopEndLat = parseFloat(hop.endLat || "0");
-          const hopEndLng = parseFloat(hop.endLng || "0");
-          if (hopEndLat && hopEndLng) {
-            for (const route of driverDestinations) {
-              for (const corridor of LEXINGTON_CORRIDORS) {
-                const cNameLower = corridor.name.toLowerCase();
-                if (route.end.includes(cNameLower) || hopDest.includes(cNameLower)) {
-                  directionBonus = Math.min(directionBonus, -3);
-                }
-              }
-            }
-
-            const driverBearing = Math.atan2(hopEndLng - driverLoc!.longitude, hopEndLat - driverLoc!.latitude);
-            const hopBearing = Math.atan2(
-              parseFloat(hop.endLng || "0") - hopStartLng,
-              parseFloat(hop.endLat || "0") - hopStartLat
-            );
-            const angleDiff = Math.abs(driverBearing - hopBearing);
-            const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-            if (normalizedAngle < Math.PI / 4) {
-              directionBonus -= 4;
-            } else if (normalizedAngle < Math.PI / 2) {
-              directionBonus -= 2;
-            }
-          }
-
-          if (circleUserIds.includes(hop.walkerId)) {
-            directionBonus -= 8;
-          }
-
-          const isMicroHop = hop.microHop || (hop.distanceMiles && parseFloat(String(hop.distanceMiles)) <= 1);
-          if (isMicroHop) {
-            directionBonus -= 1;
-          }
-
-          return pickupDist + directionBonus;
+        if (h.departureTime) {
+          const timeDiff = Math.abs(new Date(h.departureTime).getTime() - now.getTime());
+          if (timeDiff > MAX_TIME_DIFF_MS) return false;
         }
 
-        sortedAvailable = [...availableHops].sort((a, b) => scoreHop(a) - scoreHop(b));
-      }
+        const hopStartLat = parseFloat(h.startLat || "0");
+        const hopStartLng = parseFloat(h.startLng || "0");
+        const hopEndLat = parseFloat(h.endLat || "0");
+        const hopEndLng = parseFloat(h.endLng || "0");
+
+        if (driverLoc && Date.now() - driverLoc.updatedAt < 120000) {
+          if (hopStartLat && hopStartLng) {
+            const pickupDist = getDistance(driverLoc.latitude, driverLoc.longitude, hopStartLat, hopStartLng);
+            if (pickupDist > MAX_DEVIATION_MILES) return false;
+          }
+
+          if (hopEndLat && hopEndLng && hopStartLat && hopStartLng) {
+            const driverBearing = Math.atan2(hopEndLng - driverLoc.longitude, hopEndLat - driverLoc.latitude);
+            const hopBearing = Math.atan2(hopEndLng - hopStartLng, hopEndLat - hopStartLat);
+            const angleDiff = Math.abs(driverBearing - hopBearing);
+            const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
+            if (normalizedAngle > Math.PI / 2) return false;
+          }
+
+          if (hopEndLat && hopEndLng) {
+            const dropoffDist = getDistance(driverLoc.latitude, driverLoc.longitude, hopEndLat, hopEndLng);
+            if (dropoffDist > 15) return false;
+          }
+        }
+
+        if (driverRoutes.length > 0 && hopEndLat && hopEndLng) {
+          let alignedWithAnyRoute = false;
+          for (const route of driverRoutes) {
+            const rEndLat = parseFloat(route.endLat || "0");
+            const rEndLng = parseFloat(route.endLng || "0");
+            if (!rEndLat || !rEndLng) continue;
+            const dropoffToRouteDest = getDistance(hopEndLat, hopEndLng, rEndLat, rEndLng);
+            if (dropoffToRouteDest <= MAX_DEVIATION_MILES) {
+              alignedWithAnyRoute = true;
+              break;
+            }
+            const rStartLat = parseFloat(route.startLat || "0");
+            const rStartLng = parseFloat(route.startLng || "0");
+            if (hopStartLat && hopStartLng && rStartLat && rStartLng) {
+              const routeBearing = Math.atan2(rEndLng - rStartLng, rEndLat - rStartLat);
+              const hopBearing = Math.atan2(hopEndLng - hopStartLng, hopEndLat - hopStartLat);
+              const angleDiff = Math.abs(routeBearing - hopBearing);
+              const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
+              if (normalizedAngle < Math.PI / 3) {
+                alignedWithAnyRoute = true;
+                break;
+              }
+            }
+          }
+          if (!alignedWithAnyRoute) return false;
+        }
+
+        return true;
+      });
+
+      const driverHops = await storage.getHopsForDriver(req.user.id);
+      const matchedIds = new Set(matchedHops.map(h => h.id));
 
       const mergedHops = [
-        ...sortedAvailable,
-        ...driverHops.filter(h => !availableIds.has(h.id)),
+        ...matchedHops,
+        ...driverHops.filter(h => !matchedIds.has(h.id)),
       ];
 
-      if (availableHops.length > 0) {
+      if (matchedHops.length > 0) {
         const todayCount = await storage.getNotificationCountToday(req.user.id);
         if (todayCount < 5 && Math.random() < 0.3) {
-          const messages = [
-            `${availableHops.length} Hopper${availableHops.length > 1 ? 's are' : ' is'} moving along your usual route.`,
-            "You're near a busy route — want to go active?",
-            "Hoppers are nearby along your route today.",
-          ];
           await storage.createNotification({
             userId: req.user.id,
             type: "busy_route",
             title: "Route Activity 🛞",
-            message: messages[Math.floor(Math.random() * messages.length)],
+            message: `${matchedHops.length} Hopper${matchedHops.length > 1 ? 's' : ''} going your way right now.`,
             isRead: false,
           });
         }

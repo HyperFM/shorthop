@@ -1,0 +1,208 @@
+SHORT HOP — MATCHING LOGIC SIMPLIFICATION (FINAL V1 DRIVER-FIRST MODEL)
+
+This update simplifies and corrects the matching system.
+
+Goal:  
+Make matching strict, predictable, and simple while allowing small natural pickup/drop-off adjustments.
+
+---
+
+# 🚨 IMPORTANT RULES
+
+- Do NOT redesign UI  
+- Do NOT change layout or navigation  
+- Do NOT introduce new features  
+- ONLY update matching logic and related conditions  
+
+---
+
+# 🎯 CORE PRINCIPLE
+
+Drivers are matched with riders going in the same direction.
+
+Drivers should NOT significantly change their route.
+
+However, small automatic adjustments (short turns or pull-offs) are allowed.
+
+---
+
+# 🚫 REMOVE THESE LOGICS COMPLETELY
+
+Remove or disable:
+
+- walking distance preferences  
+- “willing to walk”  
+- manual pickup negotiation  
+- complex detour settings  
+- user-controlled route adjustments  
+- multi-step routing logic  
+
+---
+
+# 🧠 FINAL MATCHING LOGIC
+
+A match ONLY happens if ALL conditions below are true:
+
+---
+
+## 1. TIME MATCH
+
+- abs(driver.departure_time - hopper.departure_time) ≤ 30 minutes  
+
+Else → NO MATCH
+
+---
+
+## 2. DESTINATION ALIGNMENT
+
+- hopper destination must be ALONG the driver’s route  
+- hopper destination must NOT be ahead beyond driver’s destination  
+
+Else → NO MATCH
+
+---
+
+## 3. PICKUP POSITION (NO FORWARD PICKUPS)
+
+- hopper pickup must be:
+  - on the route OR  
+  - slightly off the route (within tolerance)  
+- hopper must NOT be ahead of the driver’s current route direction  
+
+Else → NO MATCH
+
+---
+
+## 4. MICRO-ADJUSTMENT RANGE (IMPORTANT)
+
+Allow small automatic route deviation ONLY within:
+
+- max 0.5 miles from route  
+
+This applies to:
+- pickup  
+- drop-off  
+
+Behavior:
+- driver can briefly leave route  
+- pick up or drop off  
+- immediately return to route  
+
+No large deviation allowed.
+
+---
+
+## 5. DROPOFF RULE (NO STRANDING)
+
+- hopper must be dropped:
+  - directly on their route  
+  OR  
+  - very close to their destination (within 0.5 miles)
+
+DO NOT allow:
+- dropping hopper far away requiring long walking  
+
+---
+
+## 6. SEAT AVAILABILITY
+
+- driver.available_seats ≥ hopper.seats_needed  
+
+Else → NO MATCH
+
+---
+
+# ✅ FINAL CONDITION
+
+Only if ALL conditions pass → MATCH  
+Otherwise → NO MATCH
+
+---
+
+# 🚗 SYSTEM BEHAVIOR
+
+- Driver route remains primary path  
+- System may allow SMALL automatic deviations (≤ 0.5 miles)  
+- No major rerouting  
+- No user decisions required  
+
+---
+
+# 📍 LOCATION INPUT (CONFIRM)
+
+Ensure users can:
+
+- Use current location  
+- OR manually enter a custom location  
+
+---
+
+# 🧠 MATCHING ENGINE
+
+System must:
+
+- Compare all active driver routes with all hopper requests  
+- Continuously evaluate matches  
+- Trigger match immediately when valid  
+
+---
+
+# 🔒 KEEP OTHER SYSTEMS INTACT
+
+Do NOT remove:
+
+- Smart GPS (leave inactive unless triggered)  
+- Preferences UI  
+- Locked / Coming Soon features  
+
+---
+
+# ⚠️ SIMPLICITY RULE
+
+Matching must remain:
+
+- binary (match or no match)  
+- fast  
+- predictable  
+
+No ranking or optimization layers.
+
+---
+
+# 🟢 SCHEDULING (PLANNED HOPS)
+
+Keep scheduling ACTIVE.
+
+Behavior:
+- user sets route + time  
+- system attempts to match in advance  
+
+Do NOT add:
+- automation  
+- prediction  
+- recurring logic  
+
+---
+
+# 🔒 COMMUTE CIRCLES
+
+Set to:
+
+- visible  
+- dimmed  
+- non-interactive  
+- labeled “Coming Soon”  
+
+Do NOT allow interaction.
+
+---
+
+# ✅ RESULT
+
+System should behave as:
+
+“Match riders going the same way, allowing small natural pickup/drop-off adjustments without changing the driver’s route.”
+
+---
+
+End of update

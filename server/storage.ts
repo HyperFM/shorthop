@@ -82,7 +82,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User>;
   updateUserFlexibility(id: number, updates: any): Promise<User>;
-  updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean; flowModeEnabled?: boolean; seatsNeeded?: number; availableSeats?: number; littleEarly?: boolean }): Promise<User>;
+  updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean; flowModeEnabled?: boolean; seatsNeeded?: number; availableSeats?: number; littleEarly?: boolean; homeAddress?: string; homeLat?: string; homeLng?: string; workAddress?: string; workLat?: string; workLng?: string; customLocationName?: string; customLocationAddress?: string; customLocationLat?: string; customLocationLng?: string }): Promise<User>;
   dismissWelcome(id: number): Promise<void>;
   getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; activeDrivers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }>;
   checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User>;
@@ -264,7 +264,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean; flowModeEnabled?: boolean; seatsNeeded?: number; availableSeats?: number; littleEarly?: boolean }): Promise<User> {
+  async updateUserPreferences(id: number, updates: { rideVibe?: string; tier?: string; hopperFlexRange?: string; driverFlexRange?: string; isFlexibleDriver?: boolean; hopperDropoffFlex?: string; sharedCommute?: boolean; modeLock?: string; allowDetourDrivers?: boolean; magicGpsEnabled?: boolean; flowModeEnabled?: boolean; seatsNeeded?: number; availableSeats?: number; littleEarly?: boolean; homeAddress?: string; homeLat?: string; homeLng?: string; workAddress?: string; workLat?: string; workLng?: string; customLocationName?: string; customLocationAddress?: string; customLocationLat?: string; customLocationLng?: string }): Promise<User> {
     const setValues: any = {};
     if (updates.rideVibe) setValues.rideVibe = updates.rideVibe;
     if (updates.tier) setValues.tier = updates.tier;
@@ -280,6 +280,16 @@ export class DatabaseStorage implements IStorage {
     if (updates.seatsNeeded !== undefined) setValues.seatsNeeded = updates.seatsNeeded;
     if (updates.availableSeats !== undefined) setValues.availableSeats = updates.availableSeats;
     if (updates.littleEarly !== undefined) setValues.littleEarly = updates.littleEarly;
+    if (updates.homeAddress !== undefined) setValues.homeAddress = updates.homeAddress;
+    if (updates.homeLat !== undefined) setValues.homeLat = updates.homeLat;
+    if (updates.homeLng !== undefined) setValues.homeLng = updates.homeLng;
+    if (updates.workAddress !== undefined) setValues.workAddress = updates.workAddress;
+    if (updates.workLat !== undefined) setValues.workLat = updates.workLat;
+    if (updates.workLng !== undefined) setValues.workLng = updates.workLng;
+    if (updates.customLocationName !== undefined) setValues.customLocationName = updates.customLocationName;
+    if (updates.customLocationAddress !== undefined) setValues.customLocationAddress = updates.customLocationAddress;
+    if (updates.customLocationLat !== undefined) setValues.customLocationLat = updates.customLocationLat;
+    if (updates.customLocationLng !== undefined) setValues.customLocationLng = updates.customLocationLng;
     const [user] = await db.update(users)
       .set(setValues)
       .where(eq(users.id, id))

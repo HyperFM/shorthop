@@ -88,6 +88,16 @@ export const users = pgTable("users", {
   confidenceScore: integer("confidence_score").default(0),
   lastCompletedRouteId: integer("last_completed_route_id"),
   lastCompletedRouteName: text("last_completed_route_name"),
+  homeAddress: text("home_address"),
+  homeLat: text("home_lat"),
+  homeLng: text("home_lng"),
+  workAddress: text("work_address"),
+  workLat: text("work_lat"),
+  workLng: text("work_lng"),
+  customLocationName: text("custom_location_name"),
+  customLocationAddress: text("custom_location_address"),
+  customLocationLat: text("custom_location_lat"),
+  customLocationLng: text("custom_location_lng"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

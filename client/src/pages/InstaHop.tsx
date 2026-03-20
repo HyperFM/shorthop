@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users, Home, Briefcase, Star, Settings2, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -706,6 +706,172 @@ const DEPARTURE_OPTIONS = [
   { value: -1, label: "Custom" },
 ];
 
+function QuickLocationButtons({ user, onSelectStart, onSelectEnd, mode }: { user: User; onSelectStart: (addr: string) => void; onSelectEnd: (addr: string) => void; mode: "hopper" | "driver" }) {
+  const hasHome = !!(user as any).homeAddress;
+  const hasWork = !!(user as any).workAddress;
+  const hasCustom = !!(user as any).customLocationAddress;
+  const [showSetup, setShowSetup] = useState<"home" | "work" | "custom" | null>(null);
+  const queryClient = useQueryClient();
+
+  const saveLoc = useMutation({
+    mutationFn: async (data: Record<string, string>) => {
+      const res = await apiRequest("PUT", "/api/profile/preferences", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+      showFlash("📍", "Location saved!", "success");
+      setShowSetup(null);
+    },
+  });
+
+  const [setupInput, setSetupInput] = useState("");
+
+  const handleSave = () => {
+    if (!setupInput.trim()) return;
+    if (showSetup === "home") {
+      saveLoc.mutate({ homeAddress: setupInput.trim(), homeLat: "", homeLng: "" });
+    } else if (showSetup === "work") {
+      saveLoc.mutate({ workAddress: setupInput.trim(), workLat: "", workLng: "" });
+    } else if (showSetup === "custom") {
+      saveLoc.mutate({ customLocationAddress: setupInput.trim(), customLocationName: "Fav", customLocationLat: "", customLocationLng: "" });
+    }
+  };
+
+  const handleQuickFill = (type: "home_to_work" | "work_to_home") => {
+    const homeAddr = (user as any).homeAddress;
+    const workAddr = (user as any).workAddress;
+    if (type === "home_to_work") {
+      if (homeAddr) onSelectStart(homeAddr);
+      if (workAddr) onSelectEnd(workAddr);
+    } else {
+      if (workAddr) onSelectStart(workAddr);
+      if (homeAddr) onSelectEnd(homeAddr);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1 flex-wrap">
+        {hasHome && hasWork && (
+          <>
+            <button
+              type="button"
+              onClick={() => handleQuickFill("home_to_work")}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-700/40 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-all"
+              data-testid={`button-${mode}-home-to-work`}
+            >
+              <Home className="w-3 h-3" />→<Briefcase className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFill("work_to_home")}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border border-purple-200/60 dark:border-purple-700/40 hover:bg-purple-100 dark:hover:bg-purple-950/50 transition-all"
+              data-testid={`button-${mode}-work-to-home`}
+            >
+              <Briefcase className="w-3 h-3" />→<Home className="w-3 h-3" />
+            </button>
+          </>
+        )}
+        {hasHome && (
+          <button
+            type="button"
+            onClick={() => onSelectEnd((user as any).homeAddress)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all"
+            data-testid={`button-${mode}-home`}
+          >
+            <Home className="w-3 h-3" /> Home
+          </button>
+        )}
+        {hasWork && (
+          <button
+            type="button"
+            onClick={() => onSelectEnd((user as any).workAddress)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all"
+            data-testid={`button-${mode}-work`}
+          >
+            <Briefcase className="w-3 h-3" /> Work
+          </button>
+        )}
+        {hasCustom && (
+          <button
+            type="button"
+            onClick={() => onSelectEnd((user as any).customLocationAddress)}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all"
+            data-testid={`button-${mode}-custom`}
+          >
+            <Star className="w-3 h-3" /> {(user as any).customLocationName || "Fav"}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setShowSetup(showSetup ? null : (!hasHome ? "home" : !hasWork ? "work" : "custom"))}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-700/40 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-all"
+          data-testid={`button-${mode}-set-location`}
+        >
+          <Settings2 className="w-3 h-3" /> {!hasHome ? "Set Home" : !hasWork ? "Set Work" : "Edit"}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {showSetup && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-2 rounded-lg bg-muted/40 border border-border/50 space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className="flex gap-1">
+                  {(["home", "work", "custom"] as const).map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => { setShowSetup(t); setSetupInput(t === "home" ? ((user as any).homeAddress || "") : t === "work" ? ((user as any).workAddress || "") : ((user as any).customLocationAddress || "")); }}
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${showSetup === t ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}
+                      data-testid={`button-${mode}-setup-${t}`}
+                    >
+                      {t === "home" ? "🏠 Home" : t === "work" ? "💼 Work" : "⭐ Custom"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-1.5">
+                <Input
+                  placeholder={showSetup === "home" ? "Home address" : showSetup === "work" ? "Work address" : "Custom address"}
+                  value={setupInput}
+                  onChange={(e) => setSetupInput(e.target.value)}
+                  className="h-8 text-xs rounded-lg flex-1"
+                  data-testid={`input-${mode}-setup-address`}
+                />
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={!setupInput.trim() || saveLoc.isPending}
+                  className="h-8 px-2 text-xs"
+                  data-testid={`button-${mode}-save-location`}
+                >
+                  <Check className="w-3 h-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowSetup(null)}
+                  className="h-8 px-2 text-xs"
+                  data-testid={`button-${mode}-cancel-setup`}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function DriveNowPanel({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -986,6 +1152,12 @@ function DriveNowPanel({ user }: { user: User }) {
 
       {isVerified && !isActiveNow && (
         <div className="space-y-2">
+          <QuickLocationButtons
+            user={user}
+            mode="driver"
+            onSelectStart={() => {}}
+            onSelectEnd={(addr) => setDriverDestInput(addr)}
+          />
           <div className="relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
             <Input
@@ -2041,6 +2213,13 @@ function InstaHopView({ user }: { user: User }) {
                     </CardContent>
                   </Card>
                 )}
+
+                <QuickLocationButtons
+                  user={user}
+                  mode="hopper"
+                  onSelectStart={(addr) => form.setValue("startLocation", addr)}
+                  onSelectEnd={(addr) => form.setValue("endLocation", addr)}
+                />
 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
                   <div className="space-y-2">
