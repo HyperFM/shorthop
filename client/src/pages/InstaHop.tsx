@@ -877,6 +877,7 @@ function DriveNowPanel({ user }: { user: User }) {
   const queryClient = useQueryClient();
   const geo = useGeolocation();
   const [navigatingHop, setNavigatingHop] = useState<any>(null);
+  const [driverStartInput, setDriverStartInput] = useState("");
   const [driverDestInput, setDriverDestInput] = useState("");
   const [driverDepartureMin, setDriverDepartureMin] = useState<number | null>(null);
   const [customTimeInput, setCustomTimeInput] = useState("");
@@ -1154,9 +1155,48 @@ function DriveNowPanel({ user }: { user: User }) {
           <QuickLocationButtons
             user={user}
             mode="driver"
-            onSelectStart={() => {}}
+            onSelectStart={(addr) => setDriverStartInput(addr)}
             onSelectEnd={(addr) => setDriverDestInput(addr)}
           />
+          <div className="space-y-1.5">
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+              <div
+                className="h-11 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 pr-3 flex items-center justify-between text-green-700 dark:text-green-400 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
+                data-testid="display-driver-start"
+                onClick={() => driverStartInput === "" && setDriverStartInput("🌍 Current Location")}
+              >
+                <span>{driverStartInput || "Select starting point..."}</span>
+              </div>
+            </div>
+            {driverStartInput && (
+              <div className="flex gap-1 flex-wrap px-1">
+                <button
+                  type="button"
+                  onClick={() => setDriverStartInput("🌍 Current Location")}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                    driverStartInput === "🌍 Current Location"
+                      ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  }`}
+                  data-testid="button-driver-start-current"
+                >
+                  🌍 Current
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const custom = prompt("Enter starting location:");
+                    if (custom?.trim()) setDriverStartInput(custom.trim());
+                  }}
+                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-muted/50 text-muted-foreground hover:bg-muted transition-all"
+                  data-testid="button-driver-start-custom"
+                >
+                  + Custom
+                </button>
+              </div>
+            )}
+          </div>
           <div className="relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
             <Input
@@ -2211,18 +2251,48 @@ function InstaHopView({ user }: { user: User }) {
 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
                   <div className="space-y-2">
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                      <div
-                        className="h-11 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 pr-3 flex items-center justify-between text-green-700 dark:text-green-400"
-                        data-testid="display-instahop-start"
-                      >
-                        <span>{form.watch("startLocation") || "📍 Auto current location"}</span>
-                        {walkingInfo && (
-                          <span className="text-[10px] font-semibold text-orange-500 shrink-0 ml-2">{walkingInfo.duration} · {walkingInfo.distance}</span>
-                        )}
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                        <div
+                          className="h-11 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 pr-3 flex items-center justify-between text-green-700 dark:text-green-400 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
+                          data-testid="display-instahop-start"
+                          onClick={() => form.watch("startLocation") === "" && form.setValue("startLocation", "🌍 Current Location")}
+                        >
+                          <span>{form.watch("startLocation") || "Select starting point..."}</span>
+                          {walkingInfo && form.watch("startLocation") && (
+                            <span className="text-[10px] font-semibold text-orange-500 shrink-0 ml-2">{walkingInfo.duration} · {walkingInfo.distance}</span>
+                          )}
+                        </div>
+                        <input type="hidden" {...form.register("startLocation")} />
                       </div>
-                      <input type="hidden" {...form.register("startLocation")} />
+                      {form.watch("startLocation") && (
+                        <div className="flex gap-1 flex-wrap px-1">
+                          <button
+                            type="button"
+                            onClick={() => form.setValue("startLocation", "🌍 Current Location")}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                              form.watch("startLocation") === "🌍 Current Location"
+                                ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                            }`}
+                            data-testid="button-hopper-start-current"
+                          >
+                            🌍 Current
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const custom = prompt("Enter starting location:");
+                              if (custom?.trim()) form.setValue("startLocation", custom.trim());
+                            }}
+                            className="px-2 py-1 rounded-lg text-[10px] font-bold bg-muted/50 text-muted-foreground hover:bg-muted transition-all"
+                            data-testid="button-hopper-start-custom"
+                          >
+                            + Custom
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <div className="relative">
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
