@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -717,7 +717,6 @@ function DriveNowPanel({ user }: { user: User }) {
   const [showCustomTime, setShowCustomTime] = useState(false);
   const [routeGenerated, setRouteGenerated] = useState(false);
   const [routeInfo, setRouteInfo] = useState<{ distance: string; eta: string } | null>(null);
-  const [prefsConfirmed, setPrefsConfirmed] = useState(false);
   const [activating, setActivating] = useState(false);
 
   const { data: driverStatus } = useQuery<DriverStatus>({
@@ -805,7 +804,7 @@ function DriveNowPanel({ user }: { user: User }) {
     }
   }, [driverDestInput, geo.latitude, geo.longitude]);
 
-  const canGoActive = driverDestInput.trim().length > 0 && routeGenerated && driverDepartureMin !== null && prefsConfirmed;
+  const canGoActive = driverDestInput.trim().length > 0 && routeGenerated && driverDepartureMin !== null;
 
   const handleGoActive = async () => {
     if (!canGoActive) return;
@@ -1043,22 +1042,40 @@ function DriveNowPanel({ user }: { user: User }) {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPrefsConfirmed(!prefsConfirmed)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all w-full ${
-                prefsConfirmed
-                  ? "bg-green-50 dark:bg-green-950/20 border border-green-300 dark:border-green-700/40 text-green-700 dark:text-green-400"
-                  : "bg-muted/30 border border-border/50 text-muted-foreground hover:bg-muted/50"
-              }`}
-              data-testid="button-confirm-prefs"
-            >
-              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${prefsConfirmed ? "border-green-500 bg-green-500" : "border-muted-foreground/30"}`}>
-                {prefsConfirmed && <svg viewBox="0 0 12 12" className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 6l3 3 5-5"/></svg>}
-              </div>
-              Preferences confirmed
-            </button>
+          <div className="flex items-center justify-between gap-3 px-1 py-1.5">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-[11px] font-medium text-foreground">Seats</span>
+            </div>
+            <div className="flex items-center gap-1.5" data-testid="stepper-driver-seats">
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                data-testid="button-driver-seats-minus"
+                disabled={(user as any)?.availableSeats <= 1}
+                onClick={() => {
+                  const current = (user as any)?.availableSeats || 1;
+                  if (current > 1) updatePreferences.mutate({ availableSeats: current - 1 });
+                }}
+              >
+                −
+              </Button>
+              <span className="text-sm font-bold w-5 text-center" data-testid="text-driver-seats-value">{(user as any)?.availableSeats || 1}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                data-testid="button-driver-seats-plus"
+                disabled={(user as any)?.availableSeats >= 6}
+                onClick={() => {
+                  const current = (user as any)?.availableSeats || 1;
+                  if (current < 6) updatePreferences.mutate({ availableSeats: current + 1 });
+                }}
+              >
+                +
+              </Button>
+            </div>
           </div>
 
           <Button
@@ -1080,41 +1097,12 @@ function DriveNowPanel({ user }: { user: User }) {
 
           {!canGoActive && driverDestInput.trim().length > 0 && (
             <p className="text-[10px] text-muted-foreground text-center">
-              {!routeGenerated ? "Calculating route..." : !driverDepartureMin && driverDepartureMin !== 0 ? "Select departure time" : !prefsConfirmed ? "Confirm your preferences" : ""}
+              {!routeGenerated ? "Calculating route..." : !driverDepartureMin && driverDepartureMin !== 0 ? "Select departure time" : ""}
             </p>
           )}
         </div>
       )}
 
-      {isVerified && (
-        <div className="space-y-2 mt-1">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-bold text-muted-foreground">⚡ InstaHop Requests</p>
-            {availableHops.length > 0 && (
-              <span className="text-xs font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2.5 py-1 rounded-full">
-                {availableHops.length}
-              </span>
-            )}
-          </div>
-          {availableHops.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No hops nearby yet</p>
-          ) : (
-            <div className="space-y-1.5">
-              {availableHops.map((hop) => (
-                <HopRequestCard
-                  key={hop.id}
-                  hop={hop}
-                  driverLat={geo.latitude}
-                  driverLng={geo.longitude}
-                  onNavigate={setNavigatingHop}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {isVerified && <DriverAutoNotificationsEffect hopsCount={availableHops.length} />}
     </div>
   );
 }
@@ -1221,9 +1209,11 @@ function InstaHopView({ user }: { user: User }) {
   const [repeatRouteVisible, setRepeatRouteVisible] = useState(true);
   const [onTheWayPingVisible, setOnTheWayPingVisible] = useState(false);
 
+  const magicGpsActiveForHopper = mode !== "drive" && !!user.magicGpsEnabled;
+
   const { data: magicGpsRoutes = [] } = useQuery<SavedRoute[]>({
     queryKey: ['/api/saved-routes'],
-    enabled: !!user.magicGpsEnabled,
+    enabled: magicGpsActiveForHopper,
   });
 
   const handleMagicGpsSuggestion = useCallback((match: SavedRouteMatch | null, movementType: "walking" | "driving") => {
@@ -1276,8 +1266,8 @@ function InstaHopView({ user }: { user: User }) {
   }, [mode, isMatching]);
 
   const { gpsState, declineSuggestion } = useMagicGps({
-    enabled: !!user.magicGpsEnabled,
-    flowModeEnabled: !!user.flowModeEnabled,
+    enabled: magicGpsActiveForHopper,
+    flowModeEnabled: magicGpsActiveForHopper && !!user.flowModeEnabled,
     savedRoutes: magicGpsRoutes,
     onSuggestion: handleMagicGpsSuggestion,
     onFlowModeActivate: handleFlowModeActivate,

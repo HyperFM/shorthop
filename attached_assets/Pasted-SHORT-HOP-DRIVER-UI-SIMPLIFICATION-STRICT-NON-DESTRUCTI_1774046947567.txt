@@ -1,0 +1,128 @@
+SHORT HOP — DRIVER UI SIMPLIFICATION (STRICT NON-DESTRUCTIVE UPDATE)
+
+This is a visual simplification update only.  
+Do NOT redesign, restructure, or remove screens/pages.
+
+---
+
+## 🚨 IMPORTANT RULES
+
+- Do NOT delete any pages, navigation, or major components
+- Do NOT rebuild the driver flow
+- Do NOT change layout structure unless explicitly stated
+- Only modify the specific elements listed below
+
+---
+
+## 🎯 GOAL
+
+Make the drivers experience feel simpler and clearer by:
+- removing friction
+- disabling unfinished features
+- keeping everything visually clean and intentional
+
+---
+
+## ✏️ REQUIRED CHANGES (ONLY THESE)
+
+### 1. ❌ Remove “Preferences Confirmed”
+- Delete this element entirely from the driver screen
+
+---
+
+### 2. ➕ Move “Available Seats” selector to main driver panel
+
+- Take the existing Available Seats (+ / - stepper) from settings/toggles
+- Place it directly on the main driver screen (Drive panel)
+
+Requirements:
+- Small and compact design
+- Positioned near “GO ACTIVE” or under time selector
+- Must remain simple (+ / - buttons with seat count)
+- Do NOT redesign the component—reuse existing logic
+
+---
+
+### 3. 🔒 Disable MagicGPS Detection
+
+- Keep visible
+- Toggle OFF
+- Make non-interactive
+- Add lock icon 🔒
+- Add label: “Coming Soon”
+
+IMPORTANT:
+- Ensure ZERO background logic runs
+- No tracking, no triggers
+
+---
+
+### 4. 🔒 Disable Flow Mode
+
+- Keep visible
+- Non-interactive
+- Add lock icon 🔒
+- Label: “Coming Soon”
+- No logic attached
+
+---
+
+### 5. 🔒 Disable Detours (Rename)
+
+- Rename: “Expand Match Range”
+- Keep visible
+- Disable toggle (non-clickable)
+- Add lock icon 🔒
+
+Subtext:
+“Match with riders slightly off your route — Coming Soon”
+
+- No detour logic should run
+
+---
+
+### 6. ❌ Remove Auto Alerts
+- Remove this toggle entirely from driver UI
+
+---
+
+### 7. ❌ Remove InstaHop Requests (FROM DRIVER SCREEN ONLY)
+
+- Remove this section ONLY from the main driver screen
+- Do NOT delete the feature from the app entirely
+
+---
+
+## 🎨 LOCKED FEATURE STYLE
+
+For all locked items:
+- Slightly dimmed (NOT blurred)
+- Non-clickable
+- Lock icon visible
+- Clean “Coming Soon” label
+
+---
+
+## 🚫 DO NOT TOUCH
+
+- Existing map behavior
+- Destination input
+- Departure time selector
+- GO ACTIVE button
+- Navigation tabs
+- Any other screens or flows
+
+---
+
+## ✅ RESULT
+
+Driver screens should feel:
+- cleaner
+- more focused
+- easier to understand
+
+Without changing the overall structure of the app.
+
+---
+
+End of update.

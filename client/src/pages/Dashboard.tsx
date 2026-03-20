@@ -7,7 +7,7 @@ import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
 import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
 import { useTheme } from "@/components/ThemeProvider";
-import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil, Users, Phone, MessageCircle, X, Sun, Moon, Monitor, Clock } from "lucide-react";
+import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil, Users, Phone, MessageCircle, X, Sun, Moon, Monitor, Clock, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -574,95 +574,20 @@ export default function Dashboard() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-green-500 shrink-0"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2" /><path d="M12 8v4l3 3" /></svg>
                 <p className="text-xs font-black text-foreground">Ride Style</p>
               </div>
-              <div className="flex items-center justify-between gap-3">
+
+              <div className="flex items-center justify-between gap-3 opacity-60">
                 <div className="flex items-start gap-2.5">
-                  <Navigation className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <Navigation className="w-4 h-4 mt-0.5 text-muted-foreground/50 shrink-0" />
                   <div>
-                    <Label htmlFor="toggle-detours" className="text-[11px] font-medium cursor-pointer">Allow Detours</Label>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Leave your route to pick up nearby hoppers</p>
-                  </div>
-                </div>
-                <Switch
-                  id="toggle-detours"
-                  data-testid="switch-enable-detours"
-                  checked={detourEnabled}
-                  onCheckedChange={(checked) => {
-                    setDetourEnabled(checked);
-                    if (!checked) {
-                      setDriverFlexRange("0");
-                      updatePreferences.mutate({ isFlexibleDriver: false, driverFlexRange: "0" });
-                    } else {
-                      setDriverFlexRange("0.5");
-                      updatePreferences.mutate({ isFlexibleDriver: true, driverFlexRange: "0.5" });
-                    }
-                  }}
-                />
-              </div>
-
-              {detourEnabled && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="border-t border-border/20 pt-2"
-                >
-                  <div className="flex items-center gap-2.5 mb-1">
-                    <MapPin className="w-4 h-4 text-green-500 shrink-0" />
-                    <p className="text-xs font-black text-foreground">Flex Range</p>
-                  </div>
-                  <p className="text-[11px] font-medium text-foreground mb-1">How far are you willing to detour?</p>
-                  <p className="text-[10px] text-muted-foreground mb-3">
-                    {driverFlexRange === "0" ? "No detours — direct route only" : `Up to ${driverFlexRange} mile${driverFlexRange !== "1" ? "s" : ""}${driverFlexRange === "1" ? "+" : ""}`}
-                  </p>
-                  <Slider
-                    data-testid="slider-driver-flex-range"
-                    min={0}
-                    max={3}
-                    step={1}
-                    value={[["0", "0.25", "0.5", "1"].indexOf(driverFlexRange)]}
-                    onValueChange={([idx]) => {
-                      const val = ["0", "0.25", "0.5", "1"][idx];
-                      setDriverFlexRange(val);
-                      updatePreferences.mutate({ driverFlexRange: val as any });
-                    }}
-                  />
-                  <div className="flex justify-between mt-1">
-                    {["0", "0.25", "0.5", "1+"].map((v, i) => (
-                      <span key={v} className={`text-[9px] ${driverFlexRange === ["0", "0.25", "0.5", "1"][i] ? "text-green-500 font-bold" : "text-muted-foreground"}`}>
-                        {v === "0" ? "0 mi" : `${v} mi`}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="border-t border-border/20 pt-2 mt-3">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Lightbulb className="w-3 h-3 text-yellow-500 shrink-0" />
-                      <p className="text-[10px] font-bold text-foreground">Smart Tips</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-medium text-foreground/60">Expand Match Range</span>
+                      <Lock className="w-3 h-3 text-muted-foreground/50" />
                     </div>
-                    <p className="text-[9px] text-muted-foreground leading-relaxed" data-testid="text-driver-smart-tip">
-                      {driverFlexRange === "0"
-                        ? "You'll only match hoppers right on your route. Great for staying efficient."
-                        : driverFlexRange === "0.25"
-                        ? "Short detours can increase your earnings without much extra time."
-                        : driverFlexRange === "0.5"
-                        ? "Most riders nearby are within this range — solid pickup zone."
-                        : "Maximum reach — you'll see the most hop requests in your area."}
-                    </p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">Match with riders slightly off your route — Coming Soon</p>
                   </div>
-                </motion.div>
-              )}
-
-              {!detourEnabled && (
-                <div className="border-t border-border/20 pt-2">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Lightbulb className="w-3 h-3 text-yellow-500 shrink-0" />
-                    <p className="text-[10px] font-bold text-foreground">Smart Tips</p>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground leading-relaxed" data-testid="text-driver-smart-tip-off">
-                    Detours are off — you'll match hoppers willing to walk to your route. Turn on detours to see more requests.
-                  </p>
                 </div>
-              )}
+                <Switch checked={false} disabled className="pointer-events-none opacity-50" />
+              </div>
 
               <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
                 <div className="flex items-start gap-2.5">
@@ -702,52 +627,50 @@ export default function Dashboard() {
                   </Button>
                 </div>
               </div>
-
-              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
-                <div className="flex items-start gap-2.5">
-                  {autoAlerts ? <Bell className="w-4 h-4 mt-0.5 text-orange-500 shrink-0" /> : <BellOff className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />}
-                  <div>
-                    <Label htmlFor="toggle-auto-alerts" className="text-[11px] font-medium cursor-pointer">Auto-Alerts</Label>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Alert when pickup is on your route</p>
-                  </div>
-                </div>
-                <Switch
-                  id="toggle-auto-alerts"
-                  data-testid="switch-auto-alerts"
-                  checked={autoAlerts}
-                  onCheckedChange={async (checked) => {
-                    if (checked && "Notification" in window && Notification.permission !== "granted") {
-                      const perm = await Notification.requestPermission();
-                      if (perm !== "granted") {
-                        showFlash("🔕", "Notifications blocked by browser", "error");
-                        return;
-                      }
-                    }
-                    setAutoAlerts(checked);
-                    try { localStorage.setItem("sh-driver-auto-notify", String(checked)); } catch {}
-                    window.dispatchEvent(new CustomEvent("sh-auto-alert-change"));
-                    showFlash(checked ? "🔔" : "🔕", checked ? "Auto-notifications ON" : "Auto-notifications OFF", checked ? "success" : "info");
-                  }}
-                />
-              </div>
             </CardContent>
           </Card>
         )}
 
         {activeTab === "driver" && (
-          <MagicGpsSection
-            enabled={magicGpsEnabled}
-            isDriver={true}
-            onToggle={(checked) => {
-              setMagicGpsEnabled(checked);
-              updatePreferences.mutate({ magicGpsEnabled: checked });
-            }}
-            flowModeEnabled={flowModeEnabled}
-            onFlowModeToggle={(checked) => {
-              setFlowModeEnabled(checked);
-              updatePreferences.mutate({ flowModeEnabled: checked });
-            }}
-          />
+          <Card className="border-amber-500/20 bg-gradient-to-br from-amber-500/5 to-transparent opacity-60" data-testid="card-magic-gps-locked">
+            <CardContent className="py-3 px-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 mt-0.5 text-amber-500/50 shrink-0" />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-medium text-foreground/60">✨ MagicGPS Detection</span>
+                      <Lock className="w-3 h-3 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">Detect movement and turn trips into earnings automatically</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-semibold text-amber-600/60 dark:text-amber-400/60">Coming Soon</span>
+                  <Switch checked={false} disabled className="pointer-events-none opacity-50" />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-green-50/30 dark:bg-green-900/5 border border-green-200/20 dark:border-green-800/10">
+                <div className="flex items-start gap-2">
+                  <div className="w-5 h-5 mt-0.5 rounded-full bg-gradient-to-br from-green-400/40 to-emerald-500/40 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-3 h-3 text-white/50" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-foreground/60">🌊 Flow Mode</span>
+                      <Lock className="w-3 h-3 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-[9px] text-muted-foreground/60">Auto-activate on confident routes</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-semibold text-green-600/60 dark:text-green-400/60">Coming Soon</span>
+                  <Switch checked={false} disabled className="pointer-events-none opacity-50" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {activeTab === "driver" && user && (
