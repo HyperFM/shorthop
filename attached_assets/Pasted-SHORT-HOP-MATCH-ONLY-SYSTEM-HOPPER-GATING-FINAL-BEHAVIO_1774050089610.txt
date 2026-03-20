@@ -1,0 +1,145 @@
+SHORT HOP — MATCH-ONLY SYSTEM + HOPPER GATING (FINAL BEHAVIOR UPDATE)
+
+This update enforces a strict match-only system while allowing hoppers to submit requests without confusion.
+
+---
+
+# 🚨 CORE RULE
+
+If there is NO valid match →  
+- no notifications  
+- no visibility  
+- no activity shown  
+
+System must remain silent until a real match occurs.
+
+---
+
+# 🎯 HOPPER REQUEST FLOW (UPDATED)
+
+Hoppers ARE allowed to:
+
+- enter pickup location  
+- enter destination  
+- select time  
+- submit ride request  
+
+---
+
+## 🟡 IF NO DRIVERS MATCH
+
+Show message:
+
+“No drivers available yet — waiting for a match”
+
+---
+
+### IMPORTANT BEHAVIOR:
+
+- DO NOT send notifications  
+- DO NOT show drivers  
+- DO NOT simulate activity  
+- DO NOT suggest matches  
+
+System remains idle and waiting.
+
+---
+
+# 🚫 DO NOT BLOCK INPUT
+
+Hoppers must still be able to:
+- enter routes  
+- submit requests  
+
+Even if no drivers exist.
+
+---
+
+# 🚗 DRIVER VISIBILITY RULE
+
+Drivers:
+
+- ONLY see hoppers after a confirmed match  
+- DO NOT see request lists  
+- DO NOT see unmatched users  
+- DO NOT receive any notifications unless matched  
+
+---
+
+# 🔕 NOTIFICATION SYSTEM
+
+Disable ALL notifications except:
+
+### ✅ ONLY ALLOW:
+- “Match Found” notification
+
+---
+
+### ❌ DISABLE:
+- hopper activity alerts  
+- driver activity alerts  
+- nearby users  
+- partial matches  
+- any system-triggered alerts without a match  
+
+---
+
+# 🧠 MATCH VISIBILITY SYSTEM
+
+Before match:
+- users are completely invisible to each other  
+
+After match:
+- both users are revealed  
+- both users are notified  
+
+---
+
+# ⚠️ STRICT MATCH CONDITION
+
+System must follow:
+
+MATCH == TRUE → show + notify  
+MATCH == FALSE → do nothing  
+
+---
+
+# 🚫 REMOVE DISCOVERY FEATURES
+
+Ensure NONE of the following exist:
+
+- browsing drivers  
+- browsing hoppers  
+- “available rides” lists  
+- “open requests”  
+- “nearby activity”  
+
+---
+
+# 🧘 USER EXPERIENCE GOAL
+
+Hopper experience:
+
+- enters route  
+- sees: “No drivers available yet — waiting for a match”  
+- waits silently  
+
+Driver experience:
+
+- goes active  
+- waits silently  
+- only sees a match when it actually exists  
+
+---
+
+# ✅ RESULT
+
+The app behaves as a closed system where:
+
+Users only become aware of each other when a real match occurs.
+
+No noise. No confusion. No false signals.
+
+---
+
+End of update.

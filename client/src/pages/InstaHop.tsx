@@ -910,7 +910,6 @@ function DriveNowPanel({ user }: { user: User }) {
   const appStatus = driverStatus?.applicationStatus;
   const needsOnboarding = !driverStatus?.vehicleMake && !appStatus;
 
-  const availableHops = hops?.filter(h => h.status === 'requested') || [];
   const activeDriverHop = hops?.find(h => h.status === 'matched' || h.status === 'in_ride');
 
   useLiveLocationBroadcast(isActiveNow || !!activeDriverHop);
@@ -1132,7 +1131,7 @@ function DriveNowPanel({ user }: { user: User }) {
                 <div>
                   <p className="text-sm font-bold">You're Active</p>
                   <p className="text-[10px] text-muted-foreground">
-                    Accepting hop requests · {(user as any)?.availableSeats || 1} seat{((user as any)?.availableSeats || 1) > 1 ? "s" : ""} open
+                    Waiting for a match · {(user as any)?.availableSeats || 1} seat{((user as any)?.availableSeats || 1) > 1 ? "s" : ""} open
                   </p>
                 </div>
               </div>
@@ -1629,10 +1628,6 @@ function InstaHopView({ user }: { user: User }) {
   const [paymentRefunded, setPaymentRefunded] = useState(false);
   const [departureMinutes, setDepartureMinutes] = useState(0);
 
-  const { data: driverAvailability } = useQuery<{ count: number; status: string; message: string }>({
-    queryKey: ['/api/driver-availability'],
-    refetchInterval: 30000,
-  });
 
   useEffect(() => {
     if (!prepaidInfo || !isMatching) {
@@ -2136,17 +2131,10 @@ function InstaHopView({ user }: { user: User }) {
                   </Card>
                 )}
 
-                {driverAvailability && !isMatching && !pricePreview && !hasActiveRide && mode === "hop" && (
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium mb-1 ${
-                    driverAvailability.status === "good" ? "bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border border-green-200/50 dark:border-green-700/30" :
-                    driverAvailability.status === "low" ? "bg-yellow-50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-400 border border-yellow-200/50 dark:border-yellow-700/30" :
-                    "bg-gray-50 dark:bg-gray-950/20 text-muted-foreground border border-border/30"
-                  }`} data-testid="display-driver-availability">
+                {!isMatching && !pricePreview && !hasActiveRide && mode === "hop" && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium mb-1 bg-gray-50 dark:bg-gray-950/20 text-muted-foreground border border-border/30" data-testid="display-driver-availability">
                     <Car className="w-3.5 h-3.5 shrink-0" />
-                    <span>{driverAvailability.message}</span>
-                    {driverAvailability.count > 0 && (
-                      <span className="ml-auto font-bold">{driverAvailability.count} active</span>
-                    )}
+                    <span>Submit your request — we'll match you when a driver is available</span>
                   </div>
                 )}
 
@@ -2155,7 +2143,7 @@ function InstaHopView({ user }: { user: User }) {
                     <CardContent className="py-3 px-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                          <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> Finding your driver...
+                          <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> No drivers available yet — waiting for a match
                         </p>
                         <span className="text-xs font-bold text-blue-600 dark:text-blue-400" data-testid="text-payment-amount">
                           ${(prepaidInfo.amount / 100).toFixed(2)} authorized
@@ -2178,7 +2166,7 @@ function InstaHopView({ user }: { user: User }) {
                         </div>
                       )}
                       <p className="text-[10px] text-muted-foreground">
-                        Payment confirmed. Searching for your driver. Refunded if no match found.
+                        Payment confirmed. Waiting for a match. Refunded if no match found.
                       </p>
                       <Button
                         variant="outline"

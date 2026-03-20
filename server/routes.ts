@@ -203,6 +203,160 @@ function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): str
   return "west";
 }
 
+const MAX_DEVIATION_MILES = 0.5;
+const MAX_TIME_DIFF_MS = 30 * 60 * 1000;
+
+function isHopMatchForDriver(
+  hop: any,
+  driverSeats: number,
+  driverLoc: { latitude: number; longitude: number; updatedAt: number } | undefined,
+  driverRoutes: any[]
+): boolean {
+  const now = new Date();
+  if (hop.status !== "requested") return false;
+  if (hop.timeWindowExpiry && new Date(hop.timeWindowExpiry) < now) return false;
+  if ((hop.seatsNeeded || 1) > driverSeats) return false;
+
+  if (hop.departureTime) {
+    const timeDiff = Math.abs(new Date(hop.departureTime).getTime() - now.getTime());
+    if (timeDiff > MAX_TIME_DIFF_MS) return false;
+  }
+
+  const hopStartLat = parseFloat(hop.startLat || "0");
+  const hopStartLng = parseFloat(hop.startLng || "0");
+  const hopEndLat = parseFloat(hop.endLat || "0");
+  const hopEndLng = parseFloat(hop.endLng || "0");
+
+  if (driverLoc && Date.now() - driverLoc.updatedAt < 120000) {
+    if (hopStartLat && hopStartLng) {
+      const pickupDist = getDistance(driverLoc.latitude, driverLoc.longitude, hopStartLat, hopStartLng);
+      if (pickupDist > MAX_DEVIATION_MILES) return false;
+    }
+
+    if (hopEndLat && hopEndLng && hopStartLat && hopStartLng) {
+      const driverBearing = Math.atan2(hopEndLng - driverLoc.longitude, hopEndLat - driverLoc.latitude);
+      const hopBearing = Math.atan2(hopEndLng - hopStartLng, hopEndLat - hopStartLat);
+      const angleDiff = Math.abs(driverBearing - hopBearing);
+      const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
+      if (normalizedAngle > Math.PI / 2) return false;
+    }
+
+    if (hopEndLat && hopEndLng) {
+      const dropoffDist = getDistance(driverLoc.latitude, driverLoc.longitude, hopEndLat, hopEndLng);
+      if (dropoffDist > 15) return false;
+    }
+  }
+
+  if (driverRoutes.length > 0 && hopEndLat && hopEndLng) {
+    let alignedWithAnyRoute = false;
+    for (const route of driverRoutes) {
+      const rEndLat = parseFloat(route.endLat || "0");
+      const rEndLng = parseFloat(route.endLng || "0");
+      if (!rEndLat || !rEndLng) continue;
+      const dropoffToRouteDest = getDistance(hopEndLat, hopEndLng, rEndLat, rEndLng);
+      if (dropoffToRouteDest <= MAX_DEVIATION_MILES) {
+        alignedWithAnyRoute = true;
+        break;
+      }
+      const rStartLat = parseFloat(route.startLat || "0");
+      const rStartLng = parseFloat(route.startLng || "0");
+      if (hopStartLat && hopStartLng && rStartLat && rStartLng) {
+        const routeBearing = Math.atan2(rEndLng - rStartLng, rEndLat - rStartLat);
+        const hopBearing = Math.atan2(hopEndLng - hopStartLng, hopEndLat - hopStartLat);
+        const angleDiff = Math.abs(routeBearing - hopBearing);
+        const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
+        if (normalizedAngle < Math.PI / 3) {
+          alignedWithAnyRoute = true;
+          break;
+        }
+      }
+    }
+    if (!alignedWithAnyRoute) return false;
+  }
+
+  return true;
+}
+
+async function tryAutoMatch(hopId: number) {
+  try {
+    const hop = await storage.getHop(hopId);
+    if (!hop || hop.status !== "requested") return;
+
+    const activeDrivers = await storage.getActiveDrivers();
+    for (const driver of activeDrivers) {
+      const driverLoc = liveLocations.get(driver.id);
+      const driverRoutes = await storage.getRoutes(driver.id);
+      const driverSeats = driver.availableSeats || 1;
+
+      if (isHopMatchForDriver(hop, driverSeats, driverLoc, driverRoutes)) {
+        const matched = await storage.acceptHop(hopId, driver.id);
+
+        if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
+          await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
+        }
+
+        await storage.createNotification({
+          userId: driver.id,
+          type: "match_found",
+          title: "Match Found! 🎯",
+          message: `A hopper going to ${hop.endLocation} matched with your route.`,
+          isRead: false,
+        });
+        await storage.createNotification({
+          userId: hop.walkerId,
+          type: "match_found",
+          title: "Driver Found! 🚗",
+          message: `You've been matched with a driver heading your way.`,
+          isRead: false,
+        });
+        return;
+      }
+    }
+  } catch (err) {
+    console.error("Auto-match error:", err);
+  }
+}
+
+async function tryAutoMatchForDriver(driverId: number) {
+  try {
+    const driver = await storage.getUser(driverId);
+    if (!driver || !driver.isActive) return;
+
+    const driverLoc = liveLocations.get(driverId);
+    const driverRoutes = await storage.getRoutes(driverId);
+    const driverSeats = driver.availableSeats || 1;
+
+    const allAvailable = await storage.getAvailableHops();
+    for (const hop of allAvailable) {
+      if (isHopMatchForDriver(hop, driverSeats, driverLoc, driverRoutes)) {
+        const matched = await storage.acceptHop(hop.id, driverId);
+
+        if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
+          await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
+        }
+
+        await storage.createNotification({
+          userId: driverId,
+          type: "match_found",
+          title: "Match Found! 🎯",
+          message: `A hopper going to ${hop.endLocation} matched with your route.`,
+          isRead: false,
+        });
+        await storage.createNotification({
+          userId: hop.walkerId,
+          type: "match_found",
+          title: "Driver Found! 🚗",
+          message: `You've been matched with a driver heading your way.`,
+          isRead: false,
+        });
+        return;
+      }
+    }
+  } catch (err) {
+    console.error("Auto-match for driver error:", err);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -408,102 +562,8 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     
     if (req.user.isDriver) {
-      const allAvailable = await storage.getAvailableHops();
-      const now = new Date();
-      const driverUser = await storage.getUser(req.user.id);
-      const driverSeats = driverUser?.availableSeats || 1;
-
-      const driverLoc = liveLocations.get(req.user.id);
-      const driverRoutes = await storage.getRoutes(req.user.id);
-      const MAX_DEVIATION_MILES = 0.5;
-      const MAX_TIME_DIFF_MS = 30 * 60 * 1000;
-
-      const matchedHops = allAvailable.filter(h => {
-        if (h.timeWindowExpiry && new Date(h.timeWindowExpiry) < now) return false;
-        if ((h.seatsNeeded || 1) > driverSeats) return false;
-
-        if (h.departureTime) {
-          const timeDiff = Math.abs(new Date(h.departureTime).getTime() - now.getTime());
-          if (timeDiff > MAX_TIME_DIFF_MS) return false;
-        }
-
-        const hopStartLat = parseFloat(h.startLat || "0");
-        const hopStartLng = parseFloat(h.startLng || "0");
-        const hopEndLat = parseFloat(h.endLat || "0");
-        const hopEndLng = parseFloat(h.endLng || "0");
-
-        if (driverLoc && Date.now() - driverLoc.updatedAt < 120000) {
-          if (hopStartLat && hopStartLng) {
-            const pickupDist = getDistance(driverLoc.latitude, driverLoc.longitude, hopStartLat, hopStartLng);
-            if (pickupDist > MAX_DEVIATION_MILES) return false;
-          }
-
-          if (hopEndLat && hopEndLng && hopStartLat && hopStartLng) {
-            const driverBearing = Math.atan2(hopEndLng - driverLoc.longitude, hopEndLat - driverLoc.latitude);
-            const hopBearing = Math.atan2(hopEndLng - hopStartLng, hopEndLat - hopStartLat);
-            const angleDiff = Math.abs(driverBearing - hopBearing);
-            const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-            if (normalizedAngle > Math.PI / 2) return false;
-          }
-
-          if (hopEndLat && hopEndLng) {
-            const dropoffDist = getDistance(driverLoc.latitude, driverLoc.longitude, hopEndLat, hopEndLng);
-            if (dropoffDist > 15) return false;
-          }
-        }
-
-        if (driverRoutes.length > 0 && hopEndLat && hopEndLng) {
-          let alignedWithAnyRoute = false;
-          for (const route of driverRoutes) {
-            const rEndLat = parseFloat(route.endLat || "0");
-            const rEndLng = parseFloat(route.endLng || "0");
-            if (!rEndLat || !rEndLng) continue;
-            const dropoffToRouteDest = getDistance(hopEndLat, hopEndLng, rEndLat, rEndLng);
-            if (dropoffToRouteDest <= MAX_DEVIATION_MILES) {
-              alignedWithAnyRoute = true;
-              break;
-            }
-            const rStartLat = parseFloat(route.startLat || "0");
-            const rStartLng = parseFloat(route.startLng || "0");
-            if (hopStartLat && hopStartLng && rStartLat && rStartLng) {
-              const routeBearing = Math.atan2(rEndLng - rStartLng, rEndLat - rStartLat);
-              const hopBearing = Math.atan2(hopEndLng - hopStartLng, hopEndLat - hopStartLat);
-              const angleDiff = Math.abs(routeBearing - hopBearing);
-              const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-              if (normalizedAngle < Math.PI / 3) {
-                alignedWithAnyRoute = true;
-                break;
-              }
-            }
-          }
-          if (!alignedWithAnyRoute) return false;
-        }
-
-        return true;
-      });
-
       const driverHops = await storage.getHopsForDriver(req.user.id);
-      const matchedIds = new Set(matchedHops.map(h => h.id));
-
-      const mergedHops = [
-        ...matchedHops,
-        ...driverHops.filter(h => !matchedIds.has(h.id)),
-      ];
-
-      if (matchedHops.length > 0) {
-        const todayCount = await storage.getNotificationCountToday(req.user.id);
-        if (todayCount < 5 && Math.random() < 0.3) {
-          await storage.createNotification({
-            userId: req.user.id,
-            type: "busy_route",
-            title: "Route Activity 🛞",
-            message: `${matchedHops.length} Hopper${matchedHops.length > 1 ? 's' : ''} going your way right now.`,
-            isRead: false,
-          });
-        }
-      }
-
-      res.json(mergedHops);
+      res.json(driverHops);
     } else {
       const hops = await storage.getHopsForWalker(req.user.id);
       res.json(hops);
@@ -555,6 +615,7 @@ export async function registerRoutes(
         seatsNeeded: currentUser.seatsNeeded || 1,
       });
       res.status(201).json(hop);
+      tryAutoMatch(hop.id);
     } catch (err) {
        if (err instanceof z.ZodError) {
         res.status(400).json({ message: err.errors[0].message });
@@ -1868,6 +1929,7 @@ export async function registerRoutes(
           accuracy: 10,
           updatedAt: Date.now(),
         });
+        tryAutoMatchForDriver(req.user.id);
       } else {
         liveLocations.delete(req.user.id);
       }
@@ -3070,26 +3132,8 @@ export async function registerRoutes(
     }
   });
 
-  app.get('/api/driver-availability', async (req, res) => {
-    try {
-      const activeDrivers = await storage.getActiveDrivers();
-      const count = activeDrivers.length;
-      let status: string;
-      let message: string;
-      if (count === 0) {
-        status = "none";
-        message = "No drivers active right now — your request will wait for a match";
-      } else if (count <= 3) {
-        status = "low";
-        message = "Limited drivers — increasing your price may help";
-      } else {
-        status = "good";
-        message = "Drivers nearby — high chance of quick match";
-      }
-      res.json({ count, status, message });
-    } catch {
-      res.json({ count: 0, status: "unknown", message: "Unable to check availability" });
-    }
+  app.get('/api/driver-availability', async (_req, res) => {
+    res.json({ count: 0, status: "waiting", message: "Submit your request — we'll match you when a driver is available" });
   });
 
   app.post('/api/stripe/authorize-hop', async (req, res) => {
