@@ -1520,13 +1520,22 @@ export async function registerRoutes(
   app.post('/api/schedules', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const { days, startLocation, destination, timeStart, timeEnd, returnTrip, anytime, paymentPreference } = req.body;
+      const { days, startLocation, destination, timeStart, timeEnd, returnTrip, anytime, paymentPreference, role } = req.body;
+      const scheduleRole = role === "driver" ? "driver" : "hopper";
       const isAnytime = anytime === true;
       if (!startLocation || !destination) {
         return res.status(400).json({ message: "Missing required fields" });
       }
       if (!isAnytime && (!days || !timeStart || !timeEnd)) {
         return res.status(400).json({ message: "Missing required fields for scheduled hop" });
+      }
+      if (scheduleRole === "hopper") {
+        const currentUser = await storage.getUser(req.user.id);
+        if (!currentUser) return res.status(404).json({ message: "User not found" });
+        const hasPowerHop = currentUser.subscription === "power_hop" || currentUser.lifetimeSubscription;
+        if (!hasPowerHop) {
+          return res.status(403).json({ message: "PowerHop membership required to schedule hops", requiresPowerHop: true });
+        }
       }
       const schedule = await storage.createSchedule({
         userId: req.user.id,
@@ -1539,6 +1548,8 @@ export async function registerRoutes(
         active: true,
         anytime: isAnytime,
         paymentPreference: paymentPreference || "card",
+        role: scheduleRole,
+        paid: scheduleRole === "driver",
       } as any);
       res.json(schedule);
     } catch {
@@ -1575,6 +1586,61 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch {
       res.status(500).json({ message: "Failed to delete schedule" });
+    }
+  });
+
+  app.post('/api/schedules/:id/pay', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const scheduleId = parseInt(req.params.id);
+      if (isNaN(scheduleId)) return res.status(400).json({ message: "Invalid schedule ID" });
+      const { distanceMiles } = req.body;
+      const distance = Number(distanceMiles) || 5;
+
+      const user = await storage.getUser(req.user.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const allSchedules = await storage.getUserSchedules(req.user.id);
+      const targetSchedule = allSchedules.find(s => s.id === scheduleId);
+      if (!targetSchedule) return res.status(404).json({ message: "Schedule not found" });
+      if ((targetSchedule as any).paid) return res.json({ paid: true, message: "Already paid" });
+
+      const amountCents = Math.max(Math.round(distance * 100), 100);
+
+      const stripe = await getUncachableStripeClient();
+
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          metadata: { userId: String(user.id), username: user.username },
+        });
+        customerId = customer.id;
+        await db.update(users).set({ stripeCustomerId: customerId }).where(eq(users.id, user.id));
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountCents,
+        currency: 'usd',
+        customer: customerId,
+        confirm: true,
+        metadata: {
+          userId: String(req.user.id),
+          scheduleId: String(scheduleId),
+          type: 'scheduled_hop_payment',
+        },
+        automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+      });
+
+      await storage.updateSchedule(scheduleId, req.user.id, { paid: true } as any);
+
+      res.json({
+        paymentIntentId: paymentIntent.id,
+        amount: amountCents,
+        paid: true,
+      });
+    } catch (e: any) {
+      console.error('Schedule payment error:', e.message);
+      res.status(500).json({ message: "Payment failed" });
     }
   });
 

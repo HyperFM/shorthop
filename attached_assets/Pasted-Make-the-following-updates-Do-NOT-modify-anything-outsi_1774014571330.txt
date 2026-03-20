@@ -1,0 +1,86 @@
+Make the following updates. Do NOT modify anything outside of what is listed.
+
+-----------------------------------
+PLANNED HOPS SECTION (UI STRUCTURE)
+-----------------------------------
+
+1. Do NOT create a new section.
+
+2. Inside the EXISTING "Planned Hops" section:
+- Add a SECOND panel option (Driver + Hopper views)
+- This should mirror the existing Tailor section structure (Driver / Hopper toggle)
+
+3. UI PLACEMENT:
+- Make this new panel VERY SMALL (compact version)
+- Position it:
+  - At the bottom of the Planned Hops section
+  - Slightly above / connected to the bottom control panel
+- It must:
+  - Sit ON TOP of the bottom panel (overlay style)
+  - NOT scroll with the page
+  - Allow users to swipe between Driver and Hopper views
+
+-----------------------------------
+DRIVER PLANNED HOPS PANEL
+-----------------------------------
+
+1. Duplicate the existing planned hops functionality for drivers
+
+2. Modify wording to reflect DRIVER role:
+- Scheduling trips they will DRIVE
+- Ability to plan:
+  - Long trips
+  - Regular trips
+
+3. Ensure drivers:
+- Do NOT pay to schedule
+- Are positioned to RECEIVE scheduled matches
+
+-----------------------------------
+HOPPER PLANNED HOPS PANEL
+-----------------------------------
+
+1. Keep existing functionality but enforce:
+
+- Users MUST be "PowerHop" members to create a scheduled hop
+
+2. If user is NOT a PowerHop member:
+- Block scheduling action
+- Prompt upgrade flow
+
+3. PAYMENT FLOW:
+- Require hopper to pay in advance for scheduled hops
+- Redirect to Stripe for payment processing
+
+4. After successful payment:
+- Allow scheduling
+- Store scheduled hop in system for pre-matching with drivers
+
+-----------------------------------
+NO SCHEDULE STATE (IMPORTANT)
+-----------------------------------
+
+1. The "No schedules yet" button/message:
+- Should ONLY appear if user has ZERO scheduled hops
+
+2. Once at least ONE schedule is created:
+- REMOVE the "No schedules yet" state completely
+
+-----------------------------------
+MATCHING INTENT (BACKGROUND BEHAVIOR)
+-----------------------------------
+
+1. Scheduled hops must:
+- Be planned in advance
+- Be paired with drivers ahead of time (not instant matching)
+
+2. Use:
+- Route direction
+- Timing
+- Preferences
+
+-----------------------------------
+
+Do not redesign the UI.
+Do not change existing planned hop logic outside of these additions.
+Only add the compact driver/hopper panel and enforce membership + payment rules.

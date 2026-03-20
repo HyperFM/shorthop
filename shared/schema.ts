@@ -426,6 +426,8 @@ export const schedules = pgTable("schedules", {
   corridor: text("corridor"),
   anytime: boolean("anytime").default(false),
   paymentPreference: text("payment_preference").default("stripe"),
+  role: text("role").default("hopper"),
+  paid: boolean("paid").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
