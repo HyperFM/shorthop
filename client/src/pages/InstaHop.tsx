@@ -288,7 +288,7 @@ function GlowingCarousel({ user }: { user: User }) {
   const items = [
     { emoji: "🔥", value: user.hopStreak || 0, label: "streak" },
     { emoji: "⭐", value: user.totalHops || 0, label: "hops" },
-    { emoji: "🛞", value: user.credits || 0, label: "wheels" },
+    { emoji: "🛞", value: (user.credits || 0).toFixed(2), label: "wheels" },
   ];
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -1129,8 +1129,8 @@ function DriveNowPanel({ user }: { user: User }) {
                   <Power className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold">You're Active</p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-sm font-bold text-foreground">You're Active</p>
+                  <p className="text-[10px] text-foreground/70 dark:text-green-300/80">
                     Waiting for a match · {(user as any)?.availableSeats || 1} seat{((user as any)?.availableSeats || 1) > 1 ? "s" : ""} open
                   </p>
                 </div>
@@ -1216,8 +1216,8 @@ function DriveNowPanel({ user }: { user: User }) {
 
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span className="text-[11px] text-muted-foreground">How long until you head out?</span>
+              <Clock className="w-3.5 h-3.5 text-foreground/50 dark:text-foreground/60 shrink-0" />
+              <span className="text-[11px] text-foreground/60 dark:text-foreground/70">How long until you head out?</span>
             </div>
             <div className="flex flex-wrap gap-1">
               {DEPARTURE_OPTIONS.map(opt => (
@@ -1228,7 +1228,7 @@ function DriveNowPanel({ user }: { user: User }) {
                   className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
                     (opt.value === -1 && showCustomTime) || (opt.value !== -1 && driverDepartureMin === opt.value)
                       ? "bg-primary text-white shadow-sm"
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                      : "bg-muted/50 text-foreground/60 dark:text-foreground/70 hover:bg-muted"
                   }`}
                   data-testid={`button-driver-depart-${opt.value}`}
                 >
@@ -1254,8 +1254,8 @@ function DriveNowPanel({ user }: { user: User }) {
 
           <div className="flex items-center justify-between gap-3 px-1 py-1.5">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span className="text-[11px] font-medium text-foreground">Seats</span>
+              <Users className="w-4 h-4 text-foreground/50 dark:text-foreground/60 shrink-0" />
+              <span className="text-[11px] font-medium text-foreground dark:text-foreground/80">Seats</span>
             </div>
             <div className="flex items-center gap-1.5" data-testid="stepper-driver-seats">
               <Button
@@ -1306,7 +1306,7 @@ function DriveNowPanel({ user }: { user: User }) {
           </Button>
 
           {!canGoActive && driverDestInput.trim().length > 0 && (
-            <p className="text-[10px] text-muted-foreground text-center">
+            <p className="text-[10px] text-foreground/50 dark:text-foreground/60 text-center">
               {!routeGenerated ? "Calculating route..." : !driverDepartureMin && driverDepartureMin !== 0 ? "Select departure time" : ""}
             </p>
           )}
@@ -1767,7 +1767,7 @@ function InstaHopView({ user }: { user: User }) {
         return;
       }
 
-      const priceCents = Math.max(Math.round(distanceMiles * 100), 100);
+      const priceCents = Math.max(Math.round(distanceMiles * 150), 150);
 
       setPricePreview({
         distanceMiles,
@@ -1786,9 +1786,52 @@ function InstaHopView({ user }: { user: User }) {
     }
   };
 
+  const submitHopAfterPayment = (authData: any, paymentStatus: string) => {
+    const data = form.getValues();
+    if (!pricePreview) return;
+
+    setPrepaidInfo({
+      amount: authData.amount,
+      paymentIntentId: authData.paymentIntentId,
+      departureTime: authData.departureTime,
+      arrivalDeadline: authData.arrivalDeadline,
+      timeWindowExpiry: authData.timeWindowExpiry,
+      distanceMiles: pricePreview.distanceMiles,
+    });
+
+    setIsMatching(true);
+    const hopData: any = {
+      ...data,
+      startLocation: pricePreview.startName,
+      hopType: 'short_hop',
+      distanceMiles: pricePreview.distanceMiles,
+      startLat: String(pricePreview.startLat),
+      startLng: String(pricePreview.startLng),
+      endLat: String(pricePreview.endLat),
+      endLng: String(pricePreview.endLng),
+      paymentIntentId: authData.paymentIntentId,
+      paymentStatus,
+      paymentAmountCents: authData.amount,
+      departureTime: authData.departureTime,
+      arrivalDeadline: authData.arrivalDeadline,
+      timeWindowExpiry: authData.timeWindowExpiry,
+    };
+
+    setPricePreview(null);
+    requestHop.mutate(hopData, {
+      onSuccess: () => {
+        showFlash("⚡", "Paid & requesting your hop!", "success");
+        queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+      },
+      onError: () => {
+        setIsMatching(false);
+        setPrepaidInfo(null);
+      }
+    });
+  };
+
   const confirmAndPay = async () => {
     if (!pricePreview) return;
-    const data = form.getValues();
 
     if (!user.stripeSetupCompleted) {
       try {
@@ -1814,45 +1857,61 @@ function InstaHopView({ user }: { user: User }) {
       });
       const authData = await authRes.json();
 
-      setPrepaidInfo({
-        amount: authData.amount,
-        paymentIntentId: authData.paymentIntentId,
-        departureTime: authData.departureTime,
-        arrivalDeadline: authData.arrivalDeadline,
-        timeWindowExpiry: authData.timeWindowExpiry,
-        distanceMiles: pricePreview.distanceMiles,
-      });
-
-      setIsMatching(true);
-      setPricePreview(null);
-      const hopData: any = {
-        ...data,
-        startLocation: pricePreview.startName,
-        hopType: 'short_hop',
-        distanceMiles: pricePreview.distanceMiles,
-        startLat: String(pricePreview.startLat),
-        startLng: String(pricePreview.startLng),
-        endLat: String(pricePreview.endLat),
-        endLng: String(pricePreview.endLng),
-        paymentIntentId: authData.paymentIntentId,
-        paymentStatus: "authorized",
-        paymentAmountCents: authData.amount,
-        departureTime: authData.departureTime,
-        arrivalDeadline: authData.arrivalDeadline,
-        timeWindowExpiry: authData.timeWindowExpiry,
-      };
-
-      requestHop.mutate(hopData, {
-        onSuccess: () => {
-          showFlash("⚡", "Paid & requesting your hop!", "success");
-        },
-        onError: () => {
-          setIsMatching(false);
-          setPrepaidInfo(null);
+      if (authData.needsSetup) {
+        try {
+          const setupRes = await apiRequest("POST", "/api/stripe/setup-fee", {});
+          const setupJson = await setupRes.json();
+          if (setupJson.url) {
+            setCardHoldUrl(setupJson.url);
+            showFlash("💳", "Card needs re-verification", "info");
+            return;
+          }
+        } catch (e) {
+          showFlash("❌", "Card verification failed", "error");
+          return;
         }
-      });
+      }
+
+      submitHopAfterPayment(authData, "authorized");
     } catch (authErr: any) {
-      showFlash("❌", authErr.message || "Payment failed", "error");
+      const errBody = authErr.message || "Payment failed";
+      if (errBody.includes("No payment method") || errBody.includes("needsSetup")) {
+        try {
+          const setupRes = await apiRequest("POST", "/api/stripe/setup-fee", {});
+          const setupJson = await setupRes.json();
+          if (setupJson.url) {
+            setCardHoldUrl(setupJson.url);
+            showFlash("💳", "Card needs re-verification", "info");
+            return;
+          }
+        } catch (e) {}
+      }
+      showFlash("❌", errBody, "error");
+    }
+  };
+
+  const payWithWheels = async () => {
+    if (!pricePreview) return;
+    const wheelsCost = pricePreview.priceCents / 100;
+    const userWheels = user.credits || 0;
+
+    if (userWheels < wheelsCost) {
+      showFlash("🛞", `Not enough Wheels. You have ${userWheels.toFixed(2)} but need ${wheelsCost.toFixed(2)}.`, "error");
+      return;
+    }
+
+    setPaymentRefunded(false);
+    try {
+      const res = await apiRequest("POST", "/api/stripe/pay-with-wheels", {
+        distanceMiles: pricePreview.distanceMiles,
+        departureTime: new Date(Date.now() + departureMinutes * 60000).toISOString(),
+        arrivalDeadline: new Date(Date.now() + (departureMinutes + 45) * 60000).toISOString(),
+      });
+      const data = await res.json();
+      submitHopAfterPayment(data, "wheels");
+      showFlash("🛞", `Paid ${wheelsCost.toFixed(2)} Wheels!`, "success");
+    } catch (e: any) {
+      showFlash("❌", e.message || "Wheel payment failed", "error");
     }
   };
 
@@ -1995,11 +2054,12 @@ function InstaHopView({ user }: { user: User }) {
                           key="greeting"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="text-base font-extrabold text-foreground/70 text-center mb-1"
+                          className="text-base font-extrabold text-center mb-1"
+                          style={{ color: "var(--foreground)", textShadow: "0 1px 3px rgba(0,0,0,0.15), 0 0 8px rgba(249,115,22,0.25)" }}
                           data-testid="text-instahop-greeting"
                         >
                           happy hopping,{" "}
-                          <span className="text-foreground font-black">{user.username}</span>
+                          <span className="font-black" style={{ color: "var(--foreground)", textShadow: "0 1px 4px rgba(249,115,22,0.4)" }}>{user.username}</span>
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -2093,20 +2153,38 @@ function InstaHopView({ user }: { user: User }) {
                           <p className="text-[10px] text-muted-foreground">total</p>
                         </div>
                       </div>
-                      <p className="text-[10px] text-muted-foreground text-center">$1.00/mile · $1.00 minimum · charged immediately</p>
-                      <Button
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm h-11 rounded-xl"
-                        onClick={confirmAndPay}
-                        disabled={requestHop.isPending}
-                        data-testid="button-confirm-pay"
-                      >
-                        {requestHop.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        ) : (
-                          <Zap className="w-4 h-4 mr-2" />
+                      <p className="text-[10px] text-muted-foreground text-center">$1.50/mile · $1.50 minimum · charged immediately</p>
+                      <div className="space-y-1.5">
+                        <Button
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm h-11 rounded-xl"
+                          onClick={confirmAndPay}
+                          disabled={requestHop.isPending}
+                          data-testid="button-confirm-pay"
+                        >
+                          {requestHop.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <Zap className="w-4 h-4 mr-2" />
+                          )}
+                          Confirm & Pay ${(pricePreview.priceCents / 100).toFixed(2)}
+                        </Button>
+                        {(user.credits || 0) > 0 && (
+                          <Button
+                            variant="outline"
+                            className={`w-full font-bold text-sm h-11 rounded-xl border-2 ${
+                              (user.credits || 0) >= pricePreview.priceCents / 100
+                                ? "border-amber-500/60 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                                : "border-muted text-muted-foreground opacity-60 cursor-not-allowed"
+                            }`}
+                            onClick={payWithWheels}
+                            disabled={requestHop.isPending || (user.credits || 0) < pricePreview.priceCents / 100}
+                            data-testid="button-pay-wheels"
+                          >
+                            🛞 Pay with {(pricePreview.priceCents / 100).toFixed(2)} Wheels
+                            <span className="text-[10px] ml-1.5 opacity-70">(bal: {(user.credits || 0).toFixed(2)})</span>
+                          </Button>
                         )}
-                        Confirm & Pay ${(pricePreview.priceCents / 100).toFixed(2)}
-                      </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 )}
@@ -2171,7 +2249,7 @@ function InstaHopView({ user }: { user: User }) {
                 )}
 
                 {!isMatching && !pricePreview && !hasActiveRide && mode === "hop" && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium mb-1 bg-gray-50 dark:bg-gray-950/20 text-muted-foreground border border-border/30" data-testid="display-driver-availability">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium mb-1 bg-gray-50 dark:bg-gray-900/40 text-foreground/70 dark:text-gray-200 border border-border/30" data-testid="display-driver-availability">
                     <Car className="w-3.5 h-3.5 shrink-0" />
                     <span>Submit your request — we'll match you when a driver is available</span>
                   </div>
@@ -2204,7 +2282,7 @@ function InstaHopView({ user }: { user: User }) {
                           </div>
                         </div>
                       )}
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-[10px] text-foreground/60 dark:text-blue-200/70">
                         Payment confirmed. Waiting for a match. Refunded if no match found.
                       </p>
                       <Button
@@ -2307,8 +2385,8 @@ function InstaHopView({ user }: { user: User }) {
                   {mode === "hop" && !isMatching && (
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 px-1">
-                        <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-[11px] text-muted-foreground whitespace-nowrap">Depart in</span>
+                        <Clock className="w-3.5 h-3.5 text-foreground/50 dark:text-foreground/60 shrink-0" />
+                        <span className="text-[11px] text-foreground/60 dark:text-foreground/70 whitespace-nowrap">Depart in</span>
                         <div className="flex flex-wrap gap-1">
                           {DEPARTURE_OPTIONS.filter(o => o.value !== -1).map(opt => (
                             <button
@@ -2318,7 +2396,7 @@ function InstaHopView({ user }: { user: User }) {
                               className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
                                 departureMinutes === opt.value
                                   ? "bg-primary text-white shadow-sm"
-                                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                  : "bg-muted/50 text-foreground/60 dark:text-foreground/70 hover:bg-muted"
                               }`}
                               data-testid={`button-depart-${opt.value}`}
                             >
@@ -2329,8 +2407,8 @@ function InstaHopView({ user }: { user: User }) {
                       </div>
                       <div className="flex items-center justify-between gap-3 px-1">
                         <div className="flex items-center gap-2">
-                          <Users className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                          <span className="text-[11px] text-muted-foreground">Seats</span>
+                          <Users className="w-3.5 h-3.5 text-foreground/50 dark:text-foreground/60 shrink-0" />
+                          <span className="text-[11px] text-foreground/60 dark:text-foreground/70">Seats</span>
                         </div>
                         <div className="flex items-center gap-1.5" data-testid="stepper-hopper-seats">
                           <Button

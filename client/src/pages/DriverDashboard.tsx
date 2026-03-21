@@ -236,7 +236,7 @@ export default function DriverDashboard({ user }: { user: User }) {
             </motion.div>
             <div>
               <div className="text-[10px] font-bold text-secondary uppercase tracking-wider">Wheels</div>
-              <div className="text-lg font-black text-foreground leading-none">{user.credits || 0}</div>
+              <div className="text-lg font-black text-foreground leading-none">{(user.credits || 0).toFixed(2)}</div>
             </div>
           </CardContent>
         </Card>

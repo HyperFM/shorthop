@@ -1196,7 +1196,7 @@ export default function Community() {
       </div>
 
       {user && (
-        <Card className="mt-8 border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 overflow-hidden" data-testid="donation-section">
+        <Card className="mt-8 border-orange-200 dark:border-orange-700/50 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 overflow-hidden" data-testid="donation-section">
           <CardContent className="p-5">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-md">
@@ -1204,7 +1204,7 @@ export default function Community() {
               </div>
               <div>
                 <p className="text-sm font-extrabold text-foreground">Support Short Hop</p>
-                <p className="text-[10px] text-muted-foreground">Help keep community rides running in Lexington</p>
+                <p className="text-[10px] text-foreground/60 dark:text-orange-200/70">Help keep community rides running in Lexington</p>
               </div>
             </div>
 
@@ -1217,7 +1217,7 @@ export default function Community() {
                   className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
                     donateAmount === a.cents && !showCustomDonate
                       ? "bg-orange-500 text-white shadow-md scale-[1.03]"
-                      : "bg-white dark:bg-background border border-border hover:border-orange-300"
+                      : "bg-white dark:bg-white/10 border border-border dark:border-orange-700/40 text-foreground hover:border-orange-300"
                   }`}
                   data-testid={`donate-${a.cents}`}
                 >
@@ -1232,7 +1232,7 @@ export default function Community() {
               className={`w-full py-2 rounded-lg text-xs font-bold transition-all mb-3 ${
                 showCustomDonate
                   ? "bg-orange-500 text-white"
-                  : "bg-white/60 dark:bg-background/60 border border-dashed border-orange-200 text-muted-foreground hover:border-orange-400"
+                  : "bg-white/60 dark:bg-white/10 border border-dashed border-orange-200 dark:border-orange-700/40 text-foreground/60 dark:text-orange-200/70 hover:border-orange-400"
               }`}
               data-testid="donate-custom-toggle"
             >

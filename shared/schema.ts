@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, unique, doublePrecision } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -8,7 +8,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   isDriver: boolean("is_driver").default(false),
-  credits: integer("credits").default(0),
+  credits: doublePrecision("credits").default(0),
   isFlexibleDriver: boolean("is_flexible_driver").default(false),
   maxDetourDistance: text("max_detour_distance").default("1.0"),
   maxDetourTime: integer("max_detour_time").default(15),
@@ -193,7 +193,7 @@ export const rewards = pgTable("rewards", {
   category: text("category").notNull(),
   name: text("name").notNull(),
   description: text("description"),
-  wheelsCost: integer("wheels_cost").notNull(),
+  wheelsCost: doublePrecision("wheels_cost").notNull(),
   isAvailable: boolean("is_available").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

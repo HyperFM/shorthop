@@ -605,7 +605,7 @@ export default function Admin() {
                       </p>
                     )}
                     <p className="text-[10px] text-muted-foreground mt-0.5">
-                      Joined {new Date(u.createdAt).toLocaleDateString()} · {u.credits} Wheels · {u.totalHops} hops
+                      Joined {new Date(u.createdAt).toLocaleDateString()} · {(u.credits || 0).toFixed(2)} Wheels · {u.totalHops} hops
                     </p>
                   </div>
                   {!u.isAdmin && (

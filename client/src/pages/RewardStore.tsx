@@ -86,7 +86,7 @@ export default function RewardStore() {
 
   const isConnected = stripeStatus?.connected && stripeStatus?.payoutsEnabled;
   const isPartial = stripeStatus?.connected && !stripeStatus?.payoutsEnabled;
-  const canCashout = isConnected && user.credits >= 5 && Number(cashoutAmount) >= 5 && Number(cashoutAmount) <= user.credits;
+  const canCashout = isConnected && (user.credits || 0) >= 5 && Number(cashoutAmount) >= 5 && Number(cashoutAmount) <= (user.credits || 0);
 
   return (
     <motion.div
@@ -130,7 +130,7 @@ export default function RewardStore() {
                 className="text-5xl font-black text-foreground leading-none"
                 data-testid="text-wheels-balance"
               >
-                {user.credits || 0}
+                {(user.credits || 0).toFixed(2)}
               </motion.p>
               <p className="text-lg font-bold text-secondary mt-1">${(user.credits || 0).toFixed(2)}</p>
               <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed max-w-[240px] mx-auto">
@@ -220,16 +220,16 @@ export default function RewardStore() {
             <div className="flex items-center gap-2 mb-3">
               <DollarSign className="w-4 h-4 text-green-500" />
               <p className="text-sm font-bold">Cash Out</p>
-              {user.credits < 5 && (
+              {(user.credits || 0) < 5 && (
                 <Badge className="text-[8px] bg-muted text-muted-foreground border-0 ml-auto">
-                  Need {5 - (user.credits || 0)} more Wheels
+                  Need {(5 - (user.credits || 0)).toFixed(2)} more Wheels
                 </Badge>
               )}
             </div>
 
             {!isConnected ? (
               <p className="text-xs text-muted-foreground">Connect your bank account above to start cashing out.</p>
-            ) : user.credits < 5 ? (
+            ) : (user.credits || 0) < 5 ? (
               <div className="text-center py-4">
                 <p className="text-xs text-muted-foreground">You need at least 5 Wheels to cash out.</p>
                 <div className="w-full bg-muted rounded-full h-2 mt-3">
@@ -238,7 +238,7 @@ export default function RewardStore() {
                     style={{ width: `${Math.min(100, ((user.credits || 0) / 5) * 100)}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1">{user.credits || 0}/5 Wheels</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{(user.credits || 0).toFixed(2)}/5 Wheels</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -260,7 +260,7 @@ export default function RewardStore() {
                     variant="outline"
                     size="sm"
                     className="text-xs font-bold h-10 px-3"
-                    onClick={() => setCashoutAmount(String(user.credits))}
+                    onClick={() => setCashoutAmount(String(Math.floor(user.credits || 0)))}
                     data-testid="button-cashout-max"
                   >
                     Max

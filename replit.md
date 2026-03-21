@@ -25,7 +25,7 @@ The application employs a mobile-first, app-like UI with bottom tab navigation, 
 - **Multi-Language**: Supports 14 languages with automatic translation in DMs and a "Translate" button, powered by MyMemory API.
 - **GPS/Map**: Uses Mapbox GL JS for live GPS tracking, context-aware map markers, and destination geocoding.
 - **Profile Photo Storage**: Client-side resized photos stored as base64 in the database.
-- **Prepaid Hop System**: All hops use Stripe PaymentIntent with manual capture (auth-hold), capturing payment on match and refunding on cancel/timeout. Rate is $1.00/mile, minimum $1.00.
+- **Prepaid Hop System**: All hops use Stripe PaymentIntent with saved card (setup_future_usage: off_session), capturing payment on match and refunding on cancel/timeout. Rate is $1.50/mile, minimum $1.50. Users can also pay with Wheels (1 Wheel = $1).
 - **Intelligent Commute Layer (FlexHop/PowerHop)**: Built on "MagicGPS" for features like "Flow Mode" (auto-activation based on movement), "Route Sync Matching" (vector-based direction), "Commute Circles" for group matching, "Soft Time Windows" (tracking activity patterns), "On-the-Way Ping" for nearby drivers, "Drift Catch" for walking detection nudges, "Micro-Hop" priority for short rides, a "Confidence System" for route recognition, and "One-Tap Repeat Routes."
 - **Flyers Feature**: Provides downloadable marketing materials for users to promote Short Hop.
 - **ID Verification**: Users can submit government ID photo + selfie for admin review. Admin Verify ID tab shows pending submissions with approve/reject buttons. Verified users get a blue checkmark badge on their profile photo (Settings) and a shield icon next to their name in Community profiles. Schema fields: `legalName`, `idVerified`, `idVerificationStatus`, `idPhoto`, `idSelfie`, `idSubmittedAt`. Photos stripped from public API responses via `sanitizeUser`.
@@ -37,7 +37,7 @@ The application employs a mobile-first, app-like UI with bottom tab navigation, 
 - **Authentication**: Passport.js with local strategy and PostgreSQL-backed session management for 30-day persistence.
 - **Data Validation**: Zod schemas.
 - **Database**: PostgreSQL with Drizzle ORM.
-- **Pricing Logic**: Drivers earn $1.00/mile; riders pay $1.00/mile (minimum $1.00). All payments via Stripe (no cash). Prepaid auth-hold system. Tips are allowed.
+- **Pricing Logic**: Drivers earn $1.00/mile; riders pay $1.50/mile (minimum $1.50). All payments via Stripe (no cash) or Wheels (1 Wheel = $1, fractional allowed e.g. 1.14). Prepaid auth-hold system. Tips are allowed. Wheels column uses `doublePrecision` type for fractional values.
 - **Super Admin Role**: A single designated super-admin account.
 - **Navigation**: Bottom navigation with "Connect," "Schedule," "Hop" (center), "Tailor," and "Profile" tabs.
 

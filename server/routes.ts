@@ -3098,7 +3098,7 @@ export async function registerRoutes(
       if (!user) return res.status(404).json({ message: "User not found" });
       if (!user.stripeAccountId) return res.status(400).json({ message: "Stripe not connected" });
       if ((user.credits || 0) < amount) {
-        return res.status(400).json({ message: `Not enough Wheels. You have ${user.credits || 0}.` });
+        return res.status(400).json({ message: `Not enough Wheels. You have ${(user.credits || 0).toFixed(2)}.` });
       }
 
       const stripe = await getUncachableStripeClient();
@@ -3145,9 +3145,9 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid distance" });
       }
 
-      const RIDER_RATE_PER_MILE_CENTS = 100;
+      const RIDER_RATE_PER_MILE_CENTS = 150;
       const amountCents = Math.round(distance * RIDER_RATE_PER_MILE_CENTS);
-      const minChargeCents = 100;
+      const minChargeCents = 150;
       const finalAmount = Math.max(amountCents, minChargeCents);
 
       const user = await storage.getUser(req.user.id);
@@ -3164,6 +3164,16 @@ export async function registerRoutes(
         await db.update(users).set({ stripeCustomerId: customerId }).where(eq(users.id, user.id));
       }
 
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: customerId,
+        type: 'card',
+      });
+
+      if (paymentMethods.data.length === 0) {
+        await storage.updateUser(req.user.id, { stripeSetupCompleted: false });
+        return res.status(400).json({ message: "No payment method on file. Please complete card verification first.", needsSetup: true });
+      }
+
       const depTime = departureTime ? new Date(departureTime) : new Date(Date.now() + 5 * 60000);
       const arrTime = arrivalDeadline ? new Date(arrivalDeadline) : new Date(depTime.getTime() + 45 * 60000);
       const windowExpiry = new Date(depTime.getTime() + 30 * 60000);
@@ -3172,7 +3182,9 @@ export async function registerRoutes(
         amount: finalAmount,
         currency: 'usd',
         customer: customerId,
+        payment_method: paymentMethods.data[0].id,
         confirm: true,
+        off_session: true,
         metadata: {
           userId: String(req.user.id),
           distanceMiles: String(distance),
@@ -3195,6 +3207,53 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/stripe/pay-with-wheels', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { distanceMiles, departureTime, arrivalDeadline, startLocation, endLocation, startLat, startLng, endLat, endLng } = req.body;
+      const distance = Number(distanceMiles);
+      if (!distance || distance <= 0 || distance > 100) {
+        return res.status(400).json({ message: "Invalid distance" });
+      }
+
+      const RIDER_RATE_PER_MILE_CENTS = 150;
+      const amountCents = Math.round(distance * RIDER_RATE_PER_MILE_CENTS);
+      const minChargeCents = 150;
+      const finalAmount = Math.max(amountCents, minChargeCents);
+      const wheelsCost = finalAmount / 100;
+
+      const user = await storage.getUser(req.user.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const userWheels = user.credits || 0;
+      if (userWheels < wheelsCost) {
+        return res.status(400).json({ message: `Not enough Wheels. You have ${userWheels.toFixed(2)} but need ${wheelsCost.toFixed(2)}.` });
+      }
+
+      await db.update(users)
+        .set({ credits: userWheels - wheelsCost })
+        .where(eq(users.id, user.id));
+
+      const depTime = departureTime ? new Date(departureTime) : new Date(Date.now() + 5 * 60000);
+      const arrTime = arrivalDeadline ? new Date(arrivalDeadline) : new Date(depTime.getTime() + 45 * 60000);
+      const windowExpiry = new Date(depTime.getTime() + 30 * 60000);
+
+      res.json({
+        paymentIntentId: `wheels_${Date.now()}_${user.id}`,
+        amount: finalAmount,
+        wheelsCost,
+        newBalance: userWheels - wheelsCost,
+        departureTime: depTime.toISOString(),
+        arrivalDeadline: arrTime.toISOString(),
+        timeWindowExpiry: windowExpiry.toISOString(),
+        paidWithWheels: true,
+      });
+    } catch (e: any) {
+      console.error('Pay with wheels error:', e.message);
+      res.status(500).json({ message: "Failed to process wheel payment" });
+    }
+  });
+
   app.post('/api/stripe/create-hop-payment', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
@@ -3205,9 +3264,9 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid distance" });
       }
 
-      const RIDER_RATE_PER_MILE_CENTS = 100;
+      const RIDER_RATE_PER_MILE_CENTS = 150;
       const amountCents = Math.round(distance * RIDER_RATE_PER_MILE_CENTS);
-      const minChargeCents = 100;
+      const minChargeCents = 150;
       const finalAmount = Math.max(amountCents, minChargeCents);
 
       const stripe = await getUncachableStripeClient();
@@ -3251,8 +3310,19 @@ export async function registerRoutes(
         return res.json({ alreadyCompleted: true, message: "Account already activated" });
       }
       const stripe = await getUncachableStripeClient();
+
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          metadata: { userId: String(user.id), username: user.username },
+        });
+        customerId = customer.id;
+        await db.update(users).set({ stripeCustomerId: customerId }).where(eq(users.id, user.id));
+      }
+
       const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
       const checkoutSession = await stripe.checkout.sessions.create({
+        customer: customerId,
         payment_method_types: ['card'],
         line_items: [{
           price_data: {
@@ -3266,6 +3336,9 @@ export async function registerRoutes(
           quantity: 1,
         }],
         mode: 'payment',
+        payment_intent_data: {
+          setup_future_usage: 'off_session',
+        },
         metadata: {
           userId: String(req.user.id),
           type: 'setup_fee',
