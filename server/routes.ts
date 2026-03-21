@@ -3549,6 +3549,32 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/policy', async (_req, res) => {
+    try {
+      const policy = await storage.getPolicy("unified");
+      if (policy) {
+        res.json({ content: policy.content, updatedAt: policy.updatedAt });
+      } else {
+        const legacyPrivacy = await storage.getPolicy("privacy");
+        const legacyTerms = await storage.getPolicy("terms");
+        const legacySafety = await storage.getPolicy("safety");
+        const parts = [legacyPrivacy?.content, legacyTerms?.content, legacySafety?.content].filter(Boolean);
+        if (parts.length > 0) {
+          const combined = parts.join("\n\n⸻\n\n");
+          const latest = [legacyPrivacy?.updatedAt, legacyTerms?.updatedAt, legacySafety?.updatedAt]
+            .filter(Boolean)
+            .sort()
+            .pop() || null;
+          res.json({ content: combined, updatedAt: latest });
+        } else {
+          res.json({ content: null, updatedAt: null });
+        }
+      }
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get('/api/admin/policies', requireAdmin, async (_req, res) => {
     try {
       const allPolicies = await storage.getAllPolicies();
@@ -3561,7 +3587,7 @@ export async function registerRoutes(
   app.post('/api/admin/policies/:type', requireAdmin, async (req, res) => {
     try {
       const type = req.params.type;
-      if (!["privacy", "safety", "terms"].includes(type)) {
+      if (!["privacy", "safety", "terms", "unified"].includes(type)) {
         return res.status(400).json({ message: "Invalid policy type" });
       }
       const { content } = req.body;

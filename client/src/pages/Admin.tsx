@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award, FileText, Save, Copy } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award, FileText, Save, Copy, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -1433,13 +1433,10 @@ type AmbassadorReq = { id: number; ambassadorId: number; targetUserId: number; a
 
 function PoliciesTab() {
   const queryClient = useQueryClient();
-  const [privacyContent, setPrivacyContent] = useState("");
-  const [safetyContent, setSafetyContent] = useState("");
-  const [termsContent, setTermsContent] = useState("");
-  const [privacySaving, setPrivacySaving] = useState(false);
-  const [safetySaving, setSafetySaving] = useState(false);
-  const [termsSaving, setTermsSaving] = useState(false);
+  const [policyContent, setPolicyContent] = useState("");
+  const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { data: policies } = useQuery<{ policyType: string; content: string; updatedAt: string }[]>({
     queryKey: ["/api/admin/policies"],
@@ -1447,22 +1444,32 @@ function PoliciesTab() {
 
   useEffect(() => {
     if (policies && !initialized) {
-      const privacy = policies.find(p => p.policyType === "privacy");
-      const safety = policies.find(p => p.policyType === "safety");
-      const terms = policies.find(p => p.policyType === "terms");
-      if (privacy) setPrivacyContent(privacy.content);
-      if (safety) setSafetyContent(safety.content);
-      if (terms) setTermsContent(terms.content);
+      const unified = policies.find(p => p.policyType === "unified");
+      if (unified) {
+        setPolicyContent(unified.content);
+      } else {
+        const legacyParts = ["privacy", "terms", "safety"]
+          .map(t => policies.find(p => p.policyType === t)?.content)
+          .filter(Boolean);
+        if (legacyParts.length > 0) {
+          setPolicyContent(legacyParts.join("\n\n⸻\n\n"));
+        }
+      }
       setInitialized(true);
     }
   }, [policies, initialized]);
 
-  const savePolicy = async (type: string, content: string, setSaving: (b: boolean) => void) => {
+  const savePolicy = async () => {
+    if (!policyContent.trim()) {
+      showFlash("❌", "Policy content cannot be empty", "error");
+      return;
+    }
     setSaving(true);
     try {
-      await apiRequest("POST", `/api/admin/policies/${type}`, { content });
+      await apiRequest("POST", "/api/admin/policies/unified", { content: policyContent });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/policies"] });
-      showFlash("✅", `${type === "privacy" ? "Privacy" : "Safety"} policy updated`, "success");
+      queryClient.invalidateQueries({ queryKey: ["/api/policy"] });
+      showFlash("✅", "Privacy Policy & Terms updated", "success");
     } catch {
       showFlash("❌", "Failed to save policy", "error");
     } finally {
@@ -1470,139 +1477,88 @@ function PoliciesTab() {
     }
   };
 
-  const copyToClipboard = async (text: string, label: string) => {
+  const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(text);
-      showFlash("📋", `${label} copied to clipboard`, "success");
+      await navigator.clipboard.writeText(policyContent);
+      setCopied(true);
+      showFlash("📋", "Policy copied to clipboard", "success");
+      setTimeout(() => setCopied(false), 2000);
     } catch {
-      showFlash("❌", "Failed to copy", "error");
+      const textarea = document.createElement("textarea");
+      textarea.value = policyContent;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+        setCopied(true);
+        showFlash("📋", "Policy copied to clipboard", "success");
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        showFlash("❌", "Failed to copy — try selecting the text manually", "error");
+      }
+      document.body.removeChild(textarea);
     }
   };
 
+  const unifiedPolicy = policies?.find(p => p.policyType === "unified");
+  const charCount = policyContent.length;
+
   return (
-    <div className="space-y-6" data-testid="admin-policies-tab">
-      <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-transparent">
+    <div className="space-y-4" data-testid="admin-policies-tab">
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-blue-600" />
-              <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Privacy Policy</p>
+              <Shield className="w-5 h-5 text-primary" />
+              <p className="text-xs font-bold text-primary uppercase tracking-wider">Privacy Policy & Terms of Service</p>
             </div>
             <Button
               size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-100"
-              onClick={() => copyToClipboard(privacyContent, "Privacy Policy")}
-              data-testid="button-copy-privacy-policy"
-              title="Copy policy content"
+              variant="outline"
+              className={`h-8 px-3 text-xs font-bold transition-all ${copied ? "bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400" : "text-primary border-primary/30 hover:bg-primary/10"}`}
+              onClick={copyToClipboard}
+              data-testid="button-copy-policy"
+              title="Copy full policy to clipboard"
             >
-              <Copy className="w-4 h-4" />
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 mr-1.5" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 mr-1.5" />
+                  Copy Policy
+                </>
+              )}
             </Button>
           </div>
+          <p className="text-xs text-foreground/50 dark:text-foreground/60 mb-3">
+            Edit the unified Privacy Policy & Terms of Service below. Changes are reflected on the /privacy page immediately after saving.
+          </p>
           <Textarea
-            placeholder="Enter privacy policy content..."
-            className="min-h-[300px] mb-4 text-sm font-mono border-blue-200 focus:border-blue-400"
-            value={privacyContent}
-            onChange={(e) => setPrivacyContent(e.target.value)}
-            data-testid="textarea-privacy-policy"
+            placeholder="Paste or type your full Privacy Policy & Terms of Service here..."
+            className="min-h-[500px] mb-3 text-sm font-mono border-primary/20 focus:border-primary/40 leading-relaxed"
+            value={policyContent}
+            onChange={(e) => setPolicyContent(e.target.value)}
+            data-testid="textarea-policy"
           />
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-            {policies?.find(p => p.policyType === "privacy")?.updatedAt && (
-              <p>Last updated: {new Date(policies.find(p => p.policyType === "privacy")!.updatedAt).toLocaleDateString()}</p>
+          <div className="flex items-center justify-between text-xs text-foreground/40 dark:text-foreground/50 mb-4">
+            <span>{charCount.toLocaleString()} characters</span>
+            {unifiedPolicy?.updatedAt && (
+              <span>Last saved: {new Date(unifiedPolicy.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
             )}
           </div>
           <Button
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
-            onClick={() => savePolicy("privacy", privacyContent, setPrivacySaving)}
-            disabled={privacySaving}
-            data-testid="button-save-privacy-policy"
+            className="w-full bg-primary hover:bg-primary/90 text-white font-bold"
+            onClick={savePolicy}
+            disabled={saving}
+            data-testid="button-save-policy"
           >
-            {privacySaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            {privacySaving ? "Saving..." : "Save Privacy Policy"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/5 to-transparent">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-orange-600" />
-              <p className="text-xs font-bold text-orange-600 uppercase tracking-wider">Safety Policy</p>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0 text-orange-600 hover:bg-orange-100"
-              onClick={() => copyToClipboard(safetyContent, "Safety Policy")}
-              data-testid="button-copy-safety-policy"
-              title="Copy policy content"
-            >
-              <Copy className="w-4 h-4" />
-            </Button>
-          </div>
-          <Textarea
-            placeholder="Enter safety policy content..."
-            className="min-h-[300px] mb-4 text-sm font-mono border-orange-200 focus:border-orange-400"
-            value={safetyContent}
-            onChange={(e) => setSafetyContent(e.target.value)}
-            data-testid="textarea-safety-policy"
-          />
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-            {policies?.find(p => p.policyType === "safety")?.updatedAt && (
-              <p>Last updated: {new Date(policies.find(p => p.policyType === "safety")!.updatedAt).toLocaleDateString()}</p>
-            )}
-          </div>
-          <Button
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold"
-            onClick={() => savePolicy("safety", safetyContent, setSafetySaving)}
-            disabled={safetySaving}
-            data-testid="button-save-safety-policy"
-          >
-            {safetySaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            {safetySaving ? "Saving..." : "Save Safety Policy"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="border-purple-500/30 bg-gradient-to-br from-purple-500/5 to-transparent">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-purple-600" />
-              <p className="text-xs font-bold text-purple-600 uppercase tracking-wider">Terms of Service</p>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0 text-purple-600 hover:bg-purple-100"
-              onClick={() => copyToClipboard(termsContent, "Terms of Service")}
-              data-testid="button-copy-terms-policy"
-              title="Copy policy content"
-            >
-              <Copy className="w-4 h-4" />
-            </Button>
-          </div>
-          <Textarea
-            placeholder="Enter terms of service content..."
-            className="min-h-[300px] mb-4 text-sm font-mono border-purple-200 focus:border-purple-400"
-            value={termsContent}
-            onChange={(e) => setTermsContent(e.target.value)}
-            data-testid="textarea-terms-policy"
-          />
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-            {policies?.find(p => p.policyType === "terms")?.updatedAt && (
-              <p>Last updated: {new Date(policies.find(p => p.policyType === "terms")!.updatedAt).toLocaleDateString()}</p>
-            )}
-          </div>
-          <Button
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold"
-            onClick={() => savePolicy("terms", termsContent, setTermsSaving)}
-            disabled={termsSaving}
-            data-testid="button-save-terms-policy"
-          >
-            {termsSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            {termsSaving ? "Saving..." : "Save Terms of Service"}
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {saving ? "Saving..." : "Save Policy"}
           </Button>
         </CardContent>
       </Card>
