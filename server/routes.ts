@@ -3657,5 +3657,40 @@ export async function registerRoutes(
     }
   }, 60000);
 
+  setInterval(async () => {
+    try {
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+      const pendingVerifications = await db.select().from(users)
+        .where(and(
+          eq(users.idVerificationStatus, "pending"),
+          lt(users.idSubmittedAt as any, threeDaysAgo)
+        ));
+
+      for (const user of pendingVerifications) {
+        await db.update(users).set({
+          idVerified: true,
+          idVerificationStatus: "approved",
+        }).where(eq(users.id, user.id));
+        
+        const todayCount = await storage.getNotificationCountToday(user.id);
+        if (todayCount < 5) {
+          await storage.createNotification({
+            userId: user.id,
+            type: "system",
+            title: "ID Verified! 🛡️",
+            message: "Your identity has been verified. You now have a trust badge on your profile!",
+            isRead: false,
+          });
+        }
+      }
+
+      if (pendingVerifications.length > 0) {
+        console.log(`Auto-approved ${pendingVerifications.length} ID verification(s) after 3 days of inactivity`);
+      }
+    } catch (e: any) {
+      console.error('Auto-approve ID verification error:', e.message);
+    }
+  }, 3600000);
+
   return httpServer;
 }
