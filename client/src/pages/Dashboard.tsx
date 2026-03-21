@@ -23,7 +23,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import type { SavedRoute } from "@shared/schema";
-import { CommuteCircles } from "@/components/CommuteCircles";
+import { StarHoppers } from "@/components/StarHoppers";
 
 const NOTIF_STORAGE_KEY = "shorthop-notification-preferences";
 
@@ -554,8 +554,8 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {activeTab === "driver" && user && (
-          <CommuteCircles userId={user.id} />
+        {user && (
+          <StarHoppers userId={user.id} />
         )}
 
         <Card className="border-border/40" data-testid="card-tailor-vibe">

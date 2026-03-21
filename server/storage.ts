@@ -69,10 +69,12 @@ import {
   type InsertSavedRoute,
   commuteCircles,
   commuteCircleMembers,
+  starHoppers,
   userActivityWindows,
   type CommuteCircle,
   type InsertCommuteCircle,
   type CommuteCircleMember,
+  type StarHopper,
   type UserActivityWindow,
 } from "@shared/schema";
 
@@ -129,6 +131,12 @@ export interface IStorage {
   getUserCircles(userId: number): Promise<CommuteCircle[]>;
   getCircleMemberUserIds(circleId: number): Promise<number[]>;
   getSharedCircleUserIds(userId: number): Promise<number[]>;
+
+  getStarHoppers(userId: number): Promise<StarHopper[]>;
+  addStarHopper(userId: number, starUserId: number): Promise<StarHopper>;
+  removeStarHopper(userId: number, starUserId: number): Promise<void>;
+  getStarHopperUserIds(userId: number): Promise<number[]>;
+  isStarHopper(userId: number, otherUserId: number): Promise<boolean>;
 
   getUserActivityWindows(userId: number): Promise<UserActivityWindow[]>;
   upsertActivityWindow(userId: number, dayOfWeek: number, startHour: number, endHour: number): Promise<UserActivityWindow>;
@@ -529,6 +537,31 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return [...new Set(peerMembers.map(m => m.userId))];
+  }
+
+  async getStarHoppers(userId: number): Promise<StarHopper[]> {
+    return await db.select().from(starHoppers).where(eq(starHoppers.userId, userId)).orderBy(desc(starHoppers.createdAt));
+  }
+
+  async addStarHopper(userId: number, starUserId: number): Promise<StarHopper> {
+    const existing = await db.select().from(starHoppers).where(and(eq(starHoppers.userId, userId), eq(starHoppers.starUserId, starUserId)));
+    if (existing.length > 0) return existing[0];
+    const [created] = await db.insert(starHoppers).values({ userId, starUserId }).returning();
+    return created;
+  }
+
+  async removeStarHopper(userId: number, starUserId: number): Promise<void> {
+    await db.delete(starHoppers).where(and(eq(starHoppers.userId, userId), eq(starHoppers.starUserId, starUserId)));
+  }
+
+  async getStarHopperUserIds(userId: number): Promise<number[]> {
+    const stars = await db.select({ starUserId: starHoppers.starUserId }).from(starHoppers).where(eq(starHoppers.userId, userId));
+    return stars.map(s => s.starUserId);
+  }
+
+  async isStarHopper(userId: number, otherUserId: number): Promise<boolean> {
+    const [result] = await db.select().from(starHoppers).where(and(eq(starHoppers.userId, userId), eq(starHoppers.starUserId, otherUserId)));
+    return !!result;
   }
 
   async getUserActivityWindows(userId: number): Promise<UserActivityWindow[]> {

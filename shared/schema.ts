@@ -501,6 +501,13 @@ export const commuteCircleMembers = pgTable("commute_circle_members", {
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
+export const starHoppers = pgTable("star_hoppers", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  starUserId: integer("star_user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const userActivityWindows = pgTable("user_activity_windows", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
@@ -512,12 +519,15 @@ export const userActivityWindows = pgTable("user_activity_windows", {
 
 export const insertCommuteCircleSchema = createInsertSchema(commuteCircles).omit({ id: true, createdAt: true });
 export const insertCommuteCircleMemberSchema = createInsertSchema(commuteCircleMembers).omit({ id: true, joinedAt: true });
+export const insertStarHopperSchema = createInsertSchema(starHoppers).omit({ id: true, createdAt: true });
 export const insertActivityWindowSchema = createInsertSchema(userActivityWindows).omit({ id: true });
 
 export type CommuteCircle = typeof commuteCircles.$inferSelect;
 export type InsertCommuteCircle = z.infer<typeof insertCommuteCircleSchema>;
 export type CommuteCircleMember = typeof commuteCircleMembers.$inferSelect;
 export type InsertCommuteCircleMember = z.infer<typeof insertCommuteCircleMemberSchema>;
+export type StarHopper = typeof starHoppers.$inferSelect;
+export type InsertStarHopper = z.infer<typeof insertStarHopperSchema>;
 export type UserActivityWindow = typeof userActivityWindows.$inferSelect;
 export type InsertActivityWindow = z.infer<typeof insertActivityWindowSchema>;
 

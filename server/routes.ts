@@ -12,7 +12,7 @@ import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
 import { db } from "./db";
 import { notifications, founderMessages, vipMessages, shortHops, users, donations } from "@shared/schema";
-import { eq, and, lt, isNotNull, desc } from "drizzle-orm";
+import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
   if (!user) return user;
@@ -283,34 +283,47 @@ async function tryAutoMatch(hopId: number) {
     if (!hop || hop.status !== "requested") return;
 
     const activeDrivers = await storage.getActiveDrivers();
+    const hopperStarIds = await storage.getStarHopperUserIds(hop.walkerId);
+    const starSet = new Set(hopperStarIds);
+
+    const eligibleDrivers: { driver: any; isStar: boolean }[] = [];
     for (const driver of activeDrivers) {
       const driverLoc = liveLocations.get(driver.id);
       const driverRoutes = await storage.getRoutes(driver.id);
       const driverSeats = driver.availableSeats || 1;
 
       if (isHopMatchForDriver(hop, driverSeats, driverLoc, driverRoutes)) {
-        const matched = await storage.acceptHop(hopId, driver.id);
-
-        if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
-          await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
-        }
-
-        await storage.createNotification({
-          userId: driver.id,
-          type: "match_found",
-          title: "Match Found! 🎯",
-          message: `A hopper going to ${hop.endLocation} matched with your route.`,
-          isRead: false,
-        });
-        await storage.createNotification({
-          userId: hop.walkerId,
-          type: "match_found",
-          title: "Driver Found! 🚗",
-          message: `You've been matched with a driver heading your way.`,
-          isRead: false,
-        });
-        return;
+        const hopperStarredDriver = starSet.has(driver.id);
+        const driverStarredHopper = await storage.isStarHopper(driver.id, hop.walkerId);
+        eligibleDrivers.push({ driver, isStar: hopperStarredDriver || driverStarredHopper });
       }
+    }
+
+    eligibleDrivers.sort((a, b) => (b.isStar ? 1 : 0) - (a.isStar ? 1 : 0));
+
+    if (eligibleDrivers.length > 0) {
+      const best = eligibleDrivers[0];
+      const matched = await storage.acceptHop(hopId, best.driver.id);
+
+      if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
+        await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
+      }
+
+      const starLabel = best.isStar ? " Your Star Hopper!" : "";
+      await storage.createNotification({
+        userId: best.driver.id,
+        type: "match_found",
+        title: "Match Found! 🎯",
+        message: `A hopper going to ${hop.endLocation} matched with your route.`,
+        isRead: false,
+      });
+      await storage.createNotification({
+        userId: hop.walkerId,
+        type: "match_found",
+        title: best.isStar ? "Star Match! ⭐" : "Driver Found! 🚗",
+        message: `You've been matched with a driver heading your way.${starLabel}`,
+        isRead: false,
+      });
     }
   } catch (err) {
     console.error("Auto-match error:", err);
@@ -325,32 +338,44 @@ async function tryAutoMatchForDriver(driverId: number) {
     const driverLoc = liveLocations.get(driverId);
     const driverRoutes = await storage.getRoutes(driverId);
     const driverSeats = driver.availableSeats || 1;
+    const driverStarIds = await storage.getStarHopperUserIds(driverId);
+    const starSet = new Set(driverStarIds);
 
     const allAvailable = await storage.getAvailableHops();
+    const eligibleHops: { hop: any; isStar: boolean }[] = [];
     for (const hop of allAvailable) {
       if (isHopMatchForDriver(hop, driverSeats, driverLoc, driverRoutes)) {
-        const matched = await storage.acceptHop(hop.id, driverId);
-
-        if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
-          await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
-        }
-
-        await storage.createNotification({
-          userId: driverId,
-          type: "match_found",
-          title: "Match Found! 🎯",
-          message: `A hopper going to ${hop.endLocation} matched with your route.`,
-          isRead: false,
-        });
-        await storage.createNotification({
-          userId: hop.walkerId,
-          type: "match_found",
-          title: "Driver Found! 🚗",
-          message: `You've been matched with a driver heading your way.`,
-          isRead: false,
-        });
-        return;
+        const driverStarredHopper = starSet.has(hop.walkerId);
+        const hopperStarredDriver = await storage.isStarHopper(hop.walkerId, driverId);
+        eligibleHops.push({ hop, isStar: driverStarredHopper || hopperStarredDriver });
       }
+    }
+
+    eligibleHops.sort((a, b) => (b.isStar ? 1 : 0) - (a.isStar ? 1 : 0));
+
+    if (eligibleHops.length > 0) {
+      const best = eligibleHops[0];
+      const matched = await storage.acceptHop(best.hop.id, driverId);
+
+      if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
+        await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
+      }
+
+      const starLabel = best.isStar ? " Your Star Hopper!" : "";
+      await storage.createNotification({
+        userId: driverId,
+        type: "match_found",
+        title: best.isStar ? "Star Match! ⭐" : "Match Found! 🎯",
+        message: `A hopper going to ${best.hop.endLocation} matched with your route.${starLabel}`,
+        isRead: false,
+      });
+      await storage.createNotification({
+        userId: best.hop.walkerId,
+        type: "match_found",
+        title: "Driver Found! 🚗",
+        message: `You've been matched with a driver heading your way.`,
+        isRead: false,
+      });
     }
   } catch (err) {
     console.error("Auto-match for driver error:", err);
@@ -2215,79 +2240,71 @@ export async function registerRoutes(
     }
   });
 
-  app.get('/api/commute-circles', async (req, res) => {
+  app.get('/api/star-hoppers', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const circles = await storage.getCommuteCircles();
-      const userCircles = await storage.getUserCircles(req.user!.id);
-      const userCircleIds = new Set(userCircles.map(c => c.id));
-      const enriched = await Promise.all(circles.map(async (c) => {
-        const members = await storage.getCircleMembers(c.id);
-        return { ...c, memberCount: members.length, isMember: userCircleIds.has(c.id), isCreator: c.creatorId === req.user!.id };
+      const stars = await storage.getStarHoppers(req.user!.id);
+      const enriched = await Promise.all(stars.map(async (s) => {
+        const u = await storage.getUser(s.starUserId);
+        return {
+          id: s.id,
+          starUserId: s.starUserId,
+          username: u?.username || "Unknown",
+          isDriver: u?.isDriver || false,
+          idVerified: u?.idVerified || false,
+          createdAt: s.createdAt,
+        };
       }));
       res.json(enriched);
     } catch (err) {
-      res.status(500).json({ message: "Failed to load circles" });
+      res.status(500).json({ message: "Failed to load star hoppers" });
     }
   });
 
-  app.post('/api/commute-circles', async (req, res) => {
+  app.post('/api/star-hoppers', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const { name, description, corridor } = req.body;
-      if (!name) return res.status(400).json({ message: "Name required" });
-      const circle = await storage.createCommuteCircle({ name, description, corridor, creatorId: req.user!.id });
-      res.json(circle);
+      const { starUserId } = req.body;
+      if (!starUserId) return res.status(400).json({ message: "Star user ID required" });
+      if (starUserId === req.user!.id) return res.status(400).json({ message: "Cannot star yourself" });
+      const starUser = await storage.getUser(starUserId);
+      if (!starUser) return res.status(404).json({ message: "User not found" });
+      const star = await storage.addStarHopper(req.user!.id, starUserId);
+      res.json({ ...star, username: starUser.username });
     } catch (err) {
-      res.status(500).json({ message: "Failed to create circle" });
+      res.status(500).json({ message: "Failed to add star hopper" });
     }
   });
 
-  app.post('/api/commute-circles/:id/join', async (req, res) => {
+  app.delete('/api/star-hoppers/:starUserId', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const id = parseInt(req.params.id);
-      const member = await storage.joinCircle(id, req.user!.id);
-      res.json(member);
-    } catch (err) {
-      res.status(500).json({ message: "Failed to join circle" });
-    }
-  });
-
-  app.post('/api/commute-circles/:id/leave', async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    try {
-      const id = parseInt(req.params.id);
-      await storage.leaveCircle(id, req.user!.id);
+      const starUserId = parseInt(req.params.starUserId);
+      await storage.removeStarHopper(req.user!.id, starUserId);
       res.json({ success: true });
     } catch (err) {
-      res.status(500).json({ message: "Failed to leave circle" });
+      res.status(500).json({ message: "Failed to remove star hopper" });
     }
   });
 
-  app.delete('/api/commute-circles/:id', async (req, res) => {
+  app.get('/api/star-hoppers/search', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const id = parseInt(req.params.id);
-      await storage.deleteCommuteCircle(id, req.user!.id);
-      res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ message: "Failed to delete circle" });
-    }
-  });
-
-  app.get('/api/commute-circles/:id/members', async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    try {
-      const id = parseInt(req.params.id);
-      const members = await storage.getCircleMembers(id);
-      const memberUsers = await Promise.all(members.map(async (m) => {
-        const u = await storage.getUser(m.userId);
-        return { id: m.id, userId: m.userId, username: u?.username || "Unknown", joinedAt: m.joinedAt };
+      const query = (req.query.q as string || "").trim().toLowerCase();
+      if (query.length < 2) return res.json([]);
+      const allUsers = await db.select({ id: users.id, username: users.username, isDriver: users.isDriver, idVerified: users.idVerified }).from(users).where(sql`LOWER(${users.username}) LIKE ${`%${query}%`}`).limit(10);
+      const myStars = await storage.getStarHopperUserIds(req.user!.id);
+      const myStarSet = new Set(myStars);
+      const results = allUsers.filter(u => u.id !== req.user!.id).map(u => ({
+        id: u.id,
+        username: u.username,
+        isDriver: u.isDriver,
+        idVerified: u.idVerified,
+        isStarred: myStarSet.has(u.id),
       }));
-      res.json(memberUsers);
+      res.json(results);
     } catch (err) {
-      res.status(500).json({ message: "Failed to load members" });
+      res.status(500).json({ message: "Search failed" });
     }
   });
 
