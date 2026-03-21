@@ -954,7 +954,6 @@ function DriveNowPanel({ user }: { user: User }) {
       const etaMins = Math.round(route.duration / 60);
       setRouteInfo({ distance: `${distMiles} mi`, eta: `${etaMins} min` });
       setRouteGenerated(true);
-      showFlash("🗺️", `Route: ${distMiles} mi · ${etaMins} min`, "success");
     } catch {
       showFlash("⚠️", "Error calculating route", "error");
     }
