@@ -1021,9 +1021,9 @@ function DriveNowPanel({ user }: { user: User }) {
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-base font-extrabold text-foreground/70 text-center flex-1" data-testid="text-driver-greeting">
+          <p className="text-base font-extrabold text-orange-600 dark:text-orange-400 text-center flex-1" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5), 0 0 12px rgba(249,115,22,0.5), 0 0 24px rgba(249,115,22,0.25)" }} data-testid="text-driver-greeting">
             happy driving,{" "}
-            <span className="text-foreground font-black">{user.username}</span>
+            <span className="font-black text-orange-500 dark:text-orange-300" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.6), 0 0 16px rgba(249,115,22,0.6), 0 0 32px rgba(249,115,22,0.3)" }}>{user.username}</span>
           </p>
           <a
             href="tel:8594202312"
@@ -1047,9 +1047,9 @@ function DriveNowPanel({ user }: { user: User }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-base font-extrabold text-foreground/70 text-center flex-1" data-testid="text-driver-greeting">
+        <p className="text-base font-extrabold text-orange-600 dark:text-orange-400 text-center flex-1" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5), 0 0 12px rgba(249,115,22,0.5), 0 0 24px rgba(249,115,22,0.25)" }} data-testid="text-driver-greeting">
           happy driving,{" "}
-          <span className="text-foreground font-black">{user.username}</span>
+          <span className="font-black text-orange-500 dark:text-orange-300" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.6), 0 0 16px rgba(249,115,22,0.6), 0 0 32px rgba(249,115,22,0.3)" }}>{user.username}</span>
         </p>
         <a
           href="tel:8594202312"
@@ -2054,12 +2054,12 @@ function InstaHopView({ user }: { user: User }) {
                           key="greeting"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="text-base font-extrabold text-center mb-1"
-                          style={{ color: "var(--foreground)", textShadow: "0 1px 3px rgba(0,0,0,0.15), 0 0 8px rgba(249,115,22,0.25)" }}
+                          className="text-base font-extrabold text-center mb-1 text-orange-600 dark:text-orange-400"
+                          style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5), 0 0 12px rgba(249,115,22,0.5), 0 0 24px rgba(249,115,22,0.25)" }}
                           data-testid="text-instahop-greeting"
                         >
                           happy hopping,{" "}
-                          <span className="font-black" style={{ color: "var(--foreground)", textShadow: "0 1px 4px rgba(249,115,22,0.4)" }}>{user.username}</span>
+                          <span className="font-black text-orange-500 dark:text-orange-300" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.6), 0 0 16px rgba(249,115,22,0.6), 0 0 32px rgba(249,115,22,0.3)" }}>{user.username}</span>
                         </motion.p>
                       )}
                     </AnimatePresence>
