@@ -111,7 +111,7 @@ export default function Leaderboard() {
                 </div>
                 <Badge className="bg-gradient-to-r from-primary/10 to-accent/10 text-foreground border-primary/20 font-bold" data-testid={`text-score-${index}`}>
                   {activeTab === "mostHops" && `${(entry as LeaderboardData["mostHops"][0]).totalHops} hops`}
-                  {activeTab === "topDrivers" && `${(entry as LeaderboardData["topDrivers"][0]).credits} 🛞`}
+                  {activeTab === "topDrivers" && `${((entry as LeaderboardData["topDrivers"][0]).credits || 0).toFixed(2)} 🛞`}
                   {activeTab === "communityHoppers" && `${(entry as LeaderboardData["communityHoppers"][0]).postCount} posts`}
                 </Badge>
               </motion.div>
