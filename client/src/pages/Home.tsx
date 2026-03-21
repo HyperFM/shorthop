@@ -1,123 +1,92 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Leaf, ShieldCheck, MapPin, Zap, Sparkles, Globe, ChevronDown, ArrowLeftRight, CheckCircle2, AlertTriangle, Car } from "lucide-react";
+import { ArrowRight, ShieldCheck, MapPin, Sparkles, Globe, ChevronDown, Star, AlertTriangle, RefreshCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import heroImg from '@assets/660BFE19-0B0D-4EAF-80FF-0BDCB97F3624_1772922571220.png';
-import featureImg from '@assets/75C22BDF-5452-40CB-AA2E-053855BC7702_1772922571220.png';
 import storesImg from '@assets/Bazaart_185A494F-721C-4A45-A827-D30BF7419E7D_1773320312839.jpeg';
 
 const LANGUAGES = [
-  { code: "en", name: "English", flag: "🇺🇸" },
-  { code: "es", name: "Español", flag: "🇪🇸" },
-  { code: "fr", name: "Français", flag: "🇫🇷" },
-  { code: "zh", name: "中文", flag: "🇨🇳" },
-  { code: "ar", name: "العربية", flag: "🇸🇦" },
-  { code: "hi", name: "हिन्दी", flag: "🇮🇳" },
-  { code: "pt", name: "Português", flag: "🇧🇷" },
-  { code: "ja", name: "日本語", flag: "🇯🇵" },
-  { code: "ko", name: "한국어", flag: "🇰🇷" },
-  { code: "de", name: "Deutsch", flag: "🇩🇪" },
-  { code: "sw", name: "Kiswahili", flag: "🇰🇪" },
-  { code: "tl", name: "Tagalog", flag: "🇵🇭" },
-  { code: "vi", name: "Tiếng Việt", flag: "🇻🇳" },
-  { code: "ru", name: "Русский", flag: "🇷🇺" },
+  { code: "en", name: "English", flag: "\u{1F1FA}\u{1F1F8}" },
+  { code: "es", name: "Espa\u00f1ol", flag: "\u{1F1EA}\u{1F1F8}" },
+  { code: "fr", name: "Fran\u00e7ais", flag: "\u{1F1EB}\u{1F1F7}" },
+  { code: "zh", name: "\u4E2D\u6587", flag: "\u{1F1E8}\u{1F1F3}" },
+  { code: "ar", name: "\u0627\u0644\u0639\u0631\u0628\u064A\u0629", flag: "\u{1F1F8}\u{1F1E6}" },
+  { code: "hi", name: "\u0939\u093F\u0928\u094D\u0926\u0940", flag: "\u{1F1EE}\u{1F1F3}" },
+  { code: "pt", name: "Portugu\u00eas", flag: "\u{1F1E7}\u{1F1F7}" },
+  { code: "ja", name: "\u65E5\u672C\u8A9E", flag: "\u{1F1EF}\u{1F1F5}" },
+  { code: "ko", name: "\uD55C\uAD6D\uC5B4", flag: "\u{1F1F0}\u{1F1F7}" },
+  { code: "de", name: "Deutsch", flag: "\u{1F1E9}\u{1F1EA}" },
+  { code: "sw", name: "Kiswahili", flag: "\u{1F1F0}\u{1F1EA}" },
+  { code: "tl", name: "Tagalog", flag: "\u{1F1F5}\u{1F1ED}" },
+  { code: "vi", name: "Ti\u1EBFng Vi\u1EC7t", flag: "\u{1F1FB}\u{1F1F3}" },
+  { code: "ru", name: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439", flag: "\u{1F1F7}\u{1F1FA}" },
 ];
 
 const HOME_TRANSLATIONS: Record<string, Record<string, string>> = {
   en: {
-    tagline: "Shared routes. Real connections.",
-    title_pre: "A Jump, Skip, and a",
-    title_hop: "Hop.",
-    walking: "Walking is the best option for your physical and financial health.",
-    hop_moves: "A Hop moves you affordably forward.",
-    description: "ShortHop turns a driver's everyday route into an opportunity — helping others along the way, meeting new people, and earning real money, all from the comfort of their car.",
-    cooperative: "Instead of high prices and pressure, ShortHop is built on convenience, opportunity, and connection.",
+    tagline: "Move Forward with ShortHop",
+    subtitle: "Affordable, simple, and social.",
+    description: "ShortHop connects people already heading the same way. Drivers can earn and help others along their route, meet new people, and earn money. Hoppers get a convenient, low-cost ride\u2014no pressure, no extra apps.",
     your_route: "Your route. Your routine.",
-    already: "You're already heading that way…",
-    fun: "might as well have some fun. :)",
+    fun: "If you're already headed that way, why not have some fun?",
     get_started: "Get Started",
     login: "Login to Account",
-    for_walkers: "For Walkers",
-    walkers_desc: "Move forward in stages. Choose from Walk, Short Hop, Flex Hop, or Power Hop. All rides stay inside Short Hop—no more switching through multiple apps.",
+    for_hoppers: "For Walkers (Hoppers)",
+    hoppers_1: "Choose the type of ride that fits your needs.",
+    hoppers_2: "Stay inside ShortHop\u2014no switching between apps.",
+    hoppers_3: "Move forward conveniently and affordably.",
     for_drivers: "For Drivers",
-    drivers_desc: "Register your routine routes. Only pick up walkers along your exact path. Help others advance and earn Wheels you can cash out anytime.",
-    coop_title: "A cooperative network, not gig work.",
+    drivers_1: "Register your regular routes.",
+    drivers_2: "Only pick up Hoppers going along your exact path.",
+    drivers_3: "Help others and earn money you can cash out anytime.",
+    safety_title: "Safety & Trust",
+    safety_tracking: "Live Trip Tracking",
+    safety_tracking_desc: "See your matched Driver or Hopper in real time.",
+    safety_ratings: "Two-Way Ratings",
+    safety_ratings_desc: "Both Drivers and Hoppers rate each ride to build community trust.",
+    safety_reporting: "In-App Reporting",
+    safety_reporting_desc: "Flag any safety concerns, misconduct, or emergencies.",
+    safety_refunds: "Automatic Refunds",
+    safety_refunds_desc: "If a ride doesn't happen, you don't pay.",
     hopping_soon: "Hopping Soon",
     hopping_desc: "Coming to all major app stores. Subscribe through your device with Apple Pay, Google Pay, and more.",
   },
   es: {
-    tagline: "Rutas compartidas. Conexiones reales.",
-    title_pre: "Salta, brinca y un",
-    title_hop: "Hop.",
-    walking: "Caminar es la mejor opción para tu salud física y financiera.",
-    hop_moves: "Un Hop te mueve hacia adelante de forma económica.",
-    description: "ShortHop convierte la ruta diaria de un conductor en una oportunidad — ayudando a otros, conociendo gente y ganando dinero real.",
-    cooperative: "En lugar de precios altos y presión, ShortHop está construido sobre conveniencia, oportunidad y conexión.",
+    tagline: "Avanza con ShortHop",
+    subtitle: "Asequible, simple y social.",
+    description: "ShortHop conecta personas que ya van en la misma direcci\u00f3n. Los conductores ganan y ayudan a otros en su ruta. Los Hoppers obtienen un viaje conveniente y econ\u00f3mico.",
     your_route: "Tu ruta. Tu rutina.",
-    already: "Ya vas en esa dirección…",
-    fun: "mejor diviértete. :)",
+    fun: "Si ya vas por ah\u00ed, \u00bfpor qu\u00e9 no divertirte?",
     get_started: "Comenzar",
-    login: "Iniciar Sesión",
-    for_walkers: "Para Caminantes",
-    walkers_desc: "Avanza por etapas. Elige entre Walk, Short Hop, Flex Hop o Power Hop. Todos los viajes en Short Hop.",
+    login: "Iniciar Sesi\u00f3n",
+    for_hoppers: "Para Caminantes (Hoppers)",
+    hoppers_1: "Elige el tipo de viaje que se adapte a tus necesidades.",
+    hoppers_2: "Qu\u00e9date en ShortHop\u2014sin cambiar entre apps.",
+    hoppers_3: "Avanza de forma conveniente y econ\u00f3mica.",
     for_drivers: "Para Conductores",
-    drivers_desc: "Registra tus rutas habituales. Solo recoge caminantes en tu camino. Ayuda y gana Wheels.",
-    coop_title: "Una red cooperativa, no trabajo temporal.",
-    hopping_soon: "Próximamente",
-    hopping_desc: "Llegando a todas las tiendas de apps. Suscríbete con Apple Pay, Google Pay y más.",
-  },
-  fr: {
-    tagline: "Trajets partagés. Vraies connexions.",
-    title_pre: "Sauter, bondir et un",
-    title_hop: "Hop.",
-    walking: "Marcher est la meilleure option pour votre santé physique et financière.",
-    hop_moves: "Un Hop vous fait avancer à prix abordable.",
-    description: "ShortHop transforme le trajet quotidien d'un conducteur en opportunité — aider les autres, rencontrer des gens et gagner de l'argent.",
-    cooperative: "Au lieu de prix élevés, ShortHop est construit sur la commodité, l'opportunité et la connexion.",
-    your_route: "Votre trajet. Votre routine.",
-    already: "Vous allez déjà par là…",
-    fun: "autant en profiter. :)",
-    get_started: "Commencer",
-    login: "Se Connecter",
-    for_walkers: "Pour les Marcheurs",
-    walkers_desc: "Avancez par étapes. Choisissez entre Walk, Short Hop, Flex Hop ou Power Hop.",
-    for_drivers: "Pour les Conducteurs",
-    drivers_desc: "Enregistrez vos trajets habituels. Ne prenez que les marcheurs sur votre chemin.",
-    coop_title: "Un réseau coopératif, pas du travail précaire.",
-    hopping_soon: "Bientôt Disponible",
-    hopping_desc: "Bientôt sur toutes les boutiques d'apps. Abonnez-vous avec Apple Pay, Google Pay et plus.",
-  },
-  zh: {
-    tagline: "共享路线。真实连接。",
-    title_pre: "跳跃、蹦跳和",
-    title_hop: "一跳。",
-    walking: "步行是对您身心和经济健康的最佳选择。",
-    hop_moves: "一跳让您实惠前行。",
-    description: "ShortHop 将司机的日常路线变成机会——帮助他人、结识新朋友、赚取真金白银。",
-    cooperative: "ShortHop 建立在便利、机会和连接之上，而非高价和压力。",
-    your_route: "你的路线。你的日常。",
-    already: "你已经在这条路上了…",
-    fun: "不如一起开心吧。:)",
-    get_started: "开始使用",
-    login: "登录账户",
-    for_walkers: "步行者",
-    walkers_desc: "分阶段前进。选择 Walk、Short Hop、Flex Hop 或 Power Hop。",
-    for_drivers: "驾驶者",
-    drivers_desc: "注册您的常规路线。只接顺路的步行者。帮助他人并赚取 Wheels。",
-    coop_title: "合作网络，不是零工。",
-    hopping_soon: "即将上线",
-    hopping_desc: "即将登陆所有主要应用商店。使用 Apple Pay、Google Pay 等订阅。",
+    drivers_1: "Registra tus rutas habituales.",
+    drivers_2: "Solo recoge Hoppers que van por tu camino exacto.",
+    drivers_3: "Ayuda a otros y gana dinero que puedes retirar cuando quieras.",
+    safety_title: "Seguridad y Confianza",
+    safety_tracking: "Seguimiento en Vivo",
+    safety_tracking_desc: "Ve a tu conductor o Hopper en tiempo real.",
+    safety_ratings: "Calificaciones Mutuas",
+    safety_ratings_desc: "Ambos califican cada viaje para construir confianza.",
+    safety_reporting: "Reportes en la App",
+    safety_reporting_desc: "Reporta cualquier preocupaci\u00f3n de seguridad.",
+    safety_refunds: "Reembolsos Autom\u00e1ticos",
+    safety_refunds_desc: "Si un viaje no ocurre, no pagas.",
+    hopping_soon: "Pr\u00f3ximamente",
+    hopping_desc: "Llegando a todas las tiendas de apps. Suscr\u00edbete con Apple Pay, Google Pay y m\u00e1s.",
   },
 };
 
 function t(lang: string, key: string): string {
   return HOME_TRANSLATIONS[lang]?.[key] || HOME_TRANSLATIONS["en"][key] || key;
 }
-
-const floatingEmojis = ["🚗", "🏃", "🛞", "⚡", "🌿", "✨"];
 
 export default function Home() {
   const { data: user, isLoading } = useAuth();
@@ -183,7 +152,7 @@ export default function Home() {
                     >
                       <span className="text-base">{l.flag}</span>
                       <span>{l.name}</span>
-                      {lang === l.code && <span className="ml-auto text-primary text-xs">✓</span>}
+                      {lang === l.code && <span className="ml-auto text-primary text-xs">{"\u2713"}</span>}
                     </button>
                   ))}
                 </motion.div>
@@ -193,89 +162,50 @@ export default function Home() {
         </div>
       </div>
 
-      <section className="relative pt-16 pb-28 overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+      <section className="relative pt-16 pb-20 overflow-hidden">
+        <div className="absolute inset-0 z-0 opacity-15 pointer-events-none">
           <img src={heroImg} alt="Background" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/40 to-background" />
         </div>
 
-        {floatingEmojis.map((emoji, i) => (
-          <motion.div
-            key={i}
-            className="absolute text-2xl sm:text-3xl pointer-events-none select-none z-0 opacity-20"
-            style={{
-              left: `${10 + i * 15}%`,
-              top: `${20 + (i % 3) * 25}%`,
-            }}
-            animate={{
-              y: [0, -15, 0],
-              rotate: [0, i % 2 === 0 ? 10 : -10, 0],
-            }}
-            transition={{
-              duration: 3 + i * 0.5,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: i * 0.3,
-            }}
-          >
-            {emoji}
-          </motion.div>
-        ))}
-        
-        <div className="container mx-auto px-4 max-w-6xl relative z-10">
-          <div className="max-w-3xl mx-auto text-center space-y-8">
-            <motion.div 
+        <div className="container mx-auto px-4 max-w-3xl relative z-10">
+          <div className="text-center space-y-6">
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-primary/10 text-primary font-medium text-sm mb-4 border border-primary/20"
+              className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-primary/10 text-primary font-medium text-sm border border-primary/20"
             >
-              <Sparkles className="w-4 h-4 mr-2 animate-wiggle" />
+              <Sparkles className="w-4 h-4 mr-2" />
               {t(lang, "tagline")}
             </motion.div>
 
-            <motion.h1 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-5xl md:text-7xl font-extrabold text-foreground tracking-tight leading-tight"
-            >
-              {t(lang, "title_pre")}{" "}
-              <motion.span 
-                className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-secondary inline-block"
-                animate={{ scale: [1, 1.02, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                {t(lang, "title_hop")}
-              </motion.span>
-            </motion.h1>
-
-            <motion.div 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="text-lg text-muted-foreground leading-relaxed space-y-4"
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-xl md:text-2xl font-bold text-foreground"
             >
-              <p>{t(lang, "walking")}</p>
-              <p className="font-semibold text-foreground flex items-center justify-center gap-2">
-                <Zap className="w-5 h-5 text-secondary" />
-                {t(lang, "hop_moves")}
-              </p>
+              {t(lang, "subtitle")}
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="space-y-4 text-base text-muted-foreground leading-relaxed"
+            >
               <p>{t(lang, "description")}</p>
-              <div className="pt-8 border-t border-border/30 space-y-6">
-                <p className="text-foreground font-medium">{t(lang, "cooperative")}</p>
-                <div className="space-y-2">
-                  <p className="font-semibold text-foreground">{t(lang, "your_route")}</p>
-                  <p>{t(lang, "already")}</p>
-                  <p className="italic">{t(lang, "fun")}</p>
-                </div>
+              <div className="pt-4 space-y-1">
+                <p className="font-semibold text-foreground">{t(lang, "your_route")}</p>
+                <p className="italic">{t(lang, "fun")}</p>
               </div>
             </motion.div>
-            
-            <motion.div 
+
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
             >
               <Link href="/auth?tab=register">
@@ -298,214 +228,135 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-24 bg-card border-y border-border">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <motion.div 
-              initial={{ opacity: 0, x: -30 }}
+      <section className="py-16 bg-card border-y border-border">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="grid md:grid-cols-2 gap-12">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="space-y-8"
+              transition={{ duration: 0.5 }}
+              className="space-y-4"
             >
-              <h2 className="text-3xl md:text-4xl font-bold">{t(lang, "coop_title")}</h2>
-              
-              <div className="space-y-6">
-                <motion.div 
-                  whileHover={{ x: 5 }}
-                  className="flex gap-4 p-4 rounded-2xl hover:bg-secondary/5 transition-colors"
-                >
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-secondary/20 to-secondary/5 flex items-center justify-center flex-shrink-0 text-3xl animate-float">
-                    🏃
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold mb-2">{t(lang, "for_walkers")}</h3>
-                    <p className="text-muted-foreground">{t(lang, "walkers_desc")}</p>
-                  </div>
-                </motion.div>
-                
-                <motion.div 
-                  whileHover={{ x: 5 }}
-                  className="flex gap-4 p-4 rounded-2xl hover:bg-primary/5 transition-colors"
-                >
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0 text-3xl animate-float" style={{ animationDelay: "1s" }}>
-                    🚗
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold mb-2">{t(lang, "for_drivers")}</h3>
-                    <p className="text-muted-foreground">{t(lang, "drivers_desc")}</p>
-                  </div>
-                </motion.div>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{"\u{1F3C3}"}</span>
+                <h2 className="text-xl font-bold">{t(lang, "for_hoppers")}</h2>
               </div>
+              <ul className="space-y-2.5 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2.5">
+                  <span className="text-primary mt-0.5 shrink-0">{"\u2022"}</span>
+                  {t(lang, "hoppers_1")}
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="text-primary mt-0.5 shrink-0">{"\u2022"}</span>
+                  {t(lang, "hoppers_2")}
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="text-primary mt-0.5 shrink-0">{"\u2022"}</span>
+                  {t(lang, "hoppers_3")}
+                </li>
+              </ul>
             </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0, x: 30 }}
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative"
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="space-y-4"
             >
-              <motion.div 
-                className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-[3rem] transform rotate-3"
-                animate={{ rotate: [3, 5, 3] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <img 
-                src={featureImg} 
-                alt="Feature visual" 
-                className="relative z-10 rounded-[3rem] shadow-2xl border border-white/20 object-cover w-full aspect-square"
-              />
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{"\u{1F697}"}</span>
+                <h2 className="text-xl font-bold">{t(lang, "for_drivers")}</h2>
+              </div>
+              <ul className="space-y-2.5 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2.5">
+                  <span className="text-primary mt-0.5 shrink-0">{"\u2022"}</span>
+                  {t(lang, "drivers_1")}
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="text-primary mt-0.5 shrink-0">{"\u2022"}</span>
+                  {t(lang, "drivers_2")}
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="text-primary mt-0.5 shrink-0">{"\u2022"}</span>
+                  {t(lang, "drivers_3")}
+                </li>
+              </ul>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Safety Section */}
-      <section className="py-20 bg-card border-y border-border" id="safety">
-        <div className="container mx-auto px-4 max-w-5xl">
+      <section className="py-16 border-b border-border">
+        <div className="container mx-auto px-4 max-w-3xl">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="space-y-10"
+            transition={{ duration: 0.5 }}
+            className="space-y-8"
           >
-            <div className="text-center space-y-3">
-              <div className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 font-semibold text-sm border border-orange-500/20 mb-2">
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 font-semibold text-sm border border-green-500/20">
                 <ShieldCheck className="w-4 h-4" />
-                Safety 👮🏽‍♂️
+                {t(lang, "safety_title")}
               </div>
-              <h2 className="text-3xl md:text-4xl font-extrabold text-foreground">Built around your safety.</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto text-lg leading-relaxed">
-                ShortHop's road side awareness system fires automatically the moment a driver and hopper are matched — giving both parties clear, real-time guidance before anyone moves.
-              </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              <motion.div
-                whileHover={{ y: -4 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                className="rounded-3xl border border-orange-200/60 dark:border-orange-700/30 bg-orange-50/60 dark:bg-orange-950/15 p-6 space-y-3"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-orange-500/15 flex items-center justify-center">
-                  <ArrowLeftRight className="w-6 h-6 text-orange-500" />
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-border/50 bg-muted/20 p-5 space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <MapPin className="w-4 h-4 text-primary shrink-0" />
+                  <p className="text-sm font-bold text-foreground">{t(lang, "safety_tracking")}</p>
                 </div>
-                <h3 className="font-bold text-lg">Road Side Detection</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  The app uses your GPS and corridor data to determine exactly which side of the road you're on — and whether you need to cross before your driver arrives.
-                </p>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ y: -4 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                className="rounded-3xl border border-amber-200/60 dark:border-amber-700/30 bg-amber-50/60 dark:bg-amber-950/15 p-6 space-y-3"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 flex items-center justify-center">
-                  <Car className="w-6 h-6 text-amber-600" />
-                </div>
-                <h3 className="font-bold text-lg">Instant Driver Notice</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Drivers receive a live notice showing exactly where their hopper is positioned — and if the hopper needs to cross, the driver is told to continue their route with no penalties.
-                </p>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ y: -4 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                className="rounded-3xl border border-blue-200/60 dark:border-blue-700/30 bg-blue-50/60 dark:bg-blue-950/15 p-6 space-y-3"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/15 flex items-center justify-center">
-                  <MapPin className="w-6 h-6 text-blue-500" />
-                </div>
-                <h3 className="font-bold text-lg">One-Way Road Handling</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  On one-way roads, both the driver and hopper receive specific guidance ahead of time so there's no confusion — the hopper knows to stand visibly and the driver knows to slow down.
-                </p>
-              </motion.div>
-            </div>
-
-            <div className="rounded-3xl border border-border/50 bg-muted/30 p-6 md:p-8 grid md:grid-cols-2 gap-8 items-center">
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold">Clear responsibilities. No surprises.</h3>
-                <ul className="space-y-3 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                    <span>Hoppers on two-way roads are responsible for being on the correct side — the app always tells them which side that is.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                    <span>Drivers on one-way roads just need to drive their route — the hopper handles positioning.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                    <span>No penalties ever apply for road side positioning — it's purely a smooth-pickup system.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
-                    <span>Safety warnings appear with every crossing notice — ShortHop never encourages unsafe road crossing.</span>
-                  </li>
-                </ul>
+                <p className="text-xs text-muted-foreground leading-relaxed">{t(lang, "safety_tracking_desc")}</p>
               </div>
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold">More safety features</h3>
-                <ul className="space-y-3 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-3">
-                    <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                    <span><strong className="text-foreground">Live trip tracking</strong> — real-time location sharing between matched driver and hopper during active rides.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                    <span><strong className="text-foreground">Two-way ratings</strong> — drivers and hoppers rate each trip to build trust and flag issues.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                    <span><strong className="text-foreground">In-app reporting</strong> — report any safety concern, misconduct, or emergency directly from the app.</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                    <span><strong className="text-foreground">Automatic refunds</strong> — if a ride doesn't happen, you don't pay.</span>
-                  </li>
-                </ul>
-                <Link href="/support">
-                  <Button variant="outline" size="sm" className="mt-2 rounded-full">
-                    Full Safety Guide
-                    <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-                  </Button>
-                </Link>
+
+              <div className="rounded-2xl border border-border/50 bg-muted/20 p-5 space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <Star className="w-4 h-4 text-amber-500 shrink-0" />
+                  <p className="text-sm font-bold text-foreground">{t(lang, "safety_ratings")}</p>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{t(lang, "safety_ratings_desc")}</p>
+              </div>
+
+              <div className="rounded-2xl border border-border/50 bg-muted/20 p-5 space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0" />
+                  <p className="text-sm font-bold text-foreground">{t(lang, "safety_reporting")}</p>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{t(lang, "safety_reporting_desc")}</p>
+              </div>
+
+              <div className="rounded-2xl border border-border/50 bg-muted/20 p-5 space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <RefreshCcw className="w-4 h-4 text-blue-500 shrink-0" />
+                  <p className="text-sm font-bold text-foreground">{t(lang, "safety_refunds")}</p>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{t(lang, "safety_refunds_desc")}</p>
               </div>
             </div>
           </motion.div>
         </div>
       </section>
 
-      <section className="py-20 bg-gradient-to-b from-background to-muted/20 border-t border-border">
-        <div className="container mx-auto px-4 max-w-4xl">
+      <section className="py-16 bg-gradient-to-b from-background to-muted/20">
+        <div className="container mx-auto px-4 max-w-3xl">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.5 }}
             className="text-center space-y-6"
           >
-            <motion.h2
-              className="text-3xl md:text-4xl font-extrabold text-foreground"
-              animate={{ scale: [1, 1.01, 1] }}
-              transition={{ duration: 3, repeat: Infinity }}
-            >
+            <h2 className="text-2xl md:text-3xl font-extrabold text-foreground">
               {t(lang, "hopping_soon")}
-            </motion.h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            </h2>
+            <p className="text-muted-foreground text-base max-w-xl mx-auto">
               {t(lang, "hopping_desc")}
             </p>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="relative max-w-xl mx-auto"
-            >
+            <div className="relative max-w-md mx-auto">
               <motion.div
                 className="absolute inset-0 rounded-3xl bg-gradient-to-r from-primary/10 via-accent/10 to-secondary/10"
                 animate={{ opacity: [0.3, 0.6, 0.3] }}
@@ -518,27 +369,29 @@ export default function Home() {
                 className="relative z-10 w-full rounded-3xl shadow-xl border border-border/30"
                 data-testid="img-hopping-soon-stores"
               />
-            </motion.div>
+            </div>
           </motion.div>
         </div>
       </section>
 
-      <footer className="py-12 bg-muted/30 border-t">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} ShortHop. Shared routes. Real connections.</p>
+      <footer className="py-10 bg-muted/30 border-t">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="flex flex-col items-center gap-5">
             <div className="flex items-center gap-6 text-sm">
-              <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
-              <Link href="/support#safety" className="text-muted-foreground hover:text-foreground transition-colors">Safety</Link>
-              <Link href="/artist" className="relative group flex flex-col items-center gap-0 transition-transform hover:scale-105">
-                <span className="relative">
-                  <img src="/artist-icon.png" alt="" className="w-12 h-12 inline-block dark:invert drop-shadow-md" />
-                  <span className="absolute inset-0 rounded-full animate-ping bg-primary/20 pointer-events-none" />
-                </span>
-                <span className="text-xs bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-bold -mt-1">Artist</span>
+              <Link href="/support" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-support">
+                Support & Safety
               </Link>
-              <Link href="/support" className="text-muted-foreground hover:text-foreground transition-colors">Support</Link>
+              <Link href="/artist" className="relative group flex flex-col items-center gap-0 transition-transform hover:scale-105" data-testid="link-footer-artist">
+                <span className="relative">
+                  <img src="/artist-icon.png" alt="" className="w-10 h-10 inline-block dark:invert drop-shadow-md" />
+                </span>
+                <span className="text-[10px] bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-bold -mt-0.5">Artist</span>
+              </Link>
+              <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-privacy">
+                Privacy & Terms
+              </Link>
             </div>
+            <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} ShortHop. Shared routes. Real connections.</p>
           </div>
         </div>
       </footer>
