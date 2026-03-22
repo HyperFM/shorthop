@@ -11,7 +11,7 @@ import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
 import { db } from "./db";
-import { notifications, founderMessages, vipMessages, shortHops, users, donations } from "@shared/schema";
+import { notifications, founderMessages, vipMessages, shortHops, users, donations, routineRoutes } from "@shared/schema";
 import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
@@ -2190,7 +2190,7 @@ export async function registerRoutes(
 
   app.post('/api/driver/active', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    const { active } = req.body;
+    const { active, startLat, startLng, endLat, endLng, startLocation, endLocation } = req.body;
     if (typeof active !== 'boolean') return res.status(400).json({ message: "Invalid request" });
 
     try {
@@ -2202,19 +2202,42 @@ export async function registerRoutes(
       const updated = await storage.setDriverActive(req.user.id, active);
 
       if (active) {
+        const lat = parseFloat(startLat) || 38.0406;
+        const lng = parseFloat(startLng) || -84.5037;
         liveLocations.set(req.user.id, {
-          latitude: 38.0406,
-          longitude: -84.5037,
+          latitude: lat,
+          longitude: lng,
           accuracy: 10,
           updatedAt: Date.now(),
         });
+
+        if (endLat && endLng) {
+          await db.delete(routineRoutes).where(eq(routineRoutes.driverId, req.user.id));
+          await db.insert(routineRoutes).values({
+            driverId: req.user.id,
+            name: "Active Route",
+            startLocation: startLocation || "Current Location",
+            endLocation: endLocation || "Destination",
+            startLat: String(lat),
+            startLng: String(lng),
+            endLat: String(endLat),
+            endLng: String(endLng),
+            startTime: new Date().toTimeString().slice(0, 5),
+            endTime: new Date(Date.now() + 3600000).toTimeString().slice(0, 5),
+            days: JSON.stringify(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]),
+          });
+          console.log(`Driver ${req.user.id} active route saved: (${lat},${lng}) → (${endLat},${endLng})`);
+        }
+
         tryAutoMatchForDriver(req.user.id);
       } else {
         liveLocations.delete(req.user.id);
+        await db.delete(routineRoutes).where(eq(routineRoutes.driverId, req.user.id));
       }
 
       res.json(updated);
-    } catch {
+    } catch (e: any) {
+      console.error('Driver active toggle error:', e.message);
       res.status(500).json({ message: "Failed to toggle active status" });
     }
   });
