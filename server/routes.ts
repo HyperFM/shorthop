@@ -522,6 +522,10 @@ async function runMatchingCycle() {
       driverSeatTracker.set(driver.id, effectiveSeats);
 
       for (const hop of allAvailable) {
+        if (hop.walkerId === driver.id) {
+          console.log(`  [hop${hop.id}↔drv${driver.id}] SKIP: self-match (driver is the hopper)`);
+          continue;
+        }
         const score = scoreHopMatchForDriver(hop, effectiveSeats, driverLoc, driverRoutes, driver.id);
         if (!score.valid) continue;
 
@@ -901,6 +905,10 @@ export async function registerRoutes(
 
        const existingHop = await storage.getHop(Number(req.params.id));
        if (!existingHop) return res.status(404).json({ message: "Hop not found" });
+
+       if (existingHop.walkerId === req.user.id) {
+         return res.status(400).json({ message: "You cannot accept your own hop request" });
+       }
 
        if (existingHop.timeWindowExpiry && new Date(existingHop.timeWindowExpiry) < new Date()) {
          return res.status(400).json({ message: "This hop's time window has expired" });
@@ -2807,6 +2815,10 @@ export async function registerRoutes(
       if (!hop || hop.status !== "requested") {
         pendingAdditionalHops.delete(hopId);
         return res.status(400).json({ message: "Hop no longer available" });
+      }
+      if (hop.walkerId === req.user.id) {
+        pendingAdditionalHops.delete(hopId);
+        return res.status(400).json({ message: "You cannot accept your own hop request" });
       }
       const driver = await storage.getUser(req.user.id);
       if (!driver) {

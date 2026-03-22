@@ -1777,8 +1777,11 @@ function InstaHopView({ user }: { user: User }) {
       queryClient.invalidateQueries({ queryKey: ['/api/me'] });
     },
   });
+  const userModeLock = user?.modeLock || "none";
   const [mode, setMode] = useState<HopMode>(() => {
     try {
+      if (userModeLock === "hopper_only") return "hop";
+      if (userModeLock === "driver_only") return "drive";
       const urlParams = new URLSearchParams(window.location.search);
       const urlMode = urlParams.get("mode");
       if (urlMode === "drive") return "drive";
@@ -1864,14 +1867,19 @@ function InstaHopView({ user }: { user: User }) {
   });
 
   useEffect(() => {
+    if (userModeLock === "hopper_only" && mode === "drive") setMode("hop");
+    if (userModeLock === "driver_only" && mode !== "drive") setMode("drive");
+  }, [userModeLock]);
+
+  useEffect(() => {
     function onModeChange(e: Event) {
       const tab = (e as CustomEvent).detail;
-      if (tab === "driver") setMode("drive");
-      else if (mode === "drive") setMode("hop");
+      if (tab === "driver" && userModeLock !== "hopper_only") setMode("drive");
+      else if (tab === "hopper" && userModeLock !== "driver_only" && mode === "drive") setMode("hop");
     }
     window.addEventListener("sh-mode-change", onModeChange);
     return () => window.removeEventListener("sh-mode-change", onModeChange);
-  }, [mode]);
+  }, [mode, userModeLock]);
 
   const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
 

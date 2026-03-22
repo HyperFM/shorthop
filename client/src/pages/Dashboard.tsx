@@ -116,9 +116,12 @@ export default function Dashboard() {
   const { data: user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { currentHopper, dismiss } = useNearbyHopperSimulation(!!user?.isDriver);
-  const [activeTab, setActiveTab] = useState<"hopper" | "driver">(
-    user?.isDriver ? "driver" : "hopper"
-  );
+  const [activeTab, setActiveTab] = useState<"hopper" | "driver">(() => {
+    const lock = user?.modeLock || "none";
+    if (lock === "hopper_only") return "hopper";
+    if (lock === "driver_only") return "driver";
+    return user?.isDriver ? "driver" : "hopper";
+  });
   const welcomeShown = useRef(false);
   const [subModal, setSubModal] = useState<"flex_hop" | "power_hop" | null>(null);
   const [soundDuration, setSoundDuration] = useState<DriverSoundDuration>(getDriverSoundDuration);
@@ -164,7 +167,19 @@ export default function Dashboard() {
     if (user?.isFlexibleDriver !== undefined) setDetourEnabled(user.isFlexibleDriver || false);
     if (user?.hopperDropoffFlex) setHopperDropoffFlex(user.hopperDropoffFlex);
     if (user?.sharedCommute !== undefined) setSharedCommute(user.sharedCommute || false);
-    if (user?.modeLock) setModeLock(user.modeLock);
+    if (user?.modeLock) {
+      setModeLock(user.modeLock);
+      if (user.modeLock === "hopper_only" && activeTab === "driver") {
+        setActiveTab("hopper");
+        try { localStorage.setItem("sh-active-tab", "hopper"); } catch {}
+        window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "hopper" }));
+      }
+      if (user.modeLock === "driver_only" && activeTab === "hopper") {
+        setActiveTab("driver");
+        try { localStorage.setItem("sh-active-tab", "driver"); } catch {}
+        window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "driver" }));
+      }
+    }
     if (user?.allowDetourDrivers !== undefined) setAllowDetourDrivers(user.allowDetourDrivers || "both");
     if (user?.magicGpsEnabled !== undefined) setMagicGpsEnabled(user.magicGpsEnabled || false);
     if ((user as any)?.littleEarly !== undefined) setLittleEarly((user as any).littleEarly || false);
@@ -280,6 +295,7 @@ export default function Dashboard() {
               />
               <button
                 onClick={() => {
+                  if (modeLock === "driver_only") return;
                   setActiveTab("hopper");
                   vibrate();
                   try { localStorage.setItem("sh-active-tab", "hopper"); } catch {}
@@ -287,13 +303,14 @@ export default function Dashboard() {
                 }}
                 className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
                   activeTab === "hopper" ? "text-white" : "text-muted-foreground hover:text-foreground"
-                }`}
+                } ${modeLock === "driver_only" ? "opacity-30 cursor-not-allowed" : ""}`}
                 data-testid="tab-hopper"
               >
-                Hopper
+                Hopper{modeLock === "driver_only" && " 🔒"}
               </button>
               <button
                 onClick={() => {
+                  if (modeLock === "hopper_only") return;
                   setActiveTab("driver");
                   vibrate();
                   try { localStorage.setItem("sh-active-tab", "driver"); } catch {}
@@ -301,10 +318,10 @@ export default function Dashboard() {
                 }}
                 className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
                   activeTab === "driver" ? "text-white" : "text-muted-foreground hover:text-foreground"
-                }`}
+                } ${modeLock === "hopper_only" ? "opacity-30 cursor-not-allowed" : ""}`}
                 data-testid="tab-driver"
               >
-                Driver
+                Driver{modeLock === "hopper_only" && " 🔒"}
               </button>
             </div>
           </div>
@@ -326,6 +343,51 @@ export default function Dashboard() {
         </div>
 
         <ThemeToggle />
+
+        <Card className="border-border/40" data-testid="card-tailor-mode-lock">
+          <CardContent className="py-3 px-4 space-y-3">
+            <div className="flex items-center gap-2.5">
+              <Lock className="w-4 h-4 text-orange-500 shrink-0" />
+              <p className="text-xs font-black text-foreground">Mode Selection</p>
+            </div>
+            <p className="text-[10px] text-muted-foreground">Lock your account to Driver Only, Hopper Only, or keep Dual Mode to switch freely.</p>
+            <div className="flex gap-2">
+              {([
+                { value: "none", label: "Dual Mode", icon: "🔄" },
+                { value: "hopper_only", label: "Hopper Only", icon: "🚶" },
+                { value: "driver_only", label: "Driver Only", icon: "🚗" },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  data-testid={`button-mode-lock-${opt.value}`}
+                  onClick={() => {
+                    setModeLock(opt.value);
+                    updatePreferences.mutate({ modeLock: opt.value });
+                    if (opt.value === "hopper_only" && activeTab === "driver") {
+                      setActiveTab("hopper");
+                      try { localStorage.setItem("sh-active-tab", "hopper"); } catch {}
+                      window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "hopper" }));
+                    }
+                    if (opt.value === "driver_only" && activeTab === "hopper") {
+                      setActiveTab("driver");
+                      try { localStorage.setItem("sh-active-tab", "driver"); } catch {}
+                      window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "driver" }));
+                    }
+                    vibrate();
+                  }}
+                  className={`flex-1 py-2 px-2 rounded-xl text-[10px] font-bold border transition-all ${
+                    modeLock === opt.value
+                      ? "border-orange-500 bg-orange-500/10 text-orange-600 dark:text-orange-400 shadow-sm"
+                      : "border-border/40 text-muted-foreground hover:border-border"
+                  }`}
+                >
+                  <span className="block text-base mb-0.5">{opt.icon}</span>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {activeTab === "hopper" && (
           <Card className="border-border/40 opacity-60" data-testid="card-tailor-hopper-flex">
