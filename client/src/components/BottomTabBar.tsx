@@ -54,7 +54,12 @@ export function BottomTabBar() {
   const [location, setLocation] = useLocation();
   const { data: user } = useAuth();
   const [profileColor, setProfileColor] = useState(getProfileTabColor);
-  const [activeMode, setActiveMode] = useState(getActiveMode);
+  const [activeMode, setActiveMode] = useState<"hopper" | "driver">(() => {
+    const lock = user?.modeLock || "none";
+    if (lock === "driver_only") return "driver";
+    if (lock === "hopper_only") return "hopper";
+    return getActiveMode();
+  });
 
   useEffect(() => {
     function onColorChange(e: Event) {
@@ -62,6 +67,8 @@ export function BottomTabBar() {
       if (color) setProfileColor(color);
     }
     function onModeChange(e: Event) {
+      const lock = user?.modeLock || "none";
+      if (lock !== "none") return;
       const mode = (e as CustomEvent).detail;
       setActiveMode(mode === "driver" ? "driver" : "hopper");
     }
@@ -78,7 +85,13 @@ export function BottomTabBar() {
   const isFlexPlus = user.subscription === "flex_hop" || user.subscription === "power_hop";
   const isOnHopPage = location === "/instahop" || location === "/hop";
 
+  const userModeLock = user.modeLock || "none";
+
   function toggleMode() {
+    if (userModeLock !== "none") {
+      setLocation("/instahop");
+      return;
+    }
     const next = activeMode === "hopper" ? "driver" : "hopper";
     localStorage.setItem("sh-active-tab", next);
     window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: next }));

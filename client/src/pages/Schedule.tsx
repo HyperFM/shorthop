@@ -298,7 +298,12 @@ export default function SchedulePage() {
   const [showLongHopForm, setShowLongHopForm] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [panelRole, setPanelRole] = useState<"hopper" | "driver">("hopper");
+  const userModeLock = user?.modeLock || "none";
+  const [panelRole, setPanelRole] = useState<"hopper" | "driver">(() => {
+    if (userModeLock === "driver_only") return "driver";
+    if (userModeLock === "hopper_only") return "hopper";
+    return "hopper";
+  });
   const [showSubscriptionPrompt, setShowSubscriptionPrompt] = useState(false);
   const touchStartX = useRef(0);
 
@@ -391,6 +396,7 @@ export default function SchedulePage() {
   };
 
   const handleSwipeEnd = (e: React.TouchEvent) => {
+    if (userModeLock !== "none") return;
     const diff = e.changedTouches[0].clientX - touchStartX.current;
     if (Math.abs(diff) > 50) {
       if (diff > 0) setPanelRole("hopper");
@@ -707,7 +713,20 @@ export default function SchedulePage() {
         <div className="max-w-lg mx-auto px-4">
           <div className="bg-background/95 backdrop-blur-xl rounded-t-2xl shadow-2xl border border-border/30 border-b-0 p-3 space-y-2">
             <div className="w-8 h-1 bg-muted-foreground/20 rounded-full mx-auto mb-1" />
-            <RolePanelToggle activeRole={panelRole} onChangeRole={setPanelRole} />
+            {userModeLock === "none" ? (
+              <RolePanelToggle activeRole={panelRole} onChangeRole={setPanelRole} />
+            ) : (
+              <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-xl ${
+                userModeLock === "driver_only"
+                  ? "bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-400"
+                  : "bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-400"
+              }`} data-testid="schedule-mode-locked">
+                <Lock className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold">
+                  {userModeLock === "driver_only" ? "🚗 Driver Only" : "🚶 Hopper Only"}
+                </span>
+              </div>
+            )}
             <p className="text-[10px] text-muted-foreground text-center">
               {panelRole === "driver"
                 ? "Plan drives to receive scheduled matches"
