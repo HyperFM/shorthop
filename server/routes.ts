@@ -205,21 +205,52 @@ function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): str
 
 const MAX_DEVIATION_MILES = 0.5;
 const MAX_TIME_DIFF_MS = 30 * 60 * 1000;
+const MATCH_CYCLE_INTERVAL_MS = 5000;
 
-function isHopMatchForDriver(
+function distToPolyline(lat: number, lng: number, points: [number, number][]): number {
+  if (points.length < 2) return points.length === 1 ? getDistance(lat, lng, points[0][0], points[0][1]) : Infinity;
+  let minDist = Infinity;
+  for (let i = 0; i < points.length - 1; i++) {
+    const [cLat, cLng] = closestPointOnSegment(lat, lng, points[i][0], points[i][1], points[i + 1][0], points[i + 1][1]);
+    const d = getDistance(lat, lng, cLat, cLng);
+    if (d < minDist) minDist = d;
+  }
+  return minDist;
+}
+
+function isDropoffPastDestination(dropLat: number, dropLng: number, routeStartLat: number, routeStartLng: number, routeEndLat: number, routeEndLng: number): boolean {
+  const routeDist = getDistance(routeStartLat, routeStartLng, routeEndLat, routeEndLng);
+  const dropDist = getDistance(routeStartLat, routeStartLng, dropLat, dropLng);
+  if (dropDist <= routeDist + MAX_DEVIATION_MILES) return false;
+  const routeBearing = Math.atan2(routeEndLng - routeStartLng, routeEndLat - routeStartLat);
+  const dropBearing = Math.atan2(dropLng - routeEndLng, dropLat - routeEndLat);
+  const angleDiff = Math.abs(routeBearing - dropBearing);
+  const normalized = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
+  return normalized < Math.PI / 2;
+}
+
+interface MatchScore {
+  valid: boolean;
+  pickupDist: number;
+  dropoffDist: number;
+  totalDeviation: number;
+}
+
+function scoreHopMatchForDriver(
   hop: any,
   driverSeats: number,
   driverLoc: { latitude: number; longitude: number; updatedAt: number } | undefined,
   driverRoutes: any[]
-): boolean {
+): MatchScore {
+  const fail: MatchScore = { valid: false, pickupDist: Infinity, dropoffDist: Infinity, totalDeviation: Infinity };
   const now = new Date();
-  if (hop.status !== "requested") return false;
-  if (hop.timeWindowExpiry && new Date(hop.timeWindowExpiry) < now) return false;
-  if ((hop.seatsNeeded || 1) > driverSeats) return false;
+  if (hop.status !== "requested") return fail;
+  if (hop.timeWindowExpiry && new Date(hop.timeWindowExpiry) < now) return fail;
+  if ((hop.seatsNeeded || 1) > driverSeats) return fail;
 
   if (hop.departureTime) {
     const timeDiff = Math.abs(new Date(hop.departureTime).getTime() - now.getTime());
-    if (timeDiff > MAX_TIME_DIFF_MS) return false;
+    if (timeDiff > MAX_TIME_DIFF_MS) return fail;
   }
 
   const hopStartLat = parseFloat(hop.startLat || "0");
@@ -227,176 +258,218 @@ function isHopMatchForDriver(
   const hopEndLat = parseFloat(hop.endLat || "0");
   const hopEndLng = parseFloat(hop.endLng || "0");
 
+  if (!hopStartLat || !hopStartLng || !hopEndLat || !hopEndLng) return fail;
+
+  const hopBearing = Math.atan2(hopEndLng - hopStartLng, hopEndLat - hopStartLat);
+
+  let bestPickupDist = Infinity;
+  let bestDropoffDist = Infinity;
+  let matchedAnyRoute = false;
+
   if (driverLoc && Date.now() - driverLoc.updatedAt < 120000) {
-    if (hopStartLat && hopStartLng) {
-      const pickupDist = getDistance(driverLoc.latitude, driverLoc.longitude, hopStartLat, hopStartLng);
-      if (pickupDist > MAX_DEVIATION_MILES) return false;
-    }
+    const pickupFromDriver = getDistance(driverLoc.latitude, driverLoc.longitude, hopStartLat, hopStartLng);
+    if (pickupFromDriver > MAX_DEVIATION_MILES) return fail;
 
-    if (hopEndLat && hopEndLng && hopStartLat && hopStartLng) {
-      const driverBearing = Math.atan2(hopEndLng - driverLoc.longitude, hopEndLat - driverLoc.latitude);
-      const hopBearing = Math.atan2(hopEndLng - hopStartLng, hopEndLat - hopStartLat);
-      const angleDiff = Math.abs(driverBearing - hopBearing);
-      const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-      if (normalizedAngle > Math.PI / 2) return false;
-    }
-
-    if (hopEndLat && hopEndLng) {
-      const dropoffDist = getDistance(driverLoc.latitude, driverLoc.longitude, hopEndLat, hopEndLng);
-      if (dropoffDist > 15) return false;
-    }
+    const driverBearing = Math.atan2(hopEndLng - driverLoc.longitude, hopEndLat - driverLoc.latitude);
+    const angleDiff = Math.abs(driverBearing - hopBearing);
+    const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
+    if (normalizedAngle > Math.PI / 2) return fail;
   }
 
-  if (driverRoutes.length > 0 && hopEndLat && hopEndLng) {
-    let alignedWithAnyRoute = false;
+  if (driverRoutes.length > 0) {
     for (const route of driverRoutes) {
+      const rStartLat = parseFloat(route.startLat || "0");
+      const rStartLng = parseFloat(route.startLng || "0");
       const rEndLat = parseFloat(route.endLat || "0");
       const rEndLng = parseFloat(route.endLng || "0");
       if (!rEndLat || !rEndLng) continue;
-      const dropoffToRouteDest = getDistance(hopEndLat, hopEndLng, rEndLat, rEndLng);
-      if (dropoffToRouteDest <= MAX_DEVIATION_MILES) {
-        alignedWithAnyRoute = true;
-        break;
-      }
-      const rStartLat = parseFloat(route.startLat || "0");
-      const rStartLng = parseFloat(route.startLng || "0");
-      if (hopStartLat && hopStartLng && rStartLat && rStartLng) {
+
+      const routePoints: [number, number][] = [];
+      if (rStartLat && rStartLng) routePoints.push([rStartLat, rStartLng]);
+      routePoints.push([rEndLat, rEndLng]);
+
+      const pickupToRoute = rStartLat && rStartLng
+        ? distToPolyline(hopStartLat, hopStartLng, routePoints)
+        : getDistance(hopStartLat, hopStartLng, rEndLat, rEndLng);
+      if (pickupToRoute > MAX_DEVIATION_MILES) continue;
+
+      const dropoffToRoute = distToPolyline(hopEndLat, hopEndLng, routePoints);
+      if (dropoffToRoute > MAX_DEVIATION_MILES) continue;
+
+      if (rStartLat && rStartLng) {
         const routeBearing = Math.atan2(rEndLng - rStartLng, rEndLat - rStartLat);
-        const hopBearing = Math.atan2(hopEndLng - hopStartLng, hopEndLat - hopStartLat);
         const angleDiff = Math.abs(routeBearing - hopBearing);
         const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-        if (normalizedAngle < Math.PI / 3) {
-          alignedWithAnyRoute = true;
-          break;
-        }
+        if (normalizedAngle > Math.PI / 2) continue;
       }
+
+      if (rStartLat && rStartLng && isDropoffPastDestination(hopEndLat, hopEndLng, rStartLat, rStartLng, rEndLat, rEndLng)) {
+        continue;
+      }
+
+      matchedAnyRoute = true;
+      if (pickupToRoute < bestPickupDist) bestPickupDist = pickupToRoute;
+      if (dropoffToRoute < bestDropoffDist) bestDropoffDist = dropoffToRoute;
     }
-    if (!alignedWithAnyRoute) return false;
+
+    if (!matchedAnyRoute) return fail;
+  } else {
+    return fail;
   }
 
-  return true;
+  return {
+    valid: true,
+    pickupDist: bestPickupDist,
+    dropoffDist: bestDropoffDist,
+    totalDeviation: bestPickupDist + bestDropoffDist,
+  };
 }
 
-async function tryAutoMatch(hopId: number) {
+const pendingAdditionalHops: Map<number, { hopId: number; driverId: number; hopperDest: string; createdAt: number }> = new Map();
+
+async function executeMatch(hopId: number, driverId: number, isStar: boolean, hop: any) {
+  const matched = await storage.acceptHop(hopId, driverId);
+  if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
+    await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
+  }
+  const starLabel = isStar ? " Your Star Hopper!" : "";
+  await storage.createNotification({
+    userId: driverId,
+    type: "match_found",
+    title: isStar ? "Star Match! ⭐" : "Match Found! 🎯",
+    message: `A hopper going to ${hop.endLocation} matched with your route.${starLabel}`,
+    isRead: false,
+  });
+  await storage.createNotification({
+    userId: hop.walkerId,
+    type: "match_found",
+    title: isStar ? "Star Match! ⭐" : "Driver Found! 🚗",
+    message: `You've been matched with a driver heading your way.${starLabel}`,
+    isRead: false,
+  });
+}
+
+let matchingCycleRunning = false;
+
+async function runMatchingCycle() {
+  if (matchingCycleRunning) return;
+  matchingCycleRunning = true;
   try {
-    const hop = await storage.getHop(hopId);
-    if (!hop || hop.status !== "requested") return;
+    const allAvailable = await storage.getAvailableHops();
+    if (allAvailable.length === 0) { return; }
 
     const activeDrivers = await storage.getActiveDrivers();
-    const hopperStarIds = await storage.getStarHopperUserIds(hop.walkerId);
-    const starSet = new Set(hopperStarIds);
+    if (activeDrivers.length === 0) { return; }
 
-    const eligibleDrivers: { driver: any; isStar: boolean; isMaximize: boolean }[] = [];
+    const matchedHopIds = new Set<number>();
+    const driverSeatTracker: Map<number, number> = new Map();
+
+    interface Candidate {
+      hop: any;
+      driver: any;
+      isStar: boolean;
+      score: MatchScore;
+      driverInRide: boolean;
+    }
+
+    const candidates: Candidate[] = [];
+
     for (const driver of activeDrivers) {
       const driverLoc = liveLocations.get(driver.id);
       const driverRoutes = await storage.getRoutes(driver.id);
       const driverSeats = driver.availableSeats || 1;
+      driverSeatTracker.set(driver.id, driverSeats);
+      const driverStarIds = await storage.getStarHopperUserIds(driver.id);
+      const starSet = new Set(driverStarIds);
 
-      if (isHopMatchForDriver(hop, driverSeats, driverLoc, driverRoutes)) {
-        const hopperStarredDriver = starSet.has(driver.id);
-        const driverStarredHopper = await storage.isStarHopper(driver.id, hop.walkerId);
-        eligibleDrivers.push({
+      const driverHops = await storage.getHopsForDriver(driver.id);
+      const driverInRide = driverHops.some((h: any) => h.status === "matched" || h.status === "in_ride");
+      const activeRideSeatsUsed = driverHops
+        .filter((h: any) => h.status === "matched" || h.status === "in_ride")
+        .reduce((sum: number, h: any) => sum + (h.seatsNeeded || 1), 0);
+      const effectiveSeats = Math.max(0, driverSeats - activeRideSeatsUsed);
+      driverSeatTracker.set(driver.id, effectiveSeats);
+
+      for (const hop of allAvailable) {
+        const score = scoreHopMatchForDriver(hop, effectiveSeats, driverLoc, driverRoutes);
+        if (!score.valid) continue;
+
+        const driverStarredHopper = starSet.has(hop.walkerId);
+        const hopperStarredDriver = await storage.isStarHopper(hop.walkerId, driver.id);
+
+        candidates.push({
+          hop,
           driver,
-          isStar: hopperStarredDriver || driverStarredHopper,
-          isMaximize: driver.matchPreference === "maximize_seats",
+          isStar: driverStarredHopper || hopperStarredDriver,
+          score,
+          driverInRide,
         });
       }
     }
 
-    eligibleDrivers.sort((a, b) => {
-      if (a.isMaximize !== b.isMaximize) return b.isMaximize ? 1 : -1;
+    candidates.sort((a, b) => {
+      const aMax = a.driver.matchPreference === "maximize_seats" ? 1 : 0;
+      const bMax = b.driver.matchPreference === "maximize_seats" ? 1 : 0;
+      if (aMax !== bMax) return bMax - aMax;
       if (a.isStar !== b.isStar) return b.isStar ? 1 : -1;
-      return 0;
+      return a.score.totalDeviation - b.score.totalDeviation;
     });
 
-    if (eligibleDrivers.length > 0) {
-      const best = eligibleDrivers[0];
-      const matched = await storage.acceptHop(hopId, best.driver.id);
+    for (const c of candidates) {
+      if (matchedHopIds.has(c.hop.id)) continue;
+      const remainingSeats = driverSeatTracker.get(c.driver.id) || 0;
+      const seatsNeeded = c.hop.seatsNeeded || 1;
+      if (seatsNeeded > remainingSeats) continue;
 
-      if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
-        await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
+      const isMaximize = c.driver.matchPreference === "maximize_seats";
+      const isOneRider = !isMaximize;
+
+      if (c.driverInRide) {
+        if (!pendingAdditionalHops.has(c.hop.id)) {
+          pendingAdditionalHops.set(c.hop.id, {
+            hopId: c.hop.id,
+            driverId: c.driver.id,
+            hopperDest: c.hop.endLocation || "nearby",
+            createdAt: Date.now(),
+          });
+          await storage.createNotification({
+            userId: c.driver.id,
+            type: "additional_hopper",
+            title: "New Hopper Request 🚏",
+            message: `A hopper going to ${c.hop.endLocation || "nearby"} fits your route. Accept or decline from your ride panel.`,
+            isRead: false,
+          });
+        }
+        continue;
       }
 
-      const starLabel = best.isStar ? " Your Star Hopper!" : "";
-      await storage.createNotification({
-        userId: best.driver.id,
-        type: "match_found",
-        title: "Match Found! 🎯",
-        message: `A hopper going to ${hop.endLocation} matched with your route.`,
-        isRead: false,
-      });
-      await storage.createNotification({
-        userId: hop.walkerId,
-        type: "match_found",
-        title: best.isStar ? "Star Match! ⭐" : "Driver Found! 🚗",
-        message: `You've been matched with a driver heading your way.${starLabel}`,
-        isRead: false,
-      });
+      await executeMatch(c.hop.id, c.driver.id, c.isStar, c.hop);
+      matchedHopIds.add(c.hop.id);
+      driverSeatTracker.set(c.driver.id, remainingSeats - seatsNeeded);
+
+      if (isOneRider) {
+        driverSeatTracker.set(c.driver.id, 0);
+      }
     }
   } catch (err) {
-    console.error("Auto-match error:", err);
+    console.error("Matching cycle error:", err);
+  } finally {
+    matchingCycleRunning = false;
   }
 }
 
-async function tryAutoMatchForDriver(driverId: number) {
-  try {
-    const driver = await storage.getUser(driverId);
-    if (!driver || !driver.isActive) return;
+let matchingCycleTimer: ReturnType<typeof setInterval> | null = null;
 
-    const driverLoc = liveLocations.get(driverId);
-    const driverRoutes = await storage.getRoutes(driverId);
-    let remainingSeats = driver.availableSeats || 1;
-    const driverStarIds = await storage.getStarHopperUserIds(driverId);
-    const starSet = new Set(driverStarIds);
-    const isMaximize = driver.matchPreference === "maximize_seats";
+function startMatchingCycle() {
+  if (matchingCycleTimer) return;
+  matchingCycleTimer = setInterval(runMatchingCycle, MATCH_CYCLE_INTERVAL_MS);
+  console.log(`Matching cycle started (every ${MATCH_CYCLE_INTERVAL_MS / 1000}s)`);
+}
 
-    const allAvailable = await storage.getAvailableHops();
-    const eligibleHops: { hop: any; isStar: boolean }[] = [];
-    for (const hop of allAvailable) {
-      if (isHopMatchForDriver(hop, remainingSeats, driverLoc, driverRoutes)) {
-        const driverStarredHopper = starSet.has(hop.walkerId);
-        const hopperStarredDriver = await storage.isStarHopper(hop.walkerId, driverId);
-        eligibleHops.push({ hop, isStar: driverStarredHopper || hopperStarredDriver });
-      }
-    }
+async function tryAutoMatch(_hopId: number) {
+}
 
-    eligibleHops.sort((a, b) => (b.isStar ? 1 : 0) - (a.isStar ? 1 : 0));
-
-    const matchLimit = isMaximize ? eligibleHops.length : 1;
-    for (let i = 0; i < Math.min(matchLimit, eligibleHops.length); i++) {
-      const entry = eligibleHops[i];
-      const seatsNeeded = entry.hop.seatsNeeded || 1;
-      if (seatsNeeded > remainingSeats) continue;
-
-      const matched = await storage.acceptHop(entry.hop.id, driverId);
-
-      if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
-        await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
-      }
-
-      remainingSeats -= seatsNeeded;
-
-      const starLabel = entry.isStar ? " Your Star Hopper!" : "";
-      await storage.createNotification({
-        userId: driverId,
-        type: "match_found",
-        title: entry.isStar ? "Star Match! ⭐" : "Match Found! 🎯",
-        message: `A hopper going to ${entry.hop.endLocation} matched with your route.${starLabel}`,
-        isRead: false,
-      });
-      await storage.createNotification({
-        userId: entry.hop.walkerId,
-        type: "match_found",
-        title: "Driver Found! 🚗",
-        message: `You've been matched with a driver heading your way.`,
-        isRead: false,
-      });
-
-      if (remainingSeats <= 0) break;
-    }
-  } catch (err) {
-    console.error("Auto-match for driver error:", err);
-  }
+async function tryAutoMatchForDriver(_driverId: number) {
 }
 
 export async function registerRoutes(
@@ -2506,6 +2579,75 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/driver/pending-hoppers', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const pending: any[] = [];
+      for (const [hopId, data] of pendingAdditionalHops.entries()) {
+        if (data.driverId === req.user.id) {
+          if (Date.now() - data.createdAt > 120000) {
+            pendingAdditionalHops.delete(hopId);
+            continue;
+          }
+          pending.push(data);
+        }
+      }
+      res.json(pending);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get pending hoppers" });
+    }
+  });
+
+  app.post('/api/driver/pending-hoppers/:hopId/accept', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.hopId);
+      const pending = pendingAdditionalHops.get(hopId);
+      if (!pending || pending.driverId !== req.user.id) {
+        return res.status(404).json({ message: "No pending request found" });
+      }
+      const hop = await storage.getHop(hopId);
+      if (!hop || hop.status !== "requested") {
+        pendingAdditionalHops.delete(hopId);
+        return res.status(400).json({ message: "Hop no longer available" });
+      }
+      const driver = await storage.getUser(req.user.id);
+      if (!driver) {
+        pendingAdditionalHops.delete(hopId);
+        return res.status(400).json({ message: "Driver not found" });
+      }
+      const driverHops = await storage.getHopsForDriver(req.user.id);
+      const activeSeatsUsed = driverHops
+        .filter((h: any) => h.status === "matched" || h.status === "in_ride")
+        .reduce((sum: number, h: any) => sum + (h.seatsNeeded || 1), 0);
+      const effectiveSeats = (driver.availableSeats || 1) - activeSeatsUsed;
+      if ((hop.seatsNeeded || 1) > effectiveSeats) {
+        pendingAdditionalHops.delete(hopId);
+        return res.status(400).json({ message: "Not enough seats available" });
+      }
+      await executeMatch(hopId, req.user.id, false, hop);
+      pendingAdditionalHops.delete(hopId);
+      res.json({ message: "Hopper accepted" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to accept hopper" });
+    }
+  });
+
+  app.post('/api/driver/pending-hoppers/:hopId/decline', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.hopId);
+      const pending = pendingAdditionalHops.get(hopId);
+      if (!pending || pending.driverId !== req.user.id) {
+        return res.status(404).json({ message: "No pending request found" });
+      }
+      pendingAdditionalHops.delete(hopId);
+      res.json({ message: "Hopper declined" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to decline hopper" });
+    }
+  });
+
   app.get('/api/ride-chat/:hopId', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
@@ -4040,6 +4182,8 @@ export async function registerRoutes(
       console.error('Auto-approve ID verification error:', e.message);
     }
   }, 3600000);
+
+  startMatchingCycle();
 
   return httpServer;
 }

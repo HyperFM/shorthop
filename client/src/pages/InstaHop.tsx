@@ -474,6 +474,78 @@ function HopRequestCard({ hop, driverLat, driverLng, onNavigate }: {
   );
 }
 
+function PendingHopperPrompt() {
+  const queryClient = useQueryClient();
+  const { data: pending = [] } = useQuery<any[]>({
+    queryKey: ['/api/driver/pending-hoppers'],
+    refetchInterval: 5000,
+  });
+
+  const acceptMut = useMutation({
+    mutationFn: async (hopId: number) => {
+      await apiRequest("POST", `/api/driver/pending-hoppers/${hopId}/accept`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/driver/pending-hoppers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+      showFlash("✅", "Hopper accepted!", "success");
+    },
+    onError: () => showFlash("⚠️", "Could not accept", "error"),
+  });
+
+  const declineMut = useMutation({
+    mutationFn: async (hopId: number) => {
+      await apiRequest("POST", `/api/driver/pending-hoppers/${hopId}/decline`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/driver/pending-hoppers'] });
+      showFlash("👋", "Hopper declined", "info");
+    },
+  });
+
+  if (!pending.length) return null;
+
+  return (
+    <div className="space-y-1.5">
+      {pending.map((p: any) => (
+        <motion.div
+          key={p.hopId}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border border-purple-300/50 dark:border-purple-700/40 bg-purple-50/60 dark:bg-purple-950/20 p-2.5"
+          data-testid={`pending-hopper-${p.hopId}`}
+        >
+          <p className="text-[11px] font-bold text-purple-800 dark:text-purple-300 flex items-center gap-1.5">
+            <span>🚏</span> New hopper going to {p.hopperDest}
+          </p>
+          <p className="text-[9px] text-purple-600/70 dark:text-purple-400/60 mb-1.5">Fits your current route</p>
+          <div className="flex gap-1.5">
+            <Button
+              size="sm"
+              className="flex-1 h-7 text-[10px] bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold"
+              onClick={() => acceptMut.mutate(p.hopId)}
+              disabled={acceptMut.isPending}
+              data-testid={`button-accept-hopper-${p.hopId}`}
+            >
+              Accept
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 h-7 text-[10px] rounded-lg font-bold"
+              onClick={() => declineMut.mutate(p.hopId)}
+              disabled={declineMut.isPending}
+              data-testid={`button-decline-hopper-${p.hopId}`}
+            >
+              Decline
+            </Button>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
 function RideChat({ hopId, currentUserId }: { hopId: number; currentUserId: number }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -759,6 +831,7 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
               </Button>
             </div>
             <RideChat hopId={hop.id} currentUserId={hop.driverId || 0} />
+            <PendingHopperPrompt />
             {hop.status === "matched" && (
               <Button
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl"
@@ -1025,7 +1098,8 @@ function DriveNowPanel({ user }: { user: User }) {
   const appStatus = driverStatus?.applicationStatus;
   const needsOnboarding = !driverStatus?.vehicleMake && !appStatus;
 
-  const activeDriverHop = hops?.find(h => h.status === 'matched' || h.status === 'in_ride');
+  const activeDriverHops = hops?.filter(h => h.status === 'matched' || h.status === 'in_ride') || [];
+  const activeDriverHop = activeDriverHops[0];
 
   useLiveLocationBroadcast(isActiveNow || !!activeDriverHop);
 
@@ -1132,6 +1206,7 @@ function DriveNowPanel({ user }: { user: User }) {
   };
 
   if (navigatingHop) {
+    const otherHops = activeDriverHops.filter(h => h.id !== navigatingHop.id);
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
@@ -1148,6 +1223,14 @@ function DriveNowPanel({ user }: { user: User }) {
             <Phone className="w-5 h-5" />
           </a>
         </div>
+        {otherHops.length > 0 && (
+          <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg p-2 border border-indigo-200/50 dark:border-indigo-700/30" data-testid="next-hop-label">
+            <MapPin className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+              Next Hop: {otherHops[0].endLocation || "nearby"} {otherHops.length > 1 ? `(+${otherHops.length - 1} more)` : ""}
+            </span>
+          </div>
+        )}
         <PickupNavigationView
           hop={navigatingHop}
           driverLat={geo.latitude}

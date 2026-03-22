@@ -1,0 +1,118 @@
+SHORT HOP SYSTEM UPDATE (STRICT MATCHING + EXPERIENCE COMPLETION)
+
+Please implement the following updates to complete the system behavior and user experience.
+
+⸻
+
+1. STRICT MATCH VALIDATION (REQUIRED)
+
+Update the matching logic to enforce ALL of the following conditions:
+	•	Pickup must be within 0.5 miles of the driver’s route
+	•	Dropoff must be within 0.5 miles of the driver’s route
+	•	Hopper must be traveling in the same direction as the driver
+	•	Dropoff must NOT exceed 0.5 miles past the driver’s destination
+	•	Driver must have available seats
+
+If ANY of these conditions fail:
+
+→ DO NOT MATCH under any circumstance
+→ Do not fallback to “closest available” logic
+
+This rule is absolute.
+
+⸻
+
+2. MATCH QUALITY SCORING
+
+When multiple valid hoppers are available:
+	•	Rank them based on:
+	•	Closest pickup distance to route
+	•	Closest dropoff distance to route
+	•	Prefer the hopper requiring the least total deviation
+
+This scoring should be used when:
+	•	Filling seats for “Maximize Seats” drivers
+	•	Selecting the single rider for “One Rider Only” drivers
+
+⸻
+
+3. MATCHING CYCLE SYSTEM (IMPORTANT)
+
+Update matching behavior to run in short repeating cycles instead of instant assignment:
+	•	Run matching every few seconds
+	•	Evaluate ALL drivers and ALL hoppers together
+	•	Assign matches in batches
+
+Do NOT instantly match on request.
+
+This is required for:
+	•	better grouping
+	•	smarter seat filling
+	•	less randomness
+
+⸻
+
+4. ADDITIONAL HOPPER FLOW DURING ACTIVE TRIP
+
+When a new valid hopper is found while a driver is already in a trip:
+	•	Show a non-intrusive prompt:
+	•	Accept
+	•	Decline
+
+Behavior:
+	•	Accept → add hopper as the next logical stop
+	•	Decline → ignore and continue current route
+
+Do NOT auto-assign additional hoppers without driver approval
+
+Prompt must NOT disrupt navigation aggressively
+
+⸻
+
+5. HOPPER LIVE TRACKING
+
+After a hopper is matched:
+	•	Hopper can view driver’s live location on the map
+	•	Hopper can track the driver approaching the pickup point in real time
+
+This should feel smooth and reliable
+
+⸻
+
+6. DRIVER NAVIGATION EXPERIENCE (PHASE 1)
+
+When the first hopper is matched:
+	•	Automatically start GPS navigation
+	•	Switch map to full screen
+	•	Keep UI clean and focused (no clutter)
+
+When additional hoppers are added:
+	•	Add them as stops in the route
+	•	Display a small label:
+	•	“Next Hop: X miles away”
+
+Do NOT disrupt the main navigation flow
+
+⸻
+
+7. CORE SYSTEM BEHAVIOR ENFORCEMENT
+
+Ensure the system follows this principle at all times:
+	•	Drivers do NOT significantly change their route
+	•	Hoppers are only matched if they naturally fit into existing movement
+
+Avoid:
+	•	long detours
+	•	inefficient routing
+	•	forced matches
+
+The experience should always feel like:
+
+“They were already going my way”
+
+⸻
+
+✅ IMPLEMENTATION NOTE
+
+Do NOT modify existing completed features.
+Only extend and enforce the above behaviors within the current system.
