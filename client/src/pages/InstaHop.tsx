@@ -1199,6 +1199,7 @@ function DriveNowPanel({ user }: { user: User }) {
   const [showCustomTime, setShowCustomTime] = useState(false);
   const [routeGenerated, setRouteGenerated] = useState(false);
   const [routeInfo, setRouteInfo] = useState<{ distance: string; eta: string } | null>(null);
+  const [routeCoords, setRouteCoords] = useState<{ endLat: number; endLng: number } | null>(null);
   const [activating, setActivating] = useState(false);
 
   const { data: driverStatus } = useQuery<DriverStatus>({
@@ -1208,13 +1209,13 @@ function DriveNowPanel({ user }: { user: User }) {
   const { data: hops } = useHops();
 
   const toggleActive = useMutation({
-    mutationFn: async (active: boolean) => {
-      await apiRequest("POST", "/api/driver/active", { active });
+    mutationFn: async (payload: { active: boolean; startLat?: number; startLng?: number; endLat?: number; endLng?: number; startLocation?: string; endLocation?: string }) => {
+      await apiRequest("POST", "/api/driver/active", payload);
     },
-    onSuccess: (_data, active) => {
+    onSuccess: (_data, payload) => {
       queryClient.invalidateQueries({ queryKey: ['/api/driver/status'] });
       queryClient.invalidateQueries({ queryKey: ['/api/me'] });
-      showFlash(active ? "🟢" : "🔴", active ? "You're active!" : "You're offline", active ? "success" : "info");
+      showFlash(payload.active ? "🟢" : "🔴", payload.active ? "You're active!" : "You're offline", payload.active ? "success" : "info");
     },
     onError: (err: any) => {
       showFlash("⚠️", err?.message || "Can't toggle status", "error");
@@ -1269,6 +1270,7 @@ function DriveNowPanel({ user }: { user: User }) {
       const distMiles = (route.distance / 1609.34).toFixed(1);
       const etaMins = Math.round(route.duration / 60);
       setRouteInfo({ distance: `${distMiles} mi`, eta: `${etaMins} min` });
+      setRouteCoords({ endLat, endLng });
       setRouteGenerated(true);
     } catch {
       showFlash("⚠️", "Error calculating route", "error");
@@ -1282,6 +1284,7 @@ function DriveNowPanel({ user }: { user: User }) {
     } else {
       setRouteGenerated(false);
       setRouteInfo(null);
+      setRouteCoords(null);
     }
   }, [driverDestInput, geo.latitude, geo.longitude]);
 
@@ -1291,7 +1294,15 @@ function DriveNowPanel({ user }: { user: User }) {
     if (!canGoActive) return;
     setActivating(true);
     try {
-      toggleActive.mutate(true);
+      toggleActive.mutate({
+        active: true,
+        startLat: geo.latitude || undefined,
+        startLng: geo.longitude || undefined,
+        endLat: routeCoords?.endLat,
+        endLng: routeCoords?.endLng,
+        startLocation: driverStartInput || "Current Location",
+        endLocation: driverDestInput,
+      });
     } finally {
       setActivating(false);
     }
@@ -1463,7 +1474,7 @@ function DriveNowPanel({ user }: { user: User }) {
               <Button
                 size="sm"
                 variant="destructive"
-                onClick={() => toggleActive.mutate(false)}
+                onClick={() => toggleActive.mutate({ active: false })}
                 disabled={toggleActive.isPending}
                 data-testid="button-toggle-active"
               >

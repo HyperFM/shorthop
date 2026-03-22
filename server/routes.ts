@@ -350,7 +350,10 @@ function scoreHopMatchForDriver(
       const rStartLng = parseFloat(route.startLng || "0");
       const rEndLat = parseFloat(route.endLat || "0");
       const rEndLng = parseFloat(route.endLng || "0");
-      if (!rEndLat || !rEndLng) continue;
+      if (!rEndLat || !rEndLng) {
+        console.log(`  Route "${route.name}" skipped: missing endLat/endLng (${route.endLat}, ${route.endLng})`);
+        continue;
+      }
 
       let routePoints: [number, number][] = [];
       if (rStartLat && rStartLng) routePoints.push([rStartLat, rStartLng]);
@@ -384,8 +387,12 @@ function scoreHopMatchForDriver(
       if (dropoffToRoute < bestDropoffDist) bestDropoffDist = dropoffToRoute;
     }
 
-    if (!matchedAnyRoute) return fail;
+    if (!matchedAnyRoute) {
+      console.log(`  No route match for hop ${hop.id} (${driverRoutes.length} routes checked)`);
+      return fail;
+    }
   } else {
+    console.log(`  No routes saved for driver — cannot match`);
     return fail;
   }
 
@@ -431,7 +438,11 @@ async function runMatchingCycle() {
     if (allAvailable.length === 0) { return; }
 
     const activeDrivers = await storage.getActiveDrivers();
-    if (activeDrivers.length === 0) { return; }
+    if (activeDrivers.length === 0) {
+      console.log(`Matching: ${allAvailable.length} hops waiting but no active drivers`);
+      return;
+    }
+    console.log(`Matching: evaluating ${allAvailable.length} hop(s) against ${activeDrivers.length} driver(s)`);
 
     const matchedHopIds = new Set<number>();
     const driverSeatTracker: Map<number, number> = new Map();
