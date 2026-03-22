@@ -126,7 +126,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors" | "policies" | "verify";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors" | "policies" | "verify" | "refunds";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
@@ -160,6 +160,21 @@ export default function Admin() {
     queryKey: ["/api/admin/vip-conversations"],
     enabled: tab === "dms" || tab === "overview",
   });
+
+  type AdminRefundRequest = {
+    id: number; hopId: number; userId: number; reason: string; status: string;
+    aiResponse: string | null; adminNotes: string | null;
+    greenlight1Status: boolean; greenlight2Status: boolean; gpsCompleteStatus: boolean;
+    createdAt: string; resolvedAt: string | null;
+    username: string;
+    hopDetails: { startLocation: string; endLocation: string; distanceMiles: number | null; priceCents: number | null; status: string } | null;
+    tripLog: { greenlight1: boolean; greenlight2: boolean; gpsComplete: boolean; gpsPath: any } | null;
+  };
+  const { data: refundRequests } = useQuery<AdminRefundRequest[]>({
+    queryKey: ["/api/admin/refund-requests"],
+    enabled: tab === "refunds",
+  });
+  const [refundNotes, setRefundNotes] = useState<Record<number, string>>({});
 
   const [dmUserId, setDmUserId] = useState<number | null>(null);
   const [dmReply, setDmReply] = useState("");
@@ -346,6 +361,7 @@ export default function Admin() {
     { key: "ambassadors", label: "Ambassadors", icon: Award },
     { key: "verify", label: "Verify ID", icon: Shield, badge: idVerifications?.length || 0 },
     { key: "policies", label: "Policies", icon: FileText },
+    { key: "refunds", label: "Refunds", icon: DollarSign },
   ];
 
   return (
@@ -1225,6 +1241,122 @@ export default function Admin() {
 
       {tab === "policies" && (
         <PoliciesTab />
+      )}
+
+      {tab === "refunds" && (
+        <div className="space-y-3" data-testid="admin-refunds-section">
+          <h2 className="text-base font-bold text-foreground">Refund Requests</h2>
+          {!refundRequests ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+          ) : refundRequests.length === 0 ? (
+            <Card className="p-6 text-center text-muted-foreground text-sm">No refund requests</Card>
+          ) : (
+            refundRequests.map((r) => (
+              <Card key={r.id} className="p-3 space-y-2" data-testid={`refund-card-${r.id}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-foreground dark:text-white">@{r.username}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                      r.status === "pending" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" :
+                      r.status === "approved" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" :
+                      r.status === "denied" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" :
+                      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    }`} data-testid={`refund-status-${r.id}`}>{r.status}</span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</span>
+                </div>
+
+                <p className="text-xs text-foreground dark:text-gray-200"><span className="font-medium">Reason:</span> {r.reason}</p>
+
+                {r.hopDetails && (
+                  <div className="bg-muted/50 rounded-lg p-2 text-[10px] space-y-0.5">
+                    <p className="text-foreground dark:text-gray-300"><span className="font-medium">From:</span> {r.hopDetails.startLocation}</p>
+                    <p className="text-foreground dark:text-gray-300"><span className="font-medium">To:</span> {r.hopDetails.endLocation}</p>
+                    <p className="text-foreground dark:text-gray-300">
+                      <span className="font-medium">Distance:</span> {r.hopDetails.distanceMiles?.toFixed(1) || "?"} mi ·
+                      <span className="font-medium ml-1">Paid:</span> ${((r.hopDetails.priceCents || 0) / 100).toFixed(2)} ·
+                      <span className="font-medium ml-1">Status:</span> {r.hopDetails.status}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-3 text-[10px]">
+                  <span className={`flex items-center gap-1 ${r.greenlight1Status ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                    {r.greenlight1Status ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />} GL1
+                  </span>
+                  <span className={`flex items-center gap-1 ${r.greenlight2Status ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                    {r.greenlight2Status ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />} GL2
+                  </span>
+                  <span className={`flex items-center gap-1 ${r.gpsCompleteStatus ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"}`}>
+                    {r.gpsCompleteStatus ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />} GPS
+                  </span>
+                </div>
+
+                {r.aiResponse && (
+                  <p className="text-[10px] text-muted-foreground italic">AI: {r.aiResponse}</p>
+                )}
+
+                {r.status === "pending" && (
+                  <div className="space-y-1.5 pt-1 border-t border-border/30">
+                    <textarea
+                      className="w-full text-xs p-2 rounded-lg border bg-background text-foreground dark:text-white"
+                      placeholder="Admin notes (optional)..."
+                      value={refundNotes[r.id] || ""}
+                      onChange={(e) => setRefundNotes(prev => ({ ...prev, [r.id]: e.target.value }))}
+                      rows={2}
+                      data-testid={`refund-notes-${r.id}`}
+                    />
+                    <div className="flex gap-1.5">
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white text-[10px] h-7 rounded-lg"
+                        onClick={async () => {
+                          try {
+                            await apiRequest("POST", `/api/admin/refund-requests/${r.id}/resolve`, { status: "approved", adminNotes: refundNotes[r.id] || "" });
+                            queryClient.invalidateQueries({ queryKey: ["/api/admin/refund-requests"] });
+                          } catch {}
+                        }}
+                        data-testid={`refund-approve-${r.id}`}
+                      >
+                        <CheckCircle className="w-3 h-3 mr-0.5" /> Full Refund
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] h-7 rounded-lg"
+                        onClick={async () => {
+                          try {
+                            await apiRequest("POST", `/api/admin/refund-requests/${r.id}/resolve`, { status: "partial", adminNotes: refundNotes[r.id] || "" });
+                            queryClient.invalidateQueries({ queryKey: ["/api/admin/refund-requests"] });
+                          } catch {}
+                        }}
+                        data-testid={`refund-partial-${r.id}`}
+                      >
+                        50% Refund
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-[10px] h-7 rounded-lg"
+                        onClick={async () => {
+                          try {
+                            await apiRequest("POST", `/api/admin/refund-requests/${r.id}/resolve`, { status: "denied", adminNotes: refundNotes[r.id] || "" });
+                            queryClient.invalidateQueries({ queryKey: ["/api/admin/refund-requests"] });
+                          } catch {}
+                        }}
+                        data-testid={`refund-deny-${r.id}`}
+                      >
+                        <XCircle className="w-3 h-3 mr-0.5" /> Deny
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {r.adminNotes && r.status !== "pending" && (
+                  <p className="text-[10px] text-muted-foreground"><span className="font-medium">Admin:</span> {r.adminNotes}</p>
+                )}
+              </Card>
+            ))
+          )}
+        </div>
       )}
     </div>
   );

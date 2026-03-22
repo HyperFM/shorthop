@@ -70,11 +70,15 @@ import {
   commuteCircles,
   commuteCircleMembers,
   starHoppers,
+  tripLogs,
+  refundRequests,
   userActivityWindows,
   type CommuteCircle,
   type InsertCommuteCircle,
   type CommuteCircleMember,
   type StarHopper,
+  type TripLog,
+  type RefundRequest,
   type UserActivityWindow,
 } from "@shared/schema";
 
@@ -131,6 +135,19 @@ export interface IStorage {
   getUserCircles(userId: number): Promise<CommuteCircle[]>;
   getCircleMemberUserIds(circleId: number): Promise<number[]>;
   getSharedCircleUserIds(userId: number): Promise<number[]>;
+
+  createTripLog(hopId: number, driverId: number, hopperId: number): Promise<TripLog>;
+  getTripLog(hopId: number): Promise<TripLog | undefined>;
+  appendGpsPoint(hopId: number, userId: number, lat: number, lng: number): Promise<void>;
+  setGreenlight1(hopId: number): Promise<void>;
+  setGreenlight2(hopId: number): Promise<void>;
+  setGpsIncomplete(hopId: number): Promise<void>;
+  logGpsEvent(hopId: number, event: string): Promise<void>;
+
+  createRefundRequest(hopId: number, userId: number, reason: string, aiResponse: string, gl1: boolean, gl2: boolean, gpsOk: boolean): Promise<RefundRequest>;
+  getRefundRequest(hopId: number): Promise<RefundRequest | undefined>;
+  getRefundRequests(): Promise<RefundRequest[]>;
+  resolveRefundRequest(id: number, status: string, adminNotes: string): Promise<RefundRequest>;
 
   getStarHoppers(userId: number): Promise<StarHopper[]>;
   addStarHopper(userId: number, starUserId: number): Promise<StarHopper>;
@@ -537,6 +554,75 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return [...new Set(peerMembers.map(m => m.userId))];
+  }
+
+  async createTripLog(hopId: number, driverId: number, hopperId: number): Promise<TripLog> {
+    const [log] = await db.insert(tripLogs).values({ hopId, driverId, hopperId }).returning();
+    return log;
+  }
+
+  async getTripLog(hopId: number): Promise<TripLog | undefined> {
+    const [log] = await db.select().from(tripLogs).where(eq(tripLogs.hopId, hopId));
+    return log;
+  }
+
+  async appendGpsPoint(hopId: number, userId: number, lat: number, lng: number): Promise<void> {
+    const log = await this.getTripLog(hopId);
+    if (!log) return;
+    const point = { lat, lng, t: Date.now() };
+    if (userId === log.driverId) {
+      const path = Array.isArray(log.driverGpsPath) ? [...(log.driverGpsPath as any[]), point] : [point];
+      await db.update(tripLogs).set({ driverGpsPath: path }).where(eq(tripLogs.hopId, hopId));
+    } else {
+      const path = Array.isArray(log.hopperGpsPath) ? [...(log.hopperGpsPath as any[]), point] : [point];
+      await db.update(tripLogs).set({ hopperGpsPath: path }).where(eq(tripLogs.hopId, hopId));
+    }
+  }
+
+  async setGreenlight1(hopId: number): Promise<void> {
+    const now = new Date();
+    await db.update(tripLogs).set({ greenlight1: true, greenlight1At: now }).where(eq(tripLogs.hopId, hopId));
+    await db.update(shortHops).set({ greenlight1: true, greenlight1At: now }).where(eq(shortHops.id, hopId));
+  }
+
+  async setGreenlight2(hopId: number): Promise<void> {
+    const now = new Date();
+    await db.update(tripLogs).set({ greenlight2: true, greenlight2At: now }).where(eq(tripLogs.hopId, hopId));
+    await db.update(shortHops).set({ greenlight2: true, greenlight2At: now }).where(eq(shortHops.id, hopId));
+  }
+
+  async setGpsIncomplete(hopId: number): Promise<void> {
+    await db.update(tripLogs).set({ gpsComplete: false }).where(eq(tripLogs.hopId, hopId));
+    await db.update(shortHops).set({ gpsComplete: false }).where(eq(shortHops.id, hopId));
+  }
+
+  async logGpsEvent(hopId: number, event: string): Promise<void> {
+    const log = await this.getTripLog(hopId);
+    if (!log) return;
+    const events = Array.isArray(log.gpsEvents) ? [...(log.gpsEvents as any[]), { event, t: Date.now() }] : [{ event, t: Date.now() }];
+    await db.update(tripLogs).set({ gpsEvents: events }).where(eq(tripLogs.hopId, hopId));
+  }
+
+  async createRefundRequest(hopId: number, userId: number, reason: string, aiResponse: string, gl1: boolean, gl2: boolean, gpsOk: boolean): Promise<RefundRequest> {
+    const [req] = await db.insert(refundRequests).values({
+      hopId, userId, reason, aiResponse, status: "pending",
+      greenlight1Status: gl1, greenlight2Status: gl2, gpsCompleteStatus: gpsOk,
+    }).returning();
+    return req;
+  }
+
+  async getRefundRequest(hopId: number): Promise<RefundRequest | undefined> {
+    const [req] = await db.select().from(refundRequests).where(eq(refundRequests.hopId, hopId));
+    return req;
+  }
+
+  async getRefundRequests(): Promise<RefundRequest[]> {
+    return await db.select().from(refundRequests).orderBy(desc(refundRequests.createdAt));
+  }
+
+  async resolveRefundRequest(id: number, status: string, adminNotes: string): Promise<RefundRequest> {
+    const [updated] = await db.update(refundRequests).set({ status, adminNotes, resolvedAt: new Date() }).where(eq(refundRequests.id, id)).returning();
+    return updated;
   }
 
   async getStarHoppers(userId: number): Promise<StarHopper[]> {

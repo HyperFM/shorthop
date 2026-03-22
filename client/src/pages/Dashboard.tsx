@@ -680,7 +680,7 @@ export default function Dashboard() {
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  To make sure your experience is smooth, you'll have direct access to the founder during this early phase. If anything feels off, confusing, or could be improved—even slightly—reach out anytime.
+                  To make sure your experience is smooth, our Customer Support team is available anytime. If anything feels off, confusing, or could be improved—even slightly—reach out to us.
                 </p>
                 <p className="text-xs font-bold text-foreground">You're not just driving, you're helping build this.</p>
               </div>
@@ -688,24 +688,24 @@ export default function Dashboard() {
               <div className="flex gap-2">
                 <Button
                   className="flex-1 h-10 rounded-xl text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-                  data-testid="button-contact-founder"
+                  data-testid="button-contact-support"
                   onClick={() => {
                     window.location.href = "tel:+18594202312";
                   }}
                 >
                   <Phone className="w-3.5 h-3.5 mr-1.5" />
-                  Call Founder
+                  Call Support
                 </Button>
                 <Button
                   variant="outline"
                   className="flex-1 h-10 rounded-xl text-xs font-bold"
-                  data-testid="button-message-founder"
+                  data-testid="button-message-support"
                   onClick={() => {
                     window.location.href = "sms:+18594202312";
                   }}
                 >
                   <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
-                  Text Founder
+                  Text Support
                 </Button>
               </div>
 

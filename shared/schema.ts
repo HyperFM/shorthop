@@ -177,6 +177,11 @@ export const shortHops = pgTable("short_hops", {
   timeWindowExpiry: timestamp("time_window_expiry"),
   microHop: boolean("micro_hop").default(false),
   seatsNeeded: integer("seats_needed").default(1),
+  greenlight1: boolean("greenlight1").default(false),
+  greenlight1At: timestamp("greenlight1_at"),
+  greenlight2: boolean("greenlight2").default(false),
+  greenlight2At: timestamp("greenlight2_at"),
+  gpsComplete: boolean("gps_complete").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -501,6 +506,37 @@ export const commuteCircleMembers = pgTable("commute_circle_members", {
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
+export const tripLogs = pgTable("trip_logs", {
+  id: serial("id").primaryKey(),
+  hopId: integer("hop_id").references(() => shortHops.id).notNull(),
+  driverId: integer("driver_id").references(() => users.id).notNull(),
+  hopperId: integer("hopper_id").references(() => users.id).notNull(),
+  driverGpsPath: jsonb("driver_gps_path").default([]),
+  hopperGpsPath: jsonb("hopper_gps_path").default([]),
+  greenlight1: boolean("greenlight1").default(false),
+  greenlight1At: timestamp("greenlight1_at"),
+  greenlight2: boolean("greenlight2").default(false),
+  greenlight2At: timestamp("greenlight2_at"),
+  gpsComplete: boolean("gps_complete").default(true),
+  gpsEvents: jsonb("gps_events").default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const refundRequests = pgTable("refund_requests", {
+  id: serial("id").primaryKey(),
+  hopId: integer("hop_id").references(() => shortHops.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  reason: text("reason").notNull(),
+  status: text("status").notNull().default("pending"),
+  aiResponse: text("ai_response"),
+  adminNotes: text("admin_notes"),
+  greenlight1Status: boolean("greenlight1_status").default(false),
+  greenlight2Status: boolean("greenlight2_status").default(false),
+  gpsCompleteStatus: boolean("gps_complete_status").default(true),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const starHoppers = pgTable("star_hoppers", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
@@ -519,6 +555,8 @@ export const userActivityWindows = pgTable("user_activity_windows", {
 
 export const insertCommuteCircleSchema = createInsertSchema(commuteCircles).omit({ id: true, createdAt: true });
 export const insertCommuteCircleMemberSchema = createInsertSchema(commuteCircleMembers).omit({ id: true, joinedAt: true });
+export const insertTripLogSchema = createInsertSchema(tripLogs).omit({ id: true, createdAt: true });
+export const insertRefundRequestSchema = createInsertSchema(refundRequests).omit({ id: true, createdAt: true, resolvedAt: true });
 export const insertStarHopperSchema = createInsertSchema(starHoppers).omit({ id: true, createdAt: true });
 export const insertActivityWindowSchema = createInsertSchema(userActivityWindows).omit({ id: true });
 
@@ -526,6 +564,10 @@ export type CommuteCircle = typeof commuteCircles.$inferSelect;
 export type InsertCommuteCircle = z.infer<typeof insertCommuteCircleSchema>;
 export type CommuteCircleMember = typeof commuteCircleMembers.$inferSelect;
 export type InsertCommuteCircleMember = z.infer<typeof insertCommuteCircleMemberSchema>;
+export type TripLog = typeof tripLogs.$inferSelect;
+export type InsertTripLog = z.infer<typeof insertTripLogSchema>;
+export type RefundRequest = typeof refundRequests.$inferSelect;
+export type InsertRefundRequest = z.infer<typeof insertRefundRequestSchema>;
 export type StarHopper = typeof starHoppers.$inferSelect;
 export type InsertStarHopper = z.infer<typeof insertStarHopperSchema>;
 export type UserActivityWindow = typeof userActivityWindows.$inferSelect;

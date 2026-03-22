@@ -32,7 +32,7 @@ export default function Support() {
             <h2 className="text-xl font-bold text-foreground">Getting Help</h2>
           </div>
           <p className="text-sm text-foreground/70 dark:text-foreground/60 leading-relaxed pl-[52px]">
-            If you need assistance, the founder's contact number is listed directly in the app for immediate support.
+            If you need assistance, our Customer Support team is available directly in the app. You can also use the in-app chat for quick help.
           </p>
         </section>
 
@@ -46,20 +46,24 @@ export default function Support() {
             <h2 className="text-xl font-bold text-foreground">Automatic Refunds</h2>
           </div>
           <p className="text-sm text-foreground/70 dark:text-foreground/60 leading-relaxed pl-[52px]">
-            ShortHop ensures users aren't charged for rides that don't occur. Refunds are triggered when:
+            ShortHop uses GPS verification to ensure fair outcomes for every ride. Here's how it works:
           </p>
           <ul className="space-y-2 pl-[52px]">
             <li className="flex items-start gap-2.5 text-sm text-foreground/70 dark:text-foreground/60">
               <span className="text-blue-500 mt-0.5 shrink-0">-</span>
-              A Driver cancels a ride
+              Unmatched ride requests are automatically refunded
             </li>
             <li className="flex items-start gap-2.5 text-sm text-foreground/70 dark:text-foreground/60">
               <span className="text-blue-500 mt-0.5 shrink-0">-</span>
-              The Driver fails to accept or start the ride
+              For completed rides, you can submit a refund request through in-app support
             </li>
             <li className="flex items-start gap-2.5 text-sm text-foreground/70 dark:text-foreground/60">
               <span className="text-blue-500 mt-0.5 shrink-0">-</span>
-              Technical issues prevent the ride from starting
+              Our team reviews GPS trip data and responds within 48–72 hours
+            </li>
+            <li className="flex items-start gap-2.5 text-sm text-foreground/70 dark:text-foreground/60">
+              <span className="text-blue-500 mt-0.5 shrink-0">-</span>
+              Keep GPS enabled during rides to ensure trip verification
             </li>
           </ul>
         </section>

@@ -671,22 +671,30 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
               </Button>
             )}
             {hop.status === "in_ride" && (
-              <Button
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm rounded-xl"
-                onClick={async () => {
-                  try {
-                    await apiRequest("POST", `/api/hops/${hop.id}/complete`, {});
-                    queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
-                    showFlash("✅", "Ride completed!", "success");
-                    onClose();
-                  } catch {
-                    showFlash("⚠️", "Couldn't complete ride", "error");
-                  }
-                }}
-                data-testid="button-complete-ride"
-              >
-                Complete Ride
-              </Button>
+              <>
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-700/30 rounded-xl p-2.5" data-testid="dropoff-instruction">
+                  <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                    <span>📍</span> Drop off at the exact destination pin
+                  </p>
+                  <p className="text-[10px] text-amber-700/80 dark:text-amber-400/60 mt-0.5">Please take your hopper all the way to their destination marker.</p>
+                </div>
+                <Button
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm rounded-xl"
+                  onClick={async () => {
+                    try {
+                      await apiRequest("POST", `/api/hops/${hop.id}/complete`, {});
+                      queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                      showFlash("✅", "Ride completed!", "success");
+                      onClose();
+                    } catch {
+                      showFlash("⚠️", "Couldn't complete ride", "error");
+                    }
+                  }}
+                  data-testid="button-complete-ride"
+                >
+                  Complete Ride
+                </Button>
+              </>
             )}
           </div>
         </CardContent>
@@ -2242,6 +2250,12 @@ function InstaHopView({ user }: { user: User }) {
                         >
                           Confirm Pickup - Start Ride
                         </Button>
+                      )}
+                      {activeHop?.status === "in_ride" && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-700/30 rounded-lg p-2 text-[10px] text-amber-700 dark:text-amber-300" data-testid="gps-ride-info">
+                          <p className="font-medium flex items-center gap-1"><span>📡</span> GPS is tracking this ride for your protection</p>
+                          <p className="mt-0.5 text-amber-600/70 dark:text-amber-400/60">Keep location services enabled for refund eligibility.</p>
+                        </div>
                       )}
                     </CardContent>
                   </Card>

@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import NotFound from "@/pages/not-found";
 import { NavBar } from "@/components/NavBar";
 import { BottomTabBar } from "@/components/BottomTabBar";
+import { SupportChat } from "@/components/SupportChat";
 import Home from "@/pages/Home";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
@@ -124,6 +125,7 @@ function App() {
             <Router />
           </main>
           <BottomTabBar />
+          <SupportChat />
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

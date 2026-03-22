@@ -758,7 +758,7 @@ export async function registerRoutes(
       const existingHop = await storage.getHop(Number(req.params.id));
       const hop = await storage.cancelHop(Number(req.params.id), req.user.id);
 
-      if (existingHop?.paymentIntentId && (existingHop.paymentStatus === "authorized" || existingHop.paymentStatus === "requires_capture")) {
+      if (existingHop?.paymentIntentId && existingHop.paymentStatus === "authorized" && existingHop.status === "requested") {
         try {
           const stripe = await getUncachableStripeClient();
           await stripe.paymentIntents.cancel(existingHop.paymentIntentId);
@@ -768,7 +768,11 @@ export async function registerRoutes(
         }
       }
 
-      res.json({ ...hop, paymentRefunded: !!existingHop?.paymentIntentId });
+      if (existingHop?.status === "in_ride" || existingHop?.status === "matched") {
+        await storage.logGpsEvent(Number(req.params.id), "ride_cancelled_by_user");
+      }
+
+      res.json({ ...hop, paymentRefunded: existingHop?.status === "requested" && !!existingHop?.paymentIntentId });
     } catch (e: any) {
       res.status(400).json({ message: e.message || "Failed to cancel hop" });
     }
@@ -1473,7 +1477,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/location', (req, res) => {
+  app.post('/api/location', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     const { latitude, longitude, accuracy } = req.body;
     if (typeof latitude !== 'number' || typeof longitude !== 'number' ||
@@ -1481,6 +1485,41 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Invalid coordinates" });
     }
     liveLocations.set(req.user.id, { latitude, longitude, accuracy: accuracy || 0, updatedAt: Date.now() });
+
+    try {
+      const walkerHops = await storage.getHopsForWalker(req.user.id);
+      const driverHops = await storage.getHopsForDriver(req.user.id);
+      const activeHop = [...walkerHops, ...driverHops].find(h => h.status === 'in_ride');
+      if (activeHop) {
+        await storage.appendGpsPoint(activeHop.id, req.user.id, latitude, longitude);
+
+        const partnerId = activeHop.walkerId === req.user.id ? activeHop.driverId : activeHop.walkerId;
+        if (partnerId) {
+          const partnerLoc = liveLocations.get(partnerId);
+          if (partnerLoc && Date.now() - partnerLoc.updatedAt < 120000) {
+            const dist = getDistance(latitude, longitude, partnerLoc.latitude, partnerLoc.longitude);
+            if (!activeHop.greenlight1 && dist < 0.15) {
+              await storage.setGreenlight1(activeHop.id);
+              await storage.logGpsEvent(activeHop.id, "greenlight1_triggered");
+            }
+
+            if (activeHop.greenlight1 && !activeHop.greenlight2 && activeHop.endLat && activeHop.endLng) {
+              const destLat = parseFloat(String(activeHop.endLat));
+              const destLng = parseFloat(String(activeHop.endLng));
+              const myDistToDest = getDistance(latitude, longitude, destLat, destLng);
+              const partnerDistToDest = getDistance(partnerLoc.latitude, partnerLoc.longitude, destLat, destLng);
+              if (myDistToDest < 0.19 && partnerDistToDest < 0.19) {
+                await storage.setGreenlight2(activeHop.id);
+                await storage.logGpsEvent(activeHop.id, "greenlight2_triggered");
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("GPS trip logging error:", err);
+    }
+
     res.json({ ok: true });
   });
 
@@ -1804,6 +1843,16 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Not your hop" });
       }
       const updated = await storage.startRide(hopId);
+
+      if (hop.driverId) {
+        try {
+          await storage.createTripLog(hopId, hop.driverId, hop.walkerId);
+          await storage.logGpsEvent(hopId, "ride_started");
+        } catch (e) {
+          console.error("Trip log creation error:", e);
+        }
+      }
+
       res.json(updated);
     } catch (err) {
       res.status(500).json({ message: "Failed to start ride" });
@@ -2305,6 +2354,202 @@ export async function registerRoutes(
       res.json(results);
     } catch (err) {
       res.status(500).json({ message: "Search failed" });
+    }
+  });
+
+  app.post('/api/refund-request', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { hopId, reason } = req.body;
+      if (!hopId || !reason) return res.status(400).json({ message: "Hop ID and reason required" });
+
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.walkerId !== req.user.id) return res.status(403).json({ message: "Not your hop" });
+      if (hop.status !== "completed" && hop.status !== "cancelled") {
+        return res.status(400).json({ message: "Can only request refund for completed or cancelled rides" });
+      }
+
+      const existing = await storage.getRefundRequest(hopId);
+      if (existing) return res.status(400).json({ message: "Refund request already submitted for this trip" });
+
+      const tripLog = await storage.getTripLog(hopId);
+      const gl1 = tripLog?.greenlight1 || hop.greenlight1 || false;
+      const gl2 = tripLog?.greenlight2 || hop.greenlight2 || false;
+      const gpsOk = tripLog?.gpsComplete !== false && hop.gpsComplete !== false;
+
+      const aiResponse = "Thank you for reaching out! I understand this can be frustrating. " +
+        "Our team will carefully review your trip details, including GPS data and route information, " +
+        "to ensure a fair resolution. You'll receive an update within 48–72 hours. " +
+        "We appreciate your patience and want to make sure we get this right for you.";
+
+      const refundReq = await storage.createRefundRequest(hopId, req.user.id, reason, aiResponse, gl1, gl2, gpsOk);
+      res.json({ ...refundReq, aiMessage: aiResponse });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to submit refund request" });
+    }
+  });
+
+  app.get('/api/refund-requests', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const walkerHops = await storage.getHopsForWalker(req.user.id);
+      const hopIds = new Set(walkerHops.map(h => h.id));
+      const allRequests = await storage.getRefundRequests();
+      const myRequests = allRequests.filter(r => r.userId === req.user.id || hopIds.has(r.hopId));
+      res.json(myRequests);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to load refund requests" });
+    }
+  });
+
+  app.get('/api/hops/:id/trip-log', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.walkerId !== req.user.id && hop.driverId !== req.user.id && !req.user.isAdmin) {
+        return res.status(403).json({ message: "Not your hop" });
+      }
+      const log = await storage.getTripLog(hopId);
+      res.json(log || { message: "No trip log available" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to load trip log" });
+    }
+  });
+
+  app.post('/api/hops/:id/report-gps-off', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.walkerId !== req.user.id && hop.driverId !== req.user.id && !req.user.isAdmin) {
+        return res.status(403).json({ message: "Not your hop" });
+      }
+      await storage.setGpsIncomplete(hopId);
+      await storage.logGpsEvent(hopId, "gps_disabled_by_user");
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to report GPS" });
+    }
+  });
+
+  app.post('/api/support-chat', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { message } = req.body;
+      if (!message) return res.status(400).json({ message: "Message required" });
+
+      const lowerMsg = message.toLowerCase();
+
+      let response = "";
+      if (lowerMsg.includes("refund") || lowerMsg.includes("money back") || lowerMsg.includes("charge")) {
+        response = "I understand you have a concern about a charge. I'd love to help! " +
+          "Could you tell me which ride this is about and what happened? " +
+          "Once I have more details, our team will review the trip data and get back to you within 48–72 hours with a resolution.";
+      } else if (lowerMsg.includes("driver") || lowerMsg.includes("unsafe") || lowerMsg.includes("safety")) {
+        response = "Your safety is our top priority. I'm sorry to hear about this experience. " +
+          "Could you provide a few more details about what happened? " +
+          "Our safety team will review this and follow up with you within 48–72 hours.";
+      } else if (lowerMsg.includes("cancel") || lowerMsg.includes("cancelled")) {
+        response = "I see you have a question about a cancellation. " +
+          "Cancellations before a match are fully refunded. For rides that were already in progress, " +
+          "our team reviews the trip data to determine the appropriate outcome. " +
+          "Is there a specific trip you'd like help with?";
+      } else if (lowerMsg.includes("how") || lowerMsg.includes("work") || lowerMsg.includes("what is")) {
+        response = "Great question! ShortHop is a community-based platform that connects people heading in the same direction. " +
+          "Drivers share their regular routes and get matched with hoppers going the same way. " +
+          "It's convenient, affordable, and built on trust. Is there something specific you'd like to know more about?";
+      } else {
+        response = "Thanks for reaching out! I'm here to help. " +
+          "Could you tell me a bit more about what you need assistance with? " +
+          "Whether it's about a ride, your account, or anything else, I'm happy to guide you.";
+      }
+
+      res.json({ response });
+    } catch (err) {
+      res.status(500).json({ message: "Support unavailable" });
+    }
+  });
+
+  app.get('/api/admin/refund-requests', async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const requests = await storage.getRefundRequests();
+      const enriched = await Promise.all(requests.map(async (r) => {
+        const user = await storage.getUser(r.userId);
+        const hop = await storage.getHop(r.hopId);
+        const tripLog = await storage.getTripLog(r.hopId);
+        return {
+          ...r,
+          username: user?.username || "Unknown",
+          hopDetails: hop ? { startLocation: hop.startLocation, endLocation: hop.endLocation, distanceMiles: hop.distanceMiles, priceCents: hop.priceCents, status: hop.status } : null,
+          tripLog: tripLog || null,
+        };
+      }));
+      res.json(enriched);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to load refund requests" });
+    }
+  });
+
+  app.post('/api/admin/refund-requests/:id/resolve', async (req, res) => {
+    if (!req.isAuthenticated() || !req.user.isAdmin) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { status, adminNotes } = req.body;
+      if (!status || !["approved", "denied", "partial"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      const allRequests = await storage.getRefundRequests();
+      const existing = allRequests.find(r => r.id === Number(req.params.id));
+      if (!existing) return res.status(404).json({ message: "Refund request not found" });
+      if (existing.status !== "pending") {
+        return res.status(400).json({ message: "This refund request has already been resolved" });
+      }
+      const resolved = await storage.resolveRefundRequest(Number(req.params.id), status, adminNotes || "");
+
+      if (status === "approved" && resolved.hopId) {
+        const hop = await storage.getHop(resolved.hopId);
+        if (hop?.paymentIntentId) {
+          try {
+            const stripe = await getUncachableStripeClient();
+            await stripe.refunds.create({ payment_intent: hop.paymentIntentId });
+            await db.update(shortHops).set({ paymentStatus: "refunded" }).where(eq(shortHops.id, hop.id));
+          } catch (e: any) {
+            console.error("Refund processing error:", e.message);
+          }
+        }
+      } else if (status === "partial" && resolved.hopId) {
+        const hop = await storage.getHop(resolved.hopId);
+        if (hop?.paymentIntentId && hop.paymentAmountCents) {
+          try {
+            const stripe = await getUncachableStripeClient();
+            const partialAmount = Math.round(hop.paymentAmountCents * 0.5);
+            await stripe.refunds.create({ payment_intent: hop.paymentIntentId, amount: partialAmount });
+            await db.update(shortHops).set({ paymentStatus: "partial_refund" }).where(eq(shortHops.id, hop.id));
+          } catch (e: any) {
+            console.error("Partial refund error:", e.message);
+          }
+        }
+      }
+
+      await storage.createNotification({
+        userId: resolved.userId,
+        type: "system",
+        title: status === "approved" ? "Refund Approved" : status === "partial" ? "Partial Refund Issued" : "Refund Request Update",
+        message: status === "approved"
+          ? "Your refund request has been approved. The full amount will be returned to your payment method."
+          : status === "partial"
+          ? "After reviewing your trip, a partial refund (50%) has been issued to your payment method."
+          : "After reviewing your trip data, we were unable to process a refund for this ride. If you have questions, please reach out to support.",
+        isRead: false,
+      });
+
+      res.json(resolved);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to resolve request" });
     }
   });
 

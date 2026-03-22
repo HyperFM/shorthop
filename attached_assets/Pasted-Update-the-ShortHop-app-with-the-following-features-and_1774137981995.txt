@@ -1,0 +1,139 @@
+Update the ShortHop app with the following features and logic:
+
+========================
+1. TRIP VALIDATION SYSTEM (GREENLIGHT LOGIC)
+========================
+
+Implement a dual-verification system using GPS:
+
+GREENLIGHT 1 (Ride Together Verification):
+- Detect when both driver and hopper are traveling together
+- This occurs when:
+  - Both GPS signals are active
+  - Both locations move together within a close distance threshold over time
+- When confirmed:
+  - Trigger "Greenlight 1"
+  - Log timestamp and route data
+
+GREENLIGHT 2 (Arrival Verification):
+- Detect when BOTH driver and hopper reach within a 1000ft radius of the hopper’s destination
+- When confirmed:
+  - Trigger "Greenlight 2"
+  - Log timestamp and final coordinates
+
+========================
+2. REFUND LOGIC (STRICT + CONTROLLED)
+========================
+
+- NEVER issue refunds automatically
+
+Refund outcomes:
+- If Greenlight 1 AND Greenlight 2 are both achieved:
+  → NO REFUND
+
+- If ONLY Greenlight 1 is achieved:
+  → PARTIAL REFUND (define percentage, e.g. 50%)
+
+- If NO greenlights achieved:
+  → ELIGIBLE FOR REVIEW (not automatic refund)
+
+- If GPS data is missing, incomplete, or turned off:
+  → NO REFUND (cannot verify trip)
+
+========================
+3. REFUND REQUEST FLOW (DELAY SYSTEM)
+========================
+
+When a user requests a refund:
+
+- AI agent should:
+  1. Respond kindly and acknowledge concern
+  2. Ask a few helpful clarifying questions
+  3. DO NOT resolve immediately
+
+- Then say:
+  "Thanks for your patience. Our team will review your trip and you’ll receive an email update within 48–72 hours."
+
+- After delay:
+  - System reviews GPS logs and greenlight status
+  - Then determines outcome
+
+========================
+4. GPS TRACKING + SECURITY
+========================
+
+- Continuously track:
+  - driver GPS
+  - hopper GPS
+  - timestamps
+
+- Log:
+  - trip start
+  - movement patterns
+  - greenlight triggers
+  - GPS disabled events
+
+- If GPS is turned off:
+  - Flag trip as "GPS incomplete"
+  - Display warning to users
+  - Disqualify refund eligibility
+
+========================
+5. DROP-OFF INSTRUCTIONS
+========================
+
+- Drivers must ALWAYS be instructed to drop the hopper at the EXACT destination pin
+- The 1000ft radius is ONLY for backend validation
+
+========================
+6. CUSTOMER SERVICE UPDATE
+========================
+
+- Replace "Founder's Contact Number" with:
+  → "Customer Support"
+
+- Remove any personal identity references
+
+========================
+7. AI CUSTOMER SERVICE AGENT RULES
+========================
+
+AI personality:
+- Friendly, calm, and supportive
+- Clear but NOT overly detailed
+- Avoid long explanations
+
+Knowledge:
+- AI should understand the app, features, and user experience
+- It can use general messaging like:
+  "ShortHop is a community-based platform connecting people heading in the same direction"
+
+Restrictions:
+- DO NOT reveal:
+  - internal system logic
+  - refund rules in detail
+  - GPS validation mechanics
+  - any code or backend structure
+
+Refund conversations:
+- Never instantly approve or deny
+- Always guide user through support flow
+- Always defer final decision to delayed review
+
+========================
+8. LOGGING + DISPUTE RECORDS
+========================
+
+- Store all trip logs securely
+- Include:
+  - GPS paths
+  - timestamps
+  - greenlight events
+  - refund requests
+- Ensure logs can be used for dispute resolution
+
+========================
+
+Ensure all logic is enforced:
+- Backend (final decisions, validation)
+- Frontend (user messaging, warnings, confirmations)
