@@ -1782,6 +1782,33 @@ export async function registerRoutes(
       console.error("GPS trip logging error:", err);
     }
 
+    try {
+      const driverUser = await storage.getUser(req.user.id);
+      if (driverUser?.isDriver && driverUser.isActive) {
+        const driverRoutes = await storage.getRoutes(req.user.id);
+        if (driverRoutes.length > 0) {
+          const route = driverRoutes[0];
+          const destLat = parseFloat(route.endLat || "0");
+          const destLng = parseFloat(route.endLng || "0");
+          if (destLat && destLng) {
+            const distToDest = getDistance(latitude, longitude, destLat, destLng);
+            if (distToDest < 0.1) {
+              const driverHops = await storage.getHopsForDriver(req.user.id);
+              const hasActiveRide = driverHops.some((h: any) => h.status === "matched" || h.status === "in_ride");
+              if (!hasActiveRide) {
+                await storage.setDriverActive(req.user.id, false);
+                liveLocations.delete(req.user.id);
+                await db.delete(routineRoutes).where(eq(routineRoutes.driverId, req.user.id));
+                console.log(`Driver ${req.user.id} auto-deactivated: reached destination (${distToDest.toFixed(3)}mi away)`);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Auto-deactivate check error:", err);
+    }
+
     res.json({ ok: true });
   });
 

@@ -3,8 +3,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import WalkerDashboard from "./WalkerDashboard";
 import DriverDashboard from "./DriverDashboard";
-import { NearbyHopperAlert } from "@/components/NearbyHopperAlert";
-import { useNearbyHopperSimulation } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
 import { useTheme } from "@/components/ThemeProvider";
 import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil, Users, Phone, MessageCircle, X, Sun, Moon, Monitor, Clock, Lock } from "lucide-react";
@@ -30,7 +28,6 @@ const NOTIF_STORAGE_KEY = "shorthop-notification-preferences";
 interface NotificationPreferences {
   rideAlerts: boolean;
   routeAlerts: boolean;
-  hopperNearbyAlerts: boolean;
   busyRouteAlerts: boolean;
   communityNotifications: boolean;
   growthNotifications: boolean;
@@ -40,7 +37,6 @@ interface NotificationPreferences {
 const defaultPreferences: NotificationPreferences = {
   rideAlerts: true,
   routeAlerts: true,
-  hopperNearbyAlerts: true,
   busyRouteAlerts: false,
   communityNotifications: true,
   growthNotifications: true,
@@ -115,7 +111,6 @@ function ThemeToggle() {
 export default function Dashboard() {
   const { data: user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
-  const { currentHopper, dismiss } = useNearbyHopperSimulation(!!user?.isDriver);
   const [activeTab, setActiveTab] = useState<"hopper" | "driver">(() => {
     const lock = user?.modeLock || "none";
     if (lock === "hopper_only") return "hopper";
@@ -259,7 +254,6 @@ export default function Dashboard() {
   const toggleItems: { key: keyof NotificationPreferences; label: string; description: string; icon: typeof Bell }[] = [
     { key: "rideAlerts", label: "Ride Alerts", description: "Matches or incoming drivers", icon: Bell },
     { key: "driverApproachingSound", label: "Driver Approaching Sound", description: "Alert sound when your driver enters the corridor zone", icon: Volume2 },
-    { key: "hopperNearbyAlerts", label: "Hopper Nearby", description: "Know when a hopper is nearby", icon: Bell },
     { key: "communityNotifications", label: "Community", description: "Social updates and news", icon: Bell },
     { key: "growthNotifications", label: "Network Growth", description: "Milestones and progress", icon: Bell },
   ];
@@ -273,9 +267,6 @@ export default function Dashboard() {
         />
       )}
 
-      {activeTab === "driver" && (
-        <NearbyHopperAlert hopper={currentHopper} onDismiss={dismiss} />
-      )}
 
       {modeLock === "none" ? (
         <div className="pt-2 pb-1 px-4 max-w-lg mx-auto" data-testid="mode-switcher">
