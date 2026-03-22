@@ -1,0 +1,90 @@
+Update Matching Logic (Point-to-Route, Forward-Only)
+
+Core Issue
+
+The current matching system is not working because it is likely comparing point-to-point (start-to-start and end-to-end).
+
+That is not the intended behavior.
+
+Do not modify the UI. The issue is strictly in the matching logic.
+
+⸻
+
+Required Matching Logic
+
+The system must match a rider (hopper) to a driver based on point-to-route proximity, not point-to-point comparison.
+
+Definitions
+	•	The driver’s trip should be treated as a continuous route (a line from start to destination, ideally a full path/polyline if available).
+	•	The hopper’s trip consists of two points:
+	•	Pickup (start)
+	•	Dropoff (destination)
+
+⸻
+
+Matching Conditions
+
+A match should occur only if all of the following are true:
+	1.	Pickup proximity to route
+The hopper’s pickup point must be within 2,500 feet (≈ 0.5 miles) of the driver’s route.
+	2.	Dropoff proximity to route
+The hopper’s dropoff point must also be within 2,500 feet of the driver’s route.
+	3.	Forward direction constraint (no backtracking)
+The hopper’s trip must move forward along the driver’s route, not backward.
+This means:
+	•	The closest point on the route to the hopper’s dropoff must come after the closest point to the hopper’s pickup.
+	•	The system must reject matches where the driver would need to go backward along their route to complete the trip.
+
+⸻
+
+Important Notes
+	•	The system must not rely on exact coordinate matching.
+	•	The system must not only compare start and end points.
+	•	The driver route must be treated as a path, not just two endpoints.
+	•	If a full route (polyline) is not available, approximate using a straight line from start to end, but still apply:
+	•	Distance-to-line checks
+	•	Forward progression logic
+
+⸻
+
+Matching Trigger Requirements
+
+Ensure the matching process runs when:
+	•	A rider starts searching
+	•	A driver becomes active
+	•	Optionally, re-run matching periodically to catch missed matches
+
+⸻
+
+Debug Requirements
+
+Add internal logging to confirm:
+	•	Matching function is executing
+	•	Driver route exists and is valid
+	•	Distances from pickup and dropoff to route
+	•	Whether failure is due to:
+	•	Distance threshold
+	•	Direction (backtracking)
+	•	Missing route data
+	•	Status mismatch
+
+⸻
+
+Test Case (Must Pass)
+	•	Create a driver with a route from Point A to Point B
+	•	Create a hopper with the exact same pickup and dropoff
+
+Expected result:
+	•	Immediate match
+	•	No failure under identical route conditions
+
+If this test fails, the matching logic is still incorrect.
+
+⸻
+
+Goal
+
+Implement reliable, automatic matching based on:
+	•	Proximity to the driver’s route
+	•	Forward-only trip alignment
+	•	No manual selection required

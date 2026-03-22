@@ -286,6 +286,38 @@ function distToPolyline(lat: number, lng: number, points: [number, number][]): n
   return minDist;
 }
 
+function progressAlongRoute(lat: number, lng: number, points: [number, number][]): number {
+  if (points.length < 2) return 0;
+  let cumDist = 0;
+  let bestProgress = 0;
+  let bestDist = Infinity;
+  const segLengths: number[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    segLengths.push(getDistance(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1]));
+  }
+  const totalLen = segLengths.reduce((s, d) => s + d, 0);
+  if (totalLen === 0) return 0;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const ax = points[i][0], ay = points[i][1];
+    const bx = points[i + 1][0], by = points[i + 1][1];
+    const dx = bx - ax, dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    let t = 0;
+    if (lenSq > 0) {
+      t = Math.max(0, Math.min(1, ((lat - ax) * dx + (lng - ay) * dy) / lenSq));
+    }
+    const cLat = ax + t * dx, cLng = ay + t * dy;
+    const d = getDistance(lat, lng, cLat, cLng);
+    if (d < bestDist) {
+      bestDist = d;
+      bestProgress = (cumDist + t * segLengths[i]) / totalLen;
+    }
+    cumDist += segLengths[i];
+  }
+  return bestProgress;
+}
+
 function isDropoffPastDestination(dropLat: number, dropLng: number, routeStartLat: number, routeStartLng: number, routeEndLat: number, routeEndLng: number): boolean {
   const routeDist = getDistance(routeStartLat, routeStartLng, routeEndLat, routeEndLng);
   const dropDist = getDistance(routeStartLat, routeStartLng, dropLat, dropLng);
@@ -308,17 +340,29 @@ function scoreHopMatchForDriver(
   hop: any,
   driverSeats: number,
   driverLoc: { latitude: number; longitude: number; updatedAt: number } | undefined,
-  driverRoutes: any[]
+  driverRoutes: any[],
+  driverId?: number
 ): MatchScore {
   const fail: MatchScore = { valid: false, pickupDist: Infinity, dropoffDist: Infinity, totalDeviation: Infinity };
+  const tag = `  [hop${hop.id}↔drv${driverId || '?'}]`;
   const now = new Date();
-  if (hop.status !== "requested") return fail;
-  if (hop.timeWindowExpiry && new Date(hop.timeWindowExpiry) < now) return fail;
-  if ((hop.seatsNeeded || 1) > driverSeats) return fail;
+
+  if (hop.status !== "requested") { return fail; }
+  if (hop.timeWindowExpiry && new Date(hop.timeWindowExpiry) < now) {
+    console.log(`${tag} FAIL: time window expired`);
+    return fail;
+  }
+  if ((hop.seatsNeeded || 1) > driverSeats) {
+    console.log(`${tag} FAIL: needs ${hop.seatsNeeded} seats, driver has ${driverSeats}`);
+    return fail;
+  }
 
   if (hop.departureTime) {
     const timeDiff = Math.abs(new Date(hop.departureTime).getTime() - now.getTime());
-    if (timeDiff > MAX_TIME_DIFF_MS) return fail;
+    if (timeDiff > MAX_TIME_DIFF_MS) {
+      console.log(`${tag} FAIL: departure time too far (${Math.round(timeDiff / 60000)}min diff)`);
+      return fail;
+    }
   }
 
   const hopStartLat = parseFloat(hop.startLat || "0");
@@ -326,76 +370,80 @@ function scoreHopMatchForDriver(
   const hopEndLat = parseFloat(hop.endLat || "0");
   const hopEndLng = parseFloat(hop.endLng || "0");
 
-  if (!hopStartLat || !hopStartLng || !hopEndLat || !hopEndLng) return fail;
+  if (!hopStartLat || !hopStartLng || !hopEndLat || !hopEndLng) {
+    console.log(`${tag} FAIL: hop missing coordinates (${hopStartLat},${hopStartLng})→(${hopEndLat},${hopEndLng})`);
+    return fail;
+  }
 
-  const hopBearing = Math.atan2(hopEndLng - hopStartLng, hopEndLat - hopStartLat);
+  if (driverRoutes.length === 0) {
+    console.log(`${tag} FAIL: no routes saved for driver`);
+    return fail;
+  }
 
   let bestPickupDist = Infinity;
   let bestDropoffDist = Infinity;
   let matchedAnyRoute = false;
 
-  if (driverLoc && Date.now() - driverLoc.updatedAt < 120000) {
-    const pickupFromDriver = getDistance(driverLoc.latitude, driverLoc.longitude, hopStartLat, hopStartLng);
-    if (pickupFromDriver > MAX_DEVIATION_MILES) return fail;
+  for (const route of driverRoutes) {
+    const rStartLat = parseFloat(route.startLat || "0");
+    const rStartLng = parseFloat(route.startLng || "0");
+    const rEndLat = parseFloat(route.endLat || "0");
+    const rEndLng = parseFloat(route.endLng || "0");
+    if (!rEndLat || !rEndLng) {
+      console.log(`${tag} Route "${route.name}" skipped: missing endLat/endLng`);
+      continue;
+    }
 
-    const driverBearing = Math.atan2(hopEndLng - driverLoc.longitude, hopEndLat - driverLoc.latitude);
-    const angleDiff = Math.abs(driverBearing - hopBearing);
-    const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-    if (normalizedAngle > MAX_DIRECTION_ANGLE) return fail;
+    let routePoints: [number, number][] = [];
+    if (rStartLat && rStartLng) routePoints.push([rStartLat, rStartLng]);
+    routePoints.push([rEndLat, rEndLng]);
+
+    if (driverLoc && Date.now() - driverLoc.updatedAt < 120000) {
+      routePoints = [[driverLoc.latitude, driverLoc.longitude], ...routePoints.slice(routePoints.length > 1 ? 1 : 0)];
+    }
+
+    console.log(`${tag} Route "${route.name}": ${routePoints.map(p => `(${p[0].toFixed(4)},${p[1].toFixed(4)})`).join('→')}`);
+
+    const pickupToRoute = distToPolyline(hopStartLat, hopStartLng, routePoints);
+    console.log(`${tag}   pickup dist to route: ${pickupToRoute.toFixed(3)}mi (max ${MAX_DEVIATION_MILES})`);
+    if (pickupToRoute > MAX_DEVIATION_MILES) {
+      console.log(`${tag}   SKIP: pickup too far from route`);
+      continue;
+    }
+
+    const dropoffToRoute = distToPolyline(hopEndLat, hopEndLng, routePoints);
+    console.log(`${tag}   dropoff dist to route: ${dropoffToRoute.toFixed(3)}mi (max ${MAX_DEVIATION_MILES})`);
+    if (dropoffToRoute > MAX_DEVIATION_MILES) {
+      console.log(`${tag}   SKIP: dropoff too far from route`);
+      continue;
+    }
+
+    const pickupProgress = progressAlongRoute(hopStartLat, hopStartLng, routePoints);
+    const dropoffProgress = progressAlongRoute(hopEndLat, hopEndLng, routePoints);
+    console.log(`${tag}   pickup progress: ${(pickupProgress * 100).toFixed(1)}%, dropoff progress: ${(dropoffProgress * 100).toFixed(1)}%`);
+
+    if (dropoffProgress <= pickupProgress) {
+      console.log(`${tag}   SKIP: backtracking — dropoff is before pickup along route`);
+      continue;
+    }
+
+    if (isDropoffPastDestination(hopEndLat, hopEndLng, routePoints[0][0], routePoints[0][1], rEndLat, rEndLng)) {
+      console.log(`${tag}   SKIP: dropoff is past driver's destination`);
+      continue;
+    }
+
+    console.log(`${tag}   MATCH on route "${route.name}" ✓`);
+    matchedAnyRoute = true;
+    if (pickupToRoute < bestPickupDist) bestPickupDist = pickupToRoute;
+    if (dropoffToRoute < bestDropoffDist) bestDropoffDist = dropoffToRoute;
   }
 
-  if (driverRoutes.length > 0) {
-    for (const route of driverRoutes) {
-      const rStartLat = parseFloat(route.startLat || "0");
-      const rStartLng = parseFloat(route.startLng || "0");
-      const rEndLat = parseFloat(route.endLat || "0");
-      const rEndLng = parseFloat(route.endLng || "0");
-      if (!rEndLat || !rEndLng) {
-        console.log(`  Route "${route.name}" skipped: missing endLat/endLng (${route.endLat}, ${route.endLng})`);
-        continue;
-      }
-
-      let routePoints: [number, number][] = [];
-      if (rStartLat && rStartLng) routePoints.push([rStartLat, rStartLng]);
-      routePoints.push([rEndLat, rEndLng]);
-
-      if (driverLoc && Date.now() - driverLoc.updatedAt < 120000 && routePoints.length >= 2) {
-        routePoints = getRemainingRoute(routePoints, driverLoc.latitude, driverLoc.longitude);
-      }
-
-      const pickupToRoute = routePoints.length >= 2
-        ? distToPolyline(hopStartLat, hopStartLng, routePoints)
-        : getDistance(hopStartLat, hopStartLng, rEndLat, rEndLng);
-      if (pickupToRoute > MAX_DEVIATION_MILES) continue;
-
-      const dropoffToRoute = distToPolyline(hopEndLat, hopEndLng, routePoints);
-      if (dropoffToRoute > MAX_DEVIATION_MILES) continue;
-
-      const effectiveStart = routePoints[0];
-      const effectiveEnd = routePoints[routePoints.length - 1];
-      const routeBearing = Math.atan2(effectiveEnd[1] - effectiveStart[1], effectiveEnd[0] - effectiveStart[0]);
-      const angleDiff = Math.abs(routeBearing - hopBearing);
-      const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-      if (normalizedAngle > MAX_DIRECTION_ANGLE) continue;
-
-      if (isDropoffPastDestination(hopEndLat, hopEndLng, effectiveStart[0], effectiveStart[1], rEndLat, rEndLng)) {
-        continue;
-      }
-
-      matchedAnyRoute = true;
-      if (pickupToRoute < bestPickupDist) bestPickupDist = pickupToRoute;
-      if (dropoffToRoute < bestDropoffDist) bestDropoffDist = dropoffToRoute;
-    }
-
-    if (!matchedAnyRoute) {
-      console.log(`  No route match for hop ${hop.id} (${driverRoutes.length} routes checked)`);
-      return fail;
-    }
-  } else {
-    console.log(`  No routes saved for driver — cannot match`);
+  if (!matchedAnyRoute) {
+    console.log(`${tag} FAIL: no compatible route found (${driverRoutes.length} checked)`);
     return fail;
   }
 
+  console.log(`${tag} VALID: pickup=${bestPickupDist.toFixed(3)}mi, dropoff=${bestDropoffDist.toFixed(3)}mi`);
   return {
     valid: true,
     pickupDist: bestPickupDist,
@@ -474,7 +522,7 @@ async function runMatchingCycle() {
       driverSeatTracker.set(driver.id, effectiveSeats);
 
       for (const hop of allAvailable) {
-        const score = scoreHopMatchForDriver(hop, effectiveSeats, driverLoc, driverRoutes);
+        const score = scoreHopMatchForDriver(hop, effectiveSeats, driverLoc, driverRoutes, driver.id);
         if (!score.valid) continue;
 
         const driverStarredHopper = starSet.has(hop.walkerId);
