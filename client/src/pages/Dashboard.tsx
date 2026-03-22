@@ -277,56 +277,71 @@ export default function Dashboard() {
         <NearbyHopperAlert hopper={currentHopper} onDismiss={dismiss} />
       )}
 
-      <div className="pt-2 pb-1 px-4 max-w-lg mx-auto" data-testid="mode-switcher">
-        <div className="flex justify-center">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full blur-lg bg-orange-400/25 scale-110 -z-10" />
-            <div className="relative flex items-center bg-card/98 backdrop-blur-xl rounded-full border border-orange-400/50 shadow-lg shadow-orange-500/15 p-1">
-              <motion.div
-                className="absolute top-1 bottom-1 rounded-full"
-                animate={{
-                  left: activeTab === "hopper" ? 4 : "50%",
-                  right: activeTab === "driver" ? 4 : "50%",
-                  background: activeTab === "hopper"
-                    ? "linear-gradient(135deg, #3b82f6, #1d4ed8)"
-                    : "linear-gradient(135deg, #16a34a, #15803d)",
-                }}
-                transition={{ type: "spring", stiffness: 500, damping: 35 }}
-              />
-              <button
-                onClick={() => {
-                  if (modeLock === "driver_only") return;
-                  setActiveTab("hopper");
-                  vibrate();
-                  try { localStorage.setItem("sh-active-tab", "hopper"); } catch {}
-                  window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "hopper" }));
-                }}
-                className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
-                  activeTab === "hopper" ? "text-white" : "text-muted-foreground hover:text-foreground"
-                } ${modeLock === "driver_only" ? "opacity-30 cursor-not-allowed" : ""}`}
-                data-testid="tab-hopper"
-              >
-                Hopper{modeLock === "driver_only" && " 🔒"}
-              </button>
-              <button
-                onClick={() => {
-                  if (modeLock === "hopper_only") return;
-                  setActiveTab("driver");
-                  vibrate();
-                  try { localStorage.setItem("sh-active-tab", "driver"); } catch {}
-                  window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "driver" }));
-                }}
-                className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
-                  activeTab === "driver" ? "text-white" : "text-muted-foreground hover:text-foreground"
-                } ${modeLock === "hopper_only" ? "opacity-30 cursor-not-allowed" : ""}`}
-                data-testid="tab-driver"
-              >
-                Driver{modeLock === "hopper_only" && " 🔒"}
-              </button>
+      {modeLock === "none" ? (
+        <div className="pt-2 pb-1 px-4 max-w-lg mx-auto" data-testid="mode-switcher">
+          <div className="flex justify-center">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full blur-lg bg-orange-400/25 scale-110 -z-10" />
+              <div className="relative flex items-center bg-card/98 backdrop-blur-xl rounded-full border border-orange-400/50 shadow-lg shadow-orange-500/15 p-1">
+                <motion.div
+                  className="absolute top-1 bottom-1 rounded-full"
+                  animate={{
+                    left: activeTab === "hopper" ? 4 : "50%",
+                    right: activeTab === "driver" ? 4 : "50%",
+                    background: activeTab === "hopper"
+                      ? "linear-gradient(135deg, #3b82f6, #1d4ed8)"
+                      : "linear-gradient(135deg, #16a34a, #15803d)",
+                  }}
+                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                />
+                <button
+                  onClick={() => {
+                    setActiveTab("hopper");
+                    vibrate();
+                    try { localStorage.setItem("sh-active-tab", "hopper"); } catch {}
+                    window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "hopper" }));
+                  }}
+                  className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
+                    activeTab === "hopper" ? "text-white" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid="tab-hopper"
+                >
+                  Hopper
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("driver");
+                    vibrate();
+                    try { localStorage.setItem("sh-active-tab", "driver"); } catch {}
+                    window.dispatchEvent(new CustomEvent("sh-mode-change", { detail: "driver" }));
+                  }}
+                  className={`relative z-10 px-7 py-2.5 rounded-full text-xs font-black tracking-wide transition-colors ${
+                    activeTab === "driver" ? "text-white" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid="tab-driver"
+                >
+                  Driver
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="pt-2 pb-1 px-4 max-w-lg mx-auto" data-testid="mode-switcher-locked">
+          <div className="flex justify-center">
+            <div className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full border shadow-sm ${
+              modeLock === "driver_only"
+                ? "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400"
+                : "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-400"
+            }`}>
+              <Lock className="w-3.5 h-3.5" />
+              <span className="text-xs font-black tracking-wide">
+                {modeLock === "driver_only" ? "🚗 Driver Only" : "🚶 Hopper Only"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === "driver" ? (
         <DriverDashboard user={user} />
