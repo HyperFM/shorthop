@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Users, Globe, Sparkles, Shield, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Palette, Camera, Plus, X, Eye, EyeOff, Lock } from "lucide-react";
+import { Bell, Users, Globe, Sparkles, Shield, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Palette, Camera, Plus, X, Eye, EyeOff, Lock, LogOut } from "lucide-react";
 import { PROFILE_TAB_COLORS } from "@/components/BottomTabBar";
 import { useLocation } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth, useLogout } from "@/hooks/use-auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -285,6 +285,7 @@ function IdVerificationSection({ user }: { user: any }) {
 
 export default function Settings() {
   const { data: user } = useAuth();
+  const logout = useLogout();
   const [, setLocation] = useLocation();
   const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
@@ -998,19 +999,31 @@ export default function Settings() {
         </Card>
 
         {user?.isAdmin && (
-          <Card className="border-red-200/50 dark:border-red-800/40 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/admin")} data-testid="card-admin-link">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md shadow-red-500/20">
-                  <Shield className="w-5 h-5 text-white" />
+          <>
+            <Card className="border-red-200/50 dark:border-red-800/40 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/admin")} data-testid="card-admin-link">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md shadow-red-500/20">
+                    <Shield className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-extrabold text-foreground">Admin Dashboard</p>
+                    <p className="text-[10px] text-muted-foreground">Manage users, reports, and settings</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-extrabold text-foreground">Admin Dashboard</p>
-                  <p className="text-[10px] text-muted-foreground">Manage users, reports, and settings</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+            <Button
+              variant="outline"
+              className="w-full border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 font-bold h-11 rounded-xl"
+              onClick={() => logout.mutate()}
+              disabled={logout.isPending}
+              data-testid="button-admin-logout"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              {logout.isPending ? "Logging out..." : "Log Out"}
+            </Button>
+          </>
         )}
 
         <Card className="border-border/40" data-testid="card-notifications-inbox">
