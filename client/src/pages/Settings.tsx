@@ -911,7 +911,7 @@ export default function Settings() {
                     <span className="text-xl">🚶</span>
                     <div>
                       <p className="text-sm font-bold text-foreground">Standard</p>
-                      <p className="text-xs text-muted-foreground">Free plan — pay per ride</p>
+                      <p className="text-xs text-muted-foreground">Free plan</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
