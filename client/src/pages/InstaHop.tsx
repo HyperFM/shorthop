@@ -87,6 +87,95 @@ const CORRIDORS: Corridor[] = [
   { id: 40, name: "Athens-Boonesboro Rd", lat: 38.0300, lng: -84.4500, widthRank: 4 },
 ];
 
+function AddressAutocomplete({ value, onChange, placeholder, className, dataTestId }: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+  dataTestId?: string;
+}) {
+  const [suggestions, setSuggestions] = useState<{ place_name: string; text: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const fetchSuggestions = (query: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (query.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      const token = import.meta.env.VITE_MAPBOX_TOKEN;
+      if (!token) return;
+      try {
+        const encoded = encodeURIComponent(query);
+        const res = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encoded}.json?access_token=${token}&limit=5&country=US&proximity=-84.5037,38.0406&types=address,poi,neighborhood,place`
+        );
+        const json = await res.json();
+        if (json.features) {
+          setSuggestions(json.features.map((f: any) => ({ place_name: f.place_name, text: f.text })));
+          setShowSuggestions(true);
+        }
+      } catch {}
+    }, 300);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Input
+        value={inputValue}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          onChange(e.target.value);
+          fetchSuggestions(e.target.value);
+        }}
+        onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+        placeholder={placeholder}
+        className={className}
+        data-testid={dataTestId}
+      />
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-border dark:border-gray-700 rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto" data-testid="address-suggestions">
+          {suggestions.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              className="w-full text-left px-3 py-2.5 hover:bg-muted/50 dark:hover:bg-gray-800 transition-colors border-b border-border/20 last:border-0"
+              onClick={() => {
+                setInputValue(s.place_name);
+                onChange(s.place_name);
+                setShowSuggestions(false);
+                setSuggestions([]);
+              }}
+              data-testid={`suggestion-${i}`}
+            >
+              <p className="text-sm font-semibold text-foreground dark:text-white truncate">{s.text}</p>
+              <p className="text-[10px] text-muted-foreground dark:text-gray-400 truncate">{s.place_name}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3959;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -1913,6 +2002,7 @@ function InstaHopView({ user }: { user: User }) {
 
   const [cardHoldUrl, setCardHoldUrl] = useState<string | null>(null);
   const [tooFarForInstahop, setTooFarForInstahop] = useState(false);
+  const [showCustomStart, setShowCustomStart] = useState(false);
   const [pricePreview, setPricePreview] = useState<{
     distanceMiles: number;
     etaMinutes: number;
@@ -2074,7 +2164,7 @@ function InstaHopView({ user }: { user: User }) {
       ...data,
       startLocation: pricePreview.startName,
       hopType: 'short_hop',
-      distanceMiles: pricePreview.distanceMiles,
+      distanceMiles: String(pricePreview.distanceMiles),
       startLat: String(pricePreview.startLat),
       startLng: String(pricePreview.startLng),
       endLat: String(pricePreview.endLat),
@@ -2093,15 +2183,27 @@ function InstaHopView({ user }: { user: User }) {
         showFlash("⚡", "Paid & requesting your hop!", "success");
         queryClient.invalidateQueries({ queryKey: ['/api/me'] });
       },
-      onError: () => {
+      onError: async () => {
         setIsMatching(false);
         setPrepaidInfo(null);
+        if (authData.paymentIntentId) {
+          try {
+            await apiRequest("POST", "/api/stripe/refund-failed-hop", { paymentIntentId: authData.paymentIntentId });
+            showFlash("💳", "Payment reversed — please try again", "info");
+            setPaymentRefunded(true);
+          } catch {
+            showFlash("⚠️", "Hop failed. Contact support if charged.", "error");
+          }
+        }
       }
     });
   };
 
+  const [isAuthorizing, setIsAuthorizing] = useState(false);
+
   const confirmAndPay = async () => {
-    if (!pricePreview) return;
+    if (!pricePreview || isAuthorizing) return;
+    setIsAuthorizing(true);
 
     if (!user.stripeSetupCompleted) {
       try {
@@ -2110,10 +2212,12 @@ function InstaHopView({ user }: { user: User }) {
         if (setupJson.url) {
           setCardHoldUrl(setupJson.url);
           showFlash("💳", "Verify your card is active before continuing", "info");
+          setIsAuthorizing(false);
           return;
         }
       } catch (e) {
         showFlash("❌", "Card verification failed", "error");
+        setIsAuthorizing(false);
         return;
       }
     }
@@ -2134,14 +2238,17 @@ function InstaHopView({ user }: { user: User }) {
           if (setupJson.url) {
             setCardHoldUrl(setupJson.url);
             showFlash("💳", "Card needs re-verification", "info");
+            setIsAuthorizing(false);
             return;
           }
         } catch (e) {
           showFlash("❌", "Card verification failed", "error");
+          setIsAuthorizing(false);
           return;
         }
       }
 
+      setIsAuthorizing(false);
       submitHopAfterPayment(authData, "authorized");
     } catch (authErr: any) {
       const errBody = authErr.message || "Payment failed";
@@ -2152,10 +2259,12 @@ function InstaHopView({ user }: { user: User }) {
           if (setupJson.url) {
             setCardHoldUrl(setupJson.url);
             showFlash("💳", "Card needs re-verification", "info");
+            setIsAuthorizing(false);
             return;
           }
         } catch (e) {}
       }
+      setIsAuthorizing(false);
       showFlash("❌", errBody, "error");
     }
   };
@@ -2427,15 +2536,15 @@ function InstaHopView({ user }: { user: User }) {
                         <Button
                           className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm h-11 rounded-xl"
                           onClick={confirmAndPay}
-                          disabled={requestHop.isPending}
+                          disabled={requestHop.isPending || isAuthorizing}
                           data-testid="button-confirm-pay"
                         >
-                          {requestHop.isPending ? (
+                          {requestHop.isPending || isAuthorizing ? (
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
                           ) : (
                             <Zap className="w-4 h-4 mr-2" />
                           )}
-                          Confirm & Pay ${(pricePreview.priceCents / 100).toFixed(2)}
+                          {isAuthorizing ? "Processing..." : `Confirm & Pay $${(pricePreview.priceCents / 100).toFixed(2)}`}
                         </Button>
                         {(user.credits || 0) > 0 && (
                           <Button
@@ -2446,7 +2555,7 @@ function InstaHopView({ user }: { user: User }) {
                                 : "border-muted text-muted-foreground opacity-60 cursor-not-allowed"
                             }`}
                             onClick={payWithWheels}
-                            disabled={requestHop.isPending || (user.credits || 0) < pricePreview.priceCents / 100}
+                            disabled={requestHop.isPending || isAuthorizing || (user.credits || 0) < pricePreview.priceCents / 100}
                             data-testid="button-pay-wheels"
                           >
                             🛞 Pay with {(pricePreview.priceCents / 100).toFixed(2)} Wheels
@@ -2634,7 +2743,7 @@ function InstaHopView({ user }: { user: User }) {
                         <div className="flex gap-1 flex-wrap px-1">
                           <button
                             type="button"
-                            onClick={() => form.setValue("startLocation", "🌍 Current Location")}
+                            onClick={() => { form.setValue("startLocation", "🌍 Current Location"); setShowCustomStart(false); }}
                             className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
                               form.watch("startLocation") === "🌍 Current Location"
                                 ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
@@ -2647,8 +2756,8 @@ function InstaHopView({ user }: { user: User }) {
                           <button
                             type="button"
                             onClick={() => {
-                              const custom = prompt("Enter starting location:");
-                              if (custom?.trim()) form.setValue("startLocation", custom.trim());
+                              form.setValue("startLocation", "");
+                              setShowCustomStart(true);
                             }}
                             className="px-2 py-1 rounded-lg text-[10px] font-bold bg-muted/50 text-muted-foreground hover:bg-muted transition-all"
                             data-testid="button-hopper-start-custom"
@@ -2657,14 +2766,27 @@ function InstaHopView({ user }: { user: User }) {
                           </button>
                         </div>
                       )}
+                      {showCustomStart && form.watch("startLocation") !== "🌍 Current Location" && (
+                        <div className="relative mt-1">
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500 z-10" />
+                          <AddressAutocomplete
+                            value={form.watch("startLocation") || ""}
+                            onChange={(val) => form.setValue("startLocation", val)}
+                            placeholder="Enter pickup address..."
+                            className="h-11 text-sm rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 font-semibold"
+                            dataTestId="input-instahop-start-custom"
+                          />
+                        </div>
+                      )}
                     </div>
                     <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
-                      <Input
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500 z-10" />
+                      <AddressAutocomplete
+                        value={form.watch("endLocation") || ""}
+                        onChange={(val) => form.setValue("endLocation", val)}
                         placeholder="Where to?"
                         className="h-11 text-sm rounded-xl bg-muted/40 dark:bg-white/5 border-border/50 dark:border-white/10 pl-9 focus:bg-background dark:text-white font-semibold"
-                        data-testid="input-instahop-destination"
-                        {...form.register("endLocation")}
+                        dataTestId="input-instahop-destination"
                       />
                     </div>
                   </div>

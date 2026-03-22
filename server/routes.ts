@@ -803,9 +803,30 @@ export async function registerRoutes(
       });
       res.status(201).json(hop);
       tryAutoMatch(hop.id);
-    } catch (err) {
-       if (err instanceof z.ZodError) {
+    } catch (err: any) {
+      const paymentIntentId = req.body?.paymentIntentId;
+      if (paymentIntentId && req.isAuthenticated()) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+          if (pi.metadata?.userId !== String(req.user.id)) {
+            console.warn(`Refund blocked: PI ${paymentIntentId} userId mismatch (${pi.metadata?.userId} vs ${req.user.id})`);
+          } else if (pi.status === "requires_capture") {
+            await stripe.paymentIntents.cancel(paymentIntentId);
+            console.log(`Auto-cancelled PI ${paymentIntentId} after hop creation failed`);
+          } else if (pi.status === "succeeded") {
+            await stripe.refunds.create({ payment_intent: paymentIntentId });
+            console.log(`Auto-refunded PI ${paymentIntentId} after hop creation failed`);
+          }
+        } catch (refundErr: any) {
+          console.error(`Failed to auto-refund PI ${paymentIntentId}:`, refundErr.message);
+        }
+      }
+      if (err instanceof z.ZodError) {
         res.status(400).json({ message: err.errors[0].message });
+      } else {
+        console.error('Hop creation error:', err.message || err);
+        res.status(500).json({ message: "Failed to create hop request" });
       }
     }
   });
@@ -3815,6 +3836,35 @@ export async function registerRoutes(
     } catch (e: any) {
       console.error('Stripe authorize-hop error:', e.message);
       res.status(500).json({ message: "Failed to authorize payment" });
+    }
+  });
+
+  app.post('/api/stripe/refund-failed-hop', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const { paymentIntentId } = req.body;
+      if (!paymentIntentId || typeof paymentIntentId !== 'string') {
+        return res.status(400).json({ message: "Missing paymentIntentId" });
+      }
+      const stripe = await getUncachableStripeClient();
+      const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      if (pi.metadata?.userId !== String(req.user.id)) {
+        return res.status(403).json({ message: "Not your payment" });
+      }
+
+      if (pi.status === "requires_capture") {
+        await stripe.paymentIntents.cancel(paymentIntentId);
+        console.log(`Refund-failed-hop: cancelled uncaptured PI ${paymentIntentId} for user ${req.user.id}`);
+      } else if (pi.status === "succeeded") {
+        await stripe.refunds.create({ payment_intent: paymentIntentId });
+        console.log(`Refund-failed-hop: refunded captured PI ${paymentIntentId} for user ${req.user.id}`);
+      }
+
+      res.json({ refunded: true });
+    } catch (e: any) {
+      console.error('Refund-failed-hop error:', e.message);
+      res.status(500).json({ message: "Failed to process refund" });
     }
   });
 
