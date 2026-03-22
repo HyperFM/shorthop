@@ -1,0 +1,105 @@
+Please implement the following final behavioral improvements.
+Do NOT rebuild existing systems — only extend and refine.
+
+⸻
+
+1. DYNAMIC ROUTE UPDATES (REQUIRED)
+
+Ensure driver routes are continuously updated during movement:
+	•	Recalculate the driver’s route as they progress
+	•	Matching must always use the remaining route, not the original full route
+
+This prevents outdated matches and keeps alignment accurate in real time
+
+⸻
+
+2. STOP ORDER OPTIMIZATION
+
+When multiple hoppers are assigned:
+	•	Automatically order pickups and dropoffs based on the most logical sequence along the route
+	•	Do NOT use the order in which hoppers were accepted
+
+Goal:
+	•	Maintain natural flow
+	•	Avoid backtracking or inefficient stop order
+
+⸻
+
+3. PICKUP ETA DISPLAY
+
+For each hopper:
+	•	Show a live-updating ETA for driver arrival to pickup
+	•	Update continuously as the driver moves
+
+This reduces confusion and unnecessary messaging
+
+⸻
+
+4. CANCELLATION + NO-SHOW HANDLING
+
+Add basic handling for real-world interruptions:
+
+If a hopper cancels:
+	•	Immediately remove them from the route
+	•	Recalculate remaining stops
+	•	Update navigation + “Next Hop” label
+
+If a pickup is missed or skipped:
+	•	Allow the system to move forward to the next stop
+	•	Keep route clean and updated
+
+⸻
+
+5. SUBTLE DRIVER NOTIFICATIONS
+
+For new hopper requests:
+	•	Add a light sound or vibration when the Accept/Decline prompt appears
+	•	Must remain non-intrusive (not loud or aggressive)
+
+Goal:
+	•	Driver notices it
+	•	Without disrupting focus
+
+⸻
+
+6. DIRECTION VALIDATION REFINEMENT
+
+Refine “same direction” logic:
+	•	Ensure direction matching is accurate and not overly loose
+	•	Prevent opposite-direction or awkward-angle matches
+	•	Maintain balance:
+	•	not too strict
+	•	not too permissive
+
+⸻
+
+7. NAVIGATION STABILITY
+
+Ensure navigation remains smooth at all times:
+	•	No UI jumping or resetting when:
+	•	new hoppers are added
+	•	hoppers are removed
+	•	Maintain a consistent, calm navigation experience
+
+⸻
+
+✅ IMPLEMENTATION NOTE
+
+This is a refinement pass, not a rebuild.
+
+Do NOT alter:
+	•	core matching structure
+	•	strict validation rules
+	•	scoring system
+
+Only improve real-world behavior and flow.
+
+⸻
+
+🎯 CORE GOAL
+
+The system should feel stable, predictable, and natural in motion.
+
+Everything should reinforce the feeling:
+
+“This is already on the way.”

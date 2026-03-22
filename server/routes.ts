@@ -206,6 +206,74 @@ function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): str
 const MAX_DEVIATION_MILES = 0.5;
 const MAX_TIME_DIFF_MS = 30 * 60 * 1000;
 const MATCH_CYCLE_INTERVAL_MS = 5000;
+const MAX_DIRECTION_ANGLE = Math.PI / 3;
+
+function getRemainingRoute(
+  routePoints: [number, number][],
+  driverLat: number,
+  driverLng: number
+): [number, number][] {
+  if (routePoints.length < 2) return routePoints;
+  let closestIdx = 0;
+  let closestDist = Infinity;
+  for (let i = 0; i < routePoints.length; i++) {
+    const d = getDistance(driverLat, driverLng, routePoints[i][0], routePoints[i][1]);
+    if (d < closestDist) {
+      closestDist = d;
+      closestIdx = i;
+    }
+  }
+  const remaining: [number, number][] = [[driverLat, driverLng], ...routePoints.slice(closestIdx)];
+  return remaining;
+}
+
+function getBearingRad(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
+  const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+    Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
+  return Math.atan2(y, x);
+}
+
+function orderStopsAlongRoute(
+  driverLat: number,
+  driverLng: number,
+  driverDestLat: number,
+  driverDestLng: number,
+  hops: { id: number; startLat: string; startLng: string; endLat: string; endLng: string; status: string }[]
+): { hopId: number; type: "pickup" | "dropoff"; lat: number; lng: number }[] {
+  const stops: { hopId: number; type: "pickup" | "dropoff"; lat: number; lng: number; progress: number }[] = [];
+  const routeBearing = getBearingRad(driverLat, driverLng, driverDestLat, driverDestLng);
+  const routeLen = getDistance(driverLat, driverLng, driverDestLat, driverDestLng);
+
+  for (const hop of hops) {
+    if (hop.status === "matched") {
+      const pLat = parseFloat(hop.startLat || "0");
+      const pLng = parseFloat(hop.startLng || "0");
+      if (pLat && pLng) {
+        const dist = getDistance(driverLat, driverLng, pLat, pLng);
+        const bearing = getBearingRad(driverLat, driverLng, pLat, pLng);
+        const angleDiff = bearing - routeBearing;
+        const projection = dist * Math.cos(angleDiff);
+        stops.push({ hopId: hop.id, type: "pickup", lat: pLat, lng: pLng, progress: projection / (routeLen || 1) });
+      }
+    }
+    if (hop.status === "matched" || hop.status === "in_ride") {
+      const dLat = parseFloat(hop.endLat || "0");
+      const dLng = parseFloat(hop.endLng || "0");
+      if (dLat && dLng) {
+        const dist = getDistance(driverLat, driverLng, dLat, dLng);
+        const bearing = getBearingRad(driverLat, driverLng, dLat, dLng);
+        const angleDiff = bearing - routeBearing;
+        const projection = dist * Math.cos(angleDiff);
+        stops.push({ hopId: hop.id, type: "dropoff", lat: dLat, lng: dLng, progress: projection / (routeLen || 1) });
+      }
+    }
+  }
+
+  stops.sort((a, b) => a.progress - b.progress);
+  return stops.map(s => ({ hopId: s.hopId, type: s.type, lat: s.lat, lng: s.lng }));
+}
 
 function distToPolyline(lat: number, lng: number, points: [number, number][]): number {
   if (points.length < 2) return points.length === 1 ? getDistance(lat, lng, points[0][0], points[0][1]) : Infinity;
@@ -273,7 +341,7 @@ function scoreHopMatchForDriver(
     const driverBearing = Math.atan2(hopEndLng - driverLoc.longitude, hopEndLat - driverLoc.latitude);
     const angleDiff = Math.abs(driverBearing - hopBearing);
     const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-    if (normalizedAngle > Math.PI / 2) return fail;
+    if (normalizedAngle > MAX_DIRECTION_ANGLE) return fail;
   }
 
   if (driverRoutes.length > 0) {
@@ -284,11 +352,15 @@ function scoreHopMatchForDriver(
       const rEndLng = parseFloat(route.endLng || "0");
       if (!rEndLat || !rEndLng) continue;
 
-      const routePoints: [number, number][] = [];
+      let routePoints: [number, number][] = [];
       if (rStartLat && rStartLng) routePoints.push([rStartLat, rStartLng]);
       routePoints.push([rEndLat, rEndLng]);
 
-      const pickupToRoute = rStartLat && rStartLng
+      if (driverLoc && Date.now() - driverLoc.updatedAt < 120000 && routePoints.length >= 2) {
+        routePoints = getRemainingRoute(routePoints, driverLoc.latitude, driverLoc.longitude);
+      }
+
+      const pickupToRoute = routePoints.length >= 2
         ? distToPolyline(hopStartLat, hopStartLng, routePoints)
         : getDistance(hopStartLat, hopStartLng, rEndLat, rEndLng);
       if (pickupToRoute > MAX_DEVIATION_MILES) continue;
@@ -296,14 +368,14 @@ function scoreHopMatchForDriver(
       const dropoffToRoute = distToPolyline(hopEndLat, hopEndLng, routePoints);
       if (dropoffToRoute > MAX_DEVIATION_MILES) continue;
 
-      if (rStartLat && rStartLng) {
-        const routeBearing = Math.atan2(rEndLng - rStartLng, rEndLat - rStartLat);
-        const angleDiff = Math.abs(routeBearing - hopBearing);
-        const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
-        if (normalizedAngle > Math.PI / 2) continue;
-      }
+      const effectiveStart = routePoints[0];
+      const effectiveEnd = routePoints[routePoints.length - 1];
+      const routeBearing = Math.atan2(effectiveEnd[1] - effectiveStart[1], effectiveEnd[0] - effectiveStart[0]);
+      const angleDiff = Math.abs(routeBearing - hopBearing);
+      const normalizedAngle = angleDiff > Math.PI ? 2 * Math.PI - angleDiff : angleDiff;
+      if (normalizedAngle > MAX_DIRECTION_ANGLE) continue;
 
-      if (rStartLat && rStartLng && isDropoffPastDestination(hopEndLat, hopEndLng, rStartLat, rStartLng, rEndLat, rEndLng)) {
+      if (isDropoffPastDestination(hopEndLat, hopEndLng, effectiveStart[0], effectiveStart[1], rEndLat, rEndLng)) {
         continue;
       }
 
@@ -860,7 +932,19 @@ export async function registerRoutes(
 
       if (existingHop?.status === "in_ride" || existingHop?.status === "matched") {
         await storage.logGpsEvent(Number(req.params.id), "ride_cancelled_by_user");
+        const driverId = existingHop.driverId;
+        if (driverId) {
+          await storage.createNotification({
+            userId: driverId,
+            type: "hop_cancelled",
+            title: "Hopper Cancelled 🔄",
+            message: `A hopper going to ${existingHop.endLocation || "nearby"} has cancelled. Your route has been updated.`,
+            isRead: false,
+          });
+        }
       }
+
+      pendingAdditionalHops.delete(Number(req.params.id));
 
       res.json({ ...hop, paymentRefunded: existingHop?.status === "requested" && !!existingHop?.paymentIntentId });
     } catch (e: any) {
@@ -1657,6 +1741,15 @@ export async function registerRoutes(
         else pickupSide = "Stand on the NORTH side of the road (driver coming from east)";
       }
 
+      let etaMinutes: number | null = null;
+      if (isWalker && hop.status === "matched" && hop.startLat && hop.startLng) {
+        const pickupLat = parseFloat(String(hop.startLat));
+        const pickupLng = parseFloat(String(hop.startLng));
+        const driverToPickup = getDistance(partnerLoc.latitude, partnerLoc.longitude, pickupLat, pickupLng);
+        const avgSpeedMph = 25;
+        etaMinutes = Math.max(1, Math.round((driverToPickup / avgSpeedMph) * 60));
+      }
+
       res.json({
         available: true,
         distance: distance !== null ? Math.round(distance * 100) / 100 : null,
@@ -1671,6 +1764,7 @@ export async function registerRoutes(
         pickupLng: hop.startLng ? parseFloat(String(hop.startLng)) : null,
         dropoffLat: hop.endLat ? parseFloat(String(hop.endLat)) : null,
         dropoffLng: hop.endLng ? parseFloat(String(hop.endLng)) : null,
+        etaMinutes,
       });
     } catch {
       res.status(500).json({ message: "Tracking error" });
@@ -2645,6 +2739,32 @@ export async function registerRoutes(
       res.json({ message: "Hopper declined" });
     } catch (err) {
       res.status(500).json({ message: "Failed to decline hopper" });
+    }
+  });
+
+  app.get('/api/driver/stop-order', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const driverHops = await storage.getHopsForDriver(req.user.id);
+      const activeHops = driverHops.filter((h: any) => h.status === "matched" || h.status === "in_ride");
+      if (activeHops.length === 0) return res.json({ stops: [] });
+
+      const driverLoc = liveLocations.get(req.user.id);
+      if (!driverLoc || Date.now() - driverLoc.updatedAt > 120000) {
+        return res.json({ stops: activeHops.map((h: any) => ({ hopId: h.id, type: h.status === "matched" ? "pickup" : "dropoff", lat: parseFloat(h.status === "matched" ? h.startLat : h.endLat), lng: parseFloat(h.status === "matched" ? h.startLng : h.endLng) })) });
+      }
+
+      const routes = await storage.getRoutes(req.user.id);
+      let destLat = driverLoc.latitude, destLng = driverLoc.longitude;
+      if (routes.length > 0) {
+        destLat = parseFloat(routes[0].endLat || "0") || driverLoc.latitude;
+        destLng = parseFloat(routes[0].endLng || "0") || driverLoc.longitude;
+      }
+
+      const stops = orderStopsAlongRoute(driverLoc.latitude, driverLoc.longitude, destLat, destLng, activeHops as any);
+      res.json({ stops });
+    } catch {
+      res.status(500).json({ message: "Failed to get stop order" });
     }
   });
 

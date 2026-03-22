@@ -476,10 +476,22 @@ function HopRequestCard({ hop, driverLat, driverLng, onNavigate }: {
 
 function PendingHopperPrompt() {
   const queryClient = useQueryClient();
+  const prevCountRef = useRef(0);
   const { data: pending = [] } = useQuery<any[]>({
     queryKey: ['/api/driver/pending-hoppers'],
     refetchInterval: 5000,
   });
+
+  useEffect(() => {
+    if (pending.length > prevCountRef.current) {
+      try {
+        if ("vibrate" in navigator) {
+          navigator.vibrate([100, 50, 100]);
+        }
+      } catch {}
+    }
+    prevCountRef.current = pending.length;
+  }, [pending.length]);
 
   const acceptMut = useMutation({
     mutationFn: async (hopId: number) => {
@@ -652,6 +664,8 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
 }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const driverMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const mapLoadedRef = useRef(false);
   const { data: address } = useReverseGeocode(hop.startLat, hop.startLng);
   const [turnSteps, setTurnSteps] = useState<{ instruction: string; distance: string }[]>([]);
   const [navMapError, setNavMapError] = useState(false);
@@ -669,8 +683,20 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
     ? calcDistance(driverLat, driverLng, hopLat, hopLng)
     : null;
 
+  const hopIdRef = useRef(hop.id);
+
   useEffect(() => {
     if (!mapContainerRef.current || !driverLat || !driverLng || !coordsValid || navMapErrorRef.current) return;
+    if (mapRef.current && mapLoadedRef.current && hopIdRef.current === hop.id) return;
+    hopIdRef.current = hop.id;
+
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+      driverMarkerRef.current = null;
+      mapLoadedRef.current = false;
+    }
+
     const token = import.meta.env.VITE_MAPBOX_TOKEN;
     if (!token) return;
 
@@ -700,10 +726,12 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
     mapRef.current = map;
 
     map.on("load", async () => {
-      new mapboxgl.Marker({ color: "#22c55e" })
-        .setLngLat([driverLng, driverLat])
+      mapLoadedRef.current = true;
+      const dm = new mapboxgl.Marker({ color: "#22c55e" })
+        .setLngLat([driverLng!, driverLat!])
         .setPopup(new mapboxgl.Popup().setText("You"))
         .addTo(map);
+      driverMarkerRef.current = dm;
 
       new mapboxgl.Marker({ color: "#f97316" })
         .setLngLat([hopLng, hopLat])
@@ -759,8 +787,19 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
       } catch {}
     });
 
-    return () => { map.remove(); };
-  }, [driverLat, driverLng, hopLat, hopLng, endLat, endLng]);
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      driverMarkerRef.current = null;
+      mapLoadedRef.current = false;
+    };
+  }, [hop.id, hopLat, hopLng, endLat, endLng]);
+
+  useEffect(() => {
+    if (driverMarkerRef.current && driverLat && driverLng) {
+      driverMarkerRef.current.setLngLat([driverLng, driverLat]);
+    }
+  }, [driverLat, driverLng]);
 
   return (
     <motion.div
@@ -2442,6 +2481,15 @@ function InstaHopView({ user }: { user: User }) {
                           </span>
                         )}
                       </div>
+
+                      {tracking.etaMinutes && activeHop?.status === "matched" && (
+                        <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/20 rounded-lg p-2 border border-green-200/50 dark:border-green-700/30" data-testid="display-pickup-eta">
+                          <Clock className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />
+                          <p className="text-[11px] font-bold text-green-700 dark:text-green-400">
+                            Driver arriving in ~{tracking.etaMinutes} min
+                          </p>
+                        </div>
+                      )}
 
                       {tracking.pickupSide && activeHop?.status === "matched" && (
                         <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg p-2 border border-blue-200/50 dark:border-blue-700/30" data-testid="display-pickup-side">

@@ -213,6 +213,7 @@ export interface TrackingData {
   pickupLng?: number | null;
   dropoffLat?: number | null;
   dropoffLng?: number | null;
+  etaMinutes?: number | null;
 }
 
 export function useHopTracking(hopId: number | undefined, enabled: boolean = false) {
