@@ -14,6 +14,7 @@ import { useHops, useRequestHop, useCancelHop, useAcceptHop } from "@/hooks/use-
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
 import { useMagicGps, type SavedRouteMatch } from "@/hooks/use-magic-gps";
+import { useTheme } from "@/components/ThemeProvider";
 import { MagicGpsSuggestion, MagicGpsActivation, MagicGpsStatus, FlowModeNotification, DriftCatchNotification, OnTheWayPing, RepeatRoutePrompt } from "@/components/MagicGpsNotification";
 import type { SavedRoute } from "@shared/schema";
 import { Loader2 } from "lucide-react";
@@ -139,7 +140,7 @@ function getMarkerIcon(mode: HopMode, hasMatchedRide: boolean): string {
   return hopperAloneUrl;
 }
 
-function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute }: { mode: HopMode; latitude: number | null; longitude: number | null; hasMatchedRide: boolean; walkingRoute: GeoJSON.LineString | null }) {
+function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, isDark }: { mode: HopMode; latitude: number | null; longitude: number | null; hasMatchedRide: boolean; walkingRoute: GeoJSON.LineString | null; isDark: boolean }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
@@ -156,7 +157,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute }: { 
     try {
       map = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: "mapbox://styles/mapbox/streets-v12",
+        style: isDark ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/streets-v12",
         center,
         zoom: 15,
         attributionControl: false,
@@ -187,6 +188,12 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute }: { 
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const newStyle = isDark ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/streets-v12";
+    mapRef.current.setStyle(newStyle);
+  }, [isDark]);
 
   useEffect(() => {
     if (!mapRef.current || !latitude || !longitude) return;
@@ -1100,26 +1107,26 @@ function DriveNowPanel({ user }: { user: User }) {
       )}
 
       {appStatus === "pending" && (
-        <Card className="border-yellow-200 bg-yellow-50/50 rounded-2xl" data-testid="card-pending-verification">
+        <Card className="border-yellow-200 dark:border-yellow-700/40 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-2xl" data-testid="card-pending-verification">
           <CardContent className="p-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-yellow-600" />
+            <div className="w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
             </div>
             <div>
-              <p className="text-sm font-bold text-yellow-700">Verification Pending</p>
-              <p className="text-[10px] text-muted-foreground">Your application is under review.</p>
+              <p className="text-sm font-bold text-yellow-700 dark:text-yellow-300">Verification Pending</p>
+              <p className="text-[10px] text-muted-foreground dark:text-gray-300">Your application is under review.</p>
             </div>
           </CardContent>
         </Card>
       )}
 
       {appStatus === "rejected" && (
-        <Card className="border-red-200 bg-red-50/50 rounded-2xl" data-testid="card-rejected">
+        <Card className="border-red-200 dark:border-red-700/40 bg-red-50/50 dark:bg-red-900/20 rounded-2xl" data-testid="card-rejected">
           <CardContent className="p-3 flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+            <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400 shrink-0" />
             <div>
-              <p className="text-sm font-bold text-red-700">Not Approved</p>
-              <p className="text-[10px] text-muted-foreground">Update your info and reapply.</p>
+              <p className="text-sm font-bold text-red-700 dark:text-red-300">Not Approved</p>
+              <p className="text-[10px] text-muted-foreground dark:text-gray-300">Update your info and reapply.</p>
             </div>
             <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setLocation("/driver-onboarding")} data-testid="button-reapply">
               Reapply
@@ -1184,7 +1191,7 @@ function DriveNowPanel({ user }: { user: User }) {
                   className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
                     driverStartInput === "🌍 Current Location"
                       ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                      : "bg-muted/50 text-muted-foreground dark:text-gray-300 hover:bg-muted"
                   }`}
                   data-testid="button-driver-start-current"
                 >
@@ -1196,7 +1203,7 @@ function DriveNowPanel({ user }: { user: User }) {
                     const custom = prompt("Enter starting location:");
                     if (custom?.trim()) setDriverStartInput(custom.trim());
                   }}
-                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-muted/50 text-muted-foreground hover:bg-muted transition-all"
+                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-muted/50 text-muted-foreground dark:text-gray-300 hover:bg-muted transition-all"
                   data-testid="button-driver-start-custom"
                 >
                   + Custom
@@ -1208,7 +1215,7 @@ function DriveNowPanel({ user }: { user: User }) {
             <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
             <Input
               placeholder="Where are you headed?"
-              className="h-11 text-sm rounded-xl bg-muted/40 border-border/50 pl-9 focus:bg-background font-semibold"
+              className="h-11 text-sm rounded-xl bg-muted/40 dark:bg-white/5 border-border/50 dark:border-white/10 pl-9 focus:bg-background dark:text-white font-semibold"
               value={driverDestInput}
               onChange={(e) => setDriverDestInput(e.target.value)}
               data-testid="input-driver-destination"
@@ -1224,8 +1231,8 @@ function DriveNowPanel({ user }: { user: User }) {
 
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-foreground/50 dark:text-foreground/60 shrink-0" />
-              <span className="text-[11px] text-foreground/60 dark:text-foreground/70">How long until you head out?</span>
+              <Clock className="w-3.5 h-3.5 text-foreground/50 dark:text-gray-400 shrink-0" />
+              <span className="text-[11px] text-foreground/60 dark:text-gray-300">How long until you head out?</span>
             </div>
             <div className="flex flex-wrap gap-1">
               {DEPARTURE_OPTIONS.map(opt => (
@@ -1236,7 +1243,7 @@ function DriveNowPanel({ user }: { user: User }) {
                   className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
                     (opt.value === -1 && showCustomTime) || (opt.value !== -1 && driverDepartureMin === opt.value)
                       ? "bg-primary text-white shadow-sm"
-                      : "bg-muted/50 text-foreground/60 dark:text-foreground/70 hover:bg-muted"
+                      : "bg-muted/50 text-foreground/60 dark:text-gray-300 hover:bg-muted"
                   }`}
                   data-testid={`button-driver-depart-${opt.value}`}
                 >
@@ -1262,8 +1269,8 @@ function DriveNowPanel({ user }: { user: User }) {
 
           <div className="flex items-center justify-between gap-3 px-1 py-1.5">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-foreground/50 dark:text-foreground/60 shrink-0" />
-              <span className="text-[11px] font-medium text-foreground dark:text-foreground/80">Seats</span>
+              <Users className="w-4 h-4 text-foreground/50 dark:text-gray-400 shrink-0" />
+              <span className="text-[11px] font-medium text-foreground dark:text-white">Seats</span>
             </div>
             <div className="flex items-center gap-1.5" data-testid="stepper-driver-seats">
               <Button
@@ -1314,7 +1321,7 @@ function DriveNowPanel({ user }: { user: User }) {
           </Button>
 
           {!canGoActive && driverDestInput.trim().length > 0 && (
-            <p className="text-[10px] text-foreground/50 dark:text-foreground/60 text-center">
+            <p className="text-[10px] text-foreground/50 dark:text-gray-400 text-center">
               {!routeGenerated ? "Calculating route..." : !driverDepartureMin && driverDepartureMin !== 0 ? "Select departure time" : ""}
             </p>
           )}
@@ -1401,6 +1408,7 @@ function DriverAutoNotificationsEffect({ hopsCount }: { hopsCount: number }) {
 function InstaHopView({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { isDark } = useTheme();
   const { data: hops } = useHops();
   const requestHop = useRequestHop();
   const cancelHop = useCancelHop();
@@ -2041,11 +2049,11 @@ function InstaHopView({ user }: { user: User }) {
       </AnimatePresence>
 
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
-        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} />
+        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} isDark={isDark} />
 
 
         <div
-          className="absolute bottom-0 left-0 right-0 bg-background/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 z-20"
+          className="absolute bottom-0 left-0 right-0 bg-white/97 dark:bg-black/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 dark:border-white/10 z-20"
           style={{ height: "40%" }}
           data-testid="control-panel"
         >
@@ -2090,7 +2098,7 @@ function InstaHopView({ user }: { user: User }) {
                   <Card className="border-orange-500/40 bg-gradient-to-br from-orange-500/10 to-transparent mb-2" data-testid="card-card-hold">
                     <CardContent className="py-3 px-4 space-y-2">
                       <p className="text-sm font-bold text-foreground">Verify Your Card</p>
-                      <p className="text-xs text-muted-foreground">$1 temporary hold to confirm your card is active.</p>
+                      <p className="text-xs text-muted-foreground dark:text-gray-300">$1 temporary hold to confirm your card is active.</p>
                       <Button
                         className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs h-9"
                         onClick={() => window.location.href = cardHoldUrl}
@@ -2113,7 +2121,7 @@ function InstaHopView({ user }: { user: User }) {
                   <Card className="border-blue-500/40 bg-gradient-to-br from-blue-500/10 to-transparent mb-2" data-testid="card-plan-ride">
                     <CardContent className="py-3 px-4 space-y-2">
                       <p className="text-sm font-bold text-foreground">Too Far for InstaHop</p>
-                      <p className="text-xs text-muted-foreground">Trips over 10 miles use Plan a Ride in Tailor for prepayment.</p>
+                      <p className="text-xs text-muted-foreground dark:text-gray-300">Trips over 10 miles use Plan a Ride in Tailor for prepayment.</p>
                       <Button
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9"
                         onClick={() => setLocation("/dashboard")}
@@ -2137,30 +2145,30 @@ function InstaHopView({ user }: { user: User }) {
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full bg-green-500" />
-                          <p className="text-xs text-muted-foreground truncate">{pricePreview.startName || "Current location"}</p>
+                          <p className="text-xs text-muted-foreground dark:text-gray-300 truncate">{pricePreview.startName || "Current location"}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-sm bg-orange-500" />
-                          <p className="text-xs text-muted-foreground truncate">{pricePreview.endName}</p>
+                          <p className="text-xs text-muted-foreground dark:text-gray-300 truncate">{pricePreview.endName}</p>
                         </div>
                       </div>
                       <div className="flex items-center justify-between bg-muted/30 rounded-xl p-3">
                         <div className="text-center">
                           <p className="text-lg font-black text-foreground" data-testid="text-preview-distance">{pricePreview.distanceMiles.toFixed(1)} mi</p>
-                          <p className="text-[10px] text-muted-foreground">distance</p>
+                          <p className="text-[10px] text-muted-foreground dark:text-gray-400">distance</p>
                         </div>
-                        <div className="w-px h-8 bg-border" />
+                        <div className="w-px h-8 bg-border dark:bg-white/10" />
                         <div className="text-center">
-                          <p className="text-lg font-black text-foreground" data-testid="text-preview-eta">{pricePreview.etaMinutes} min</p>
-                          <p className="text-[10px] text-muted-foreground">est. time</p>
+                          <p className="text-lg font-black text-foreground dark:text-white" data-testid="text-preview-eta">{pricePreview.etaMinutes} min</p>
+                          <p className="text-[10px] text-muted-foreground dark:text-gray-400">est. time</p>
                         </div>
-                        <div className="w-px h-8 bg-border" />
+                        <div className="w-px h-8 bg-border dark:bg-white/10" />
                         <div className="text-center">
                           <p className="text-lg font-black text-green-600 dark:text-green-400" data-testid="text-preview-price">${(pricePreview.priceCents / 100).toFixed(2)}</p>
-                          <p className="text-[10px] text-muted-foreground">total</p>
+                          <p className="text-[10px] text-muted-foreground dark:text-gray-400">total</p>
                         </div>
                       </div>
-                      <p className="text-[10px] text-muted-foreground text-center">$1.50/mile · $1.50 minimum · charged immediately</p>
+                      <p className="text-[10px] text-muted-foreground dark:text-gray-400 text-center">$1.50/mile · $1.50 minimum · charged immediately</p>
                       <div className="space-y-1.5">
                         <Button
                           className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm h-11 rounded-xl"
@@ -2228,7 +2236,7 @@ function InstaHopView({ user }: { user: User }) {
                       )}
 
                       {tracking.available && tracking.direction && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground dark:text-gray-300">
                           Driver heading {tracking.direction} toward you
                         </p>
                       )}
@@ -2281,9 +2289,9 @@ function InstaHopView({ user }: { user: User }) {
                       </div>
                       {matchCountdown !== null && (
                         <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-gray-300">
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Time remaining</span>
-                            <span className="font-mono font-bold text-foreground" data-testid="text-match-countdown">
+                            <span className="font-mono font-bold text-foreground dark:text-white" data-testid="text-match-countdown">
                               {Math.floor(matchCountdown / 60)}:{String(matchCountdown % 60).padStart(2, '0')}
                             </span>
                           </div>
@@ -2388,7 +2396,7 @@ function InstaHopView({ user }: { user: User }) {
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
                       <Input
                         placeholder="Where to?"
-                        className="h-11 text-sm rounded-xl bg-muted/40 border-border/50 pl-9 focus:bg-background font-semibold"
+                        className="h-11 text-sm rounded-xl bg-muted/40 dark:bg-white/5 border-border/50 dark:border-white/10 pl-9 focus:bg-background dark:text-white font-semibold"
                         data-testid="input-instahop-destination"
                         {...form.register("endLocation")}
                       />
@@ -2409,7 +2417,7 @@ function InstaHopView({ user }: { user: User }) {
                               className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
                                 departureMinutes === opt.value
                                   ? "bg-primary text-white shadow-sm"
-                                  : "bg-muted/50 text-foreground/60 dark:text-foreground/70 hover:bg-muted"
+                                  : "bg-muted/50 text-foreground/60 dark:text-gray-300 hover:bg-muted"
                               }`}
                               data-testid={`button-depart-${opt.value}`}
                             >

@@ -18,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import { InterestBubbles } from "@/components/InterestBubbles";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
+import { SupportChat } from "@/components/SupportChat";
 
 const FUN_PROMPTS = [
   "My go-to karaoke song is...",
@@ -1218,6 +1219,7 @@ function ReportIssue() {
           </div>
         </DialogContent>
       </Dialog>
+      <SupportChat />
     </>
   );
 }
