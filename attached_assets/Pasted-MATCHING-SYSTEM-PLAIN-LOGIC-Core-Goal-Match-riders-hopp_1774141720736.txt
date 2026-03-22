@@ -1,0 +1,170 @@
+MATCHING SYSTEM (PLAIN LOGIC)
+
+Core Goal
+
+Match riders (“hoppers”) with drivers who are already going their way, in a way that feels:
+- effortless  
+- natural  
+- not forced  
+
+---
+
+SYSTEM STRUCTURE
+
+There are always two live lists:
+
+Drivers List
+
+Each driver has:
+- current location  
+- destination  
+- route (the path they’re already taking)  
+- number of available seats  
+- preference:
+  - One Rider Only  
+  - Maximize Seats  
+
+---
+
+Hoppers List
+
+Each hopper has:
+- pickup location  
+- dropoff location  
+
+---
+
+HOW MATCHING WORKS (STEP BY STEP)
+
+1. Compare routes  
+
+For every hopper, the system checks every driver and asks:
+
+“Is this hopper basically on the way?”
+
+---
+
+2. A match is ONLY valid if ALL are true:
+
+Pickup is close to the driver’s route  
+- within 0.5 miles  
+
+Dropoff is close to the driver’s route  
+- within 0.5 miles  
+
+Hopper is going the same direction  
+- not opposite or backwards  
+
+Dropoff is not too far past the driver’s destination  
+- cannot exceed 0.5 miles beyond destination  
+
+Driver has available seats  
+
+---
+
+If ANY of these fail:
+
+Do not match  
+(even if it is the only driver available)
+
+---
+
+MATCH PRIORITY (IMPORTANT)
+
+The system does not match randomly.
+
+It prioritizes:
+
+1. Drivers who want to “Maximize Seats”  
+   - fill these cars first  
+
+2. Drivers who want “One Rider Only”  
+   - match them after  
+
+---
+
+HOW ASSIGNMENT WORKS
+
+For “Maximize Seats” drivers:
+- Find all valid hoppers along their route  
+- Sort them by best fit (closest to route)  
+- Fill seats one by one until:
+  - seats are full  
+  - or no more good matches  
+
+---
+
+For “One Rider Only” drivers:
+- Find the single best hopper  
+- Assign only that one  
+- Stop  
+
+---
+
+WHAT “BEST MATCH” MEANS
+
+A better match is:
+- closer pickup to route  
+- closer dropoff to route  
+
+The system prefers:
+hoppers that require the least deviation  
+
+---
+
+SEAT LOGIC
+
+Every time a hopper is matched:
+- reduce driver’s available seats  
+
+When seats reach 0:
+- driver is removed from the matching pool  
+
+---
+
+IMPORTANT BEHAVIOR RULES
+
+Do not match just because someone is available  
+
+Do not send drivers across town  
+
+Do not go far past destination  
+
+Do not create awkward detours  
+
+---
+
+WHAT THE SYSTEM SHOULD FEEL LIKE
+
+To the user, it should feel like:
+
+“They were already going my way.”
+
+Not:
+
+“The driver went out of their way for me.”
+
+---
+
+MATCHING TIMING
+
+Instead of instant matching:
+- The system runs in short cycles (every few seconds)  
+- It evaluates all drivers and all hoppers together  
+- It assigns matches intelligently  
+
+This allows:
+- better seat filling  
+- smarter grouping  
+- less randomness  
+
+---
+
+BIG PICTURE
+
+This is not a taxi system.
+
+This is a shared route alignment system.
+
+Drivers do not change their plan.  
+Riders fit into existing movement.

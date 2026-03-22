@@ -80,6 +80,8 @@ import {
   type TripLog,
   type RefundRequest,
   type UserActivityWindow,
+  rideMessages,
+  type RideMessage,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -151,6 +153,9 @@ export interface IStorage {
 
   getStarHoppers(userId: number): Promise<StarHopper[]>;
   addStarHopper(userId: number, starUserId: number): Promise<StarHopper>;
+
+  getRideMessages(hopId: number): Promise<RideMessage[]>;
+  createRideMessage(hopId: number, senderId: number, message: string): Promise<RideMessage>;
   removeStarHopper(userId: number, starUserId: number): Promise<void>;
   getStarHopperUserIds(userId: number): Promise<number[]>;
   isStarHopper(userId: number, otherUserId: number): Promise<boolean>;
@@ -648,6 +653,15 @@ export class DatabaseStorage implements IStorage {
   async isStarHopper(userId: number, otherUserId: number): Promise<boolean> {
     const [result] = await db.select().from(starHoppers).where(and(eq(starHoppers.userId, userId), eq(starHoppers.starUserId, otherUserId)));
     return !!result;
+  }
+
+  async getRideMessages(hopId: number): Promise<RideMessage[]> {
+    return await db.select().from(rideMessages).where(eq(rideMessages.hopId, hopId)).orderBy(rideMessages.createdAt);
+  }
+
+  async createRideMessage(hopId: number, senderId: number, message: string): Promise<RideMessage> {
+    const [msg] = await db.insert(rideMessages).values({ hopId, senderId, message }).returning();
+    return msg;
   }
 
   async getUserActivityWindows(userId: number): Promise<UserActivityWindow[]> {

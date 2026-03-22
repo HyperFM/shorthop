@@ -86,6 +86,7 @@ export const users = pgTable("users", {
   flowModeEnabled: boolean("flow_mode_enabled").default(false),
   littleEarly: boolean("little_early").default(false),
   confidenceScore: integer("confidence_score").default(0),
+  matchPreference: text("match_preference").default("one_rider"),
   lastCompletedRouteId: integer("last_completed_route_id"),
   lastCompletedRouteName: text("last_completed_route_name"),
   homeAddress: text("home_address"),
@@ -553,6 +554,16 @@ export const userActivityWindows = pgTable("user_activity_windows", {
   count: integer("count").default(1),
 });
 
+export const rideMessages = pgTable("ride_messages", {
+  id: serial("id").primaryKey(),
+  hopId: integer("hop_id").references(() => shortHops.id).notNull(),
+  senderId: integer("sender_id").references(() => users.id).notNull(),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRideMessageSchema = createInsertSchema(rideMessages).omit({ id: true, createdAt: true });
+
 export const insertCommuteCircleSchema = createInsertSchema(commuteCircles).omit({ id: true, createdAt: true });
 export const insertCommuteCircleMemberSchema = createInsertSchema(commuteCircleMembers).omit({ id: true, joinedAt: true });
 export const insertTripLogSchema = createInsertSchema(tripLogs).omit({ id: true, createdAt: true });
@@ -572,6 +583,9 @@ export type StarHopper = typeof starHoppers.$inferSelect;
 export type InsertStarHopper = z.infer<typeof insertStarHopperSchema>;
 export type UserActivityWindow = typeof userActivityWindows.$inferSelect;
 export type InsertActivityWindow = z.infer<typeof insertActivityWindowSchema>;
+
+export type RideMessage = typeof rideMessages.$inferSelect;
+export type InsertRideMessage = z.infer<typeof insertRideMessageSchema>;
 
 export type LoginRequest = z.infer<typeof insertUserSchema>;
 export type RegisterRequest = z.infer<typeof insertUserSchema>;

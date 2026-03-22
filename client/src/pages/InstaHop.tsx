@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users, Home, Briefcase, Star, Settings2, Check } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -474,6 +474,104 @@ function HopRequestCard({ hop, driverLat, driverLng, onNavigate }: {
   );
 }
 
+function RideChat({ hopId, currentUserId }: { hopId: number; currentUserId: number }) {
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+
+  const { data: messages = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/ride-chat', hopId],
+    refetchInterval: chatOpen ? 3000 : false,
+    enabled: chatOpen,
+  });
+
+  const sendMsg = useMutation({
+    mutationFn: async (message: string) => {
+      await apiRequest("POST", `/api/ride-chat/${hopId}`, { message });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ride-chat', hopId] });
+      setChatInput("");
+    },
+  });
+
+  useEffect(() => {
+    if (chatOpen && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, chatOpen]);
+
+  if (!chatOpen) {
+    return (
+      <button
+        onClick={() => setChatOpen(true)}
+        className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-700/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
+        data-testid="button-open-ride-chat"
+      >
+        <MessageCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300">Chat with your ride partner</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-blue-200/50 dark:border-blue-700/30 overflow-hidden" data-testid="ride-chat-panel">
+      <div className="flex items-center justify-between px-3 py-2 bg-blue-50 dark:bg-blue-950/30">
+        <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+          <MessageCircle className="w-3.5 h-3.5" /> Ride Chat
+        </span>
+        <button onClick={() => setChatOpen(false)} className="text-blue-400 hover:text-blue-600" data-testid="button-close-ride-chat">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="h-[140px] overflow-y-auto px-3 py-2 space-y-1.5 bg-white/50 dark:bg-black/20">
+        {isLoading && <p className="text-[10px] text-muted-foreground text-center">Loading...</p>}
+        {!isLoading && messages.length === 0 && (
+          <p className="text-[10px] text-muted-foreground dark:text-gray-400 text-center py-4">No messages yet. Say hi!</p>
+        )}
+        {messages.map((m: any) => {
+          const isMe = m.senderId === currentUserId;
+          return (
+            <div key={m.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[75%] px-2.5 py-1.5 rounded-xl text-[11px] ${
+                isMe
+                  ? "bg-primary text-white rounded-br-sm"
+                  : "bg-muted dark:bg-white/10 text-foreground dark:text-white rounded-bl-sm"
+              }`} data-testid={`chat-msg-${m.id}`}>
+                {!isMe && <p className="text-[9px] font-bold opacity-70 mb-0.5">{m.senderUsername}</p>}
+                <p>{m.message}</p>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={chatEndRef} />
+      </div>
+      <div className="flex items-center gap-1.5 px-2 py-1.5 bg-muted/30 dark:bg-white/5 border-t border-border/30">
+        <Input
+          placeholder="Type a message..."
+          className="h-8 text-xs rounded-lg flex-1 dark:bg-white/5 dark:text-white"
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && chatInput.trim()) sendMsg.mutate(chatInput.trim());
+          }}
+          data-testid="input-ride-chat"
+        />
+        <Button
+          size="sm"
+          className="h-8 w-8 p-0 rounded-lg"
+          disabled={!chatInput.trim() || sendMsg.isPending}
+          onClick={() => { if (chatInput.trim()) sendMsg.mutate(chatInput.trim()); }}
+          data-testid="button-send-chat"
+        >
+          <Send className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
   hop: any;
   driverLat: number | null;
@@ -660,6 +758,7 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
                 Open in Maps
               </Button>
             </div>
+            <RideChat hopId={hop.id} currentUserId={hop.driverId || 0} />
             {hop.status === "matched" && (
               <Button
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl"
@@ -1300,6 +1399,39 @@ function DriveNowPanel({ user }: { user: User }) {
               >
                 +
               </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 px-1 py-1.5">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-foreground/50 dark:text-gray-400 shrink-0" />
+              <span className="text-[11px] font-medium text-foreground dark:text-white">Match Mode</span>
+            </div>
+            <div className="flex gap-1" data-testid="toggle-match-preference">
+              {[
+                { val: "one_rider", label: "One Rider" },
+                { val: "maximize_seats", label: "Max Seats" },
+              ].map((opt) => (
+                <button
+                  key={opt.val}
+                  type="button"
+                  onClick={async () => {
+                    if ((user as any).matchPreference === opt.val) return;
+                    try {
+                      await apiRequest("PATCH", "/api/user/match-preference", { matchPreference: opt.val });
+                      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+                    } catch {}
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                    ((user as any).matchPreference || "one_rider") === opt.val
+                      ? "bg-primary text-white shadow-sm"
+                      : "bg-muted/50 text-foreground/60 dark:text-gray-300 hover:bg-muted"
+                  }`}
+                  data-testid={`button-match-${opt.val}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -2264,6 +2396,9 @@ function InstaHopView({ user }: { user: User }) {
                           <p className="font-medium flex items-center gap-1"><span>📡</span> GPS is tracking this ride for your protection</p>
                           <p className="mt-0.5 text-amber-600/70 dark:text-amber-400/60">Keep location services enabled for refund eligibility.</p>
                         </div>
+                      )}
+                      {(activeHop?.status === "matched" || activeHop?.status === "in_ride") && (
+                        <RideChat hopId={activeHop.id} currentUserId={user.id} />
                       )}
                     </CardContent>
                   </Card>

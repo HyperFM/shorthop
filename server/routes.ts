@@ -286,7 +286,7 @@ async function tryAutoMatch(hopId: number) {
     const hopperStarIds = await storage.getStarHopperUserIds(hop.walkerId);
     const starSet = new Set(hopperStarIds);
 
-    const eligibleDrivers: { driver: any; isStar: boolean }[] = [];
+    const eligibleDrivers: { driver: any; isStar: boolean; isMaximize: boolean }[] = [];
     for (const driver of activeDrivers) {
       const driverLoc = liveLocations.get(driver.id);
       const driverRoutes = await storage.getRoutes(driver.id);
@@ -295,11 +295,19 @@ async function tryAutoMatch(hopId: number) {
       if (isHopMatchForDriver(hop, driverSeats, driverLoc, driverRoutes)) {
         const hopperStarredDriver = starSet.has(driver.id);
         const driverStarredHopper = await storage.isStarHopper(driver.id, hop.walkerId);
-        eligibleDrivers.push({ driver, isStar: hopperStarredDriver || driverStarredHopper });
+        eligibleDrivers.push({
+          driver,
+          isStar: hopperStarredDriver || driverStarredHopper,
+          isMaximize: driver.matchPreference === "maximize_seats",
+        });
       }
     }
 
-    eligibleDrivers.sort((a, b) => (b.isStar ? 1 : 0) - (a.isStar ? 1 : 0));
+    eligibleDrivers.sort((a, b) => {
+      if (a.isMaximize !== b.isMaximize) return b.isMaximize ? 1 : -1;
+      if (a.isStar !== b.isStar) return b.isStar ? 1 : -1;
+      return 0;
+    });
 
     if (eligibleDrivers.length > 0) {
       const best = eligibleDrivers[0];
@@ -337,14 +345,15 @@ async function tryAutoMatchForDriver(driverId: number) {
 
     const driverLoc = liveLocations.get(driverId);
     const driverRoutes = await storage.getRoutes(driverId);
-    const driverSeats = driver.availableSeats || 1;
+    let remainingSeats = driver.availableSeats || 1;
     const driverStarIds = await storage.getStarHopperUserIds(driverId);
     const starSet = new Set(driverStarIds);
+    const isMaximize = driver.matchPreference === "maximize_seats";
 
     const allAvailable = await storage.getAvailableHops();
     const eligibleHops: { hop: any; isStar: boolean }[] = [];
     for (const hop of allAvailable) {
-      if (isHopMatchForDriver(hop, driverSeats, driverLoc, driverRoutes)) {
+      if (isHopMatchForDriver(hop, remainingSeats, driverLoc, driverRoutes)) {
         const driverStarredHopper = starSet.has(hop.walkerId);
         const hopperStarredDriver = await storage.isStarHopper(hop.walkerId, driverId);
         eligibleHops.push({ hop, isStar: driverStarredHopper || hopperStarredDriver });
@@ -353,29 +362,37 @@ async function tryAutoMatchForDriver(driverId: number) {
 
     eligibleHops.sort((a, b) => (b.isStar ? 1 : 0) - (a.isStar ? 1 : 0));
 
-    if (eligibleHops.length > 0) {
-      const best = eligibleHops[0];
-      const matched = await storage.acceptHop(best.hop.id, driverId);
+    const matchLimit = isMaximize ? eligibleHops.length : 1;
+    for (let i = 0; i < Math.min(matchLimit, eligibleHops.length); i++) {
+      const entry = eligibleHops[i];
+      const seatsNeeded = entry.hop.seatsNeeded || 1;
+      if (seatsNeeded > remainingSeats) continue;
+
+      const matched = await storage.acceptHop(entry.hop.id, driverId);
 
       if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
         await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
       }
 
-      const starLabel = best.isStar ? " Your Star Hopper!" : "";
+      remainingSeats -= seatsNeeded;
+
+      const starLabel = entry.isStar ? " Your Star Hopper!" : "";
       await storage.createNotification({
         userId: driverId,
         type: "match_found",
-        title: best.isStar ? "Star Match! ⭐" : "Match Found! 🎯",
-        message: `A hopper going to ${best.hop.endLocation} matched with your route.${starLabel}`,
+        title: entry.isStar ? "Star Match! ⭐" : "Match Found! 🎯",
+        message: `A hopper going to ${entry.hop.endLocation} matched with your route.${starLabel}`,
         isRead: false,
       });
       await storage.createNotification({
-        userId: best.hop.walkerId,
+        userId: entry.hop.walkerId,
         type: "match_found",
         title: "Driver Found! 🚗",
         message: `You've been matched with a driver heading your way.`,
         isRead: false,
       });
+
+      if (remainingSeats <= 0) break;
     }
   } catch (err) {
     console.error("Auto-match for driver error:", err);
@@ -2471,6 +2488,76 @@ export async function registerRoutes(
       res.json({ response });
     } catch (err) {
       res.status(500).json({ message: "Support unavailable" });
+    }
+  });
+
+  app.patch('/api/user/match-preference', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    if (!req.user.isDriver) return res.status(403).json({ message: "Drivers only" });
+    try {
+      const { matchPreference } = req.body;
+      if (!matchPreference || !["one_rider", "maximize_seats"].includes(matchPreference)) {
+        return res.status(400).json({ message: "Invalid preference" });
+      }
+      const updated = await storage.updateUser(req.user.id, { matchPreference });
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update preference" });
+    }
+  });
+
+  app.get('/api/ride-chat/:hopId', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.hopId);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.status !== "matched" && hop.status !== "in_ride") {
+        return res.status(400).json({ message: "Chat only available during active rides" });
+      }
+      if (!hop.driverId || (hop.walkerId !== req.user.id && hop.driverId !== req.user.id)) {
+        return res.status(403).json({ message: "Not your ride" });
+      }
+      const messages = await storage.getRideMessages(hopId);
+      const enriched = await Promise.all(messages.map(async (m) => {
+        const sender = await storage.getUser(m.senderId);
+        return { ...m, senderUsername: sender?.username || "Unknown" };
+      }));
+      res.json(enriched);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to load messages" });
+    }
+  });
+
+  app.post('/api/ride-chat/:hopId', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.hopId);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.status !== "matched" && hop.status !== "in_ride") {
+        return res.status(400).json({ message: "Chat only available during active rides" });
+      }
+      if (!hop.driverId || (hop.walkerId !== req.user.id && hop.driverId !== req.user.id)) {
+        return res.status(403).json({ message: "Not your ride" });
+      }
+      const { message } = req.body;
+      if (!message?.trim()) return res.status(400).json({ message: "Message required" });
+      const msg = await storage.createRideMessage(hopId, req.user.id, message.trim());
+
+      const recipientId = req.user.id === hop.walkerId ? hop.driverId : hop.walkerId;
+      if (recipientId) {
+        await storage.createNotification({
+          userId: recipientId,
+          type: "message",
+          title: "New message",
+          message: `${req.user.username}: ${message.trim().slice(0, 80)}`,
+        });
+      }
+
+      res.json(msg);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to send message" });
     }
   });
 

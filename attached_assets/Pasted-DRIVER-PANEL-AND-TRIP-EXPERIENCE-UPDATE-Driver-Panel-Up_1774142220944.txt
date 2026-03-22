@@ -1,0 +1,101 @@
+DRIVER PANEL AND TRIP EXPERIENCE UPDATE
+
+Driver Panel Update
+
+Add a toggle option in the driver panel with two clear choices:
+- One Rider Only  
+- Maximize Seats  
+
+This toggle controls how the matching system assigns hoppers to the driver, without changing any existing matching logic.
+
+---
+
+Driver Navigation Experience
+
+Once a driver is matched with a hopper, the app should transition into a guided trip mode similar to standard rideshare navigation.
+
+The system should:
+- Begin full GPS navigation immediately after the first match  
+- Provide clear, calm, and friendly voice guidance  
+- Verbally announce:
+  - upcoming turns  
+  - pickup locations  
+  - dropoff locations  
+  - estimated time and distance  
+
+Voice tone should feel supportive and simple, not overly technical or robotic.
+
+---
+
+Map Behavior
+
+- The map automatically switches to full screen when the first hopper is matched  
+- The driver’s route remains unchanged visually (no clutter or unnecessary UI changes)  
+- The LCD display should remain clean and focused on navigation only  
+
+When additional hoppers are matched:
+- The second (or next) hopper appears on the map as an additional stop  
+- A small label appears indicating:
+  - “Next Hop: X miles away”  
+
+No disruption to the main navigation flow
+
+---
+
+Additional Hopper Matching Flow
+
+When a new hopper is found during an active trip:
+
+- The driver receives a simple prompt:
+  - Accept  
+  - Decline  
+
+- The prompt should not interrupt navigation aggressively  
+- If accepted:
+  - The hopper is added to the route as the next logical stop  
+- If declined:
+  - The system continues without change  
+
+---
+
+Hopper Experience
+
+Once matched with a driver:
+
+Hoppers should be able to:
+- View the driver’s live location on the map  
+- Track the driver approaching their pickup point  
+
+---
+
+Communication
+
+Add a built-in chat section between driver and hopper:
+
+- Simple messaging interface  
+- Used for:
+  - quick coordination  
+  - clarifications  
+- No unnecessary complexity  
+
+---
+
+System Feel
+
+The experience should feel:
+- smooth  
+- predictable  
+- low-pressure  
+
+Drivers stay focused on driving.  
+Hoppers feel informed and connected.  
+
+No part of the system should feel overwhelming or distracting.
+
+---
+
+Core Principle
+
+Navigation and matching should work together quietly in the background, guiding the trip without forcing attention.
+
+Everything should feel like it is naturally unfolding, not being managed.
