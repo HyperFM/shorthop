@@ -3803,7 +3803,7 @@ export async function registerRoutes(
 
       if (paymentMethods.data.length === 0) {
         await storage.updateUser(req.user.id, { stripeSetupCompleted: false });
-        return res.status(400).json({ message: "No payment method on file. Please complete card verification first.", needsSetup: true });
+        return res.status(400).json({ message: "No payment method on file. Please add a card first.", needsSetup: true });
       }
 
       const depTime = departureTime ? new Date(departureTime) : new Date(Date.now() + 5 * 60000);
@@ -3968,7 +3968,7 @@ export async function registerRoutes(
       const user = await storage.getUser(req.user.id);
       if (!user) return res.status(404).json({ message: "User not found" });
       if (user.stripeSetupCompleted) {
-        return res.json({ alreadyCompleted: true, message: "Account already activated" });
+        return res.json({ alreadyCompleted: true, message: "Card already on file" });
       }
       const stripe = await getUncachableStripeClient();
 
@@ -3985,32 +3985,18 @@ export async function registerRoutes(
       const checkoutSession = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
-        line_items: [{
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'ShortHop Account Activation',
-              description: '$1 verification charge to activate ShortHop.',
-            },
-            unit_amount: 100,
-          },
-          quantity: 1,
-        }],
-        mode: 'payment',
-        payment_intent_data: {
-          setup_future_usage: 'off_session',
-        },
+        mode: 'setup',
         metadata: {
           userId: String(req.user.id),
-          type: 'setup_fee',
+          type: 'card_setup',
         },
         success_url: `https://${domain}/instahop?setup=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `https://${domain}/instahop?setup=cancelled`,
       });
       res.json({ url: checkoutSession.url, checkoutRequired: true });
     } catch (e: any) {
-      console.error('Stripe setup fee error:', e.message);
-      res.status(500).json({ message: "Failed to create setup payment" });
+      console.error('Stripe card setup error:', e.message);
+      res.status(500).json({ message: "Failed to create card setup" });
     }
   });
 
@@ -4023,8 +4009,8 @@ export async function registerRoutes(
       }
       const stripe = await getUncachableStripeClient();
       const session = await stripe.checkout.sessions.retrieve(sessionId);
-      if (session.payment_status !== 'paid' || session.metadata?.type !== 'setup_fee' || session.metadata?.userId !== String(req.user.id)) {
-        return res.status(400).json({ message: "Invalid or unpaid session" });
+      if (session.status !== 'complete' || session.metadata?.type !== 'card_setup' || session.metadata?.userId !== String(req.user.id)) {
+        return res.status(400).json({ message: "Invalid or incomplete session" });
       }
       await storage.updateUser(req.user.id, { stripeSetupCompleted: true });
       res.json({ success: true });

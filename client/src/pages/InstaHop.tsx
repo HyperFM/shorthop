@@ -1956,9 +1956,9 @@ function InstaHopView({ user }: { user: User }) {
       if (sessionId) {
         apiRequest("POST", "/api/stripe/confirm-setup", { sessionId }).then(() => {
           queryClient.invalidateQueries({ queryKey: ['/api/me'] });
-          showFlash("✅", "Account activated!", "success");
+          showFlash("✅", "Card saved! You're ready to hop.", "success");
         }).catch(() => {
-          showFlash("⚠️", "Activation verification failed. Please contact support.", "error");
+          showFlash("⚠️", "Card setup verification failed. Please try again.", "error");
         });
       }
       window.history.replaceState({}, "", "/instahop");
@@ -2211,12 +2211,12 @@ function InstaHopView({ user }: { user: User }) {
         const setupJson = await setupRes.json();
         if (setupJson.url) {
           setCardHoldUrl(setupJson.url);
-          showFlash("💳", "Verify your card is active before continuing", "info");
+          showFlash("💳", "Add a card on file before continuing", "info");
           setIsAuthorizing(false);
           return;
         }
       } catch (e) {
-        showFlash("❌", "Card verification failed", "error");
+        showFlash("❌", "Card setup failed", "error");
         setIsAuthorizing(false);
         return;
       }
@@ -2237,12 +2237,12 @@ function InstaHopView({ user }: { user: User }) {
           const setupJson = await setupRes.json();
           if (setupJson.url) {
             setCardHoldUrl(setupJson.url);
-            showFlash("💳", "Card needs re-verification", "info");
+            showFlash("💳", "Please add a card to continue", "info");
             setIsAuthorizing(false);
             return;
           }
         } catch (e) {
-          showFlash("❌", "Card verification failed", "error");
+          showFlash("❌", "Card setup failed", "error");
           setIsAuthorizing(false);
           return;
         }
@@ -2258,7 +2258,7 @@ function InstaHopView({ user }: { user: User }) {
           const setupJson = await setupRes.json();
           if (setupJson.url) {
             setCardHoldUrl(setupJson.url);
-            showFlash("💳", "Card needs re-verification", "info");
+            showFlash("💳", "Please add a card to continue", "info");
             setIsAuthorizing(false);
             return;
           }
@@ -2460,14 +2460,14 @@ function InstaHopView({ user }: { user: User }) {
                 {cardHoldUrl && (
                   <Card className="border-orange-500/40 bg-gradient-to-br from-orange-500/10 to-transparent mb-2" data-testid="card-card-hold">
                     <CardContent className="py-3 px-4 space-y-2">
-                      <p className="text-sm font-bold text-foreground">Verify Your Card</p>
-                      <p className="text-xs text-muted-foreground dark:text-gray-300">$1 temporary hold to confirm your card is active.</p>
+                      <p className="text-sm font-bold text-foreground">Add Your Card</p>
+                      <p className="text-xs text-muted-foreground dark:text-gray-300">Save a card on file to pay for rides. No charge until you hop.</p>
                       <Button
                         className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs h-9"
                         onClick={() => window.location.href = cardHoldUrl}
                         data-testid="button-verify-card"
                       >
-                        Complete Verification
+                        Add Card
                       </Button>
                       <button
                         type="button"
