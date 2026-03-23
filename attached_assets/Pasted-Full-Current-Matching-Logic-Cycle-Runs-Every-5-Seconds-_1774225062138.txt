@@ -1,0 +1,52 @@
+Full Current Matching Logic
+Cycle Runs Every 5 Seconds
+
+Step 1: Gather Candidates
+Fetch all "requested" hops (not yet matched)
+Fetch all active drivers (currently online/broadcasting location)
+For each driver: fetch their saved routes + live GPS location + available seats
+Step 2: Per-Driver Scoring (Hop-to-Driver Evaluation)
+Skip if:
+
+✖ Hop status != "requested"
+✖ Hop time window expired
+✖ Hop needs more seats than driver has available
+✖ Hopper ID === Driver ID (self-match prevention)
+✖ Hop departure time differs by >30 minutes
+Then check each driver's route(s):
+
+✖ Skip if driver has no saved routes
+✖ Skip if route missing end coordinates
+For each route, calculate:
+
+Point-to-route distance
+Pickup location's closest distance to driver's route line → must be < 0.5 miles
+Dropoff location's closest distance to driver's route line → must be < 0.5 miles
+Forward progression check
+Calculate where pickup projects on the route (as % of route traveled)
+Calculate where dropoff projects on the route (as % of route traveled)
+✖ Skip if dropoff is before or at same point as pickup (prevents backtracking)
+Destination check
+✖ Skip if dropoff goes past the driver's destination
+If valid: Record pickup distance + dropoff distance as score
+
+Step 3: Candidate Prioritization
+Sort all valid candidates by:
+
+Driver's match preference: maximize_seats first (else one rider locks driver)
+Star status: Star hoppers get priority
+Lowest total deviation (pickup dist + dropoff dist)
+Step 4: Execution
+For each candidate in order:
+
+If driver already in a ride: Add to pending list (2-min in-ride prompt)
+If driver is free: Execute match immediately
+Set hop to "matched"
+Capture payment (if authorized via Stripe)
+Create notifications for both driver & hopper
+Deduct seats from driver's availability
+Constants
+MAX_DEVIATION_MILES = 0.5 (pickup/dropoff max distance from route)
+MAX_TIME_DIFF_MS = 30min (departure time tolerance)
+MATCH_CYCLE_INTERVAL = 5 seconds
+Key: It's 100% route-based, not position-based. The driver's current GPS location is only used to update the remaining route; matching is purely whether pickup and dropoff fit on the driver's entered start→destination line.
