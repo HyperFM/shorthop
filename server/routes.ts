@@ -490,6 +490,7 @@ async function executeMatch(hopId: number, driverId: number, isStar: boolean, ho
     message: `You've been matched with a driver heading your way.${starLabel}`,
     isRead: false,
   });
+  console.log(`✅ MATCH CONFIRMED: hop${hopId} → driver${driverId} (hopper=${hop.walkerId}, dest="${hop.endLocation}", star=${isStar})`);
 }
 
 let matchingCycleRunning = false;
@@ -2415,6 +2416,18 @@ export async function registerRoutes(
     if (!user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
     next();
   };
+
+  app.post('/api/admin/force-cancel-hop/:id', requireAdmin, async (req, res) => {
+    try {
+      const hopId = Number(req.params.id);
+      await db.update(shortHops).set({ status: "cancelled", paymentStatus: "refunded" }).where(eq(shortHops.id, hopId));
+      pendingAdditionalHops.delete(hopId);
+      console.log(`Admin force-cancelled hop ${hopId}`);
+      res.json({ ok: true, hopId });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
 
   app.get('/api/admin/stats', requireAdmin, async (_req, res) => {
     try {

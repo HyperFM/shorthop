@@ -20,6 +20,7 @@ import { FirstHopCelebration } from "@/components/FirstHopCelebration";
 import { LiveRideOverlay } from "@/components/LiveRideOverlay";
 import { HopperRoadSideAlert, buildRoadSideInfo, findCorridorByName } from "@/components/RoadSideGuide";
 import type { RoadSideInfo } from "@/components/RoadSideGuide";
+import { MatchFoundModal } from "@/components/MatchFoundModal";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { playDriverApproachingSound } from "@/lib/sounds";
@@ -121,6 +122,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const prevStatusRef = useRef<string | undefined>(undefined);
   const [showFirstTimeHint, setShowFirstTimeHint] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedElapsed, setMatchedElapsed] = useState(0);
   const matchedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -181,11 +183,8 @@ export default function WalkerDashboard({ user }: { user: User }) {
 
   useEffect(() => {
     if (activeHop?.status === 'matched' && prevStatusRef.current === 'requested') {
-      if (navigator.vibrate) {
-        navigator.vibrate([200, 100, 200, 100, 300]);
-      }
+      setShowMatchModal(true);
       playDriverApproachingSound();
-      setShowInsightBubble(true);
       const corridor = findCorridorByName(activeHop?.startLocation || "");
       const info = buildRoadSideInfo(
         corridor,
@@ -323,6 +322,20 @@ export default function WalkerDashboard({ user }: { user: User }) {
 
   return (
     <div className="px-4 pt-3 pb-4 max-w-lg mx-auto">
+
+      <MatchFoundModal
+        visible={showMatchModal}
+        role="hopper"
+        destination={activeHop?.endLocation || undefined}
+        driverInfo={matchedDriverInfo ? {
+          vehicleMake: matchedDriverInfo.vehicleMake,
+          vehicleModel: matchedDriverInfo.vehicleModel,
+          vehicleColor: matchedDriverInfo.vehicleColor,
+          licensePlate: matchedDriverInfo.licensePlate,
+        } : undefined}
+        onDismiss={() => setShowMatchModal(false)}
+        onViewTrip={() => setLocation("/instahop")}
+      />
 
       <div className="flex items-center justify-between mb-3">
         <div>

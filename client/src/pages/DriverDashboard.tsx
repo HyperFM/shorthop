@@ -6,6 +6,7 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin, CarFront, Share2, Flame, Award, Star, Power, Shield, AlertTriangle, Smartphone, Navigation, LocateFixed } from "lucide-react";
 import { motion } from "framer-motion";
+import { MatchFoundModal } from "@/components/MatchFoundModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +70,7 @@ export default function DriverDashboard({ user }: { user: User }) {
 
   const { data: driverStatus } = useQuery<DriverStatus>({
     queryKey: ['/api/driver/status'],
+    refetchInterval: 5000,
   });
 
   const toggleActive = useMutation({
@@ -99,6 +101,8 @@ export default function DriverDashboard({ user }: { user: User }) {
   const [completedHopForShare, setCompletedHopForShare] = useState<ShortHop | null>(null);
   const [driverCurrentLoc, setDriverCurrentLoc] = useState("");
   const [driverDestination, setDriverDestination] = useState("");
+  const [showDriverMatchModal, setShowDriverMatchModal] = useState(false);
+  const driverPrevActiveHopCountRef = useRef<number>(0);
   const [driverTripActive, setDriverTripActive] = useState(false);
 
   const form = useForm<z.infer<typeof routeSchema>>({
@@ -137,6 +141,18 @@ export default function DriverDashboard({ user }: { user: User }) {
   const availableHops = hops?.filter(h => h.status === 'requested') || [];
   const activeHops = hops?.filter(h => h.status === 'matched' || h.status === 'in_ride') || [];
   const currentActiveHop = activeHops[0];
+
+  useEffect(() => {
+    const currentCount = activeHops.length;
+    if (currentCount > driverPrevActiveHopCountRef.current && currentCount > 0) {
+      setShowDriverMatchModal(true);
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200, 100, 400]);
+      }
+    }
+    driverPrevActiveHopCountRef.current = currentCount;
+  }, [activeHops.length]);
+
   const geo = useGeolocation();
   const tracking = useHopTracking(currentActiveHop?.id, !!(currentActiveHop && (currentActiveHop.status === 'matched' || currentActiveHop.status === 'in_ride')));
   const driverDropoffSoundRef = useRef(false);
@@ -207,6 +223,14 @@ export default function DriverDashboard({ user }: { user: User }) {
 
   return (
     <div className="px-4 pt-3 pb-6 max-w-lg mx-auto space-y-4">
+
+      <MatchFoundModal
+        visible={showDriverMatchModal}
+        role="driver"
+        destination={currentActiveHop?.endLocation || undefined}
+        onDismiss={() => setShowDriverMatchModal(false)}
+        onViewTrip={() => {}}
+      />
       
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
