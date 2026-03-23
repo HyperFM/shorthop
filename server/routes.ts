@@ -530,12 +530,16 @@ async function runMatchingCycle() {
       const starSet = new Set(driverStarIds);
 
       const driverHops = await storage.getHopsForDriver(driver.id);
-      const driverInRide = driverHops.some((h: any) => h.status === "matched" || h.status === "in_ride");
-      const activeRideSeatsUsed = driverHops
-        .filter((h: any) => h.status === "matched" || h.status === "in_ride")
-        .reduce((sum: number, h: any) => sum + (h.seatsNeeded || 1), 0);
+      const activeHops = driverHops.filter((h: any) => h.status === "matched" || h.status === "in_ride");
+      const driverInRide = activeHops.length > 0;
+      const activeRideSeatsUsed = activeHops.reduce((sum: number, h: any) => sum + (h.seatsNeeded || 1), 0);
       const effectiveSeats = Math.max(0, driverSeats - activeRideSeatsUsed);
       driverSeatTracker.set(driver.id, effectiveSeats);
+      if (driverInRide) {
+        console.log(`  Driver ${driver.id}: already in ride (${activeHops.length} active hop(s): ${activeHops.map((h: any) => `hop${h.id}[${h.status}]`).join(', ')}), effective seats: ${effectiveSeats}/${driverSeats}`);
+      } else {
+        console.log(`  Driver ${driver.id}: free, ${effectiveSeats} seat(s) available`);
+      }
 
       for (const hop of allAvailable) {
         if (hop.walkerId === driver.id) {
@@ -568,16 +572,24 @@ async function runMatchingCycle() {
       return aScore - bScore;
     });
 
+    console.log(`Matching: ${candidates.length} valid candidate(s) found, executing...`);
     for (const c of candidates) {
-      if (matchedHopIds.has(c.hop.id)) continue;
+      if (matchedHopIds.has(c.hop.id)) {
+        console.log(`  [hop${c.hop.id}↔drv${c.driver.id}] SKIP-EXEC: hop already matched this cycle`);
+        continue;
+      }
       const remainingSeats = driverSeatTracker.get(c.driver.id) || 0;
       const seatsNeeded = c.hop.seatsNeeded || 1;
-      if (seatsNeeded > remainingSeats) continue;
+      if (seatsNeeded > remainingSeats) {
+        console.log(`  [hop${c.hop.id}↔drv${c.driver.id}] SKIP-EXEC: needs ${seatsNeeded} seats, driver has ${remainingSeats} remaining`);
+        continue;
+      }
 
       const isMaximize = c.driver.matchPreference === "maximize_seats";
       const isOneRider = !isMaximize;
 
       if (c.driverInRide) {
+        console.log(`  [hop${c.hop.id}↔drv${c.driver.id}] DIVERT: driver already in ride, adding as pending additional hopper`);
         if (!pendingAdditionalHops.has(c.hop.id)) {
           pendingAdditionalHops.set(c.hop.id, {
             hopId: c.hop.id,
@@ -596,6 +608,7 @@ async function runMatchingCycle() {
         continue;
       }
 
+      console.log(`  [hop${c.hop.id}↔drv${c.driver.id}] EXECUTING MATCH (star=${c.isStar}, seats=${seatsNeeded}/${remainingSeats})`);
       await executeMatch(c.hop.id, c.driver.id, c.isStar, c.hop);
       matchedHopIds.add(c.hop.id);
       driverSeatTracker.set(c.driver.id, remainingSeats - seatsNeeded);
