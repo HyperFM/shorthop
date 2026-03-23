@@ -203,7 +203,8 @@ function getBearing(lat1: number, lon1: number, lat2: number, lon2: number): str
   return "west";
 }
 
-const MAX_DEVIATION_MILES = 0.5;
+const MAX_DEVIATION_MILES = 2.0;
+const MAX_DETOUR_MILES = 2.0;
 const MAX_TIME_DIFF_MS = 30 * 60 * 1000;
 const MATCH_CYCLE_INTERVAL_MS = 5000;
 const MAX_DIRECTION_ANGLE = Math.PI / 3;
@@ -334,6 +335,7 @@ interface MatchScore {
   pickupDist: number;
   dropoffDist: number;
   totalDeviation: number;
+  detourMiles: number;
 }
 
 function scoreHopMatchForDriver(
@@ -343,7 +345,7 @@ function scoreHopMatchForDriver(
   driverRoutes: any[],
   driverId?: number
 ): MatchScore {
-  const fail: MatchScore = { valid: false, pickupDist: Infinity, dropoffDist: Infinity, totalDeviation: Infinity };
+  const fail: MatchScore = { valid: false, pickupDist: Infinity, dropoffDist: Infinity, totalDeviation: Infinity, detourMiles: Infinity };
   const tag = `  [hop${hop.id}↔drv${driverId || '?'}]`;
   const now = new Date();
 
@@ -382,6 +384,7 @@ function scoreHopMatchForDriver(
 
   let bestPickupDist = Infinity;
   let bestDropoffDist = Infinity;
+  let bestDetour = Infinity;
   let matchedAnyRoute = false;
 
   for (const route of driverRoutes) {
@@ -432,10 +435,22 @@ function scoreHopMatchForDriver(
       continue;
     }
 
+    const driverStart = routePoints[0];
+    const driverEnd = routePoints[routePoints.length - 1];
+    const directDist = getDistance(driverStart[0], driverStart[1], driverEnd[0], driverEnd[1]);
+    const detouredDist =
+      getDistance(driverStart[0], driverStart[1], hopStartLat, hopStartLng) +
+      getDistance(hopStartLat, hopStartLng, hopEndLat, hopEndLng) +
+      getDistance(hopEndLat, hopEndLng, driverEnd[0], driverEnd[1]);
+    const detour = Math.max(0, detouredDist - directDist);
+
+    console.log(`${tag}   detour: ${detour.toFixed(3)}mi (direct=${directDist.toFixed(3)}, detoured=${detouredDist.toFixed(3)}, soft cap ${MAX_DETOUR_MILES})`);
+
     console.log(`${tag}   MATCH on route "${route.name}" ✓`);
     matchedAnyRoute = true;
     if (pickupToRoute < bestPickupDist) bestPickupDist = pickupToRoute;
     if (dropoffToRoute < bestDropoffDist) bestDropoffDist = dropoffToRoute;
+    if (detour < bestDetour) bestDetour = detour;
   }
 
   if (!matchedAnyRoute) {
@@ -443,12 +458,13 @@ function scoreHopMatchForDriver(
     return fail;
   }
 
-  console.log(`${tag} VALID: pickup=${bestPickupDist.toFixed(3)}mi, dropoff=${bestDropoffDist.toFixed(3)}mi`);
+  console.log(`${tag} VALID: pickup=${bestPickupDist.toFixed(3)}mi, dropoff=${bestDropoffDist.toFixed(3)}mi, detour=${bestDetour.toFixed(3)}mi`);
   return {
     valid: true,
     pickupDist: bestPickupDist,
     dropoffDist: bestDropoffDist,
     totalDeviation: bestPickupDist + bestDropoffDist,
+    detourMiles: bestDetour,
   };
 }
 
@@ -547,7 +563,9 @@ async function runMatchingCycle() {
       const bMax = b.driver.matchPreference === "maximize_seats" ? 1 : 0;
       if (aMax !== bMax) return bMax - aMax;
       if (a.isStar !== b.isStar) return b.isStar ? 1 : -1;
-      return a.score.totalDeviation - b.score.totalDeviation;
+      const aScore = a.score.totalDeviation + a.score.detourMiles;
+      const bScore = b.score.totalDeviation + b.score.detourMiles;
+      return aScore - bScore;
     });
 
     for (const c of candidates) {

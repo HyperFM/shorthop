@@ -1,0 +1,101 @@
+Matching Logic Update — Priority: Guarantee First Successful Match
+
+We need to simplify and relax the current matching logic to ensure at least one successful match occurs during testing, while still enforcing directional integrity (no opposite-direction matches).
+
+⸻
+
+Core Goal
+
+Get reliable matches for drivers and hoppers traveling in the same general direction, without requiring perfect geometric alignment.
+
+⸻
+
+Key Changes
+
+1. Increase Route Deviation Tolerance
+The current 0.5 mile constraint is too strict for real-world conditions (road curvature, GPS variance, polyline simplification).
+
+Update:
+	•	MAX_DEVIATION_MILES = 2.0
+
+This allows pickups and dropoffs within a reasonable distance of the driver’s route while still keeping them “on the way.”
+
+⸻
+
+2. Enforce Direction (Required — Do NOT remove)
+We still must guarantee that the hopper is moving forward along the driver’s route.
+
+Keep this logic:
+	•	Project pickup onto route → get % along route
+	•	Project dropoff onto route → get % along route
+
+Rule:
+	•	Reject if dropoff_percentage <= pickup_percentage
+
+This ensures:
+	•	No backtracking
+	•	Hopper is going the same direction as driver
+
+⸻
+
+3. Temporarily Prioritize Match Success Over Precision
+For testing purposes:
+	•	Keep time window (30 min)
+	•	Keep seat constraints
+	•	Keep self-match prevention
+
+But:
+	•	Do NOT add any new strict filters yet
+	•	Do NOT reduce deviation again yet
+
+⸻
+
+4. Add Detour Calculation (Soft Limit for Now)
+We want to measure real-world efficiency, but not block matches too aggressively during testing.
+
+Inside scoreHopMatchForDriver():
+
+Compute:
+	•	direct_distance = distance(start → destination)
+	•	detoured_distance = distance(start → pickup → dropoff → destination)
+	•	detour = detoured_distance - direct_distance
+
+Add:
+	•	MAX_DETOUR_MILES = 2.0
+
+For now:
+	•	Do NOT hard reject slightly over the limit
+	•	Instead, use detour as part of scoring (lower = better)
+
+This prevents unnecessary match failures while still guiding optimal matches.
+
+⸻
+
+Resulting Behavior
+	•	Driver sees matches that are slightly off their route but still reasonable
+	•	Hopper is always traveling forward in the same direction
+	•	Total detour remains small and controlled
+	•	System prioritizes “making a match happen” over perfection
+
+⸻
+
+Important Note
+
+The system should behave like:
+
+“I’m already driving this way — picking this person up adds minimal effort”
+
+NOT:
+
+“Everything must align perfectly or no match occurs”
+
+⸻
+
+Summary
+	•	Increase deviation tolerance to 2 miles
+	•	Keep forward-direction enforcement
+	•	Introduce detour calculation (but don’t hard reject yet)
+	•	Prioritize successful matches over strict optimization
+
+This is a testing-phase configuration to validate the matching system works in real conditions. Optimization can be tightened after consistent matches are confirmed.
+:::
