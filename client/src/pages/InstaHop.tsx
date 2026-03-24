@@ -506,6 +506,22 @@ function GlowingSearchText() {
   );
 }
 
+function SeatIcon({ className }: { className?: string }) {
+  return <img src="/seat-icon.png" alt="" className={className || "w-4 h-4"} style={{ objectFit: "contain" }} draggable={false} />;
+}
+
+function HopperIcon({ className, searching }: { className?: string; searching?: boolean }) {
+  return (
+    <img
+      src="/hopper-icon.png"
+      alt=""
+      className={`${className || "w-5 h-5"} ${searching ? "animate-pulse opacity-60" : ""}`}
+      style={{ objectFit: "contain" }}
+      draggable={false}
+    />
+  );
+}
+
 function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRide }: {
   user: User;
   hop: any | null;
@@ -518,107 +534,121 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
   const { data: hops } = useHops();
   const activeHops = hops?.filter(h => (h.status === "matched" || h.status === "in_ride") && h.driverId === user.id) || [];
   const occupiedSeats = activeHops.reduce((sum: number, h: any) => sum + (h.seatsNeeded || 1), 0);
+  const isFull = occupiedSeats >= totalSeats;
 
   const hopperUser = hop ? (hop as any).walker : null;
   const rideStyleEmoji = hop?.rideStyle === "quiet" ? "🤫" : hop?.rideStyle === "friendly" ? "😊" : hop?.rideStyle === "social" ? "🫱🏻‍🫲🏿" : null;
 
   return (
-    <div
-      className="absolute bottom-0 left-0 right-0 z-20"
+    <motion.div
+      className="absolute bottom-0 left-0 right-0 z-20 px-3 pb-3"
       data-testid="driver-nav-bar"
+      initial={{ y: 200, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0.1 }}
     >
-      <div className="bg-black/85 backdrop-blur-xl border-t border-white/10 px-4 py-2.5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 shrink-0">
+      <div className="bg-gradient-to-br from-orange-500 to-orange-600 backdrop-blur-xl rounded-3xl shadow-2xl shadow-orange-500/30 px-4 py-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0 flex-nowrap overflow-hidden">
             {routeInfo && (
               <>
-                <div className="flex flex-col items-center" data-testid="display-nav-eta">
+                <div className="flex flex-col items-center shrink-0" data-testid="display-nav-eta">
                   <span className="text-white font-black text-sm leading-tight">{routeInfo.eta}</span>
-                  <span className="text-white/50 text-[9px] font-medium">ETA</span>
+                  <span className="text-white/60 text-[9px] font-medium">ETA</span>
                 </div>
-                <div className="w-px h-6 bg-white/15" />
-                <div className="flex flex-col items-center" data-testid="display-nav-distance">
+                <div className="w-px h-5 bg-white/25 shrink-0" />
+                <div className="flex flex-col items-center shrink-0" data-testid="display-nav-distance">
                   <span className="text-white font-black text-sm leading-tight">{routeInfo.distance}</span>
-                  <span className="text-white/50 text-[9px] font-medium">dist</span>
+                  <span className="text-white/60 text-[9px] font-medium">dist</span>
                 </div>
-                <div className="w-px h-6 bg-white/15" />
+                <div className="w-px h-5 bg-white/25 shrink-0" />
               </>
             )}
-            <div className="flex flex-col items-center" data-testid="display-nav-seats">
-              <span className="text-white font-black text-sm leading-tight">💺{occupiedSeats}/{totalSeats}</span>
-              <span className="text-white/50 text-[9px] font-medium">seats</span>
+            <div className="flex items-center gap-1 shrink-0" data-testid="display-nav-seats">
+              <span className="text-white font-black text-sm leading-tight">{occupiedSeats}/{totalSeats}</span>
+              <SeatIcon className="w-4 h-4" />
             </div>
-          </div>
-
-          <div className="flex-1 min-w-0 flex items-center justify-end gap-2">
-            {!hop && (
-              <GlowingSearchText />
-            )}
-
-            {hop && hop.status === "matched" && (
-              <div className="flex items-center gap-2 min-w-0" data-testid="display-matched-hopper">
-                {hopperUser?.profilePhoto ? (
-                  <img src={hopperUser.profilePhoto} className="w-7 h-7 rounded-full border-2 border-orange-500 object-cover shrink-0" alt="" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-orange-500/30 border-2 border-orange-500 flex items-center justify-center shrink-0">
-                    <span className="text-[10px] font-bold text-orange-300">{(hopperUser?.firstName || hop.walkerName || "?")[0]}</span>
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <p className="text-white text-[11px] font-bold truncate leading-tight">
-                    {hopperUser?.firstName || hop.walkerName || "Hopper"} {hopperUser?.lastName ? hopperUser.lastName[0] + "." : ""}
-                    {rideStyleEmoji && <span className="ml-1">{rideStyleEmoji}</span>}
-                  </p>
-                  <p className="text-white/50 text-[9px] truncate">pickup</p>
-                </div>
-                <button
-                  onClick={() => onStartRide(hop.id)}
-                  className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold rounded-lg shrink-0 transition-colors"
-                  data-testid="button-driver-start-ride-bar"
-                >
-                  Pick Up
-                </button>
-              </div>
-            )}
-
-            {hop && hop.status === "in_ride" && (
-              <div className="flex items-center gap-2 min-w-0" data-testid="display-in-ride-hopper">
-                {hopperUser?.profilePhoto ? (
-                  <img src={hopperUser.profilePhoto} className="w-7 h-7 rounded-full border-2 border-green-500 object-cover shrink-0" alt="" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-green-500/30 border-2 border-green-500 flex items-center justify-center shrink-0">
-                    <span className="text-[10px] font-bold text-green-300">{(hopperUser?.firstName || hop.walkerName || "?")[0]}</span>
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <p className="text-white text-[11px] font-bold truncate leading-tight">
-                    {hopperUser?.firstName || hop.walkerName || "Hopper"} {hopperUser?.lastName ? hopperUser.lastName[0] + "." : ""}
-                    {rideStyleEmoji && <span className="ml-1">{rideStyleEmoji}</span>}
-                  </p>
-                  <p className="text-green-400 text-[9px] truncate">in ride</p>
-                </div>
-                <button
-                  onClick={() => onCompleteRide(hop.id)}
-                  className="px-2.5 py-1 bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold rounded-lg shrink-0 transition-colors"
-                  data-testid="button-driver-complete-ride-bar"
-                >
-                  Complete
-                </button>
-              </div>
-            )}
+            <div className="w-px h-5 bg-white/25 shrink-0" />
+            <HopperIcon className="w-5 h-5 shrink-0" searching={!hop && !isFull} />
           </div>
 
           <button
             onClick={onStop}
-            className="w-8 h-8 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center shrink-0 hover:bg-red-500/30 transition-colors"
+            className="w-9 h-9 rounded-full bg-red-500/30 border border-red-400/50 flex items-center justify-center shrink-0 hover:bg-red-500/50 transition-colors"
             data-testid="button-driver-stop-bar"
             title="Go offline"
           >
-            <Power className="w-3.5 h-3.5 text-red-400" />
+            <Power className="w-4 h-4 text-white" />
           </button>
         </div>
+
+        <div className="min-h-[40px] flex items-center">
+          {isFull && (
+            <div className="flex items-center gap-2 w-full" data-testid="display-seats-full">
+              <span className="text-white/90 font-black text-sm">Route locked — Full</span>
+            </div>
+          )}
+
+          {!hop && !isFull && (
+            <div className="flex items-center gap-2">
+              <GlowingSearchText />
+            </div>
+          )}
+
+          {hop && hop.status === "matched" && (
+            <div className="flex items-center gap-3 w-full" data-testid="display-matched-hopper">
+              {hopperUser?.profilePhoto ? (
+                <img src={hopperUser.profilePhoto} className="w-10 h-10 rounded-full border-2 border-white/80 object-cover shrink-0" alt="" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center shrink-0">
+                  <HopperIcon className="w-6 h-6" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-white text-sm font-bold truncate leading-tight">
+                  {hopperUser?.firstName || hop.walkerName || "Hopper"} {hopperUser?.lastName ? hopperUser.lastName[0] + "." : ""}
+                  {rideStyleEmoji && <span className="ml-1">{rideStyleEmoji}</span>}
+                </p>
+                <p className="text-white/60 text-[10px] truncate">heading to pickup</p>
+              </div>
+              <button
+                onClick={() => onStartRide(hop.id)}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-black rounded-xl shrink-0 transition-colors border border-white/30"
+                data-testid="button-driver-start-ride-bar"
+              >
+                Pick Up
+              </button>
+            </div>
+          )}
+
+          {hop && hop.status === "in_ride" && (
+            <div className="flex items-center gap-3 w-full" data-testid="display-in-ride-hopper">
+              {hopperUser?.profilePhoto ? (
+                <img src={hopperUser.profilePhoto} className="w-10 h-10 rounded-full border-2 border-white/80 object-cover shrink-0" alt="" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center shrink-0">
+                  <HopperIcon className="w-6 h-6" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-white text-sm font-bold truncate leading-tight">
+                  {hopperUser?.firstName || hop.walkerName || "Hopper"} {hopperUser?.lastName ? hopperUser.lastName[0] + "." : ""}
+                  {rideStyleEmoji && <span className="ml-1">{rideStyleEmoji}</span>}
+                </p>
+                <p className="text-green-200 text-[10px] font-semibold truncate">in ride</p>
+              </div>
+              <button
+                onClick={() => onCompleteRide(hop.id)}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-black rounded-xl shrink-0 transition-colors border border-white/30"
+                data-testid="button-driver-complete-ride-bar"
+              >
+                Complete
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -1769,8 +1799,8 @@ function DriveNowPanel({ user }: { user: User }) {
 
           <div className="flex items-center justify-between gap-3 px-1 py-1.5">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-foreground/50 dark:text-gray-400 shrink-0" />
-              <span className="text-[11px] font-medium text-foreground dark:text-white">Seats</span>
+              <SeatIcon className="w-5 h-5" />
+              <span className="text-[11px] font-medium text-foreground dark:text-white">0/{(user as any)?.availableSeats || 1}</span>
             </div>
             <div className="flex items-center gap-1.5" data-testid="stepper-driver-seats">
               <Button
@@ -2731,8 +2761,10 @@ function InstaHopView({ user }: { user: User }) {
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
         <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} driverNavRoute={isDriverMode && isDriverActive ? driverNavRoute : null} isDark={isDark} />
 
-        {isDriverMode && isDriverActive && (
+        <AnimatePresence mode="wait">
+        {isDriverMode && isDriverActive ? (
           <DriverNavBar
+            key="driver-nav"
             user={user}
             hop={driverActiveHop}
             routeInfo={driverRouteInfo}
@@ -2758,13 +2790,15 @@ function InstaHopView({ user }: { user: User }) {
               }
             }}
           />
-        )}
-
-        {!(isDriverMode && isDriverActive) && (
-        <div
+        ) : (
+        <motion.div
+          key="control-panel"
           className="absolute bottom-0 left-0 right-0 bg-white/97 dark:bg-black/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 dark:border-white/10 z-20"
           style={{ height: "40%" }}
           data-testid="control-panel"
+          initial={{ y: 0 }}
+          exit={{ y: 300, opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
         >
           <div className="px-4 pt-3 pb-2 h-full overflow-y-auto">
             {isDriverMode ? (
@@ -3162,8 +3196,8 @@ function InstaHopView({ user }: { user: User }) {
                       </div>
                       <div className="flex items-center justify-between gap-3 px-1">
                         <div className="flex items-center gap-2">
-                          <Users className="w-3.5 h-3.5 text-foreground/50 dark:text-foreground/60 shrink-0" />
-                          <span className="text-[11px] text-foreground/60 dark:text-foreground/70">Seats</span>
+                          <SeatIcon className="w-4 h-4" />
+                          <span className="text-[11px] text-foreground/60 dark:text-foreground/70">{(user as any)?.seatsNeeded || 1} seat{((user as any)?.seatsNeeded || 1) > 1 ? "s" : ""}</span>
                         </div>
                         <div className="flex items-center gap-1.5" data-testid="stepper-hopper-seats">
                           <Button
@@ -3255,8 +3289,9 @@ function InstaHopView({ user }: { user: User }) {
               </>
             )}
           </div>
-        </div>
+        </motion.div>
         )}
+        </AnimatePresence>
       </div>
     </>
   );

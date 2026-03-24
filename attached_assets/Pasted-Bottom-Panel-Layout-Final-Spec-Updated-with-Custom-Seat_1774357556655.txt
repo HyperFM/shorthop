@@ -1,0 +1,119 @@
+Bottom Panel Layout (Final Spec – Updated with Custom Seat Icon)
+
+Left Side Layout (Inline Order)
+
+ETA | Distance | Time | 0/X [Seat Icon] | [Hopper Icon]
+	•	0/X [Seat Icon] = seat count
+	•	[Seat Icon] = use the exact cropped transparent seat image provided
+	•	Replace the 💺 emoji entirely
+	•	Use the generated cartoon seat asset
+	•	Maintain transparency (no background box)
+	•	Keep proportions consistent with text height
+	•	[Hopper Icon] = use the existing blue walking icon
+	•	Already used in:
+	•	Hopper Lexington ShortHop network
+	•	Hopper current location indicator
+	•	Do NOT modify or restyle
+	•	Reuse the exact same asset file
+
+⸻
+
+Pre-Active Visibility (New Requirement)
+	•	The seat indicator (0/X [Seat Icon]) must be visible BEFORE the driver goes active
+	•	Purpose:
+	•	Helps driver immediately understand capacity selection
+	•	Builds familiarity with the icon before live use
+
+Also Apply To:
+	•	Hopper panel:
+	•	Show the same seat icon + count format
+	•	Keeps UI consistent across both roles
+
+⸻
+
+Layout Rules
+	•	Must always remain:
+	•	Single horizontal row (inline)
+	•	Compact
+	•	Evenly spaced
+	•	Vertically centered
+	•	Strict rule: NO wrapping under any screen size
+
+⸻
+
+Responsive Behavior
+	•	If space becomes constrained:
+	•	Slightly reduce:
+	•	Font size
+	•	Horizontal spacing
+	•	Do NOT:
+	•	Stack elements
+	•	Hide elements
+	•	Change order
+
+⸻
+
+Behavior / Logic
+
+Seat Count
+	•	Format:
+	•	0/X [Seat Icon]
+	•	X = total seat capacity (from driver settings)
+	•	Left number = current occupied seats
+
+State Updates
+	•	Default:
+	•	0/X
+	•	On match accepted:
+	•	Increment immediately (real-time)
+	•	On drop-off:
+	•	Decrement automatically
+
+⸻
+
+Hopper Icon Behavior
+	•	Default:
+	•	Visible
+	•	Static
+	•	While searching:
+	•	Optional:
+	•	Very subtle pulse/glow
+	•	Low opacity
+	•	Slow timing
+	•	Must remain non-distracting
+	•	On match:
+	•	Returns to static
+	•	Acts as passive confirmation
+
+⸻
+
+Constraints
+	•	No aggressive animations
+	•	No expanding components
+	•	No layout shifts
+	•	No popups or overlays covering the map
+	•	All updates must feel:
+	•	Instant
+	•	Smooth
+	•	Quiet
+
+⸻
+
+Edge Cases
+
+When Full (X/X [Seat Icon])
+	•	Stop hopper search immediately
+	•	Right-side status switches to:
+	•	"Full" or "Route locked"
+	•	Disable additional matching completely
+
+⸻
+
+Design Intent
+	•	Panel is glanceable, not interactive
+	•	Driver should instantly understand:
+	•	Route progress
+	•	Capacity
+	•	Match state
+
+Target comprehension time: < 1 second

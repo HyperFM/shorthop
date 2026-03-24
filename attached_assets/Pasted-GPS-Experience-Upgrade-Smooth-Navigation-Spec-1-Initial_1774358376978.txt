@@ -1,0 +1,142 @@
+GPS Experience Upgrade (Smooth Navigation Spec)
+
+1. Initial Map Load (Fix the “zoomed-out route” problem)
+
+Current issue:
+	•	Map loads showing full route → feels static and not like navigation
+
+Required behavior:
+	•	On destination set OR when driver goes active:
+	•	Briefly calculate full route (background)
+	•	Then immediately:
+
+👉 Zoom into driver location (primary focus)
+👉 Center map on driver
+👉 Tilt slightly (3D effect)
+
+⸻
+
+2. Default Camera State (The “Wow Smooth” Look)
+
+This is the core of what you’re after.
+
+Camera Setup:
+	•	Zoom: Close (street-level, not city-level)
+	•	Tilt: ~45° (slight 3D perspective)
+	•	Bearing: Aligned with driver direction (forward-facing)
+
+Result:
+	•	Driver sees:
+	•	Their car
+	•	The road ahead
+	•	Direction of movement
+
+Not the whole trip—just what matters right now
+
+⸻
+
+3. Driver Indicator (Critical for GPS Feel)
+
+Replace static marker with:
+
+Car + Direction Arrow Behavior
+	•	Car icon = current position
+	•	Arrow = heading direction (live rotation based on movement)
+
+States:
+	•	Idle:
+	•	Arrow visible but subtle
+	•	Moving:
+	•	Arrow rotates smoothly with heading
+	•	Navigation active:
+	•	Arrow always points forward along route
+
+⸻
+
+4. Route Visibility (Don’t Remove—Just De-emphasize)
+
+Keep the full route, BUT:
+	•	Primary route:
+	•	Highlighted clearly ahead of driver
+	•	Remaining route:
+	•	Slightly faded or thinner
+	•	Completed route:
+	•	Fades out behind driver
+
+👉 This keeps context without overwhelming the screen
+
+⸻
+
+5. Smart Camera Movement (This is the magic)
+
+Instead of static map:
+	•	Camera follows driver smoothly
+	•	Slight forward offset (so driver isn’t dead center)
+
+Positioning:
+	•	Driver sits slightly lower on screen
+	•	More space shown ahead than behind
+
+⸻
+
+6. Alignment Tool (What you’re actually wanting here)
+
+You don’t need a complex tool—just this:
+
+“Recenter / Align Button”
+	•	Tap → snaps camera back to:
+	•	Driver position
+	•	Correct heading
+	•	Proper zoom + tilt
+
+Auto-behavior:
+	•	If user drags map:
+	•	Pause auto-follow
+	•	After X seconds OR button tap:
+	•	Re-align smoothly
+
+⸻
+
+7. Transition Into Navigation (Make it feel alive)
+
+Right now it probably just appears.
+
+Instead:
+
+When driver goes active:
+	1.	Map loads route (zoomed out briefly)
+	2.	Smooth animation:
+	•	Zooms in to driver
+	•	Tilts into 3D
+	•	Rotates to match heading
+
+👉 This 0.5–1 second transition = “wow” effect
+
+⸻
+
+8. Matching Integration (Keep your system intact)
+
+When a hopper is matched:
+	•	DO NOT reset camera
+	•	DO NOT zoom out
+
+Instead:
+	•	Route updates dynamically:
+	•	Driver → Pickup → Drop-off → Destination
+
+Camera stays:
+	•	Locked on driver
+	•	Same zoom
+	•	Same tilt
+
+👉 This keeps everything feeling continuous
+
+⸻
+
+9. What NOT to Do (Important)
+
+Avoid:
+	•	Constant zoom changes
+	•	Snapping camera abruptly
+	•	Showing full route all the time
+	•	Big UI overlays blocking map
