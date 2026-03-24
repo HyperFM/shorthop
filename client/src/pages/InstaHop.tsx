@@ -23,7 +23,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { User } from "@shared/routes";
 import hopperAloneUrl from "@assets/Untitled_design_1773399128365.png";
-import driverAloneUrl from "@assets/Untitled_design_1773399149078.png";
+import driverAloneUrl from "@assets/Untitled_design_1774360166484.png";
 import driverWithHopperUrl from "@assets/Untitled_design_1773399128366.png";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
@@ -225,33 +225,17 @@ function createMarkerEl(src: string): HTMLElement {
 
 function createDriverNavMarker(): HTMLElement {
   const outer = document.createElement("div");
-  outer.style.width = "64px";
-  outer.style.height = "64px";
+  outer.style.width = "52px";
+  outer.style.height = "52px";
   outer.style.position = "relative";
-  outer.style.filter = "drop-shadow(0 4px 8px rgba(0,0,0,0.4))";
-  outer.style.transition = "transform 0.6s ease";
-
-  const arrow = document.createElement("div");
-  arrow.className = "driver-nav-arrow";
-  arrow.style.position = "absolute";
-  arrow.style.top = "-8px";
-  arrow.style.left = "50%";
-  arrow.style.transform = "translateX(-50%)";
-  arrow.style.width = "0";
-  arrow.style.height = "0";
-  arrow.style.borderLeft = "8px solid transparent";
-  arrow.style.borderRight = "8px solid transparent";
-  arrow.style.borderBottom = "12px solid #3b82f6";
-  arrow.style.transition = "opacity 0.3s";
-  arrow.style.opacity = "0.8";
-  outer.appendChild(arrow);
+  outer.style.filter = "drop-shadow(0 2px 6px rgba(0,0,0,0.35))";
 
   const pulse = document.createElement("div");
   pulse.style.position = "absolute";
-  pulse.style.inset = "-6px";
+  pulse.style.inset = "-4px";
   pulse.style.borderRadius = "50%";
-  pulse.style.border = "2px solid rgba(59,130,246,0.4)";
-  pulse.style.animation = "driver-pulse 2s ease-in-out infinite";
+  pulse.style.border = "2px solid rgba(59,130,246,0.35)";
+  pulse.style.animation = "driver-pulse 2.5s ease-in-out infinite";
   outer.appendChild(pulse);
 
   const img = document.createElement("img");
@@ -477,7 +461,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
         const el = createDriverNavMarker();
         const img = el.querySelector("img");
         if (img) img.src = iconSrc;
-        markerRef.current = new mapboxgl.Marker({ element: el, rotationAlignment: "map", pitchAlignment: "map" })
+        markerRef.current = new mapboxgl.Marker({ element: el, rotationAlignment: "viewport", pitchAlignment: "viewport" })
           .setLngLat(lngLat)
           .addTo(mapRef.current);
       }
@@ -829,7 +813,7 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
             )}
             <div className="flex items-center gap-1 shrink-0" data-testid="display-nav-seats">
               <span className="text-white font-black text-sm leading-tight">{occupiedSeats}/{totalSeats}</span>
-              <SeatIcon className="w-4 h-4" />
+              <SeatIcon className="w-8 h-8" />
             </div>
             <div className="w-px h-5 bg-white/25 shrink-0" />
             <HopperIcon className="w-5 h-5 shrink-0" searching={!hop && !isFull} />
@@ -1744,7 +1728,7 @@ function DriveNowPanel({ user }: { user: User }) {
 
   const updatePreferences = useMutation({
     mutationFn: async (updates: { availableSeats?: number }) => {
-      await apiRequest("PATCH", "/api/user/preferences", updates);
+      await apiRequest("PUT", "/api/profile/preferences", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/me'] });
@@ -2062,7 +2046,7 @@ function DriveNowPanel({ user }: { user: User }) {
 
           <div className="flex items-center justify-between gap-3 px-1 py-1.5">
             <div className="flex items-center gap-2">
-              <SeatIcon className="w-5 h-5" />
+              <SeatIcon className="w-10 h-10" />
               <span className="text-[11px] font-medium text-foreground dark:text-white">0/{(user as any)?.availableSeats || 1}</span>
             </div>
             <div className="flex items-center gap-1.5" data-testid="stepper-driver-seats">
@@ -2345,7 +2329,7 @@ function InstaHopView({ user }: { user: User }) {
 
   const updatePreferences = useMutation({
     mutationFn: async (updates: { seatsNeeded?: number }) => {
-      await apiRequest("PATCH", "/api/user/preferences", updates);
+      await apiRequest("PUT", "/api/profile/preferences", updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/me'] });
@@ -3459,7 +3443,7 @@ function InstaHopView({ user }: { user: User }) {
                       </div>
                       <div className="flex items-center justify-between gap-3 px-1">
                         <div className="flex items-center gap-2">
-                          <SeatIcon className="w-4 h-4" />
+                          <SeatIcon className="w-8 h-8" />
                           <span className="text-[11px] text-foreground/60 dark:text-foreground/70">{(user as any)?.seatsNeeded || 1} seat{((user as any)?.seatsNeeded || 1) > 1 ? "s" : ""}</span>
                         </div>
                         <div className="flex items-center gap-1.5" data-testid="stepper-hopper-seats">
