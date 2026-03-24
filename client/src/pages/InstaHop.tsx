@@ -223,6 +223,47 @@ function createMarkerEl(src: string): HTMLElement {
   return el;
 }
 
+function createDriverNavMarker(): HTMLElement {
+  const outer = document.createElement("div");
+  outer.style.width = "64px";
+  outer.style.height = "64px";
+  outer.style.position = "relative";
+  outer.style.filter = "drop-shadow(0 4px 8px rgba(0,0,0,0.4))";
+  outer.style.transition = "transform 0.6s ease";
+
+  const arrow = document.createElement("div");
+  arrow.className = "driver-nav-arrow";
+  arrow.style.position = "absolute";
+  arrow.style.top = "-8px";
+  arrow.style.left = "50%";
+  arrow.style.transform = "translateX(-50%)";
+  arrow.style.width = "0";
+  arrow.style.height = "0";
+  arrow.style.borderLeft = "8px solid transparent";
+  arrow.style.borderRight = "8px solid transparent";
+  arrow.style.borderBottom = "12px solid #3b82f6";
+  arrow.style.transition = "opacity 0.3s";
+  arrow.style.opacity = "0.8";
+  outer.appendChild(arrow);
+
+  const pulse = document.createElement("div");
+  pulse.style.position = "absolute";
+  pulse.style.inset = "-6px";
+  pulse.style.borderRadius = "50%";
+  pulse.style.border = "2px solid rgba(59,130,246,0.4)";
+  pulse.style.animation = "driver-pulse 2s ease-in-out infinite";
+  outer.appendChild(pulse);
+
+  const img = document.createElement("img");
+  img.style.width = "100%";
+  img.style.height = "100%";
+  img.style.objectFit = "contain";
+  img.style.position = "relative";
+  outer.appendChild(img);
+
+  return outer;
+}
+
 function getMarkerIcon(mode: HopMode, hasMatchedRide: boolean): string {
   if (hasMatchedRide) return driverWithHopperUrl;
   if (mode === "drive") return driverAloneUrl;
@@ -236,6 +277,10 @@ type DriverNavRoute = {
   destMarkerCoord?: { lat: number; lng: number };
 };
 
+const NAV_ZOOM = 17;
+const NAV_PITCH = 50;
+const RECENTER_DELAY_MS = 5000;
+
 function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driverNavRoute, isDark }: { mode: HopMode; latitude: number | null; longitude: number | null; hasMatchedRide: boolean; walkingRoute: GeoJSON.LineString | null; driverNavRoute: DriverNavRoute | null; isDark: boolean }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -246,23 +291,33 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
   const [mapError, setMapError] = useState(false);
   const mapErrorRef = useRef(false);
   const driverRouteFittedRef = useRef<string | null>(null);
+  const prevLatLngRef = useRef<{ lat: number; lng: number } | null>(null);
+  const bearingRef = useRef(0);
+  const isNavModeRef = useRef(false);
+  const navTransitionDoneRef = useRef(false);
+  const userDraggedRef = useRef(false);
+  const recenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showRecenter, setShowRecenter] = useState(false);
+
+  const isNavMode = !!(mode === "drive" && driverNavRoute);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current || mapErrorRef.current) return;
 
     const center: [number, number] = latitude && longitude ? [longitude, latitude] : LEX_CENTER;
-    const useNavStyle = mode === "drive" && driverNavRoute;
 
     let map: mapboxgl.Map;
     try {
       map = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: useNavStyle
+        style: isNavMode
           ? "mapbox://styles/mapbox/navigation-night-v1"
           : (isDark ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/streets-v12"),
         center,
         zoom: 15,
         attributionControl: false,
+        pitch: 0,
+        bearing: 0,
       });
     } catch (e) {
       console.warn("Map init failed (WebGL not available):", e);
@@ -279,6 +334,18 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
       }
     });
 
+    map.on("dragstart", () => {
+      if (isNavModeRef.current) {
+        userDraggedRef.current = true;
+        setShowRecenter(true);
+        if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+        recenterTimerRef.current = setTimeout(() => {
+          userDraggedRef.current = false;
+          setShowRecenter(false);
+        }, RECENTER_DELAY_MS);
+      }
+    });
+
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-left");
 
     mapRef.current = map;
@@ -288,19 +355,51 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
       if (destMarkerRef.current) { destMarkerRef.current.remove(); destMarkerRef.current = null; }
       if (pickupMarkerRef.current) { pickupMarkerRef.current.remove(); pickupMarkerRef.current = null; }
       if (dropoffMarkerRef.current) { dropoffMarkerRef.current.remove(); dropoffMarkerRef.current = null; }
+      if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
   useEffect(() => {
+    isNavModeRef.current = isNavMode;
+  }, [isNavMode]);
+
+  useEffect(() => {
     if (!mapRef.current) return;
-    const useNavStyle = mode === "drive" && driverNavRoute;
-    const newStyle = useNavStyle
+    const newStyle = isNavMode
       ? "mapbox://styles/mapbox/navigation-night-v1"
       : (isDark ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/streets-v12");
     mapRef.current.setStyle(newStyle);
-  }, [isDark, !!(mode === "drive" && driverNavRoute)]);
+
+    if (markerRef.current) {
+      markerRef.current.remove();
+      markerRef.current = null;
+    }
+
+    if (!isNavMode) {
+      navTransitionDoneRef.current = false;
+      userDraggedRef.current = false;
+      setShowRecenter(false);
+      mapRef.current.easeTo({ pitch: 0, bearing: 0, duration: 800 });
+    }
+  }, [isDark, isNavMode]);
+
+  useEffect(() => {
+    if (isNavMode && !navTransitionDoneRef.current && latitude && longitude && mapRef.current) {
+      navTransitionDoneRef.current = true;
+      const map = mapRef.current;
+      map.flyTo({
+        center: [longitude, latitude],
+        zoom: NAV_ZOOM,
+        pitch: NAV_PITCH,
+        bearing: bearingRef.current,
+        duration: 1200,
+        essential: true,
+        offset: [0, 80],
+      });
+    }
+  }, [isNavMode, latitude, longitude]);
 
   useEffect(() => {
     if (!mapRef.current || !latitude || !longitude) return;
@@ -308,22 +407,59 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
     const lngLat: [number, number] = [longitude, latitude];
     const iconSrc = getMarkerIcon(mode, hasMatchedRide);
 
-    if (markerRef.current) {
-      markerRef.current.setLngLat(lngLat);
-      const el = markerRef.current.getElement();
-      const img = el.querySelector("img");
-      if (img) img.src = iconSrc;
-    } else {
-      const el = createMarkerEl(iconSrc);
-      markerRef.current = new mapboxgl.Marker({ element: el })
-        .setLngLat(lngLat)
-        .addTo(mapRef.current);
+    if (prevLatLngRef.current && isNavMode) {
+      const dLat = latitude - prevLatLngRef.current.lat;
+      const dLng = longitude - prevLatLngRef.current.lng;
+      const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+      if (dist > 0.00005) {
+        const newBearing = (Math.atan2(dLng, dLat) * 180) / Math.PI;
+        bearingRef.current = newBearing;
+      }
     }
+    prevLatLngRef.current = { lat: latitude, lng: longitude };
 
-    if (!walkingRoute && !driverNavRoute) {
-      mapRef.current.easeTo({ center: lngLat, duration: 800 });
+    if (isNavMode) {
+      if (markerRef.current) {
+        markerRef.current.setLngLat(lngLat);
+        const img = markerRef.current.getElement().querySelector("img");
+        if (img) img.src = iconSrc;
+      } else {
+        const el = createDriverNavMarker();
+        const img = el.querySelector("img");
+        if (img) img.src = iconSrc;
+        markerRef.current = new mapboxgl.Marker({ element: el, rotationAlignment: "map", pitchAlignment: "map" })
+          .setLngLat(lngLat)
+          .addTo(mapRef.current);
+      }
+
+      if (!userDraggedRef.current && navTransitionDoneRef.current) {
+        mapRef.current.easeTo({
+          center: lngLat,
+          bearing: bearingRef.current,
+          zoom: NAV_ZOOM,
+          pitch: NAV_PITCH,
+          duration: 1000,
+          offset: [0, 80],
+          easing: (t) => t * (2 - t),
+        });
+      }
+    } else {
+      if (markerRef.current) {
+        markerRef.current.setLngLat(lngLat);
+        const img = markerRef.current.getElement().querySelector("img");
+        if (img) img.src = iconSrc;
+      } else {
+        const el = createMarkerEl(iconSrc);
+        markerRef.current = new mapboxgl.Marker({ element: el })
+          .setLngLat(lngLat)
+          .addTo(mapRef.current);
+      }
+
+      if (!walkingRoute && !driverNavRoute) {
+        mapRef.current.easeTo({ center: lngLat, duration: 800 });
+      }
     }
-  }, [latitude, longitude, mode, hasMatchedRide]);
+  }, [latitude, longitude, mode, hasMatchedRide, isNavMode]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -435,14 +571,6 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
           }
         }
 
-        const routeKey = JSON.stringify(driverNavRoute.geometry.coordinates.slice(0, 3));
-        if (driverRouteFittedRef.current !== routeKey && driverNavRoute.geometry.coordinates.length > 1) {
-          driverRouteFittedRef.current = routeKey;
-          const coords = driverNavRoute.geometry.coordinates as [number, number][];
-          const bounds = new mapboxgl.LngLatBounds();
-          coords.forEach(c => bounds.extend(c));
-          map!.fitBounds(bounds, { padding: { top: 80, bottom: 120, left: 50, right: 50 }, duration: 1000 });
-        }
       } else {
         driverRouteFittedRef.current = null;
         if (destMarkerRef.current) { destMarkerRef.current.remove(); destMarkerRef.current = null; }
@@ -455,6 +583,21 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
       map.once("style.load", addOrUpdateDriverRoute);
     }
   }, [driverNavRoute]);
+
+  const handleRecenter = useCallback(() => {
+    if (!mapRef.current || !latitude || !longitude) return;
+    userDraggedRef.current = false;
+    setShowRecenter(false);
+    if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+    mapRef.current.flyTo({
+      center: [longitude, latitude],
+      zoom: NAV_ZOOM,
+      pitch: NAV_PITCH,
+      bearing: bearingRef.current,
+      duration: 800,
+      offset: [0, 80],
+    });
+  }, [latitude, longitude]);
 
   if (mapError) {
     return (
@@ -470,6 +613,22 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
   return (
     <div className="absolute inset-0 z-0" data-testid="map-view">
       <div ref={mapContainerRef} className="w-full h-full" style={{ zIndex: 0 }} />
+      <AnimatePresence>
+        {showRecenter && isNavMode && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 10 }}
+            transition={{ duration: 0.25 }}
+            onClick={handleRecenter}
+            className="absolute top-4 right-4 z-30 w-11 h-11 rounded-full bg-white/90 dark:bg-black/80 shadow-lg border border-border/30 flex items-center justify-center"
+            data-testid="button-recenter-map"
+            title="Recenter on driver"
+          >
+            <Navigation className="w-5 h-5 text-blue-500" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
