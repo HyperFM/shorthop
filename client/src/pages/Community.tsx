@@ -520,6 +520,7 @@ type ProfileData = {
 };
 
 function CommunityProfiles({ user, onOpenDM }: { user: any; onOpenDM?: (target: { id: number; username: string; profilePhoto: string | null }) => void }) {
+  const canSocial = !!(user?.isFounder || user?.subscription === "power_hop" || user?.username?.toLowerCase() === "hyperfm");
   const { data: profiles = [], isLoading } = useQuery<ProfileData[]>({
     queryKey: ["/api/community/profiles"],
   });
@@ -616,7 +617,7 @@ function CommunityProfiles({ user, onOpenDM }: { user: any; onOpenDM?: (target: 
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {(friendIds.has(p.id) || user?.username?.toLowerCase() === "hyperfm") && onOpenDM && (
+                  {canSocial && (friendIds.has(p.id) || user?.username?.toLowerCase() === "hyperfm") && onOpenDM && (
                     <button
                       onClick={() => onOpenDM({ id: p.id, username: p.username, profilePhoto: p.profilePhoto })}
                       className="p-1.5 rounded-full hover:bg-primary/10 transition-colors"
@@ -630,6 +631,11 @@ function CommunityProfiles({ user, onOpenDM }: { user: any; onOpenDM?: (target: 
                     <Badge variant="secondary" className="text-[9px] h-8 px-3">
                       <UserCheck className="w-3 h-3 mr-1" />
                       Friends
+                    </Badge>
+                  ) : !canSocial ? (
+                    <Badge variant="outline" className="text-[9px] h-8 px-3 text-muted-foreground border-amber-200 dark:border-amber-700/50">
+                      <Crown className="w-3 h-3 mr-1 text-amber-500" />
+                      Upgrade
                     </Badge>
                   ) : pendingSentIds.has(p.id) ? (
                     <Badge variant="outline" className="text-[9px] h-8 px-3 text-muted-foreground">
@@ -759,6 +765,7 @@ function DMChat({ user, friendId, friendName, friendPhoto, onClose }: { user: an
 }
 
 function FriendRequestsTab({ user }: { user: any }) {
+  const canSocial = !!(user?.isFounder || user?.subscription === "power_hop" || user?.username?.toLowerCase() === "hyperfm");
   const [dmTarget, setDmTarget] = useState<{ id: number; username: string; profilePhoto: string | null } | null>(null);
   const { data: requests = [], isLoading } = useQuery<FriendRequestData[]>({
     queryKey: ["/api/friends/requests"],
@@ -810,6 +817,19 @@ function FriendRequestsTab({ user }: { user: any }) {
 
   return (
     <div className="space-y-6">
+      {!canSocial && (
+        <Card className="border-amber-200/60 dark:border-amber-700/30 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-950/20 rounded-2xl" data-testid="card-social-gate">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+              <Crown className="w-5 h-5 text-amber-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-foreground dark:text-white">Founder & PowerHop Feature</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Messaging and adding friends is available to Founders and PowerHop members.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {requests.length > 0 && (
         <div>
           <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Pending Requests</p>
@@ -881,14 +901,16 @@ function FriendRequestsTab({ user }: { user: any }) {
                     )}
                   </div>
                   <p className="text-sm font-semibold flex-1" data-testid={`friend-username-${f.friendId}`}>{f.username}</p>
-                  <button
-                    onClick={() => setDmTarget({ id: f.friendId, username: f.username, profilePhoto: f.profilePhoto })}
-                    className="relative p-1.5 rounded-full hover:bg-primary/10 transition-colors"
-                    data-testid={`button-dm-${f.friendId}`}
-                    title={`Message ${f.username}`}
-                  >
-                    <MessageCircle className="w-5 h-5 text-primary" />
-                  </button>
+                  {canSocial && (
+                    <button
+                      onClick={() => setDmTarget({ id: f.friendId, username: f.username, profilePhoto: f.profilePhoto })}
+                      className="relative p-1.5 rounded-full hover:bg-primary/10 transition-colors"
+                      data-testid={`button-dm-${f.friendId}`}
+                      title={`Message ${f.username}`}
+                    >
+                      <MessageCircle className="w-5 h-5 text-primary" />
+                    </button>
+                  )}
                   <Badge variant="secondary" className="text-[9px]">
                     <UserCheck className="w-3 h-3 mr-0.5" />
                     Friends

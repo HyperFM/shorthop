@@ -1350,6 +1350,10 @@ export async function registerRoutes(
     const addresseeId = Number(req.body.addresseeId);
     if (!addresseeId || isNaN(addresseeId) || addresseeId === req.user.id) return res.status(400).json({ message: "Invalid request" });
     try {
+      const currentUser = await storage.getUser(req.user.id);
+      const isAdmin = currentUser?.username?.toLowerCase() === "hyperfm";
+      const canSocial = isAdmin || currentUser?.isFounder || currentUser?.subscription === "power_hop";
+      if (!canSocial) return res.status(403).json({ message: "Founder or PowerHop membership required to add friends" });
       const result = await storage.sendFriendRequest(req.user.id, addresseeId);
       const sender = await storage.getUser(req.user.id);
       const todayCount = await storage.getNotificationCountToday(addresseeId);
@@ -1451,6 +1455,8 @@ export async function registerRoutes(
       const currentUser = await storage.getUser(req.user.id);
       const receiverUser = await storage.getUser(receiverId);
       const isAdmin = currentUser?.username?.toLowerCase() === "hyperfm";
+      const canSocial = isAdmin || currentUser?.isFounder || currentUser?.subscription === "power_hop";
+      if (!canSocial) return res.status(403).json({ message: "Founder or PowerHop membership required to send messages" });
       const receiverIsAdmin = receiverUser?.username?.toLowerCase() === "hyperfm";
       if (!isAdmin && !receiverIsAdmin) {
         const areFriends = await storage.areFriends(req.user.id, receiverId);
