@@ -677,7 +677,7 @@ function DMChat({ user, friendId, friendName, friendPhoto, onClose }: { user: an
   const { data: messages = [], isLoading: loadingMsgs } = useQuery<any[]>({
     queryKey: ["/api/dm", friendId],
     queryFn: async () => {
-      const res = await fetch(`/api/dm/${friendId}`);
+      const res = await fetch(`/api/dm/${friendId}`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },
@@ -700,9 +700,14 @@ function DMChat({ user, friendId, friendName, friendPhoto, onClose }: { user: an
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    setTimeout(() => inputRef.current?.focus(), 300);
+  }, []);
+
   return (
-    <div className="fixed inset-0 bg-background/95 z-50 flex flex-col" data-testid="dm-chat-view">
-      <div className="flex items-center gap-3 p-3 border-b border-border/30 bg-card">
+    <div className="fixed inset-0 bg-background z-[100] flex flex-col" data-testid="dm-chat-view">
+      <div className="flex items-center gap-3 p-3 border-b border-border/30 bg-card shrink-0">
         <Button size="sm" variant="ghost" onClick={onClose} data-testid="button-close-dm" className="h-8 w-8 p-0">
           <X className="w-4 h-4" />
         </Button>
@@ -733,9 +738,10 @@ function DMChat({ user, friendId, friendName, friendPhoto, onClose }: { user: an
           })
         )}
       </div>
-      <div className="p-3 border-t border-border/30 bg-card">
+      <div className="p-3 border-t border-border/30 bg-card shrink-0 safe-area-bottom">
         <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (msg.trim()) sendMsg.mutate(msg.trim()); }}>
           <Input
+            ref={inputRef}
             value={msg}
             onChange={(e) => setMsg(e.target.value)}
             placeholder={`Message ${friendName}...`}
@@ -765,7 +771,7 @@ function FriendRequestsTab({ user }: { user: any }) {
   const { data: unreadData } = useQuery<{ count: number }>({
     queryKey: ["/api/dm/unread/count"],
     queryFn: async () => {
-      const res = await fetch("/api/dm/unread/count");
+      const res = await fetch("/api/dm/unread/count", { credentials: "include" });
       if (!res.ok) return { count: 0 };
       return res.json();
     },
