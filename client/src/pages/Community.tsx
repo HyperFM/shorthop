@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { NetworkProgress } from "@/components/NetworkProgress";
 import { ChatBubbleActions } from "@/components/ChatBubbleActions";
+import { SubscriptionModal } from "@/components/SubscriptionModal";
 
 function timeAgo(date: string | null): string {
   if (!date) return "";
@@ -521,6 +522,7 @@ type ProfileData = {
 
 function CommunityProfiles({ user, onOpenDM }: { user: any; onOpenDM?: (target: { id: number; username: string; profilePhoto: string | null }) => void }) {
   const canSocial = !!(user?.isFounder || user?.subscription === "power_hop" || user?.username?.toLowerCase() === "hyperfm");
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const { data: profiles = [], isLoading } = useQuery<ProfileData[]>({
     queryKey: ["/api/community/profiles"],
   });
@@ -617,14 +619,15 @@ function CommunityProfiles({ user, onOpenDM }: { user: any; onOpenDM?: (target: 
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {canSocial && (friendIds.has(p.id) || user?.username?.toLowerCase() === "hyperfm") && onOpenDM && (
+                  {(friendIds.has(p.id) || user?.username?.toLowerCase() === "hyperfm") && onOpenDM && (
                     <button
-                      onClick={() => onOpenDM({ id: p.id, username: p.username, profilePhoto: p.profilePhoto })}
-                      className="p-1.5 rounded-full hover:bg-primary/10 transition-colors"
+                      onClick={() => canSocial ? onOpenDM({ id: p.id, username: p.username, profilePhoto: p.profilePhoto }) : setShowUpgrade(true)}
+                      className="relative p-1.5 rounded-full hover:bg-primary/10 transition-colors"
                       data-testid={`button-dm-profile-${p.id}`}
-                      title={`Message ${p.username}`}
+                      title={canSocial ? `Message ${p.username}` : "Upgrade to message"}
                     >
-                      <MessageCircle className="w-4.5 h-4.5 text-primary" />
+                      <MessageCircle className={`w-4.5 h-4.5 ${canSocial ? "text-primary" : "text-muted-foreground"}`} />
+                      {!canSocial && <Crown className="w-2.5 h-2.5 text-amber-500 absolute -top-0.5 -right-0.5" />}
                     </button>
                   )}
                   {friendIds.has(p.id) ? (
@@ -633,10 +636,16 @@ function CommunityProfiles({ user, onOpenDM }: { user: any; onOpenDM?: (target: 
                       Friends
                     </Badge>
                   ) : !canSocial ? (
-                    <Badge variant="outline" className="text-[9px] h-8 px-3 text-muted-foreground border-amber-200 dark:border-amber-700/50">
-                      <Crown className="w-3 h-3 mr-1 text-amber-500" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-8 px-3 border-amber-200 dark:border-amber-700/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                      onClick={() => setShowUpgrade(true)}
+                      data-testid={`button-upgrade-social-${p.id}`}
+                    >
+                      <Crown className="w-3.5 h-3.5 mr-1" />
                       Upgrade
-                    </Badge>
+                    </Button>
                   ) : pendingSentIds.has(p.id) ? (
                     <Badge variant="outline" className="text-[9px] h-8 px-3 text-muted-foreground">
                       Pending
@@ -664,6 +673,18 @@ function CommunityProfiles({ user, onOpenDM }: { user: any; onOpenDM?: (target: 
           </Card>
         );
       })}
+      {showUpgrade && user && (
+        <SubscriptionModal
+          open={showUpgrade}
+          onOpenChange={setShowUpgrade}
+          plan="power_hop"
+          user={user}
+          onSubscribed={() => {
+            setShowUpgrade(false);
+            queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -766,6 +787,7 @@ function DMChat({ user, friendId, friendName, friendPhoto, onClose }: { user: an
 
 function FriendRequestsTab({ user }: { user: any }) {
   const canSocial = !!(user?.isFounder || user?.subscription === "power_hop" || user?.username?.toLowerCase() === "hyperfm");
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [dmTarget, setDmTarget] = useState<{ id: number; username: string; profilePhoto: string | null } | null>(null);
   const { data: requests = [], isLoading } = useQuery<FriendRequestData[]>({
     queryKey: ["/api/friends/requests"],
@@ -818,15 +840,18 @@ function FriendRequestsTab({ user }: { user: any }) {
   return (
     <div className="space-y-6">
       {!canSocial && (
-        <Card className="border-amber-200/60 dark:border-amber-700/30 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-950/20 rounded-2xl" data-testid="card-social-gate">
+        <Card className="border-amber-200/60 dark:border-amber-700/30 bg-gradient-to-br from-amber-50/50 to-transparent dark:from-amber-950/20 rounded-2xl cursor-pointer hover:shadow-md transition-shadow" data-testid="card-social-gate" onClick={() => setShowUpgrade(true)}>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
               <Crown className="w-5 h-5 text-amber-500" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-foreground dark:text-white">Founder & PowerHop Feature</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Messaging and adding friends is available to Founders and PowerHop members.</p>
+              <p className="text-sm font-bold text-foreground dark:text-white">Unlock Social Features</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Upgrade to PowerHop to message friends and grow your network.</p>
             </div>
+            <Button size="sm" variant="outline" className="text-xs border-amber-200 dark:border-amber-700/50 text-amber-600 dark:text-amber-400 shrink-0" data-testid="button-upgrade-social">
+              Upgrade
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -901,16 +926,15 @@ function FriendRequestsTab({ user }: { user: any }) {
                     )}
                   </div>
                   <p className="text-sm font-semibold flex-1" data-testid={`friend-username-${f.friendId}`}>{f.username}</p>
-                  {canSocial && (
-                    <button
-                      onClick={() => setDmTarget({ id: f.friendId, username: f.username, profilePhoto: f.profilePhoto })}
-                      className="relative p-1.5 rounded-full hover:bg-primary/10 transition-colors"
-                      data-testid={`button-dm-${f.friendId}`}
-                      title={`Message ${f.username}`}
-                    >
-                      <MessageCircle className="w-5 h-5 text-primary" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => canSocial ? setDmTarget({ id: f.friendId, username: f.username, profilePhoto: f.profilePhoto }) : setShowUpgrade(true)}
+                    className="relative p-1.5 rounded-full hover:bg-primary/10 transition-colors"
+                    data-testid={`button-dm-${f.friendId}`}
+                    title={canSocial ? `Message ${f.username}` : "Upgrade to message"}
+                  >
+                    <MessageCircle className={`w-5 h-5 ${canSocial ? "text-primary" : "text-muted-foreground"}`} />
+                    {!canSocial && <Crown className="w-2.5 h-2.5 text-amber-500 absolute -top-0.5 -right-0.5" />}
+                  </button>
                   <Badge variant="secondary" className="text-[9px]">
                     <UserCheck className="w-3 h-3 mr-0.5" />
                     Friends
@@ -928,6 +952,18 @@ function FriendRequestsTab({ user }: { user: any }) {
           <p className="text-muted-foreground font-medium">No friend activity</p>
           <p className="text-sm text-muted-foreground/70 mt-1">Visit the Community tab to discover people!</p>
         </div>
+      )}
+      {showUpgrade && user && (
+        <SubscriptionModal
+          open={showUpgrade}
+          onOpenChange={setShowUpgrade}
+          plan="power_hop"
+          user={user}
+          onSubscribed={() => {
+            setShowUpgrade(false);
+            queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+          }}
+        />
       )}
     </div>
   );
