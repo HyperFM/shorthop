@@ -2293,6 +2293,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/driver/routine-routes', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const routes = await storage.getRoutes(req.user.id);
+      res.json(routes);
+    } catch {
+      res.status(500).json({ message: "Failed to get routine routes" });
+    }
+  });
+
   app.get('/api/driver/status', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {

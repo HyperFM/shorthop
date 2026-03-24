@@ -229,24 +229,37 @@ function getMarkerIcon(mode: HopMode, hasMatchedRide: boolean): string {
   return hopperAloneUrl;
 }
 
-function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, isDark }: { mode: HopMode; latitude: number | null; longitude: number | null; hasMatchedRide: boolean; walkingRoute: GeoJSON.LineString | null; isDark: boolean }) {
+type DriverNavRoute = {
+  geometry: GeoJSON.LineString;
+  pickupMarker?: { lat: number; lng: number; label: string };
+  dropoffMarker?: { lat: number; lng: number; label: string };
+  destMarkerCoord?: { lat: number; lng: number };
+};
+
+function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driverNavRoute, isDark }: { mode: HopMode; latitude: number | null; longitude: number | null; hasMatchedRide: boolean; walkingRoute: GeoJSON.LineString | null; driverNavRoute: DriverNavRoute | null; isDark: boolean }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const destMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const pickupMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const dropoffMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapError, setMapError] = useState(false);
   const mapErrorRef = useRef(false);
+  const driverRouteFittedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current || mapErrorRef.current) return;
 
     const center: [number, number] = latitude && longitude ? [longitude, latitude] : LEX_CENTER;
+    const useNavStyle = mode === "drive" && driverNavRoute;
 
     let map: mapboxgl.Map;
     try {
       map = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: isDark ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/streets-v12",
+        style: useNavStyle
+          ? "mapbox://styles/mapbox/navigation-night-v1"
+          : (isDark ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/streets-v12"),
         center,
         zoom: 15,
         attributionControl: false,
@@ -273,6 +286,8 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, isDa
     return () => {
       if (markerRef.current) { markerRef.current.remove(); markerRef.current = null; }
       if (destMarkerRef.current) { destMarkerRef.current.remove(); destMarkerRef.current = null; }
+      if (pickupMarkerRef.current) { pickupMarkerRef.current.remove(); pickupMarkerRef.current = null; }
+      if (dropoffMarkerRef.current) { dropoffMarkerRef.current.remove(); dropoffMarkerRef.current = null; }
       map.remove();
       mapRef.current = null;
     };
@@ -280,9 +295,12 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, isDa
 
   useEffect(() => {
     if (!mapRef.current) return;
-    const newStyle = isDark ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/streets-v12";
+    const useNavStyle = mode === "drive" && driverNavRoute;
+    const newStyle = useNavStyle
+      ? "mapbox://styles/mapbox/navigation-night-v1"
+      : (isDark ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/streets-v12");
     mapRef.current.setStyle(newStyle);
-  }, [isDark]);
+  }, [isDark, !!(mode === "drive" && driverNavRoute)]);
 
   useEffect(() => {
     if (!mapRef.current || !latitude || !longitude) return;
@@ -302,7 +320,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, isDa
         .addTo(mapRef.current);
     }
 
-    if (!walkingRoute) {
+    if (!walkingRoute && !driverNavRoute) {
       mapRef.current.easeTo({ center: lngLat, duration: 800 });
     }
   }, [latitude, longitude, mode, hasMatchedRide]);
@@ -362,6 +380,82 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, isDa
     }
   }, [walkingRoute]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    function addOrUpdateDriverRoute() {
+      if (!map!.isStyleLoaded()) return;
+
+      if (pickupMarkerRef.current) { pickupMarkerRef.current.remove(); pickupMarkerRef.current = null; }
+      if (dropoffMarkerRef.current) { dropoffMarkerRef.current.remove(); dropoffMarkerRef.current = null; }
+
+      if (map!.getSource("driver-nav-route")) {
+        if (driverNavRoute) {
+          (map!.getSource("driver-nav-route") as mapboxgl.GeoJSONSource).setData(driverNavRoute.geometry);
+        } else {
+          (map!.getSource("driver-nav-route") as mapboxgl.GeoJSONSource).setData({ type: "LineString", coordinates: [] });
+        }
+      } else if (driverNavRoute) {
+        map!.addSource("driver-nav-route", { type: "geojson", data: driverNavRoute.geometry });
+        map!.addLayer({
+          id: "driver-nav-route-line",
+          type: "line",
+          source: "driver-nav-route",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#3b82f6", "line-width": 6, "line-opacity": 0.9 },
+        });
+      }
+
+      if (driverNavRoute) {
+        if (driverNavRoute.pickupMarker) {
+          const pEl = document.createElement("div");
+          pEl.innerHTML = `<div style="width:28px;height:28px;background:#f97316;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="color:white;font-size:13px">🧍</span></div>`;
+          pickupMarkerRef.current = new mapboxgl.Marker({ element: pEl })
+            .setLngLat([driverNavRoute.pickupMarker.lng, driverNavRoute.pickupMarker.lat])
+            .addTo(map!);
+        }
+        if (driverNavRoute.dropoffMarker) {
+          const dEl = document.createElement("div");
+          dEl.innerHTML = `<div style="width:28px;height:28px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="color:white;font-size:13px">📍</span></div>`;
+          dropoffMarkerRef.current = new mapboxgl.Marker({ element: dEl })
+            .setLngLat([driverNavRoute.dropoffMarker.lng, driverNavRoute.dropoffMarker.lat])
+            .addTo(map!);
+        }
+
+        if (driverNavRoute.destMarkerCoord) {
+          if (destMarkerRef.current) {
+            destMarkerRef.current.setLngLat([driverNavRoute.destMarkerCoord.lng, driverNavRoute.destMarkerCoord.lat]);
+          } else {
+            const el = document.createElement("div");
+            el.innerHTML = `<div style="width:28px;height:28px;background:#22c55e;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="color:white;font-size:13px">🏁</span></div>`;
+            destMarkerRef.current = new mapboxgl.Marker({ element: el })
+              .setLngLat([driverNavRoute.destMarkerCoord.lng, driverNavRoute.destMarkerCoord.lat])
+              .addTo(map!);
+          }
+        }
+
+        const routeKey = JSON.stringify(driverNavRoute.geometry.coordinates.slice(0, 3));
+        if (driverRouteFittedRef.current !== routeKey && driverNavRoute.geometry.coordinates.length > 1) {
+          driverRouteFittedRef.current = routeKey;
+          const coords = driverNavRoute.geometry.coordinates as [number, number][];
+          const bounds = new mapboxgl.LngLatBounds();
+          coords.forEach(c => bounds.extend(c));
+          map!.fitBounds(bounds, { padding: { top: 80, bottom: 120, left: 50, right: 50 }, duration: 1000 });
+        }
+      } else {
+        driverRouteFittedRef.current = null;
+        if (destMarkerRef.current) { destMarkerRef.current.remove(); destMarkerRef.current = null; }
+      }
+    }
+
+    if (map.isStyleLoaded()) {
+      addOrUpdateDriverRoute();
+    } else {
+      map.once("style.load", addOrUpdateDriverRoute);
+    }
+  }, [driverNavRoute]);
+
   if (mapError) {
     return (
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-green-100 to-green-50 dark:from-green-950/20 dark:to-background flex items-center justify-center" data-testid="map-view">
@@ -376,6 +470,154 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, isDa
   return (
     <div className="absolute inset-0 z-0" data-testid="map-view">
       <div ref={mapContainerRef} className="w-full h-full" style={{ zIndex: 0 }} />
+    </div>
+  );
+}
+
+function GlowingSearchText() {
+  const words = ["Looking", "for", "hoppers", "nearby"];
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    if (visibleCount < words.length) {
+      const timer = setTimeout(() => setVisibleCount(prev => prev + 1), 400);
+      return () => clearTimeout(timer);
+    } else {
+      const timer = setTimeout(() => setVisibleCount(0), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [visibleCount]);
+
+  return (
+    <span className="inline-flex gap-1 items-center" data-testid="text-searching-hoppers">
+      {words.map((w, i) => (
+        <motion.span
+          key={`${w}-${i}`}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: i < visibleCount ? 1 : 0, y: i < visibleCount ? 0 : 4 }}
+          transition={{ duration: 0.3 }}
+          className="text-orange-500 dark:text-orange-400 font-bold text-[11px]"
+          style={{ textShadow: "0 0 8px rgba(249,115,22,0.5)" }}
+        >
+          {w}
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
+function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRide }: {
+  user: User;
+  hop: any | null;
+  routeInfo: { distance: string; eta: string } | null;
+  onStop: () => void;
+  onStartRide: (hopId: number) => void;
+  onCompleteRide: (hopId: number) => void;
+}) {
+  const totalSeats = (user as any)?.availableSeats || 1;
+  const { data: hops } = useHops();
+  const activeHops = hops?.filter(h => (h.status === "matched" || h.status === "in_ride") && h.driverId === user.id) || [];
+  const occupiedSeats = activeHops.reduce((sum: number, h: any) => sum + (h.seatsNeeded || 1), 0);
+
+  const hopperUser = hop ? (hop as any).walker : null;
+  const rideStyleEmoji = hop?.rideStyle === "quiet" ? "🤫" : hop?.rideStyle === "friendly" ? "😊" : hop?.rideStyle === "social" ? "🫱🏻‍🫲🏿" : null;
+
+  return (
+    <div
+      className="absolute bottom-0 left-0 right-0 z-20"
+      data-testid="driver-nav-bar"
+    >
+      <div className="bg-black/85 backdrop-blur-xl border-t border-white/10 px-4 py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 shrink-0">
+            {routeInfo && (
+              <>
+                <div className="flex flex-col items-center" data-testid="display-nav-eta">
+                  <span className="text-white font-black text-sm leading-tight">{routeInfo.eta}</span>
+                  <span className="text-white/50 text-[9px] font-medium">ETA</span>
+                </div>
+                <div className="w-px h-6 bg-white/15" />
+                <div className="flex flex-col items-center" data-testid="display-nav-distance">
+                  <span className="text-white font-black text-sm leading-tight">{routeInfo.distance}</span>
+                  <span className="text-white/50 text-[9px] font-medium">dist</span>
+                </div>
+                <div className="w-px h-6 bg-white/15" />
+              </>
+            )}
+            <div className="flex flex-col items-center" data-testid="display-nav-seats">
+              <span className="text-white font-black text-sm leading-tight">💺{occupiedSeats}/{totalSeats}</span>
+              <span className="text-white/50 text-[9px] font-medium">seats</span>
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0 flex items-center justify-end gap-2">
+            {!hop && (
+              <GlowingSearchText />
+            )}
+
+            {hop && hop.status === "matched" && (
+              <div className="flex items-center gap-2 min-w-0" data-testid="display-matched-hopper">
+                {hopperUser?.profilePhoto ? (
+                  <img src={hopperUser.profilePhoto} className="w-7 h-7 rounded-full border-2 border-orange-500 object-cover shrink-0" alt="" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-orange-500/30 border-2 border-orange-500 flex items-center justify-center shrink-0">
+                    <span className="text-[10px] font-bold text-orange-300">{(hopperUser?.firstName || hop.walkerName || "?")[0]}</span>
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-white text-[11px] font-bold truncate leading-tight">
+                    {hopperUser?.firstName || hop.walkerName || "Hopper"} {hopperUser?.lastName ? hopperUser.lastName[0] + "." : ""}
+                    {rideStyleEmoji && <span className="ml-1">{rideStyleEmoji}</span>}
+                  </p>
+                  <p className="text-white/50 text-[9px] truncate">pickup</p>
+                </div>
+                <button
+                  onClick={() => onStartRide(hop.id)}
+                  className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold rounded-lg shrink-0 transition-colors"
+                  data-testid="button-driver-start-ride-bar"
+                >
+                  Pick Up
+                </button>
+              </div>
+            )}
+
+            {hop && hop.status === "in_ride" && (
+              <div className="flex items-center gap-2 min-w-0" data-testid="display-in-ride-hopper">
+                {hopperUser?.profilePhoto ? (
+                  <img src={hopperUser.profilePhoto} className="w-7 h-7 rounded-full border-2 border-green-500 object-cover shrink-0" alt="" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-green-500/30 border-2 border-green-500 flex items-center justify-center shrink-0">
+                    <span className="text-[10px] font-bold text-green-300">{(hopperUser?.firstName || hop.walkerName || "?")[0]}</span>
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-white text-[11px] font-bold truncate leading-tight">
+                    {hopperUser?.firstName || hop.walkerName || "Hopper"} {hopperUser?.lastName ? hopperUser.lastName[0] + "." : ""}
+                    {rideStyleEmoji && <span className="ml-1">{rideStyleEmoji}</span>}
+                  </p>
+                  <p className="text-green-400 text-[9px] truncate">in ride</p>
+                </div>
+                <button
+                  onClick={() => onCompleteRide(hop.id)}
+                  className="px-2.5 py-1 bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold rounded-lg shrink-0 transition-colors"
+                  data-testid="button-driver-complete-ride-bar"
+                >
+                  Complete
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={onStop}
+            className="w-8 h-8 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center shrink-0 hover:bg-red-500/30 transition-colors"
+            data-testid="button-driver-stop-bar"
+            title="Go offline"
+          >
+            <Power className="w-3.5 h-3.5 text-red-400" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1191,7 +1433,6 @@ function DriveNowPanel({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const geo = useGeolocation();
-  const [navigatingHop, setNavigatingHop] = useState<any>(null);
   const [driverStartInput, setDriverStartInput] = useState("");
   const [driverDestInput, setDriverDestInput] = useState("");
   const [driverDepartureMin, setDriverDepartureMin] = useState<number | null>(null);
@@ -1207,6 +1448,15 @@ function DriveNowPanel({ user }: { user: User }) {
   });
 
   const { data: hops } = useHops();
+
+  const updatePreferences = useMutation({
+    mutationFn: async (updates: { availableSeats?: number }) => {
+      await apiRequest("PATCH", "/api/user/preferences", updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+    },
+  });
 
   const toggleActive = useMutation({
     mutationFn: async (payload: { active: boolean; startLat?: number; startLng?: number; endLat?: number; endLng?: number; startLocation?: string; endLocation?: string }) => {
@@ -1235,12 +1485,6 @@ function DriveNowPanel({ user }: { user: User }) {
   useEffect(() => {
     if (!geo.permitted) geo.requestPermission();
   }, [geo.permitted]);
-
-  useEffect(() => {
-    if (activeDriverHop && !navigatingHop) {
-      setNavigatingHop(activeDriverHop);
-    }
-  }, [activeDriverHop]);
 
   const generateRoute = async () => {
     if (!driverDestInput.trim()) return;
@@ -1344,42 +1588,6 @@ function DriveNowPanel({ user }: { user: User }) {
     showFlash("⏰", `Departing at ${customTimeInput.trim()}`, "success");
   };
 
-  if (navigatingHop) {
-    const otherHops = activeDriverHops.filter(h => h.id !== navigatingHop.id);
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-base font-extrabold text-foreground dark:text-orange-400 dark:[text-shadow:0_0_6px_rgba(249,115,22,0.7),0_0_2px_rgba(0,0,0,0.8)] text-center flex-1" data-testid="text-driver-greeting">
-            happy driving,{" "}
-            <span className="font-black text-foreground dark:text-orange-300 dark:[text-shadow:0_0_8px_rgba(249,115,22,0.8),0_0_2px_rgba(0,0,0,0.9)]">{user.username}</span>
-          </p>
-          <a
-            href="tel:8594202312"
-            className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all active:scale-95"
-            title="Call for help: (859) 420-2312"
-            data-testid="button-call-help"
-          >
-            <Phone className="w-5 h-5" />
-          </a>
-        </div>
-        {otherHops.length > 0 && (
-          <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg p-2 border border-indigo-200/50 dark:border-indigo-700/30" data-testid="next-hop-label">
-            <MapPin className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
-              Next Hop: {otherHops[0].endLocation || "nearby"} {otherHops.length > 1 ? `(+${otherHops.length - 1} more)` : ""}
-            </span>
-          </div>
-        )}
-        <PickupNavigationView
-          hop={navigatingHop}
-          driverLat={geo.latitude}
-          driverLng={geo.longitude}
-          onClose={() => setNavigatingHop(null)}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -1452,35 +1660,6 @@ function DriveNowPanel({ user }: { user: User }) {
             <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => setLocation("/driver-onboarding")} data-testid="button-reapply">
               Reapply
             </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {isVerified && isActiveNow && (
-        <Card className="border-2 border-green-400 bg-green-50/30 dark:bg-green-950/20 rounded-2xl" data-testid="card-active-toggle">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br from-green-400 to-green-600">
-                  <Power className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-foreground">You're Active</p>
-                  <p className="text-[10px] text-foreground/70 dark:text-green-300/80">
-                    Waiting for a match · {(user as any)?.availableSeats || 1} seat{((user as any)?.availableSeats || 1) > 1 ? "s" : ""} open
-                  </p>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => toggleActive.mutate({ active: false })}
-                disabled={toggleActive.isPending}
-                data-testid="button-toggle-active"
-              >
-                Stop
-              </Button>
-            </div>
           </CardContent>
         </Card>
       )}
@@ -1769,6 +1948,108 @@ function InstaHopView({ user }: { user: User }) {
   const geo = useGeolocation();
   const [greetingVisible, setGreetingVisible] = useState(true);
 
+  const { data: driverStatusTop } = useQuery<DriverStatus>({
+    queryKey: ['/api/driver/status'],
+    refetchInterval: 5000,
+  });
+  const isDriverActive = driverStatusTop?.isActive ?? false;
+
+  const [driverNavRoute, setDriverNavRoute] = useState<DriverNavRoute | null>(null);
+  const [driverRouteInfo, setDriverRouteInfo] = useState<{ distance: string; eta: string } | null>(null);
+  const prevRouteKeyRef = useRef<string>("");
+
+  const driverActiveHops = hops?.filter(h =>
+    (h.status === "matched" || h.status === "in_ride") && h.driverId === user.id
+  ) || [];
+  const driverActiveHop = driverActiveHops[0] || null;
+
+  useEffect(() => {
+    if (!isDriverActive || !geo.latitude || !geo.longitude) {
+      if (driverNavRoute) setDriverNavRoute(null);
+      if (driverRouteInfo) setDriverRouteInfo(null);
+      prevRouteKeyRef.current = "";
+      return;
+    }
+
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    if (!token) return;
+
+    const buildRoute = async () => {
+      try {
+        const routeRes = await fetch("/api/driver/routine-routes", { credentials: "include" });
+        if (!routeRes.ok) return;
+        const routes = await routeRes.json();
+        if (!routes.length) return;
+        const route = routes[0];
+        const destLat = parseFloat(route.endLat);
+        const destLng = parseFloat(route.endLng);
+        if (!isFinite(destLat) || !isFinite(destLng)) return;
+
+        let waypoints = `${geo.longitude},${geo.latitude}`;
+        let pickupMarker: DriverNavRoute["pickupMarker"];
+        let dropoffMarker: DriverNavRoute["dropoffMarker"];
+
+        if (driverActiveHop) {
+          const pLat = parseFloat(driverActiveHop.startLat || "0");
+          const pLng = parseFloat(driverActiveHop.startLng || "0");
+          const dLat = parseFloat(driverActiveHop.endLat || "0");
+          const dLng = parseFloat(driverActiveHop.endLng || "0");
+
+          if (driverActiveHop.status === "matched" && isFinite(pLat) && pLat !== 0) {
+            waypoints += `;${pLng},${pLat}`;
+            pickupMarker = { lat: pLat, lng: pLng, label: "Pickup" };
+          }
+          if (isFinite(dLat) && dLat !== 0) {
+            waypoints += `;${dLng},${dLat}`;
+            dropoffMarker = { lat: dLat, lng: dLng, label: "Dropoff" };
+          }
+        }
+
+        waypoints += `;${destLng},${destLat}`;
+
+        const routeKey = waypoints;
+        if (routeKey === prevRouteKeyRef.current) return;
+        prevRouteKeyRef.current = routeKey;
+
+        const dirRes = await fetch(
+          `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&access_token=${token}`
+        );
+        const dirJson = await dirRes.json();
+        if (!dirJson.routes?.[0]) return;
+
+        const r = dirJson.routes[0];
+        const distMiles = (r.distance / 1609.34).toFixed(1);
+        const etaMins = Math.round(r.duration / 60);
+
+        setDriverRouteInfo({ distance: `${distMiles} mi`, eta: `${etaMins} min` });
+        setDriverNavRoute({
+          geometry: r.geometry,
+          pickupMarker,
+          dropoffMarker,
+          destMarkerCoord: { lat: destLat, lng: destLng },
+        });
+      } catch {}
+    };
+
+    buildRoute();
+    const interval = setInterval(buildRoute, 15000);
+    return () => clearInterval(interval);
+  }, [isDriverActive, geo.latitude, geo.longitude, driverActiveHop?.id, driverActiveHop?.status]);
+
+  const toggleActiveTop = useMutation({
+    mutationFn: async (active: boolean) => {
+      await apiRequest("POST", "/api/driver/active", { active });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/driver/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+      setDriverNavRoute(null);
+      setDriverRouteInfo(null);
+      prevRouteKeyRef.current = "";
+      showFlash("🔴", "You're offline", "info");
+    },
+  });
+
   const updatePreferences = useMutation({
     mutationFn: async (updates: { seatsNeeded?: number }) => {
       await apiRequest("PATCH", "/api/user/preferences", updates);
@@ -1800,6 +2081,23 @@ function InstaHopView({ user }: { user: User }) {
   const [driftCatchVisible, setDriftCatchVisible] = useState(false);
   const [repeatRouteVisible, setRepeatRouteVisible] = useState(true);
   const [onTheWayPingVisible, setOnTheWayPingVisible] = useState(false);
+
+  const prevDriverHopCountRef = useRef(driverActiveHops.length);
+  const driverMatchAudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    if (mode !== "drive") return;
+    if (driverActiveHops.length > prevDriverHopCountRef.current) {
+      if (!driverMatchAudioRef.current) {
+        driverMatchAudioRef.current = new Audio("/driver-approaching-alert.m4a");
+        driverMatchAudioRef.current.volume = 0.8;
+      }
+      driverMatchAudioRef.current.currentTime = 0;
+      driverMatchAudioRef.current.play().catch(() => {});
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      prevRouteKeyRef.current = "";
+    }
+    prevDriverHopCountRef.current = driverActiveHops.length;
+  }, [driverActiveHops.length, mode]);
 
   const magicGpsActiveForHopper = false;
 
@@ -2431,9 +2729,38 @@ function InstaHopView({ user }: { user: User }) {
       </AnimatePresence>
 
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
-        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} isDark={isDark} />
+        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} driverNavRoute={isDriverMode && isDriverActive ? driverNavRoute : null} isDark={isDark} />
 
+        {isDriverMode && isDriverActive && (
+          <DriverNavBar
+            user={user}
+            hop={driverActiveHop}
+            routeInfo={driverRouteInfo}
+            onStop={() => toggleActiveTop.mutate(false)}
+            onStartRide={async (hopId) => {
+              try {
+                await apiRequest("POST", `/api/hops/${hopId}/start-ride`);
+                queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                prevRouteKeyRef.current = "";
+                showFlash("🚗", "Ride started!", "success");
+              } catch {
+                showFlash("⚠️", "Couldn't start ride", "error");
+              }
+            }}
+            onCompleteRide={async (hopId) => {
+              try {
+                await apiRequest("POST", `/api/hops/${hopId}/complete`, {});
+                queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                prevRouteKeyRef.current = "";
+                showFlash("✅", "Ride completed!", "success");
+              } catch {
+                showFlash("⚠️", "Couldn't complete ride", "error");
+              }
+            }}
+          />
+        )}
 
+        {!(isDriverMode && isDriverActive) && (
         <div
           className="absolute bottom-0 left-0 right-0 bg-white/97 dark:bg-black/97 backdrop-blur-xl rounded-t-3xl shadow-2xl border-t border-border/30 dark:border-white/10 z-20"
           style={{ height: "40%" }}
@@ -2929,6 +3256,7 @@ function InstaHopView({ user }: { user: User }) {
             )}
           </div>
         </div>
+        )}
       </div>
     </>
   );

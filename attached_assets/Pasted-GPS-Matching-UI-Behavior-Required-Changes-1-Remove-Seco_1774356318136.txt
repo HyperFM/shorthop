@@ -1,0 +1,98 @@
+GPS & Matching UI Behavior – Required Changes
+
+1. Remove Secondary Map Completely
+	•	Eliminate the extra/minimap panel that appears at the bottom when a driver and hopper are matched.
+	•	There should only ever be one full-screen map.
+	•	Do not render, mount, or update any secondary map component under any condition.
+
+⸻
+
+2. Core Map Behavior (Always Active GPS Mode)
+	•	The main map should function like a standard GPS navigation system (similar to everyday navigation apps).
+	•	Driver inputs a destination manually.
+	•	Once the driver sets a destination and goes active:
+	•	The map displays:
+	•	Current location (car icon — “door open” state = no passenger yet)
+	•	Route from current location → destination
+	•	Navigation persists continuously regardless of matching state.
+	•	Driver can delay movement; route remains visible and active.
+
+⸻
+
+3. Matching Should NOT Alter Map Layout
+	•	Matching a hopper must NOT:
+	•	Add a new map
+	•	Resize the map
+	•	Overlay large UI components
+	•	The map remains full-screen at all times, with UI layered minimally on top.
+
+⸻
+
+4. Bottom Panel (Persistent, Slim Overlay)
+	•	Replace the old expanding panel with a slim, fixed bottom bar.
+
+Design Rules:
+	•	Always visible
+	•	Minimal height (do NOT obstruct map visibility)
+	•	Map continues rendering behind it
+
+Left Side (Static Info):
+	•	ETA
+	•	Distance (miles)
+	•	Estimated travel time
+→ Compact, horizontally aligned
+
+Right Side (Dynamic Status):
+	•	Default state (searching):
+	•	Text: "Looking for hoppers nearby"
+	•	Animated:
+	•	Word-by-word appearance
+	•	Orange glow effect
+	•	Inline (NOT stacked)
+
+⸻
+
+5. Match Event Behavior (No Popups)
+When a hopper is matched:
+	•	Do NOT:
+	•	Open modals
+	•	Expand panels
+	•	Cover the map
+	•	Instead:
+	•	Play notification sound (based on user’s timing settings)
+	•	Replace right-side status text with:
+	•	Hopper profile photo
+	•	First + last name
+	•	Ride style (emoji only, e.g. 🤫 😊 🫱🏻‍🫲🏿)
+
+⸻
+
+6. Route Auto-Update Logic
+Upon match confirmation:
+	•	Instantly update navigation route:
+	1.	Current driver location → Hopper pickup
+	2.	Pickup → Hopper drop-off
+	3.	Drop-off → Driver’s original destination
+
+Constraints:
+	•	Hopper must already be along the driver’s route direction
+	•	No backtracking or rerouting outside forward path
+
+⸻
+
+7. State Indicators
+	•	Driver alone:
+	•	Car icon shows “open door” state
+	•	Driver with hopper:
+	•	Update icon/state subtly (no disruptive animation)
+
+⸻
+
+8. UX Philosophy (Important)
+	•	No interruptions
+	•	No layout shifts
+	•	No stacked UI
+	•	Everything should feel:
+	•	Seamless
+	•	Passive
+	•	Always-navigation-first
