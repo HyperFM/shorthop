@@ -1,0 +1,221 @@
+GPS Behavior & Logic System – Implementation Instruction (Replit)
+
+Objective
+
+Convert the map into a smooth-follow GPS system where the camera tracks the driver with forward offset, rotates with heading, maintains a slight 3D tilt, and updates continuously without snapping or resetting—while preserving a full-screen, non-intrusive navigation experience.
+
+
+The system should feel like:
+
+A camera that follows the driver in real time — not a static map displaying a route.
+
+⸻
+
+1. Map Initialization Behavior
+
+Current Issue
+	•	Map loads fully zoomed out showing entire route
+
+Required Behavior
+	•	When a destination is set OR driver goes active:
+	1.	Briefly calculate and render the full route (background only)
+	2.	Immediately transition to:
+	•	Zoomed-in view of driver location
+	•	Camera centered on driver (with forward offset)
+	•	Slight 3D tilt applied
+	•	Map rotated to match driver’s direction
+
+This transition should be:
+	•	Smooth
+	•	Animated (not instant)
+	•	~0.5–1 second duration
+
+⸻
+
+2. Navigation Mode (Primary State)
+
+Once active, the map enters continuous navigation mode:
+
+Core Behavior
+	•	The camera continuously follows the driver’s position
+	•	The map rotates to match the driver’s heading
+	•	The camera remains slightly behind the driver to show more road ahead
+
+Visual Result
+	•	Driver appears slightly lower on screen
+	•	Road ahead is clearly visible
+	•	Movement feels fluid and natural
+
+⸻
+
+3. Camera Behavior Rules
+
+Positioning
+	•	Camera follows driver location at all times during navigation
+	•	Do NOT hard-center the driver:
+	•	Apply a forward offset so the driver sits lower on the screen
+
+⸻
+
+Rotation (Heading Alignment)
+	•	Map rotates to match driver direction
+	•	Rotation must be:
+	•	Smooth
+	•	Gradual (no snapping)
+	•	Continuously updated
+
+⸻
+
+Tilt (3D Perspective)
+	•	Apply a constant slight tilt (~40–50°) during navigation
+	•	This creates depth and improves forward visibility
+
+⸻
+
+Zoom Behavior
+	•	Default: close, street-level zoom
+	•	Adjust slightly based on speed:
+	•	Slower speed → closer zoom
+	•	Faster speed → slightly zoom out
+	•	Changes must be subtle and smooth
+
+⸻
+
+4. Motion Smoothing (Critical)
+
+All camera movement must:
+	•	Transition smoothly between states
+	•	Never snap or jump
+
+This applies to:
+	•	Position
+	•	Rotation
+	•	Zoom
+
+The goal:
+	•	Movement should feel like gliding, not updating
+
+⸻
+
+5. Route Display Logic
+
+Keep Full Route—but Prioritize Clarity
+	•	The route should always exist, but visually separated into:
+	•	Remaining route → clearly highlighted
+	•	Completed route → faded behind driver
+
+Live Updating
+	•	As the driver moves:
+	•	The completed portion increases
+	•	The remaining portion shortens
+
+⸻
+
+6. Free Look (User Interaction)
+
+When User Touches/Drags Map
+	•	Temporarily disable auto-follow
+	•	Allow full manual control
+
+Return to Navigation
+	•	Resume auto-follow when:
+	•	User taps “recenter” button
+OR
+	•	After a short period of inactivity
+
+Return Behavior
+	•	Smoothly animate back to:
+	•	Driver position
+	•	Correct rotation
+	•	Correct zoom and tilt
+
+⸻
+
+7. Recenter / Alignment Control
+
+Add a simple control that:
+	•	Instantly restores navigation view
+
+On Activation
+	•	Re-enable follow mode
+	•	Smoothly re-align camera to:
+	•	Driver position
+	•	Current heading
+	•	Navigation zoom
+	•	Tilt
+
+⸻
+
+8. Driver Indicator Behavior
+
+Replace static marker with a dynamic indicator:
+
+Requirements
+	•	Represents driver position
+	•	Includes directional awareness
+
+Behavior
+	•	Rotates to match heading
+	•	Moves smoothly along route
+	•	Remains stable and easy to track
+
+⸻
+
+9. Route Updates During Matching (Critical Integration)
+
+When a hopper is matched:
+
+DO NOT
+	•	Reset the camera
+	•	Zoom out
+	•	Interrupt navigation flow
+
+INSTEAD
+	•	Quietly update route to:
+	•	Driver → Pickup → Drop-off → Final destination
+
+Camera remains unchanged
+	•	Same zoom
+	•	Same tilt
+	•	Same follow behavior
+
+⸻
+
+10. State Handling (Behind the Scenes Logic)
+
+The system should operate with clear modes:
+	•	Idle → No navigation yet
+	•	Preview → Route exists but not moving
+	•	Navigating → Active GPS tracking
+	•	Free Look → User controlling map
+
+Transitions between these states must be:
+	•	Smooth
+	•	Non-disruptive
+	•	Predictable
+
+⸻
+
+11. What to Avoid
+
+To maintain a clean experience, do NOT:
+	•	Snap camera abruptly
+	•	Constantly zoom in/out
+	•	Re-center aggressively
+	•	Show full route as the main focus during navigation
+	•	Overlay large UI elements on the map
+
+⸻
+
+12. Overall Experience Goal
+
+The final behavior should feel:
+	•	Smooth
+	•	Predictable
+	•	Lightweight
+	•	Navigation-focused
+
+The driver should never feel like they are:
+	•	Fighting the map
+	•	Losing orientation
+	•	Being interrupted

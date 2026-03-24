@@ -277,9 +277,29 @@ type DriverNavRoute = {
   destMarkerCoord?: { lat: number; lng: number };
 };
 
-const NAV_ZOOM = 17;
+const NAV_ZOOM_DEFAULT = 17;
+const NAV_ZOOM_MIN = 16;
+const NAV_ZOOM_MAX = 18;
 const NAV_PITCH = 50;
-const RECENTER_DELAY_MS = 5000;
+const RECENTER_DELAY_MS = 6000;
+const FORWARD_OFFSET: [number, number] = [0, 100];
+
+function lerpAngle(from: number, to: number, t: number): number {
+  let diff = ((to - from + 540) % 360) - 180;
+  return from + diff * t;
+}
+
+function findClosestPointIndex(coords: [number, number][], pos: [number, number]): number {
+  let minDist = Infinity;
+  let minIdx = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const dx = coords[i][0] - pos[0];
+    const dy = coords[i][1] - pos[1];
+    const d = dx * dx + dy * dy;
+    if (d < minDist) { minDist = d; minIdx = i; }
+  }
+  return minIdx;
+}
 
 function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driverNavRoute, isDark }: { mode: HopMode; latitude: number | null; longitude: number | null; hasMatchedRide: boolean; walkingRoute: GeoJSON.LineString | null; driverNavRoute: DriverNavRoute | null; isDark: boolean }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -290,9 +310,11 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
   const dropoffMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapError, setMapError] = useState(false);
   const mapErrorRef = useRef(false);
-  const driverRouteFittedRef = useRef<string | null>(null);
   const prevLatLngRef = useRef<{ lat: number; lng: number } | null>(null);
+  const prevTimeRef = useRef<number>(Date.now());
   const bearingRef = useRef(0);
+  const smoothBearingRef = useRef(0);
+  const speedRef = useRef(0);
   const isNavModeRef = useRef(false);
   const navTransitionDoneRef = useRef(false);
   const userDraggedRef = useRef(false);
@@ -340,8 +362,21 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
         setShowRecenter(true);
         if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
         recenterTimerRef.current = setTimeout(() => {
+          if (!mapRef.current || !isNavModeRef.current) return;
           userDraggedRef.current = false;
           setShowRecenter(false);
+          const lat = prevLatLngRef.current?.lat;
+          const lng = prevLatLngRef.current?.lng;
+          if (lat && lng) {
+            mapRef.current.flyTo({
+              center: [lng, lat],
+              zoom: getSpeedZoom(speedRef.current),
+              pitch: NAV_PITCH,
+              bearing: smoothBearingRef.current,
+              duration: 1000,
+              offset: FORWARD_OFFSET,
+            });
+          }
         }, RECENTER_DELAY_MS);
       }
     });
@@ -360,6 +395,12 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
       mapRef.current = null;
     };
   }, []);
+
+  function getSpeedZoom(mph: number): number {
+    if (mph < 5) return NAV_ZOOM_MAX;
+    if (mph > 40) return NAV_ZOOM_MIN;
+    return NAV_ZOOM_MAX - ((mph - 5) / 35) * (NAV_ZOOM_MAX - NAV_ZOOM_MIN);
+  }
 
   useEffect(() => {
     isNavModeRef.current = isNavMode;
@@ -391,12 +432,12 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
       const map = mapRef.current;
       map.flyTo({
         center: [longitude, latitude],
-        zoom: NAV_ZOOM,
+        zoom: NAV_ZOOM_DEFAULT,
         pitch: NAV_PITCH,
-        bearing: bearingRef.current,
+        bearing: smoothBearingRef.current,
         duration: 1200,
         essential: true,
-        offset: [0, 80],
+        offset: FORWARD_OFFSET,
       });
     }
   }, [isNavMode, latitude, longitude]);
@@ -406,17 +447,26 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
 
     const lngLat: [number, number] = [longitude, latitude];
     const iconSrc = getMarkerIcon(mode, hasMatchedRide);
+    const now = Date.now();
 
     if (prevLatLngRef.current && isNavMode) {
       const dLat = latitude - prevLatLngRef.current.lat;
       const dLng = longitude - prevLatLngRef.current.lng;
-      const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-      if (dist > 0.00005) {
-        const newBearing = (Math.atan2(dLng, dLat) * 180) / Math.PI;
-        bearingRef.current = newBearing;
+      const distDeg = Math.sqrt(dLat * dLat + dLng * dLng);
+      const dtSec = Math.max((now - prevTimeRef.current) / 1000, 0.1);
+
+      if (distDeg > 0.00003) {
+        const rawBearing = (Math.atan2(dLng, dLat) * 180) / Math.PI;
+        bearingRef.current = rawBearing;
+        smoothBearingRef.current = lerpAngle(smoothBearingRef.current, rawBearing, 0.3);
+
+        const distMiles = distDeg * 69;
+        const mph = (distMiles / dtSec) * 3600;
+        speedRef.current = speedRef.current * 0.7 + mph * 0.3;
       }
     }
     prevLatLngRef.current = { lat: latitude, lng: longitude };
+    prevTimeRef.current = now;
 
     if (isNavMode) {
       if (markerRef.current) {
@@ -433,13 +483,14 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
       }
 
       if (!userDraggedRef.current && navTransitionDoneRef.current) {
+        const targetZoom = getSpeedZoom(speedRef.current);
         mapRef.current.easeTo({
           center: lngLat,
-          bearing: bearingRef.current,
-          zoom: NAV_ZOOM,
+          bearing: smoothBearingRef.current,
+          zoom: targetZoom,
           pitch: NAV_PITCH,
-          duration: 1000,
-          offset: [0, 80],
+          duration: 1200,
+          offset: FORWARD_OFFSET,
           easing: (t) => t * (2 - t),
         });
       }
@@ -526,21 +577,75 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
       if (pickupMarkerRef.current) { pickupMarkerRef.current.remove(); pickupMarkerRef.current = null; }
       if (dropoffMarkerRef.current) { dropoffMarkerRef.current.remove(); dropoffMarkerRef.current = null; }
 
-      if (map!.getSource("driver-nav-route")) {
-        if (driverNavRoute) {
-          (map!.getSource("driver-nav-route") as mapboxgl.GeoJSONSource).setData(driverNavRoute.geometry);
+      const driverPos: [number, number] | null = (latitude && longitude) ? [longitude, latitude] : null;
+
+      if (driverNavRoute && driverNavRoute.geometry.coordinates.length > 1 && driverPos) {
+        const allCoords = driverNavRoute.geometry.coordinates as [number, number][];
+        const splitIdx = findClosestPointIndex(allCoords, driverPos);
+
+        const completedCoords = allCoords.slice(0, splitIdx + 1);
+        const remainingCoords = allCoords.slice(splitIdx);
+
+        if (map!.getSource("driver-nav-completed")) {
+          (map!.getSource("driver-nav-completed") as mapboxgl.GeoJSONSource).setData({
+            type: "LineString", coordinates: completedCoords.length > 1 ? completedCoords : []
+          });
         } else {
-          (map!.getSource("driver-nav-route") as mapboxgl.GeoJSONSource).setData({ type: "LineString", coordinates: [] });
+          map!.addSource("driver-nav-completed", {
+            type: "geojson",
+            data: { type: "LineString", coordinates: completedCoords.length > 1 ? completedCoords : [] }
+          });
+          map!.addLayer({
+            id: "driver-nav-completed-line",
+            type: "line",
+            source: "driver-nav-completed",
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#3b82f6", "line-width": 4, "line-opacity": 0.25 },
+          });
+        }
+
+        if (map!.getSource("driver-nav-route")) {
+          (map!.getSource("driver-nav-route") as mapboxgl.GeoJSONSource).setData({
+            type: "LineString", coordinates: remainingCoords.length > 1 ? remainingCoords : allCoords
+          });
+        } else {
+          map!.addSource("driver-nav-route", {
+            type: "geojson",
+            data: { type: "LineString", coordinates: remainingCoords.length > 1 ? remainingCoords : allCoords }
+          });
+          map!.addLayer({
+            id: "driver-nav-route-line",
+            type: "line",
+            source: "driver-nav-route",
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#3b82f6", "line-width": 6, "line-opacity": 0.9 },
+          });
         }
       } else if (driverNavRoute) {
-        map!.addSource("driver-nav-route", { type: "geojson", data: driverNavRoute.geometry });
-        map!.addLayer({
-          id: "driver-nav-route-line",
-          type: "line",
-          source: "driver-nav-route",
-          layout: { "line-join": "round", "line-cap": "round" },
-          paint: { "line-color": "#3b82f6", "line-width": 6, "line-opacity": 0.9 },
-        });
+        const emptyLine: GeoJSON.LineString = { type: "LineString", coordinates: [] };
+        if (map!.getSource("driver-nav-completed")) {
+          (map!.getSource("driver-nav-completed") as mapboxgl.GeoJSONSource).setData(emptyLine);
+        }
+        if (map!.getSource("driver-nav-route")) {
+          (map!.getSource("driver-nav-route") as mapboxgl.GeoJSONSource).setData(driverNavRoute.geometry);
+        } else {
+          map!.addSource("driver-nav-route", { type: "geojson", data: driverNavRoute.geometry });
+          map!.addLayer({
+            id: "driver-nav-route-line",
+            type: "line",
+            source: "driver-nav-route",
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#3b82f6", "line-width": 6, "line-opacity": 0.9 },
+          });
+        }
+      } else {
+        const emptyLine: GeoJSON.LineString = { type: "LineString", coordinates: [] };
+        if (map!.getSource("driver-nav-route")) {
+          (map!.getSource("driver-nav-route") as mapboxgl.GeoJSONSource).setData(emptyLine);
+        }
+        if (map!.getSource("driver-nav-completed")) {
+          (map!.getSource("driver-nav-completed") as mapboxgl.GeoJSONSource).setData(emptyLine);
+        }
       }
 
       if (driverNavRoute) {
@@ -572,7 +677,6 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
         }
 
       } else {
-        driverRouteFittedRef.current = null;
         if (destMarkerRef.current) { destMarkerRef.current.remove(); destMarkerRef.current = null; }
       }
     }
@@ -582,7 +686,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
     } else {
       map.once("style.load", addOrUpdateDriverRoute);
     }
-  }, [driverNavRoute]);
+  }, [driverNavRoute, latitude, longitude]);
 
   const handleRecenter = useCallback(() => {
     if (!mapRef.current || !latitude || !longitude) return;
@@ -591,11 +695,11 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
     if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
     mapRef.current.flyTo({
       center: [longitude, latitude],
-      zoom: NAV_ZOOM,
+      zoom: getSpeedZoom(speedRef.current),
       pitch: NAV_PITCH,
-      bearing: bearingRef.current,
+      bearing: smoothBearingRef.current,
       duration: 800,
-      offset: [0, 80],
+      offset: FORWARD_OFFSET,
     });
   }, [latitude, longitude]);
 
@@ -621,7 +725,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
             exit={{ opacity: 0, scale: 0.8, y: 10 }}
             transition={{ duration: 0.25 }}
             onClick={handleRecenter}
-            className="absolute top-4 right-4 z-30 w-11 h-11 rounded-full bg-white/90 dark:bg-black/80 shadow-lg border border-border/30 flex items-center justify-center"
+            className="absolute top-4 right-4 z-30 w-12 h-12 rounded-full bg-white/90 dark:bg-black/80 shadow-xl border border-border/30 flex items-center justify-center backdrop-blur-sm"
             data-testid="button-recenter-map"
             title="Recenter on driver"
           >
