@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send, Square, Timer, DollarSign, UserPlus } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send, Square, Timer, DollarSign, UserPlus, Volume2, VolumeX, ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, ArrowUpRight, ArrowUpLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -243,25 +243,70 @@ function createMarkerEl(src: string): HTMLElement {
 
 function createDriverNavMarker(): HTMLElement {
   const outer = document.createElement("div");
-  outer.style.width = "52px";
-  outer.style.height = "52px";
+  outer.style.width = "60px";
+  outer.style.height = "80px";
   outer.style.position = "relative";
   outer.style.filter = "drop-shadow(0 2px 6px rgba(0,0,0,0.35))";
 
+  const arrow = document.createElement("div");
+  arrow.className = "driver-direction-arrow";
+  arrow.style.position = "absolute";
+  arrow.style.top = "-2px";
+  arrow.style.left = "50%";
+  arrow.style.transform = "translateX(-50%)";
+  arrow.style.width = "0";
+  arrow.style.height = "0";
+  arrow.style.borderLeft = "10px solid transparent";
+  arrow.style.borderRight = "10px solid transparent";
+  arrow.style.borderBottom = "16px solid #3b82f6";
+  arrow.style.zIndex = "2";
+  outer.appendChild(arrow);
+
+  const arrowOutline = document.createElement("div");
+  arrowOutline.style.position = "absolute";
+  arrowOutline.style.top = "-5px";
+  arrowOutline.style.left = "50%";
+  arrowOutline.style.transform = "translateX(-50%)";
+  arrowOutline.style.width = "0";
+  arrowOutline.style.height = "0";
+  arrowOutline.style.borderLeft = "13px solid transparent";
+  arrowOutline.style.borderRight = "13px solid transparent";
+  arrowOutline.style.borderBottom = "19px solid #f97316";
+  arrowOutline.style.zIndex = "1";
+  outer.appendChild(arrowOutline);
+
+  const circle = document.createElement("div");
+  circle.style.position = "absolute";
+  circle.style.top = "12px";
+  circle.style.left = "50%";
+  circle.style.transform = "translateX(-50%)";
+  circle.style.width = "52px";
+  circle.style.height = "52px";
+  circle.style.borderRadius = "50%";
+  circle.style.border = "3px solid #f97316";
+  circle.style.overflow = "hidden";
+  circle.style.zIndex = "3";
+  outer.appendChild(circle);
+
   const pulse = document.createElement("div");
   pulse.style.position = "absolute";
-  pulse.style.inset = "-4px";
+  pulse.style.top = "8px";
+  pulse.style.left = "50%";
+  pulse.style.transform = "translateX(-50%)";
+  pulse.style.width = "60px";
+  pulse.style.height = "60px";
   pulse.style.borderRadius = "50%";
   pulse.style.border = "2px solid rgba(59,130,246,0.35)";
   pulse.style.animation = "driver-pulse 2.5s ease-in-out infinite";
+  pulse.style.zIndex = "0";
   outer.appendChild(pulse);
 
   const img = document.createElement("img");
   img.style.width = "100%";
   img.style.height = "100%";
-  img.style.objectFit = "contain";
-  img.style.position = "relative";
-  outer.appendChild(img);
+  img.style.objectFit = "cover";
+  img.style.borderRadius = "50%";
+  circle.appendChild(img);
 
   return outer;
 }
@@ -273,11 +318,20 @@ function getMarkerIcon(mode: HopMode, hasMatchedRide: boolean, rideStatus?: stri
   return mode === "drive" ? driverAloneUrl : hopperAloneUrl;
 }
 
+type NavStep = {
+  instruction: string;
+  distance: number;
+  maneuverType: string;
+  maneuverModifier?: string;
+  name: string;
+};
+
 type DriverNavRoute = {
   geometry: GeoJSON.LineString;
   pickupMarker?: { lat: number; lng: number; label: string };
   dropoffMarker?: { lat: number; lng: number; label: string };
   destMarkerCoord?: { lat: number; lng: number };
+  steps?: NavStep[];
 };
 
 const NAV_ZOOM_DEFAULT = 17;
@@ -643,6 +697,13 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
             data: { type: "LineString", coordinates: remainingCoords.length > 1 ? remainingCoords : allCoords }
           });
           map!.addLayer({
+            id: "driver-nav-route-casing",
+            type: "line",
+            source: "driver-nav-route",
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#f97316", "line-width": 10, "line-opacity": 0.9 },
+          });
+          map!.addLayer({
             id: "driver-nav-route-line",
             type: "line",
             source: "driver-nav-route",
@@ -659,6 +720,13 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
           (map!.getSource("driver-nav-route") as mapboxgl.GeoJSONSource).setData(driverNavRoute.geometry);
         } else {
           map!.addSource("driver-nav-route", { type: "geojson", data: driverNavRoute.geometry });
+          map!.addLayer({
+            id: "driver-nav-route-casing",
+            type: "line",
+            source: "driver-nav-route",
+            layout: { "line-join": "round", "line-cap": "round" },
+            paint: { "line-color": "#f97316", "line-width": 10, "line-opacity": 0.9 },
+          });
           map!.addLayer({
             id: "driver-nav-route-line",
             type: "line",
@@ -812,6 +880,93 @@ function HopperIcon({ className, searching }: { className?: string; searching?: 
       style={{ objectFit: "contain" }}
       draggable={false}
     />
+  );
+}
+
+function getManeuverIcon(type: string, modifier?: string) {
+  if (type === "turn") {
+    if (modifier === "left" || modifier === "sharp left" || modifier === "slight left") return <ArrowLeft className="w-6 h-6 text-white" />;
+    if (modifier === "right" || modifier === "sharp right" || modifier === "slight right") return <ArrowRight className="w-6 h-6 text-white" />;
+  }
+  if (type === "fork" || type === "off ramp") {
+    if (modifier?.includes("left")) return <ArrowUpLeft className="w-6 h-6 text-white" />;
+    if (modifier?.includes("right")) return <ArrowUpRight className="w-6 h-6 text-white" />;
+  }
+  if (type === "merge" || type === "on ramp") {
+    if (modifier?.includes("left")) return <CornerUpLeft className="w-6 h-6 text-white" />;
+    return <CornerUpRight className="w-6 h-6 text-white" />;
+  }
+  if (type === "roundabout" || type === "rotary") return <Navigation className="w-6 h-6 text-white" />;
+  if (type === "arrive") return <MapPin className="w-6 h-6 text-white" />;
+  return <ArrowUp className="w-6 h-6 text-white" />;
+}
+
+function formatStepDistance(meters: number): string {
+  if (meters < 160) return `${Math.round(meters * 3.281)} ft`;
+  const miles = meters / 1609.34;
+  if (miles < 0.1) return `${Math.round(meters * 3.281)} ft`;
+  return `${miles.toFixed(1)} mi`;
+}
+
+function DriverDirectionsPanel({ steps, voiceEnabled, onToggleVoice }: {
+  steps: NavStep[];
+  voiceEnabled: boolean;
+  onToggleVoice: () => void;
+}) {
+  if (!steps.length) return null;
+
+  const currentStep = steps[0];
+  const nextStep = steps.length > 1 ? steps[1] : null;
+
+  return (
+    <motion.div
+      className="absolute top-0 left-0 right-0 z-20 px-3 pt-3"
+      data-testid="driver-directions-panel"
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", damping: 25, stiffness: 300 }}
+    >
+      <div className="bg-gradient-to-br from-gray-900/95 to-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/10 overflow-hidden">
+        <div className="flex items-center px-4 py-3 gap-3">
+          <div className="w-11 h-11 rounded-xl bg-blue-500 flex items-center justify-center shrink-0">
+            {getManeuverIcon(currentStep.maneuverType, currentStep.maneuverModifier)}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-black text-sm leading-tight truncate" data-testid="text-current-direction">
+              {currentStep.instruction}
+            </p>
+            <p className="text-white/50 text-[10px] font-semibold mt-0.5">
+              {formatStepDistance(currentStep.distance)}
+            </p>
+          </div>
+          <button
+            onClick={onToggleVoice}
+            className="w-9 h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center shrink-0 hover:bg-white/20 transition-colors"
+            data-testid="button-toggle-voice"
+            title={voiceEnabled ? "Mute directions" : "Enable voice directions"}
+          >
+            {voiceEnabled ? (
+              <Volume2 className="w-4 h-4 text-orange-400" />
+            ) : (
+              <VolumeX className="w-4 h-4 text-white/50" />
+            )}
+          </button>
+        </div>
+        {nextStep && (
+          <div className="px-4 pb-2.5 flex items-center gap-2.5 border-t border-white/5 pt-2">
+            <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+              {getManeuverIcon(nextStep.maneuverType, nextStep.maneuverModifier)}
+            </div>
+            <p className="text-white/40 text-[10px] font-bold truncate" data-testid="text-next-direction">
+              Then: {nextStep.instruction}
+            </p>
+            <p className="text-white/30 text-[10px] font-semibold ml-auto shrink-0">
+              {formatStepDistance(nextStep.distance)}
+            </p>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
@@ -1380,11 +1535,10 @@ function colorClassToHex(colorClass: string): string {
   return map[colorClass] || "#22c55e";
 }
 
-function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, queryClient }: {
+function HopperRidePanel({ activeHop, user, tracking, queryClient }: {
   activeHop: any;
   user: any;
   tracking: any;
-  pickupTimerRemaining: number | null;
   queryClient: any;
 }) {
   const { data: driverInfo } = useQuery({
@@ -1622,15 +1776,6 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
         )}
 
         <div className="flex-1 space-y-2.5 overflow-y-auto">
-          {pickupTimerRemaining !== null && isMatched && (
-            <div className={`flex items-center gap-2.5 rounded-xl p-3 ${pickupTimerRemaining <= 30 ? 'bg-red-500/25 border border-red-400/40' : 'bg-white/12 border border-white/15'}`} data-testid="display-pickup-timer">
-              <Timer className={`w-4 h-4 shrink-0 ${pickupTimerRemaining <= 30 ? 'text-red-300' : 'text-white/80'}`} />
-              <p className={`text-xs font-black ${pickupTimerRemaining <= 30 ? 'text-red-200' : 'text-white/90'}`}>
-                Pickup window: {Math.floor(pickupTimerRemaining / 60)}:{String(pickupTimerRemaining % 60).padStart(2, '0')}
-                {pickupTimerRemaining <= 0 && " — Time expired"}
-              </p>
-            </div>
-          )}
 
           {tracking.pickupSide && isMatched && (
             <div className="flex items-center gap-2.5 bg-white/12 rounded-xl p-3 border border-white/15" data-testid="display-pickup-side">
@@ -3201,7 +3346,7 @@ function InstaHopView({ user }: { user: User }) {
         prevRouteKeyRef.current = routeKey;
 
         const dirRes = await fetch(
-          `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&access_token=${token}`
+          `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&steps=true&banner_instructions=true&access_token=${token}`
         );
         const dirJson = await dirRes.json();
         if (!dirJson.routes?.[0]) return;
@@ -3210,12 +3355,32 @@ function InstaHopView({ user }: { user: User }) {
         const distMiles = (r.distance / 1609.34).toFixed(1);
         const etaMins = Math.round(r.duration / 60);
 
+        const steps: NavStep[] = [];
+        if (r.legs) {
+          for (const leg of r.legs) {
+            if (leg.steps) {
+              for (const s of leg.steps) {
+                if (s.maneuver?.instruction) {
+                  steps.push({
+                    instruction: s.maneuver.instruction,
+                    distance: s.distance || 0,
+                    maneuverType: s.maneuver.type || "",
+                    maneuverModifier: s.maneuver.modifier || "",
+                    name: s.name || "",
+                  });
+                }
+              }
+            }
+          }
+        }
+
         setDriverRouteInfo({ distance: `${distMiles} mi`, eta: `${etaMins} min` });
         setDriverNavRoute({
           geometry: r.geometry,
           pickupMarker,
           dropoffMarker,
           destMarkerCoord: { lat: destLat, lng: destLng },
+          steps,
         });
       } catch {}
     };
@@ -3224,6 +3389,31 @@ function InstaHopView({ user }: { user: User }) {
     const interval = setInterval(buildRoute, 15000);
     return () => clearInterval(interval);
   }, [isDriverActive, geo.latitude, geo.longitude, driverActiveHop?.id, driverActiveHop?.status]);
+
+  const [voiceDirectionsEnabled, setVoiceDirectionsEnabled] = useState(() => {
+    return localStorage.getItem("sh-voice-nav") === "true";
+  });
+  const lastSpokenRef = useRef<string>("");
+
+  useEffect(() => {
+    localStorage.setItem("sh-voice-nav", voiceDirectionsEnabled ? "true" : "false");
+  }, [voiceDirectionsEnabled]);
+
+  useEffect(() => {
+    if (!voiceDirectionsEnabled || !driverNavRoute?.steps?.length) return;
+    const currentInstruction = driverNavRoute.steps[0]?.instruction;
+    if (!currentInstruction || currentInstruction === lastSpokenRef.current) return;
+    lastSpokenRef.current = currentInstruction;
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(currentInstruction);
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [voiceDirectionsEnabled, driverNavRoute?.steps]);
 
   const toggleActiveTop = useMutation({
     mutationFn: async (active: boolean) => {
@@ -3435,9 +3625,6 @@ function InstaHopView({ user }: { user: User }) {
   const [proximityAlerted, setProximityAlerted] = useState<{ pickup: boolean; dropoff: boolean }>({ pickup: false, dropoff: false });
   const proximityAudioRef = useRef<HTMLAudioElement | null>(null);
   const proximitySoundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [pickupTimerStart, setPickupTimerStart] = useState<number | null>(null);
-  const [pickupTimerRemaining, setPickupTimerRemaining] = useState<number | null>(null);
-
   const hasActiveRide = !!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"));
   const prevHasActiveRideRef = useRef(hasActiveRide);
   useEffect(() => {
@@ -3475,8 +3662,6 @@ function InstaHopView({ user }: { user: User }) {
         }
       }, durationMs);
 
-      setPickupTimerStart(Date.now());
-
       showFlash("🚗", "Your driver is within 1000ft!", "success");
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification("Short Hop", { body: "Your driver is within 1000ft of pickup!", icon: "/favicon.png", tag: "sh-proximity" });
@@ -3511,24 +3696,8 @@ function InstaHopView({ user }: { user: User }) {
   }, [hasActiveRide, tracking, proximityAlerted]);
 
   useEffect(() => {
-    if (!pickupTimerStart || activeHop?.status !== "matched") {
-      setPickupTimerRemaining(null);
-      return;
-    }
-    const interval = setInterval(() => {
-      const elapsed = (Date.now() - pickupTimerStart) / 1000;
-      const remaining = Math.max(0, 180 - elapsed);
-      setPickupTimerRemaining(Math.ceil(remaining));
-      if (remaining <= 0) clearInterval(interval);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [pickupTimerStart, activeHop?.status]);
-
-  useEffect(() => {
     if (!hasActiveRide) {
       setProximityAlerted({ pickup: false, dropoff: false });
-      setPickupTimerStart(null);
-      setPickupTimerRemaining(null);
     }
   }, [hasActiveRide]);
 
@@ -4020,6 +4189,14 @@ function InstaHopView({ user }: { user: User }) {
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
         <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} rideStatus={activeHop?.status} walkingRoute={walkingRoute} driverNavRoute={isDriverMode && (isDriverActive || driverActiveHop) ? driverNavRoute : null} isDark={isDark} />
 
+        {isDriverMode && (isDriverActive || driverActiveHop) && driverNavRoute?.steps && driverNavRoute.steps.length > 0 && (
+          <DriverDirectionsPanel
+            steps={driverNavRoute.steps}
+            voiceEnabled={voiceDirectionsEnabled}
+            onToggleVoice={() => setVoiceDirectionsEnabled(v => !v)}
+          />
+        )}
+
         <AnimatePresence>
           {!isDriverMode && pricePreview && !isMatching && (
             <motion.div
@@ -4477,7 +4654,6 @@ function InstaHopView({ user }: { user: User }) {
             activeHop={activeHop}
             user={user}
             tracking={tracking}
-            pickupTimerRemaining={pickupTimerRemaining}
             queryClient={queryClient}
           />
         )}
