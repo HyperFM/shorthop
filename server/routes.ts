@@ -2777,6 +2777,7 @@ export async function registerRoutes(
       if (!user?.isDriver) return res.status(403).json({ message: "Not a registered driver" });
       if (!user?.driverVerified && active) return res.status(403).json({ message: "Driver not verified yet" });
       if (user?.isDisabled) return res.status(403).json({ message: "Account disabled" });
+      if (!user?.profilePhoto && active) return res.status(403).json({ message: "Profile photo required to go active. Hoppers need to see who they're riding with!" });
 
       const updated = await storage.setDriverActive(req.user.id, active);
 
