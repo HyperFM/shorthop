@@ -844,13 +844,14 @@ function HopperIcon({ className, searching }: { className?: string; searching?: 
   );
 }
 
-function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRide }: {
+function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRide, onConfirmPickup }: {
   user: User;
   hop: any | null;
   routeInfo: { distance: string; eta: string } | null;
   onStop: () => void;
   onStartRide: (hopId: number) => void;
   onCompleteRide: (hopId: number) => void;
+  onConfirmPickup: (hopId: number) => Promise<void>;
 }) {
   const totalSeats = (user as any)?.availableSeats || 1;
   const { data: hops } = useHops();
@@ -861,6 +862,9 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
   const hopperUser = hop ? (hop as any).walker : null;
   const hopperVibe = hopperUser?.rideVibe || "friendly_chat";
   const rideStyleEmoji = hopperVibe === "quiet_ride" ? "🤫" : hopperVibe === "social" ? "🤝" : "😊";
+  const [showPickupConfirm, setShowPickupConfirm] = useState(false);
+  const [confirmingPickup, setConfirmingPickup] = useState(false);
+  const driverAlreadyConfirmed = !!(hop?.driverConfirmedPickup);
 
   return (
     <motion.div
@@ -918,7 +922,7 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
           </div>
         )}
 
-        {hop && hop.status === "matched" && (
+        {hop && hop.status === "matched" && !showPickupConfirm && (
           <div className="bg-white/10 rounded-xl px-3 py-2.5" data-testid="display-matched-hopper">
             <div className="flex items-center gap-3">
               {hopperUser?.profilePhoto ? (
@@ -932,16 +936,72 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
                 <p className="text-white text-sm font-bold truncate">
                   {hopperUser?.username || hop.walkerName || "Hopper"} {rideStyleEmoji}
                 </p>
-                <p className="text-white/50 text-[10px]">heading to pickup</p>
+                <p className="text-white/50 text-[10px]">
+                  {driverAlreadyConfirmed ? "waiting for hopper to confirm" : "heading to pickup"}
+                </p>
               </div>
+              {driverAlreadyConfirmed ? (
+                <div className="px-3 py-2 bg-yellow-400/20 text-yellow-200 text-[10px] font-bold rounded-xl shrink-0">
+                  Awaiting Hopper
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowPickupConfirm(true)}
+                  className="px-4 py-2.5 bg-white text-orange-600 text-xs font-black rounded-xl shrink-0 shadow-lg hover:bg-white/90 transition-colors"
+                  data-testid="button-driver-start-ride-bar"
+                >
+                  Pick Up
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {hop && hop.status === "matched" && showPickupConfirm && !driverAlreadyConfirmed && (
+          <div className="bg-white rounded-2xl px-4 py-4 shadow-xl space-y-3" data-testid="card-pickup-confirm">
+            <div className="flex items-center gap-3">
+              {hopperUser?.profilePhoto ? (
+                <img src={hopperUser.profilePhoto} className="w-12 h-12 rounded-full border-2 border-orange-200 object-cover shrink-0" alt="" />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-gray-100 border-2 border-orange-200 flex items-center justify-center shrink-0">
+                  <HopperIcon className="w-6 h-6 text-gray-400" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-900 text-sm font-black">
+                  Is {hopperUser?.username || hop.walkerName || "the hopper"} in your vehicle?
+                </p>
+                <p className="text-gray-500 text-xs mt-0.5">Confirm only when the hopper is physically in your car</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
               <button
-                onClick={() => onStartRide(hop.id)}
-                className="px-4 py-2.5 bg-white text-orange-600 text-xs font-black rounded-xl shrink-0 shadow-lg hover:bg-white/90 transition-colors"
-                data-testid="button-driver-start-ride-bar"
+                onClick={() => setShowPickupConfirm(false)}
+                className="flex-1 px-3 py-2.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-xl"
+                data-testid="button-pickup-cancel"
               >
-                Pick Up
+                Not Yet
+              </button>
+              <button
+                onClick={async () => {
+                  setConfirmingPickup(true);
+                  try {
+                    await onConfirmPickup(hop.id);
+                    setShowPickupConfirm(false);
+                  } finally {
+                    setConfirmingPickup(false);
+                  }
+                }}
+                disabled={confirmingPickup}
+                className="flex-1 px-3 py-2.5 bg-orange-500 text-white text-xs font-black rounded-xl shadow-lg disabled:opacity-50"
+                data-testid="button-pickup-confirm-yes"
+              >
+                {confirmingPickup ? "Confirming..." : "Yes, Hopper is Here"}
               </button>
             </div>
+            <p className="text-red-600 text-[10px] font-semibold text-center leading-tight" data-testid="text-pickup-warning">
+              Falsely confirming a pickup is not tolerated. Disciplinary actions will apply for violations — repeated offenses result in permanent account deactivation.
+            </p>
           </div>
         )}
 
@@ -1371,6 +1431,60 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
   const isInRide = activeHop.status === "in_ride";
   const isMatched = activeHop.status === "matched";
   const [collapsed, setCollapsed] = useState(false);
+  const [confirmingHopperPickup, setConfirmingHopperPickup] = useState(false);
+  const driverConfirmed = !!(activeHop.driverConfirmedPickup);
+  const hopperConfirmed = !!(activeHop.hopperConfirmedPickup);
+  const needsHopperConfirm = isMatched && driverConfirmed && !hopperConfirmed;
+  const coMovementRef = useRef<{ dist: number; time: number }[]>([]);
+  const falsePickupHandledRef = useRef(false);
+  const autoConfirmedRef = useRef(false);
+
+  useEffect(() => {
+    if (!needsHopperConfirm || !tracking.available || tracking.distance === null) return;
+    if (autoConfirmedRef.current || falsePickupHandledRef.current) return;
+
+    const now = Date.now();
+    coMovementRef.current.push({ dist: tracking.distance, time: now });
+    if (coMovementRef.current.length > 10) coMovementRef.current.shift();
+
+    const readings = coMovementRef.current;
+    if (readings.length < 5) return;
+
+    const recent = readings.slice(-5);
+    const allClose = recent.every(r => r.dist < 0.08);
+    const timeSpan = recent[recent.length - 1].time - recent[0].time;
+    const sufficientTime = timeSpan > 15000;
+
+    if (allClose && sufficientTime) {
+      autoConfirmedRef.current = true;
+      (async () => {
+        try {
+          const res = await fetch(`/api/hops/${activeHop.id}/hopper-confirm-pickup`, {
+            method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+          });
+          if (res.ok) queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+        } catch {}
+      })();
+      return;
+    }
+
+    if (readings.length >= 6 && timeSpan > 20000) {
+      const last4 = readings.slice(-4);
+      const increasing = last4.every((r, i, arr) => i === 0 || r.dist >= arr[i - 1].dist);
+      const driverFarAway = last4[last4.length - 1].dist > 0.3;
+      if (increasing && driverFarAway) {
+        falsePickupHandledRef.current = true;
+        (async () => {
+          try {
+            await fetch(`/api/hops/${activeHop.id}/false-pickup-violation`, {
+              method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+            });
+            queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+          } catch {}
+        })();
+      }
+    }
+  }, [needsHopperConfirm, tracking.distance]);
 
   const etaNum = tracking.etaMinutes ? parseInt(tracking.etaMinutes) : null;
   const showApproaching = isMatched && etaNum !== null && etaNum <= 3;
@@ -1399,7 +1513,7 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
           <div className="w-10 h-1 rounded-full bg-white/30" />
         </motion.div>
 
-        {showApproaching && (
+        {showApproaching && !needsHopperConfirm && (
           <motion.div
             className="bg-green-400/25 border border-green-300/40 rounded-2xl px-4 py-3 mb-3 flex items-center gap-3"
             initial={{ scale: 0.9, opacity: 0 }}
@@ -1416,12 +1530,64 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
           </motion.div>
         )}
 
+        {needsHopperConfirm && (
+          <motion.div
+            className="bg-white rounded-2xl px-4 py-4 mb-3 shadow-xl space-y-3"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            data-testid="card-hopper-confirm-pickup"
+          >
+            <div className="flex items-center gap-3">
+              {driverInfo?.profilePhoto ? (
+                <img src={driverInfo.profilePhoto} className="w-12 h-12 rounded-full border-2 border-blue-200 object-cover shrink-0" alt="" />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-gray-100 border-2 border-blue-200 flex items-center justify-center shrink-0">
+                  <Car className="w-6 h-6 text-gray-400" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-900 text-sm font-black">
+                  Are you in {driverInfo?.username || "the driver"}'s vehicle?
+                </p>
+                <p className="text-gray-500 text-xs mt-0.5">The driver says you've been picked up</p>
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                setConfirmingHopperPickup(true);
+                try {
+                  const res = await fetch(`/api/hops/${activeHop.id}/hopper-confirm-pickup`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                  });
+                  if (res.ok) {
+                    queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                  }
+                } finally {
+                  setConfirmingHopperPickup(false);
+                }
+              }}
+              disabled={confirmingHopperPickup}
+              className="w-full px-3 py-3 bg-blue-500 text-white text-sm font-black rounded-xl shadow-lg disabled:opacity-50"
+              data-testid="button-hopper-confirm-pickup"
+            >
+              {confirmingHopperPickup ? "Confirming..." : "Confirmed — I'm in the Car"}
+            </button>
+            <p className="text-gray-400 text-[10px] text-center">
+              If you don't respond, the ride will auto-start once GPS confirms you're traveling together
+            </p>
+          </motion.div>
+        )}
+
         <div className="flex items-center justify-between mb-3 relative">
           <div className="flex items-center gap-2">
             {isMatched ? (
               <div className="bg-white/20 rounded-full px-3.5 py-1.5 flex items-center gap-1.5">
                 <Car className="w-4 h-4 text-white" />
-                <span className="text-white text-sm font-black">Driver on the way</span>
+                <span className="text-white text-sm font-black">
+                  {needsHopperConfirm ? "Confirm pickup" : "Driver on the way"}
+                </span>
               </div>
             ) : (
               <div className="bg-green-400/25 rounded-full px-3.5 py-1.5 flex items-center gap-1.5">
@@ -1521,21 +1687,10 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
             </div>
           )}
 
-          {isMatched && (
-            <button
-              className="w-full py-3.5 bg-white text-blue-600 text-sm font-black rounded-2xl shadow-lg hover:bg-white/90 transition-colors"
-              onClick={async () => {
-                try {
-                  await apiRequest("POST", `/api/hops/${activeHop.id}/start-ride`);
-                  queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
-                } catch {
-                  showFlash("⚠️", "Couldn't start ride", "error");
-                }
-              }}
-              data-testid="button-start-ride"
-            >
-              Confirm Pickup — Start Ride
-            </button>
+          {isMatched && !needsHopperConfirm && !driverConfirmed && (
+            <div className="bg-white/10 rounded-xl px-4 py-3 text-center">
+              <p className="text-white/60 text-xs font-semibold">Waiting for driver to confirm pickup</p>
+            </div>
           )}
 
           {isInRide && <SafetyMessageRotator />}
@@ -3969,6 +4124,14 @@ function InstaHopView({ user }: { user: User }) {
             hop={driverActiveHop}
             routeInfo={driverRouteInfo}
             onStop={() => toggleActiveTop.mutate(false)}
+            onConfirmPickup={async (hopId) => {
+              try {
+                await apiRequest("POST", `/api/hops/${hopId}/driver-confirm-pickup`);
+                queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+              } catch {
+                showFlash("⚠️", "Couldn't confirm pickup", "error");
+              }
+            }}
             onStartRide={async (hopId) => {
               try {
                 await apiRequest("POST", `/api/hops/${hopId}/start-ride`);

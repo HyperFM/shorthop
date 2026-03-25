@@ -2345,6 +2345,121 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/hops/:id/driver-confirm-pickup', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.status !== "matched") return res.status(400).json({ message: "Hop must be in matched state" });
+      if (hop.driverId !== req.user.id) return res.status(403).json({ message: "Only the driver can confirm pickup" });
+
+      const driver = await storage.getUser(req.user.id);
+      if (driver && (driver.falsePickupCount ?? 0) >= 5) {
+        await db.update(users).set({ isDisabled: true, isActive: false }).where(eq(users.id, req.user.id));
+        return res.status(403).json({ message: "Account deactivated due to repeated false pickup violations" });
+      }
+
+      await db.update(shortHops).set({
+        driverConfirmedPickup: true,
+        driverConfirmedPickupAt: new Date(),
+      }).where(eq(shortHops.id, hopId));
+
+      console.log(`[PICKUP] Driver ${req.user.id} confirmed pickup for hop${hopId}`);
+      const updated = await storage.getHop(hopId);
+      res.json(updated);
+    } catch (err) {
+      console.error("Driver confirm pickup error:", err);
+      res.status(500).json({ message: "Failed to confirm pickup" });
+    }
+  });
+
+  app.post('/api/hops/:id/hopper-confirm-pickup', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.status !== "matched") return res.status(400).json({ message: "Hop must be in matched state" });
+      if (hop.walkerId !== req.user.id) return res.status(403).json({ message: "Only the hopper can confirm" });
+      if (!hop.driverConfirmedPickup) return res.status(400).json({ message: "Driver has not confirmed pickup yet" });
+
+      await db.update(shortHops).set({ hopperConfirmedPickup: true }).where(eq(shortHops.id, hopId));
+
+      if (hop.paymentIntentId && hop.paymentStatus === "authorized" && !hop.paymentIntentId.startsWith("wheels_")) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          const pi = await stripe.paymentIntents.retrieve(hop.paymentIntentId);
+          if (pi.status === "requires_capture") {
+            await stripe.paymentIntents.capture(hop.paymentIntentId);
+            await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, hopId));
+            console.log(`[PAYMENT] CAPTURED: PI ${hop.paymentIntentId} for hop${hopId} | hopper confirmed | $${(pi.amount / 100).toFixed(2)}`);
+          }
+        } catch (captureErr: any) {
+          console.error(`[PAYMENT] CAPTURE FAILED: PI ${hop.paymentIntentId} for hop${hopId}:`, captureErr.message);
+        }
+      } else if (hop.paymentStatus === "wheels") {
+        console.log(`[PAYMENT] WHEELS CONFIRMED: hop${hopId} | wheels already deducted at request time`);
+      }
+
+      const updated = await storage.startRide(hopId);
+
+      if (hop.driverId) {
+        try {
+          await storage.createTripLog(hopId, hop.driverId, hop.walkerId);
+          await storage.logGpsEvent(hopId, "ride_started");
+        } catch (e) {
+          console.error("Trip log creation error:", e);
+        }
+      }
+
+      console.log(`[PICKUP] Hopper ${req.user.id} confirmed pickup for hop${hopId} — ride started`);
+      res.json(updated);
+    } catch (err) {
+      console.error("Hopper confirm pickup error:", err);
+      res.status(500).json({ message: "Failed to confirm pickup" });
+    }
+  });
+
+  app.post('/api/hops/:id/false-pickup-violation', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.walkerId !== req.user.id && hop.driverId !== req.user.id && !req.user.isAdmin) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      if (!hop.driverConfirmedPickup || hop.hopperConfirmedPickup) {
+        return res.status(400).json({ message: "Invalid state for false pickup violation" });
+      }
+
+      if (hop.driverId) {
+        const newCount = ((await storage.getUser(hop.driverId))?.falsePickupCount ?? 0) + 1;
+        await db.update(users).set({ falsePickupCount: newCount }).where(eq(users.id, hop.driverId));
+        console.log(`[VIOLATION] False pickup for hop${hopId} by driver ${hop.driverId} — count: ${newCount}/5`);
+
+        if (newCount >= 5) {
+          await db.update(users).set({ isDisabled: true, isActive: false }).where(eq(users.id, hop.driverId));
+          console.log(`[VIOLATION] Driver ${hop.driverId} BANNED — 5 false pickup violations reached`);
+        }
+
+        await db.update(shortHops).set({
+          status: "cancelled",
+          driverConfirmedPickup: false,
+          hopperConfirmedPickup: false,
+        }).where(eq(shortHops.id, hopId));
+
+        res.json({ violations: newCount, banned: newCount >= 5 });
+      } else {
+        res.status(400).json({ message: "No driver assigned" });
+      }
+    } catch (err) {
+      console.error("False pickup violation error:", err);
+      res.status(500).json({ message: "Failed to record violation" });
+    }
+  });
+
   app.post('/api/hops/:id/start-ride', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
@@ -2354,6 +2469,10 @@ export async function registerRoutes(
       if (hop.status !== "matched") return res.status(400).json({ message: "Hop must be in matched state to start ride" });
       if (hop.walkerId !== req.user.id && hop.driverId !== req.user.id) {
         return res.status(403).json({ message: "Not your hop" });
+      }
+
+      if (!hop.driverConfirmedPickup || !hop.hopperConfirmedPickup) {
+        return res.status(400).json({ message: "Both driver and hopper must confirm pickup first" });
       }
 
       if (hop.paymentIntentId && hop.paymentStatus === "authorized" && !hop.paymentIntentId.startsWith("wheels_")) {
