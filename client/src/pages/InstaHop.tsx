@@ -2306,6 +2306,9 @@ function DriveNowPanel({ user }: { user: User }) {
     },
   });
 
+  const TUTORIAL_KEY = "sh-driver-tutorial-clicks";
+  const [tutorialClicks, setTutorialClicks] = useState(() => parseInt(localStorage.getItem(TUTORIAL_KEY) || "0", 10));
+
   const isVerified = driverStatus?.driverVerified ?? false;
   const isActiveNow = driverStatus?.isActive ?? false;
   const appStatus = driverStatus?.applicationStatus;
@@ -2496,6 +2499,42 @@ function DriveNowPanel({ user }: { user: User }) {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {isVerified && !isActiveNow && tutorialClicks < 3 && (
+          <Card className="border-green-400/50 dark:border-green-600/30 bg-gradient-to-br from-green-50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/10 rounded-2xl overflow-hidden" data-testid="card-driver-tutorial">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center shrink-0">
+                  <Navigation className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="space-y-1.5 flex-1">
+                  <p className="text-sm font-bold text-green-800 dark:text-green-300">Welcome, Driver!</p>
+                  <p className="text-xs text-green-700/80 dark:text-green-400/70 leading-relaxed">
+                    Just follow the map and use Short Hop to navigate to your destination — we'll make sure you get there and get paid!
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/40 dark:border-amber-700/20 rounded-xl px-3 py-2">
+                <span className="text-base">🐦</span>
+                <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                  The Early Bird gets the Hop! Short Hop works better for drivers that head out early.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="w-full text-[10px] text-green-600/60 dark:text-green-500/50 hover:text-green-700 dark:hover:text-green-400 transition-colors py-1"
+                onClick={() => {
+                  const next = tutorialClicks + 1;
+                  localStorage.setItem(TUTORIAL_KEY, String(next));
+                  setTutorialClicks(next);
+                }}
+                data-testid="button-dismiss-tutorial"
+              >
+                Got it ({3 - tutorialClicks} {3 - tutorialClicks === 1 ? "tap" : "taps"} to dismiss)
+              </button>
+            </CardContent>
+          </Card>
       )}
 
       {isVerified && !isActiveNow && (
@@ -3610,6 +3649,117 @@ function InstaHopView({ user }: { user: User }) {
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
         <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} driverNavRoute={isDriverMode && isDriverActive ? driverNavRoute : null} isDark={isDark} />
 
+        <AnimatePresence>
+          {!isDriverMode && pricePreview && !isMatching && (
+            <motion.div
+              key="top-trip-summary"
+              initial={{ y: -80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -80, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="absolute top-0 left-0 right-0 z-30 px-3 pt-3"
+              data-testid="top-trip-summary"
+            >
+              <div className="bg-white/95 dark:bg-black/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-green-200/40 dark:border-green-700/30 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-bold text-foreground dark:text-white flex items-center gap-1.5">
+                    <Navigation className="w-3.5 h-3.5 text-green-500" /> Trip Summary
+                  </p>
+                  <button onClick={() => setPricePreview(null)} className="text-muted-foreground hover:text-foreground p-1" data-testid="button-close-top-preview">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                    <div className="w-px h-4 bg-border dark:bg-white/20" />
+                    <div className="w-2.5 h-2.5 rounded-sm bg-orange-500" />
+                  </div>
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <p className="text-[11px] text-foreground/70 dark:text-gray-300 truncate">{pricePreview.startName || "Current location"}</p>
+                    <p className="text-[11px] text-foreground/70 dark:text-gray-300 truncate">{pricePreview.endName}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between bg-muted/20 dark:bg-white/5 rounded-xl px-3 py-2">
+                  <div className="text-center">
+                    <p className="text-base font-black text-foreground dark:text-white" data-testid="text-top-preview-distance">{pricePreview.distanceMiles.toFixed(1)} mi</p>
+                    <p className="text-[9px] text-muted-foreground dark:text-gray-500">distance</p>
+                  </div>
+                  <div className="w-px h-6 bg-border dark:bg-white/10" />
+                  <div className="text-center">
+                    <p className="text-base font-black text-foreground dark:text-white" data-testid="text-top-preview-eta">{pricePreview.etaMinutes} min</p>
+                    <p className="text-[9px] text-muted-foreground dark:text-gray-500">est. time</p>
+                  </div>
+                  <div className="w-px h-6 bg-border dark:bg-white/10" />
+                  <div className="text-center">
+                    <p className="text-base font-black text-green-600 dark:text-green-400" data-testid="text-top-preview-price">${(pricePreview.priceCents / 100).toFixed(2)}</p>
+                    <p className="text-[9px] text-muted-foreground dark:text-gray-500">total</p>
+                  </div>
+                </div>
+                <p className="text-[9px] text-center text-muted-foreground dark:text-gray-500">$1.50/mile · $1.50 minimum · charged immediately</p>
+                <div className="space-y-1.5">
+                  <Button
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm h-10 rounded-xl"
+                    onClick={confirmAndPay}
+                    disabled={requestHop.isPending || isAuthorizing}
+                    data-testid="button-top-confirm-pay"
+                  >
+                    {requestHop.isPending || isAuthorizing ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Zap className="w-4 h-4 mr-2" />
+                    )}
+                    {isAuthorizing ? "Processing..." : `Confirm & Pay $${(pricePreview.priceCents / 100).toFixed(2)}`}
+                  </Button>
+                  {(user.credits || 0) > 0 && (
+                    <Button
+                      variant="outline"
+                      className={`w-full font-bold text-xs h-9 rounded-xl border-2 ${
+                        (user.credits || 0) >= pricePreview.priceCents / 100
+                          ? "border-amber-500/60 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                          : "border-muted text-muted-foreground opacity-60 cursor-not-allowed"
+                      }`}
+                      onClick={payWithWheels}
+                      disabled={requestHop.isPending || isAuthorizing || (user.credits || 0) < pricePreview.priceCents / 100}
+                      data-testid="button-top-pay-wheels"
+                    >
+                      🛞 Pay with {(pricePreview.priceCents / 100).toFixed(2)} Wheels
+                      <span className="text-[10px] ml-1.5 opacity-70">(bal: {(user.credits || 0).toFixed(2)})</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {!isDriverMode && isMatching && prepaidInfo && (
+            <motion.div
+              key="top-matching-banner"
+              initial={{ y: -60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -60, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="absolute top-0 left-0 right-0 z-30 px-3 pt-3"
+              data-testid="top-matching-banner"
+            >
+              <div className="bg-white/95 dark:bg-black/95 backdrop-blur-xl rounded-2xl shadow-lg border border-blue-200/40 dark:border-blue-700/30 px-4 py-2.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-foreground dark:text-white truncate">Waiting for a match...</p>
+                    <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">${(prepaidInfo.amount / 100).toFixed(2)} authorized</p>
+                  </div>
+                </div>
+                {matchCountdown !== null && (
+                  <span className="text-xs font-mono font-bold text-foreground dark:text-white shrink-0 bg-blue-50 dark:bg-blue-950/30 px-2 py-1 rounded-lg" data-testid="text-top-match-countdown">
+                    {Math.floor(matchCountdown / 60)}:{String(matchCountdown % 60).padStart(2, '0')}
+                  </span>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence mode="wait">
         {isDriverMode && isDriverActive ? (
           <DriverNavBar
@@ -3725,76 +3875,6 @@ function InstaHopView({ user }: { user: User }) {
                   </Card>
                 )}
 
-                {pricePreview && !isMatching && (
-                  <Card className="border-green-500/40 bg-gradient-to-br from-green-500/5 to-transparent mb-2" data-testid="card-price-preview">
-                    <CardContent className="py-3 px-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-bold text-foreground">Trip Summary</p>
-                        <button onClick={() => setPricePreview(null)} className="text-muted-foreground hover:text-foreground" data-testid="button-close-preview">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-green-500" />
-                          <p className="text-xs text-muted-foreground dark:text-gray-300 truncate">{pricePreview.startName || "Current location"}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-sm bg-orange-500" />
-                          <p className="text-xs text-muted-foreground dark:text-gray-300 truncate">{pricePreview.endName}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between bg-muted/30 rounded-xl p-3">
-                        <div className="text-center">
-                          <p className="text-lg font-black text-foreground" data-testid="text-preview-distance">{pricePreview.distanceMiles.toFixed(1)} mi</p>
-                          <p className="text-[10px] text-muted-foreground dark:text-gray-400">distance</p>
-                        </div>
-                        <div className="w-px h-8 bg-border dark:bg-white/10" />
-                        <div className="text-center">
-                          <p className="text-lg font-black text-foreground dark:text-white" data-testid="text-preview-eta">{pricePreview.etaMinutes} min</p>
-                          <p className="text-[10px] text-muted-foreground dark:text-gray-400">est. time</p>
-                        </div>
-                        <div className="w-px h-8 bg-border dark:bg-white/10" />
-                        <div className="text-center">
-                          <p className="text-lg font-black text-green-600 dark:text-green-400" data-testid="text-preview-price">${(pricePreview.priceCents / 100).toFixed(2)}</p>
-                          <p className="text-[10px] text-muted-foreground dark:text-gray-400">total</p>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground dark:text-gray-400 text-center">$1.50/mile · $1.50 minimum · charged immediately</p>
-                      <div className="space-y-1.5">
-                        <Button
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm h-11 rounded-xl"
-                          onClick={confirmAndPay}
-                          disabled={requestHop.isPending || isAuthorizing}
-                          data-testid="button-confirm-pay"
-                        >
-                          {requestHop.isPending || isAuthorizing ? (
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          ) : (
-                            <Zap className="w-4 h-4 mr-2" />
-                          )}
-                          {isAuthorizing ? "Processing..." : `Confirm & Pay $${(pricePreview.priceCents / 100).toFixed(2)}`}
-                        </Button>
-                        {(user.credits || 0) > 0 && (
-                          <Button
-                            variant="outline"
-                            className={`w-full font-bold text-sm h-11 rounded-xl border-2 ${
-                              (user.credits || 0) >= pricePreview.priceCents / 100
-                                ? "border-amber-500/60 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-                                : "border-muted text-muted-foreground opacity-60 cursor-not-allowed"
-                            }`}
-                            onClick={payWithWheels}
-                            disabled={requestHop.isPending || isAuthorizing || (user.credits || 0) < pricePreview.priceCents / 100}
-                            data-testid="button-pay-wheels"
-                          >
-                            🛞 Pay with {(pricePreview.priceCents / 100).toFixed(2)} Wheels
-                            <span className="text-[10px] ml-1.5 opacity-70">(bal: {(user.credits || 0).toFixed(2)})</span>
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
 
                 {hasActiveRide && activeHop && (
                   <HopperRidePanel
@@ -3814,53 +3894,27 @@ function InstaHopView({ user }: { user: User }) {
                 )}
 
                 {isMatching && prepaidInfo && (
-                  <Card className="border-blue-500/40 bg-gradient-to-br from-blue-500/10 to-transparent mb-2" data-testid="card-matching-countdown">
-                    <CardContent className="py-3 px-4 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                          <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> No drivers available yet — waiting for a match
-                        </p>
-                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400" data-testid="text-payment-amount">
-                          ${(prepaidInfo.amount / 100).toFixed(2)} authorized
-                        </span>
-                      </div>
-                      {matchCountdown !== null && (
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-gray-300">
-                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Time remaining</span>
-                            <span className="font-mono font-bold text-foreground dark:text-white" data-testid="text-match-countdown">
-                              {Math.floor(matchCountdown / 60)}:{String(matchCountdown % 60).padStart(2, '0')}
-                            </span>
-                          </div>
-                          <div className="w-full bg-muted/30 rounded-full h-1.5">
-                            <div
-                              className={`h-1.5 rounded-full transition-all ${matchCountdown < 120 ? 'bg-red-500' : matchCountdown < 300 ? 'bg-yellow-500' : 'bg-blue-500'}`}
-                              style={{ width: `${Math.min(100, (matchCountdown / 1800) * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                      <p className="text-[10px] text-foreground/60 dark:text-blue-200/70">
-                        Payment confirmed. Waiting for a match. Refunded if no match found.
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-xs h-8"
-                        onClick={async () => {
-                          if (activeHop) {
-                            cancelHop.mutate(activeHop.id);
-                          }
-                          setIsMatching(false);
-                          setPrepaidInfo(null);
-                          showFlash("✅", "Cancelled — payment authorization released", "info");
-                        }}
-                        data-testid="button-cancel-matching"
-                      >
-                        Cancel & Refund
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  <div className="mb-2 space-y-2" data-testid="card-matching-countdown">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs h-9 rounded-xl border-red-200/50 dark:border-red-700/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                      onClick={async () => {
+                        if (activeHop) {
+                          cancelHop.mutate(activeHop.id);
+                        }
+                        setIsMatching(false);
+                        setPrepaidInfo(null);
+                        showFlash("✅", "Cancelled — payment authorization released", "info");
+                      }}
+                      data-testid="button-cancel-matching"
+                    >
+                      <X className="w-3.5 h-3.5 mr-1.5" /> Cancel & Refund
+                    </Button>
+                    <p className="text-[10px] text-center text-foreground/50 dark:text-gray-500">
+                      Refunded automatically if no match found
+                    </p>
+                  </div>
                 )}
 
                 {paymentRefunded && !isMatching && (
