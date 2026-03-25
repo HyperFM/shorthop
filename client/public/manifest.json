@@ -2,7 +2,7 @@
   "name": "ShortHop",
   "short_name": "ShortHop",
   "description": "Shared routes. Real connections. A micro-rideshare for Lexington, KY.",
-  "start_url": "/dashboard",
+  "start_url": "/community",
   "scope": "/",
   "display": "standalone",
   "background_color": "#000000",

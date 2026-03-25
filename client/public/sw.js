@@ -1,7 +1,7 @@
-const CACHE_NAME = 'shorthop-v2';
+const CACHE_NAME = 'shorthop-v3';
 const SHELL_ASSETS = [
   '/',
-  '/dashboard',
+  '/community',
   '/app-icon-192.png',
   '/app-icon.png',
   '/apple-touch-icon.png',

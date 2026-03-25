@@ -62,7 +62,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      setLocation("/dashboard");
+      setLocation("/community");
     }
   }, [user, authLoading, setLocation]);
 
