@@ -8,12 +8,10 @@ import { Map, Clock, Calendar, Check, X, Plus, Play, Route as RouteIcon, MapPin,
 import { motion } from "framer-motion";
 import { MatchFoundModal } from "@/components/MatchFoundModal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRoutes, useCreateRoute, useDeleteRoute } from "@/hooks/use-routes";
 import { useHops, useAcceptHop, useCompleteHop } from "@/hooks/use-hops";
 import { TrustedHoppers } from "@/components/TrustedHoppers";
@@ -95,8 +93,6 @@ export default function DriverDashboard({ user }: { user: User }) {
   useLiveLocationBroadcast(hasMatchedHop || (driverStatus?.isActive ?? false));
   
   const [isRouteOpen, setIsRouteOpen] = useState(false);
-  const [completeHopId, setCompleteHopId] = useState<number | null>(null);
-  const [distance, setDistance] = useState("1.0");
   const [ratingHop, setRatingHop] = useState<{ tripId: number; ratedUserId: number; ratedUsername?: string; ratedPhoto?: string | null } | null>(null);
 
   const { data: pendingRating } = useQuery<{
@@ -137,20 +133,6 @@ export default function DriverDashboard({ user }: { user: User }) {
         form.reset();
       }
     });
-  };
-
-  const handleComplete = () => {
-    if (completeHopId) {
-      const hop = activeHops.find(h => h.id === completeHopId);
-      completeHop.mutate({ id: completeHopId, data: { distanceMiles: distance } }, {
-        onSuccess: (completedHop) => {
-          setCompleteHopId(null);
-          if (hop) {
-            setCompletedHopForShare({ ...hop, status: "completed", distanceMiles: distance });
-          }
-        }
-      });
-    }
   };
 
   const availableHops = hops?.filter(h => h.status === 'requested') || [];
@@ -497,30 +479,20 @@ export default function DriverDashboard({ user }: { user: User }) {
                         </div>
                       )}
                       
-                      <Dialog open={completeHopId === hop.id} onOpenChange={(open) => !open && setCompleteHopId(null)}>
-                        <DialogTrigger asChild>
-                          <Button className="w-full" onClick={() => setCompleteHopId(hop.id)}>Complete Hop</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Complete Hop</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                              <Label>Distance Driven (miles)</Label>
-                              <Input 
-                                type="number" 
-                                step="0.1" 
-                                value={distance} 
-                                onChange={(e) => setDistance(e.target.value)} 
-                              />
-                            </div>
-                            <Button onClick={handleComplete} className="w-full" disabled={completeHop.isPending} data-testid="button-confirm-complete">
-                              Confirm & Earn Wheels
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      <Button
+                        className="w-full"
+                        onClick={() => {
+                          completeHop.mutate({ id: hop.id, data: { distanceMiles: "0" } }, {
+                            onSuccess: (completedHop) => {
+                              setCompletedHopForShare({ ...hop, status: "completed", distanceMiles: hop.distanceMiles || "1" });
+                            }
+                          });
+                        }}
+                        disabled={completeHop.isPending}
+                        data-testid="button-complete-hop"
+                      >
+                        {completeHop.isPending ? 'Completing...' : 'Complete Hop'}
+                      </Button>
 
                     </CardContent>
                   </Card>

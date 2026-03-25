@@ -472,9 +472,7 @@ const pendingAdditionalHops: Map<number, { hopId: number; driverId: number; hopp
 
 async function executeMatch(hopId: number, driverId: number, isStar: boolean, hop: any) {
   const matched = await storage.acceptHop(hopId, driverId);
-  if (matched.paymentIntentId && matched.paymentStatus === "authorized") {
-    await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, matched.id));
-  }
+  console.log(`[PAYMENT] MATCH: hop${hopId} | PI=${matched.paymentIntentId || 'none'} | paymentStatus=${matched.paymentStatus} | payment held (not captured until ride starts)`);
   const starLabel = isStar ? " Your Star Hopper!" : "";
   await storage.createNotification({
     userId: driverId,
@@ -501,6 +499,24 @@ async function runMatchingCycle() {
   try {
     const allAvailable = await storage.getAvailableHops();
     if (allAvailable.length === 0) { return; }
+
+    const BACKGROUND_NOTIFY_MS = 5 * 60 * 1000;
+    const now = Date.now();
+    for (const hop of allAvailable) {
+      if (hop.status === "requested" && hop.createdAt) {
+        const hopAge = now - new Date(hop.createdAt).getTime();
+        if (hopAge >= BACKGROUND_NOTIFY_MS && hopAge < BACKGROUND_NOTIFY_MS + MATCH_CYCLE_INTERVAL_MS + 1000) {
+          await storage.createNotification({
+            userId: hop.walkerId,
+            type: "search_update",
+            title: "Still Searching 🔍",
+            message: "We're still looking for a driver on your route. Hang tight — we'll notify you as soon as someone matches!",
+            isRead: false,
+          });
+          console.log(`[MATCH] 5-min background search notification sent to user${hop.walkerId} for hop${hop.id}`);
+        }
+      }
+    }
 
     const activeDrivers = await storage.getActiveDrivers();
     if (activeDrivers.length === 0) {
@@ -960,10 +976,7 @@ export async function registerRoutes(
        }
 
        const hop = await storage.acceptHop(Number(req.params.id), req.user.id);
-
-       if (hop.paymentIntentId && hop.paymentStatus === "authorized") {
-         await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, hop.id));
-       }
+       console.log(`[PAYMENT] MANUAL ACCEPT: hop${hop.id} | PI=${hop.paymentIntentId || 'none'} | paymentStatus=${hop.paymentStatus} | payment held (not captured until ride starts)`);
 
        res.json(hop);
     } catch (e) {
@@ -990,6 +1003,7 @@ export async function registerRoutes(
        }
 
        const hop = await storage.completeHop(Number(req.params.id), distanceMiles);
+       console.log(`[PAYMENT] HOP COMPLETED: hop${hop.id} | distance=${distanceMiles}mi | PI=${targetHop.paymentIntentId || 'none'} | paymentStatus=${targetHop.paymentStatus} | driver=${req.user.id}`);
 
        const driverStreak = await storage.updateHopStreak(req.user.id);
        for (const badge of driverStreak.newBadges) {
@@ -1048,14 +1062,45 @@ export async function registerRoutes(
     try {
       const existingHop = await storage.getHop(Number(req.params.id));
       const hop = await storage.cancelHop(Number(req.params.id), req.user.id);
+      let paymentRefunded = false;
 
-      if (existingHop?.paymentIntentId && existingHop.paymentStatus === "authorized" && existingHop.status === "requested") {
+      if (existingHop?.paymentIntentId && !existingHop.paymentIntentId.startsWith("wheels_")) {
         try {
           const stripe = await getUncachableStripeClient();
-          await stripe.paymentIntents.cancel(existingHop.paymentIntentId);
-          await db.update(shortHops).set({ paymentStatus: "refunded" }).where(eq(shortHops.id, hop.id));
+          const pi = await stripe.paymentIntents.retrieve(existingHop.paymentIntentId);
+
+          if (pi.status === "requires_capture") {
+            await stripe.paymentIntents.cancel(existingHop.paymentIntentId);
+            await db.update(shortHops).set({ paymentStatus: "refunded" }).where(eq(shortHops.id, hop.id));
+            paymentRefunded = true;
+            console.log(`[PAYMENT] AUTHORIZATION CANCELLED: PI ${existingHop.paymentIntentId} for hop${hop.id} | was ${existingHop.status} | $${(pi.amount / 100).toFixed(2)} released back to hopper`);
+          } else if (pi.status === "succeeded") {
+            await stripe.refunds.create({ payment_intent: existingHop.paymentIntentId });
+            await db.update(shortHops).set({ paymentStatus: "refunded" }).where(eq(shortHops.id, hop.id));
+            paymentRefunded = true;
+            console.log(`[PAYMENT] REFUNDED: PI ${existingHop.paymentIntentId} for hop${hop.id} | was ${existingHop.status} | $${(pi.amount / 100).toFixed(2)} refunded to hopper`);
+          } else {
+            console.log(`[PAYMENT] CANCEL SKIPPED: PI ${existingHop.paymentIntentId} status=${pi.status} for hop${hop.id}`);
+          }
         } catch (cancelErr: any) {
-          console.error('Payment cancel failed:', cancelErr.message);
+          console.error(`[PAYMENT] CANCEL/REFUND FAILED: PI ${existingHop.paymentIntentId} for hop${hop.id}:`, cancelErr.message);
+        }
+      }
+
+      if (existingHop?.paymentIntentId?.startsWith("wheels_") && (existingHop.status === "requested" || existingHop.status === "matched" || existingHop.status === "in_ride")) {
+        try {
+          const wheelsCost = (existingHop.priceCents || 0) / 100;
+          if (wheelsCost > 0 && existingHop.walkerId) {
+            const walker = await storage.getUser(existingHop.walkerId);
+            if (walker) {
+              await db.update(users).set({ credits: (walker.credits || 0) + wheelsCost }).where(eq(users.id, existingHop.walkerId));
+              await db.update(shortHops).set({ paymentStatus: "refunded" }).where(eq(shortHops.id, hop.id));
+              paymentRefunded = true;
+              console.log(`[PAYMENT] WHEELS REFUNDED: ${wheelsCost.toFixed(2)} wheels returned to user${existingHop.walkerId} for hop${hop.id} | was ${existingHop.status}`);
+            }
+          }
+        } catch (wheelErr: any) {
+          console.error(`[PAYMENT] WHEEL REFUND FAILED: hop${hop.id}:`, wheelErr.message);
         }
       }
 
@@ -1075,7 +1120,8 @@ export async function registerRoutes(
 
       pendingAdditionalHops.delete(Number(req.params.id));
 
-      res.json({ ...hop, paymentRefunded: existingHop?.status === "requested" && !!existingHop?.paymentIntentId });
+      console.log(`[PAYMENT] HOP CANCELLED: hop${hop.id} | previousStatus=${existingHop?.status} | paymentRefunded=${paymentRefunded} | cancelledBy=user${req.user.id}`);
+      res.json({ ...hop, paymentRefunded });
     } catch (e: any) {
       res.status(400).json({ message: e.message || "Failed to cancel hop" });
     }
@@ -2273,6 +2319,25 @@ export async function registerRoutes(
       if (hop.walkerId !== req.user.id && hop.driverId !== req.user.id) {
         return res.status(403).json({ message: "Not your hop" });
       }
+
+      if (hop.paymentIntentId && hop.paymentStatus === "authorized" && !hop.paymentIntentId.startsWith("wheels_")) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          const pi = await stripe.paymentIntents.retrieve(hop.paymentIntentId);
+          if (pi.status === "requires_capture") {
+            await stripe.paymentIntents.capture(hop.paymentIntentId);
+            await db.update(shortHops).set({ paymentStatus: "captured" }).where(eq(shortHops.id, hopId));
+            console.log(`[PAYMENT] CAPTURED: PI ${hop.paymentIntentId} for hop${hopId} | ride started | $${(pi.amount / 100).toFixed(2)}`);
+          } else {
+            console.log(`[PAYMENT] CAPTURE SKIPPED: PI ${hop.paymentIntentId} status=${pi.status} for hop${hopId}`);
+          }
+        } catch (captureErr: any) {
+          console.error(`[PAYMENT] CAPTURE FAILED: PI ${hop.paymentIntentId} for hop${hopId}:`, captureErr.message);
+        }
+      } else if (hop.paymentStatus === "wheels") {
+        console.log(`[PAYMENT] WHEELS CONFIRMED: hop${hopId} | wheels already deducted at request time`);
+      }
+
       const updated = await storage.startRide(hopId);
 
       if (hop.driverId) {
@@ -4285,6 +4350,7 @@ export async function registerRoutes(
         payment_method: paymentMethods.data[0].id,
         confirm: true,
         off_session: true,
+        capture_method: 'manual',
         metadata: {
           userId: String(req.user.id),
           distanceMiles: String(distance),
@@ -4292,6 +4358,8 @@ export async function registerRoutes(
         },
         automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
       });
+
+      console.log(`[PAYMENT] AUTHORIZED: PI ${paymentIntent.id} for $${(finalAmount / 100).toFixed(2)} | user=${req.user.id} (${user.username}) | ${distance}mi | status=${paymentIntent.status}`);
 
       res.json({
         clientSecret: paymentIntent.client_secret,
@@ -4302,7 +4370,7 @@ export async function registerRoutes(
         timeWindowExpiry: windowExpiry.toISOString(),
       });
     } catch (e: any) {
-      console.error('Stripe authorize-hop error:', e.message);
+      console.error('[PAYMENT] AUTHORIZATION FAILED:', e.message, `| user=${req.user.id}`);
       res.status(500).json({ message: "Failed to authorize payment" });
     }
   });
@@ -4323,15 +4391,17 @@ export async function registerRoutes(
 
       if (pi.status === "requires_capture") {
         await stripe.paymentIntents.cancel(paymentIntentId);
-        console.log(`Refund-failed-hop: cancelled uncaptured PI ${paymentIntentId} for user ${req.user.id}`);
+        console.log(`[PAYMENT] REFUND-FAILED-HOP: cancelled uncaptured PI ${paymentIntentId} for user${req.user.id} | $${(pi.amount / 100).toFixed(2)} released`);
       } else if (pi.status === "succeeded") {
         await stripe.refunds.create({ payment_intent: paymentIntentId });
-        console.log(`Refund-failed-hop: refunded captured PI ${paymentIntentId} for user ${req.user.id}`);
+        console.log(`[PAYMENT] REFUND-FAILED-HOP: refunded captured PI ${paymentIntentId} for user${req.user.id} | $${(pi.amount / 100).toFixed(2)} refunded`);
+      } else {
+        console.log(`[PAYMENT] REFUND-FAILED-HOP: PI ${paymentIntentId} status=${pi.status} — no action needed`);
       }
 
       res.json({ refunded: true });
     } catch (e: any) {
-      console.error('Refund-failed-hop error:', e.message);
+      console.error(`[PAYMENT] REFUND-FAILED-HOP ERROR: PI ${req.body?.paymentIntentId}:`, e.message);
       res.status(500).json({ message: "Failed to process refund" });
     }
   });
@@ -4367,8 +4437,11 @@ export async function registerRoutes(
       const arrTime = arrivalDeadline ? new Date(arrivalDeadline) : new Date(depTime.getTime() + 45 * 60000);
       const windowExpiry = new Date(depTime.getTime() + 30 * 60000);
 
+      const wheelPaymentId = `wheels_${Date.now()}_${user.id}`;
+      console.log(`[PAYMENT] WHEELS DEDUCTED: ${wheelsCost.toFixed(2)} wheels from user${user.id} (${user.username}) | ${distance}mi | balance: ${userWheels.toFixed(2)} → ${(userWheels - wheelsCost).toFixed(2)} | id=${wheelPaymentId}`);
+
       res.json({
-        paymentIntentId: `wheels_${Date.now()}_${user.id}`,
+        paymentIntentId: wheelPaymentId,
         amount: finalAmount,
         wheelsCost,
         newBalance: userWheels - wheelsCost,
@@ -4378,7 +4451,7 @@ export async function registerRoutes(
         paidWithWheels: true,
       });
     } catch (e: any) {
-      console.error('Pay with wheels error:', e.message);
+      console.error('[PAYMENT] WHEELS DEDUCTION FAILED:', e.message);
       res.status(500).json({ message: "Failed to process wheel payment" });
     }
   });
