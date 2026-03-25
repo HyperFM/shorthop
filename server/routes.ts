@@ -1064,6 +1064,11 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const existingHop = await storage.getHop(Number(req.params.id));
+
+      if (existingHop && (existingHop.status === "matched" || existingHop.status === "in_ride") && existingHop.paymentIntentId && existingHop.walkerId === req.user.id) {
+        return res.status(400).json({ message: "Cannot cancel a ride after payment. Contact support if there's an issue." });
+      }
+
       const hop = await storage.cancelHop(Number(req.params.id), req.user.id);
       let paymentRefunded = false;
 

@@ -870,119 +870,116 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0.1 }}
     >
-      <div className="bg-gradient-to-br from-orange-500 to-orange-600 backdrop-blur-xl rounded-3xl shadow-2xl shadow-orange-500/30 px-4 py-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="flex items-center gap-2.5 flex-1 min-w-0 flex-nowrap overflow-hidden">
+      <div className="bg-gradient-to-br from-orange-500 to-orange-600 backdrop-blur-xl rounded-3xl shadow-2xl shadow-orange-500/30 px-4 py-3 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
             {routeInfo && (
               <>
-                <div className="flex flex-col items-center shrink-0" data-testid="display-nav-eta">
-                  <span className="text-white font-black text-sm leading-tight">{routeInfo.eta}</span>
-                  <span className="text-white/60 text-[9px] font-medium">ETA</span>
+                <div className="text-center" data-testid="display-nav-eta">
+                  <p className="text-white font-black text-base leading-none">{routeInfo.eta}</p>
+                  <p className="text-white/50 text-[8px] font-semibold mt-0.5">ETA</p>
                 </div>
-                <div className="w-px h-5 bg-white/25 shrink-0" />
-                <div className="flex flex-col items-center shrink-0" data-testid="display-nav-distance">
-                  <span className="text-white font-black text-sm leading-tight">{routeInfo.distance}</span>
-                  <span className="text-white/60 text-[9px] font-medium">dist</span>
+                <div className="w-px h-6 bg-white/20" />
+                <div className="text-center" data-testid="display-nav-distance">
+                  <p className="text-white font-black text-base leading-none">{routeInfo.distance}</p>
+                  <p className="text-white/50 text-[8px] font-semibold mt-0.5">DIST</p>
                 </div>
-                <div className="w-px h-5 bg-white/25 shrink-0" />
+                <div className="w-px h-6 bg-white/20" />
               </>
             )}
-            <div className="flex items-center gap-1 shrink-0" data-testid="display-nav-seats">
-              <span className="text-white font-black text-sm leading-tight">{occupiedSeats}/{totalSeats}</span>
-              <SeatIcon className="w-8 h-8" />
+            <div className="flex items-center gap-1.5" data-testid="display-nav-seats">
+              <SeatIcon className="w-7 h-7" />
+              <span className="text-white font-black text-base leading-none">{occupiedSeats}/{totalSeats}</span>
             </div>
-            <div className="w-px h-5 bg-white/25 shrink-0" />
-            <HopperIcon className="w-5 h-5 shrink-0" searching={!hop && !isFull} />
           </div>
 
-          <button
-            onClick={onStop}
-            className="w-9 h-9 rounded-full bg-red-500/30 border border-red-400/50 flex items-center justify-center shrink-0 hover:bg-red-500/50 transition-colors"
-            data-testid="button-driver-stop-bar"
-            title="Go offline"
-          >
-            <Power className="w-4 h-4 text-white" />
-          </button>
+          <div className="flex items-center gap-2">
+            <HopperIcon className="w-5 h-5" searching={!hop && !isFull} />
+            <button
+              onClick={onStop}
+              className="w-8 h-8 rounded-full bg-red-500/30 border border-red-400/50 flex items-center justify-center hover:bg-red-500/50 transition-colors"
+              data-testid="button-driver-stop-bar"
+              title="Go offline"
+            >
+              <Power className="w-3.5 h-3.5 text-white" />
+            </button>
+          </div>
         </div>
 
-        <div className="min-h-[40px] flex items-center">
-          {isFull && (
-            <div className="flex items-center gap-2 w-full" data-testid="display-seats-full">
-              <span className="text-white/90 font-black text-sm">Route locked — Full</span>
-            </div>
-          )}
+        {isFull && (
+          <div className="bg-white/10 rounded-xl px-3 py-2" data-testid="display-seats-full">
+            <p className="text-white/90 font-black text-sm text-center">Route locked — All seats full</p>
+          </div>
+        )}
 
-          {!hop && !isFull && (
-            <div className="flex items-center gap-2">
-              <GlowingSearchText />
-            </div>
-          )}
+        {!hop && !isFull && (
+          <div className="flex items-center justify-center gap-2 py-1">
+            <GlowingSearchText />
+          </div>
+        )}
 
-          {hop && hop.status === "matched" && (
-            <div className="flex items-center gap-3 w-full" data-testid="display-matched-hopper">
+        {hop && hop.status === "matched" && (
+          <div className="bg-white/10 rounded-xl px-3 py-2.5" data-testid="display-matched-hopper">
+            <div className="flex items-center gap-3">
               {hopperUser?.profilePhoto ? (
-                <img src={hopperUser.profilePhoto} className="w-10 h-10 rounded-full border-2 border-white/80 object-cover shrink-0" alt="" />
+                <img src={hopperUser.profilePhoto} className="w-10 h-10 rounded-full border-2 border-white/60 object-cover shrink-0" alt="" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center shrink-0">
-                  <HopperIcon className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-full bg-white/15 border-2 border-white/40 flex items-center justify-center shrink-0">
+                  <HopperIcon className="w-5 h-5" />
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-white text-sm font-bold truncate leading-tight">
-                  {hopperUser?.username || hop.walkerName || "Hopper"}
-                  {rideStyleEmoji && <span className="ml-1">{rideStyleEmoji}</span>}
+                <p className="text-white text-sm font-bold truncate">
+                  {hopperUser?.username || hop.walkerName || "Hopper"} {rideStyleEmoji}
                 </p>
-                <p className="text-white/60 text-[10px] truncate">heading to pickup</p>
+                <p className="text-white/50 text-[10px]">heading to pickup</p>
               </div>
               <button
                 onClick={() => onStartRide(hop.id)}
-                className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-black rounded-xl shrink-0 transition-colors border border-white/30"
+                className="px-4 py-2.5 bg-white text-orange-600 text-xs font-black rounded-xl shrink-0 shadow-lg hover:bg-white/90 transition-colors"
                 data-testid="button-driver-start-ride-bar"
               >
                 Pick Up
               </button>
             </div>
-          )}
+          </div>
+        )}
 
-          {hop && hop.status === "in_ride" && (
-            <div className="flex items-center gap-3 w-full" data-testid="display-in-ride-hopper">
-              {hopperUser?.profilePhoto ? (
-                <img src={hopperUser.profilePhoto} className="w-10 h-10 rounded-full border-2 border-white/80 object-cover shrink-0" alt="" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center shrink-0">
-                  <HopperIcon className="w-6 h-6" />
+        {hop && hop.status === "in_ride" && (
+          <div className="space-y-2">
+            <div className="bg-white/10 rounded-xl px-3 py-2.5" data-testid="display-in-ride-hopper">
+              <div className="flex items-center gap-3">
+                {hopperUser?.profilePhoto ? (
+                  <img src={hopperUser.profilePhoto} className="w-10 h-10 rounded-full border-2 border-green-300/60 object-cover shrink-0" alt="" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-white/15 border-2 border-green-300/40 flex items-center justify-center shrink-0">
+                    <HopperIcon className="w-5 h-5" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-white text-sm font-bold truncate">
+                    {hopperUser?.username || hop.walkerName || "Hopper"} {rideStyleEmoji}
+                  </p>
+                  <p className="text-green-200 text-[10px] font-semibold">in ride</p>
                 </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-white text-sm font-bold truncate leading-tight">
-                  {hopperUser?.username || hop.walkerName || "Hopper"}
-                  {rideStyleEmoji && <span className="ml-1">{rideStyleEmoji}</span>}
-                </p>
-                <p className="text-green-200 text-[10px] font-semibold truncate">in ride</p>
+                <button
+                  onClick={() => onCompleteRide(hop.id)}
+                  className="px-4 py-2.5 bg-green-400 text-green-900 text-xs font-black rounded-xl shrink-0 shadow-lg hover:bg-green-300 transition-colors"
+                  data-testid="button-driver-complete-ride-bar"
+                >
+                  Complete
+                </button>
               </div>
-              <button
-                onClick={() => onCompleteRide(hop.id)}
-                className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-black rounded-xl shrink-0 transition-colors border border-white/30"
-                data-testid="button-driver-complete-ride-bar"
-              >
-                Complete
-              </button>
             </div>
-          )}
-          {hop && hop.status === "in_ride" && (
-            <div className="mt-2">
-              <SpontaneousStopDriver hopId={hop.id} />
-            </div>
-          )}
+            <SpontaneousStopDriver hopId={hop.id} />
+          </div>
+        )}
 
-          {hop && hopperUser && (
-            <div className="mt-1.5 flex items-center gap-1.5" data-testid="display-ride-preference-advisory">
-              <span className="text-[9px] text-white/50 italic truncate">
-                {rideStyleEmoji} {hopperVibe === "quiet_ride" ? "prefers quiet" : hopperVibe === "social" ? "loves chatting" : "friendly vibes"} · please be kind & respect all preferences
-              </span>
-            </div>
-          )}
-        </div>
+        {hop && hopperUser && (
+          <p className="text-[9px] text-white/40 italic text-center" data-testid="display-ride-preference-advisory">
+            {rideStyleEmoji} {hopperVibe === "quiet_ride" ? "prefers quiet" : hopperVibe === "social" ? "loves chatting" : "friendly vibes"} · please be kind & respect all preferences
+          </p>
+        )}
       </div>
     </motion.div>
   );

@@ -21,7 +21,8 @@ export function useGeolocation() {
     permitted: false,
   });
   const watchIdRef = useRef<number | null>(null);
-  const lastGoodRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
+  const lastGoodRef = useRef<{ lat: number; lng: number; acc: number; time: number } | null>(null);
+  const recentRef = useRef<{ lat: number; lng: number; acc: number }[]>([]);
 
   const requestPermission = useCallback(() => {
     if (!navigator.geolocation) {
@@ -38,23 +39,48 @@ export function useGeolocation() {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude: lat, longitude: lng, accuracy } = position.coords;
-        const MAX_ACCURACY = 100;
-        if (accuracy > MAX_ACCURACY && lastGoodRef.current) return;
+
+        if (accuracy > 50 && lastGoodRef.current) return;
 
         const prev = lastGoodRef.current;
         if (prev) {
           const dLat = lat - prev.lat;
           const dLng = lng - prev.lng;
           const distMeters = Math.sqrt(dLat * dLat + dLng * dLng) * 111_139;
-          const dtSec = (Date.now() - prev.time) / 1000;
-          const speedMps = dtSec > 0 ? distMeters / dtSec : 0;
-          if (speedMps > 67 && distMeters > 50) return;
+          const dtSec = Math.max((Date.now() - prev.time) / 1000, 0.5);
+          const speedMps = distMeters / dtSec;
+
+          if (speedMps > 45) return;
+
+          if (distMeters > 200 && accuracy > 30) return;
+
+          if (distMeters < 3) return;
         }
 
-        lastGoodRef.current = { lat, lng, time: Date.now() };
+        recentRef.current.push({ lat, lng, acc: accuracy });
+        if (recentRef.current.length > 5) recentRef.current.shift();
+
+        let finalLat = lat;
+        let finalLng = lng;
+
+        if (recentRef.current.length >= 3) {
+          let totalWeight = 0;
+          let wLat = 0;
+          let wLng = 0;
+          for (const r of recentRef.current) {
+            const w = 1 / Math.max(r.acc, 5);
+            wLat += r.lat * w;
+            wLng += r.lng * w;
+            totalWeight += w;
+          }
+          finalLat = wLat / totalWeight;
+          finalLng = wLng / totalWeight;
+        }
+
+        lastGoodRef.current = { lat: finalLat, lng: finalLng, acc: accuracy, time: Date.now() };
         setState({
-          latitude: lat,
-          longitude: lng,
+          latitude: finalLat,
+          longitude: finalLng,
           accuracy,
           error: null,
           loading: false,
@@ -69,7 +95,7 @@ export function useGeolocation() {
           permitted: false,
         }));
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 3000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }
     );
   }, []);
 
