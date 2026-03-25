@@ -6,13 +6,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send, Square, Timer, DollarSign } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useHops, useRequestHop, useCancelHop, useAcceptHop } from "@/hooks/use-hops";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking } from "@/hooks/use-location";
 import { showFlash } from "@/components/FlashNotification";
+import { getDriverSoundDuration } from "@/lib/sounds";
 import { useMagicGps, type SavedRouteMatch } from "@/hooks/use-magic-gps";
 import { useTheme } from "@/components/ThemeProvider";
 import { MagicGpsSuggestion, MagicGpsActivation, MagicGpsStatus, FlowModeNotification, DriftCatchNotification, OnTheWayPing, RepeatRoutePrompt } from "@/components/MagicGpsNotification";
@@ -893,6 +894,11 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
               </button>
             </div>
           )}
+          {hop && hop.status === "in_ride" && (
+            <div className="mt-2">
+              <SpontaneousStopDriver hopId={hop.id} />
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -1164,6 +1170,291 @@ function PendingHopperPrompt() {
       ))}
     </div>
   );
+}
+
+function SpontaneousStopHopper({ hopId }: { hopId: number }) {
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: ssData, refetch: refetchSs } = useQuery({
+    queryKey: ['/api/hops', hopId, 'ss-status'],
+    queryFn: async () => {
+      const res = await fetch(`/api/hops/${hopId}/ss-status`, { credentials: 'include' });
+      if (!res.ok) return { active: false };
+      return res.json();
+    },
+    refetchInterval: 3000,
+  });
+
+  const stop = ssData?.stop;
+  const isActive = ssData?.active && stop;
+
+  const [localElapsed, setLocalElapsed] = useState(0);
+  useEffect(() => {
+    if (!stop?.driverArrivedAt || stop.status !== "active") { setLocalElapsed(0); return; }
+    const arrivalTime = new Date(stop.driverArrivedAt).getTime();
+    const tick = () => setLocalElapsed(Math.floor((Date.now() - arrivalTime) / 1000));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [stop?.driverArrivedAt, stop?.status]);
+
+  const handleRequest = async () => {
+    setRequesting(true);
+    try {
+      const res = await fetch(`/api/hops/${hopId}/ss-request`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+      if (res.ok) {
+        showFlash("🛑", "SS request sent to driver!", "success");
+        refetchSs();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showFlash("⚠️", data.message || "Couldn't request SS", "error");
+      }
+    } catch { showFlash("⚠️", "Failed to request SS", "error"); }
+    setRequesting(false);
+    setShowConfirm(false);
+  };
+
+  const handleComplete = async () => {
+    try {
+      const res = await fetch(`/api/hops/${hopId}/ss-complete`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+      if (res.ok) {
+        showFlash("✅", "Spontaneous Stop completed!", "success");
+        refetchSs();
+        queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+      }
+    } catch { showFlash("⚠️", "Failed to complete SS", "error"); }
+  };
+
+  if (isActive && stop.status === "requested") {
+    return (
+      <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200/50 dark:border-yellow-700/30 rounded-lg p-2.5" data-testid="ss-waiting-approval">
+        <p className="text-[11px] font-bold text-yellow-800 dark:text-yellow-300 flex items-center gap-1.5">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Waiting for driver to approve your stop...
+        </p>
+        <p className="text-[10px] text-yellow-700/70 dark:text-yellow-400/60 mt-0.5">$2.00 fee will be added if approved</p>
+      </div>
+    );
+  }
+
+  if (isActive && stop.status === "approved") {
+    return (
+      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-700/30 rounded-lg p-2.5" data-testid="ss-approved">
+        <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+          <Check className="w-3.5 h-3.5" /> Driver approved your stop!
+        </p>
+        <p className="text-[10px] text-blue-700/70 dark:text-blue-400/60 mt-0.5">Waiting for driver to arrive at the stop location</p>
+      </div>
+    );
+  }
+
+  if (isActive && stop.status === "active") {
+    const mins = Math.floor(localElapsed / 60);
+    const secs = localElapsed % 60;
+    const overTime = localElapsed > 180;
+    const extraMins = overTime ? Math.ceil((localElapsed - 180) / 60) : 0;
+    const extraFee = extraMins * 0.50;
+    const totalFee = 2.00 + extraFee;
+    const timeLeft = Math.max(0, 180 - localElapsed);
+
+    return (
+      <div className={`border rounded-lg p-2.5 ${overTime ? 'bg-red-50 dark:bg-red-950/20 border-red-200/50 dark:border-red-700/30' : 'bg-green-50 dark:bg-green-950/20 border-green-200/50 dark:border-green-700/30'}`} data-testid="ss-active-hopper">
+        <p className={`text-[11px] font-bold flex items-center gap-1.5 ${overTime ? 'text-red-800 dark:text-red-300' : 'text-green-800 dark:text-green-300'}`}>
+          <Timer className="w-3.5 h-3.5" />
+          {overTime ? "⚠️ Over time!" : "Spontaneous Stop Active"}
+        </p>
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-[11px] font-mono font-bold text-foreground dark:text-white">
+            {overTime ? `+${mins - 3}:${String(secs).padStart(2, '0')} over` : `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')} left`}
+          </span>
+          <span className="text-[10px] font-bold text-foreground dark:text-white">${totalFee.toFixed(2)}</span>
+        </div>
+        {overTime && (
+          <p className="text-[9px] text-red-600 dark:text-red-400 mt-0.5">$0.50/min being added. Please hurry back!</p>
+        )}
+        <Button size="sm" className="w-full mt-2 text-[10px] h-7 bg-green-600 hover:bg-green-700 text-white" onClick={handleComplete} data-testid="button-ss-done">
+          I'm Done — Back to Car
+        </Button>
+      </div>
+    );
+  }
+
+  if (isActive && stop.status === "denied") {
+    return (
+      <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/50 dark:border-red-700/30 rounded-lg p-2 text-[10px] text-red-700 dark:text-red-300" data-testid="ss-denied">
+        <p className="font-medium">Driver declined the spontaneous stop request</p>
+      </div>
+    );
+  }
+
+  return (
+    <div data-testid="ss-button-container">
+      {showConfirm ? (
+        <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200/50 dark:border-purple-700/30 rounded-lg p-2.5 space-y-2" data-testid="ss-confirm-dialog">
+          <p className="text-[11px] font-bold text-purple-800 dark:text-purple-300">Want to make a Spontaneous Stop?</p>
+          <div className="text-[10px] text-purple-700/80 dark:text-purple-400/70 space-y-0.5">
+            <p>• Must be along the current route</p>
+            <p>• Quick stop — under 3 minutes</p>
+            <p>• $2.00 fee added to your ride</p>
+            <p>• $0.50/min after 3 minutes</p>
+            <p>• Driver must approve</p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" className="flex-1 text-[10px] h-7 bg-purple-600 hover:bg-purple-700 text-white" onClick={handleRequest} disabled={requesting} data-testid="button-ss-confirm">
+              {requesting ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes, Request SS"}
+            </Button>
+            <Button size="sm" variant="outline" className="flex-1 text-[10px] h-7" onClick={() => setShowConfirm(false)} data-testid="button-ss-cancel">
+              Never mind
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full text-[10px] h-8 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+          onClick={() => setShowConfirm(true)}
+          data-testid="button-ss-open"
+        >
+          <Square className="w-3 h-3 mr-1" /> SS — Spontaneous Stop
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function SpontaneousStopDriver({ hopId }: { hopId: number }) {
+  const queryClient = useQueryClient();
+
+  const { data: ssData, refetch: refetchSs } = useQuery({
+    queryKey: ['/api/hops', hopId, 'ss-status'],
+    queryFn: async () => {
+      const res = await fetch(`/api/hops/${hopId}/ss-status`, { credentials: 'include' });
+      if (!res.ok) return { active: false };
+      return res.json();
+    },
+    refetchInterval: 3000,
+  });
+
+  const stop = ssData?.stop;
+  const isActive = ssData?.active && stop;
+
+  const [localElapsed, setLocalElapsed] = useState(0);
+  useEffect(() => {
+    if (!stop?.driverArrivedAt || stop.status !== "active") { setLocalElapsed(0); return; }
+    const arrivalTime = new Date(stop.driverArrivedAt).getTime();
+    const tick = () => setLocalElapsed(Math.floor((Date.now() - arrivalTime) / 1000));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [stop?.driverArrivedAt, stop?.status]);
+
+  const handleApprove = async () => {
+    try {
+      const res = await fetch(`/api/hops/${hopId}/ss-approve`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+      if (res.ok) { showFlash("✅", "Stop approved!", "success"); refetchSs(); }
+    } catch { showFlash("⚠️", "Failed to approve", "error"); }
+  };
+
+  const handleDeny = async () => {
+    try {
+      const res = await fetch(`/api/hops/${hopId}/ss-deny`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+      if (res.ok) { showFlash("🚫", "Stop denied", "info"); refetchSs(); }
+    } catch { showFlash("⚠️", "Failed to deny", "error"); }
+  };
+
+  const handleArrive = async () => {
+    try {
+      const res = await fetch(`/api/hops/${hopId}/ss-arrive`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+      if (res.ok) { showFlash("📍", "Arrived at stop — timer started!", "success"); refetchSs(); }
+    } catch { showFlash("⚠️", "Failed to mark arrival", "error"); }
+  };
+
+  const handleComplete = async () => {
+    try {
+      const res = await fetch(`/api/hops/${hopId}/ss-complete`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+      if (res.ok) {
+        showFlash("✅", "Stop completed!", "success");
+        refetchSs();
+        queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+      }
+    } catch { showFlash("⚠️", "Failed to complete", "error"); }
+  };
+
+  if (!isActive) return null;
+
+  if (stop.status === "requested") {
+    return (
+      <div className="bg-yellow-50 dark:bg-yellow-950/20 border-2 border-yellow-400 dark:border-yellow-600 rounded-xl p-3 space-y-2" data-testid="ss-driver-request">
+        <p className="text-sm font-bold text-yellow-800 dark:text-yellow-200 flex items-center gap-1.5">
+          🛑 Hopper wants a Spontaneous Stop
+        </p>
+        <p className="text-[10px] text-yellow-700/80 dark:text-yellow-400/70">
+          Must be on the current route. Stop is under 3 min. You'll earn extra fare.
+        </p>
+        <div className="flex gap-2">
+          <Button size="sm" className="flex-1 text-xs h-8 bg-green-600 hover:bg-green-700 text-white" onClick={handleApprove} data-testid="button-ss-approve">
+            <Check className="w-3.5 h-3.5 mr-1" /> Approve
+          </Button>
+          <Button size="sm" variant="outline" className="flex-1 text-xs h-8 border-red-300 text-red-600 hover:bg-red-50" onClick={handleDeny} data-testid="button-ss-deny">
+            <X className="w-3.5 h-3.5 mr-1" /> Deny
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (stop.status === "approved") {
+    return (
+      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-300 dark:border-blue-700 rounded-xl p-3 space-y-2" data-testid="ss-driver-approved">
+        <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+          <Navigation className="w-3.5 h-3.5" /> Head to the stop location
+        </p>
+        <Button size="sm" className="w-full text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleArrive} data-testid="button-ss-arrived">
+          <MapPin className="w-3.5 h-3.5 mr-1" /> I've Arrived at Stop
+        </Button>
+      </div>
+    );
+  }
+
+  if (stop.status === "active") {
+    const mins = Math.floor(localElapsed / 60);
+    const secs = localElapsed % 60;
+    const overTime = localElapsed > 180;
+    const extraMins = overTime ? Math.ceil((localElapsed - 180) / 60) : 0;
+    const extraFee = extraMins * 0.50;
+    const totalFee = 2.00 + extraFee;
+
+    return (
+      <div className={`border-2 rounded-xl p-3 space-y-2 ${overTime ? 'bg-red-50 dark:bg-red-950/20 border-red-400 dark:border-red-600' : 'bg-green-50 dark:bg-green-950/20 border-green-400 dark:border-green-600'}`} data-testid="ss-driver-active">
+        <div className="flex items-center justify-between">
+          <p className={`text-sm font-bold flex items-center gap-1.5 ${overTime ? 'text-red-800 dark:text-red-300' : 'text-green-800 dark:text-green-300'}`}>
+            <Timer className="w-4 h-4" /> SS Timer
+          </p>
+          <span className="text-lg font-mono font-black text-foreground dark:text-white" data-testid="text-ss-timer">
+            {mins}:{String(secs).padStart(2, '0')}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-foreground/70 dark:text-gray-300">
+            {overTime ? `$0.50/min extra since 3:00` : "Hopper has 3 min"}
+          </span>
+          <span className="text-xs font-bold text-foreground dark:text-white flex items-center gap-0.5">
+            <DollarSign className="w-3 h-3" /> {totalFee.toFixed(2)} earned
+          </span>
+        </div>
+        <p className="text-[10px] text-foreground/60 dark:text-gray-400 italic">
+          Please be patient — you will be paid additional fare for your time :)
+        </p>
+        <Button size="sm" className="w-full text-xs h-8 bg-orange-600 hover:bg-orange-700 text-white" onClick={handleComplete} data-testid="button-ss-complete-driver">
+          Hopper Returned — End Stop
+        </Button>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function RideChat({ hopId, currentUserId }: { hopId: number; currentUserId: number }) {
@@ -1504,6 +1795,7 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
                   </p>
                   <p className="text-[10px] text-amber-700/80 dark:text-amber-400/60 mt-0.5">Please take your hopper all the way to their destination marker.</p>
                 </div>
+                <SpontaneousStopDriver hopId={hop.id} />
                 <Button
                   className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm rounded-xl"
                   onClick={async () => {
@@ -2460,31 +2752,51 @@ function InstaHopView({ user }: { user: User }) {
 
   const [proximityAlerted, setProximityAlerted] = useState<{ pickup: boolean; dropoff: boolean }>({ pickup: false, dropoff: false });
   const proximityAudioRef = useRef<HTMLAudioElement | null>(null);
+  const proximitySoundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pickupTimerStart, setPickupTimerStart] = useState<number | null>(null);
+  const [pickupTimerRemaining, setPickupTimerRemaining] = useState<number | null>(null);
 
   const hasActiveRide = !!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"));
   useLiveLocationBroadcast(hasActiveRide || mode === "drive");
   const tracking = useHopTracking(activeHop?.id, hasActiveRide);
 
+  const PROXIMITY_THRESHOLD = 0.189;
+
   useEffect(() => {
     if (!hasActiveRide || !tracking.available || !tracking.distance) return;
 
-    if (tracking.distance <= 0.1 && !proximityAlerted.pickup && tracking.hopStatus === "matched") {
+    if (tracking.distance <= PROXIMITY_THRESHOLD && !proximityAlerted.pickup && tracking.hopStatus === "matched") {
       setProximityAlerted(prev => ({ ...prev, pickup: true }));
       if (!proximityAudioRef.current) {
         proximityAudioRef.current = new Audio("/driver-approaching-alert.m4a");
         proximityAudioRef.current.volume = 0.9;
       }
+      if (proximitySoundTimerRef.current) {
+        clearTimeout(proximitySoundTimerRef.current);
+        proximitySoundTimerRef.current = null;
+      }
       proximityAudioRef.current.currentTime = 0;
       proximityAudioRef.current.play().catch(() => {});
-      showFlash("🚗", "Your driver is approaching!", "success");
+      const soundDur = getDriverSoundDuration();
+      const durationMs = soundDur === "short" ? 3000 : 8000;
+      proximitySoundTimerRef.current = setTimeout(() => {
+        if (proximityAudioRef.current) {
+          proximityAudioRef.current.pause();
+          proximityAudioRef.current.currentTime = 0;
+        }
+      }, durationMs);
+
+      setPickupTimerStart(Date.now());
+
+      showFlash("🚗", "Your driver is within 1000ft!", "success");
       if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Short Hop", { body: "Your driver is approaching the pickup!", icon: "/favicon.png", tag: "sh-proximity" });
+        new Notification("Short Hop", { body: "Your driver is within 1000ft of pickup!", icon: "/favicon.png", tag: "sh-proximity" });
       }
     }
 
     if (tracking.hopStatus === "in_ride" && tracking.dropoffLat && tracking.dropoffLng && tracking.partnerLat && tracking.partnerLng) {
       const distToDropoff = calcDistance(tracking.partnerLat, tracking.partnerLng, tracking.dropoffLat, tracking.dropoffLng);
-      if (distToDropoff <= 0.1 && !proximityAlerted.dropoff) {
+      if (distToDropoff <= PROXIMITY_THRESHOLD && !proximityAlerted.dropoff) {
         setProximityAlerted(prev => ({ ...prev, dropoff: true }));
         if (!proximityAudioRef.current) {
           proximityAudioRef.current = new Audio("/driver-approaching-alert.m4a");
@@ -2492,6 +2804,15 @@ function InstaHopView({ user }: { user: User }) {
         }
         proximityAudioRef.current.currentTime = 0;
         proximityAudioRef.current.play().catch(() => {});
+        const soundDur = getDriverSoundDuration();
+        const durationMs = soundDur === "short" ? 3000 : 8000;
+        if (proximitySoundTimerRef.current) clearTimeout(proximitySoundTimerRef.current);
+        proximitySoundTimerRef.current = setTimeout(() => {
+          if (proximityAudioRef.current) {
+            proximityAudioRef.current.pause();
+            proximityAudioRef.current.currentTime = 0;
+          }
+        }, durationMs);
         showFlash("📍", "Approaching your destination!", "success");
         if ("Notification" in window && Notification.permission === "granted") {
           new Notification("Short Hop", { body: "Almost at your destination!", icon: "/favicon.png", tag: "sh-proximity-dropoff" });
@@ -2501,8 +2822,24 @@ function InstaHopView({ user }: { user: User }) {
   }, [hasActiveRide, tracking, proximityAlerted]);
 
   useEffect(() => {
+    if (!pickupTimerStart || activeHop?.status !== "matched") {
+      setPickupTimerRemaining(null);
+      return;
+    }
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - pickupTimerStart) / 1000;
+      const remaining = Math.max(0, 180 - elapsed);
+      setPickupTimerRemaining(Math.ceil(remaining));
+      if (remaining <= 0) clearInterval(interval);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [pickupTimerStart, activeHop?.status]);
+
+  useEffect(() => {
     if (!hasActiveRide) {
       setProximityAlerted({ pickup: false, dropoff: false });
+      setPickupTimerStart(null);
+      setPickupTimerRemaining(null);
     }
   }, [hasActiveRide]);
 
@@ -3227,6 +3564,16 @@ function InstaHopView({ user }: { user: User }) {
                         </div>
                       )}
 
+                      {pickupTimerRemaining !== null && activeHop?.status === "matched" && (
+                        <div className={`flex items-center gap-2 rounded-lg p-2 border ${pickupTimerRemaining <= 30 ? 'bg-red-50 dark:bg-red-950/20 border-red-200/50 dark:border-red-700/30' : 'bg-orange-50 dark:bg-orange-950/20 border-orange-200/50 dark:border-orange-700/30'}`} data-testid="display-pickup-timer">
+                          <Timer className={`w-3.5 h-3.5 shrink-0 ${pickupTimerRemaining <= 30 ? 'text-red-600 dark:text-red-400' : 'text-orange-600 dark:text-orange-400'}`} />
+                          <p className={`text-[11px] font-bold ${pickupTimerRemaining <= 30 ? 'text-red-700 dark:text-red-400' : 'text-orange-700 dark:text-orange-400'}`}>
+                            Pickup window: {Math.floor(pickupTimerRemaining / 60)}:{String(pickupTimerRemaining % 60).padStart(2, '0')}
+                            {pickupTimerRemaining <= 0 && " — Time expired"}
+                          </p>
+                        </div>
+                      )}
+
                       {tracking.pickupSide && activeHop?.status === "matched" && (
                         <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg p-2 border border-blue-200/50 dark:border-blue-700/30" data-testid="display-pickup-side">
                           <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -3263,6 +3610,9 @@ function InstaHopView({ user }: { user: User }) {
                           <p className="font-medium flex items-center gap-1"><span>📡</span> GPS is tracking this ride for your protection</p>
                           <p className="mt-0.5 text-amber-600/70 dark:text-amber-400/60">Keep location services enabled for refund eligibility.</p>
                         </div>
+                      )}
+                      {activeHop?.status === "in_ride" && (
+                        <SpontaneousStopHopper hopId={activeHop.id} />
                       )}
                       {(activeHop?.status === "matched" || activeHop?.status === "in_ride") && (
                         <RideChat hopId={activeHop.id} currentUserId={user.id} />

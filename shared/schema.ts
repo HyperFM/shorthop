@@ -558,6 +558,23 @@ export const userActivityWindows = pgTable("user_activity_windows", {
   count: integer("count").default(1),
 });
 
+export const spontaneousStops = pgTable("spontaneous_stops", {
+  id: serial("id").primaryKey(),
+  hopId: integer("hop_id").references(() => shortHops.id).notNull(),
+  hopperId: integer("hopper_id").references(() => users.id).notNull(),
+  driverId: integer("driver_id").references(() => users.id).notNull(),
+  status: text("status").notNull().default("requested"),
+  baseFee: integer("base_fee").default(200),
+  extraMinutesFee: integer("extra_minutes_fee").default(0),
+  driverArrivedAt: timestamp("driver_arrived_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSpontaneousStopSchema = createInsertSchema(spontaneousStops).omit({ id: true, createdAt: true });
+export type SpontaneousStop = typeof spontaneousStops.$inferSelect;
+export type InsertSpontaneousStop = z.infer<typeof insertSpontaneousStopSchema>;
+
 export const rideMessages = pgTable("ride_messages", {
   id: serial("id").primaryKey(),
   hopId: integer("hop_id").references(() => shortHops.id).notNull(),

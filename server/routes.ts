@@ -11,7 +11,7 @@ import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
 import { db } from "./db";
-import { notifications, founderMessages, vipMessages, shortHops, users, donations, routineRoutes } from "@shared/schema";
+import { notifications, founderMessages, vipMessages, shortHops, users, donations, routineRoutes, spontaneousStops } from "@shared/schema";
 import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
@@ -2237,6 +2237,191 @@ export async function registerRoutes(
       res.json(completed);
     } catch (err) {
       res.status(500).json({ message: "Failed to auto-complete ride" });
+    }
+  });
+
+  app.post('/api/hops/:id/ss-request', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.status !== "in_ride") return res.status(400).json({ message: "Must be in ride" });
+      if (hop.walkerId !== req.user.id) return res.status(403).json({ message: "Only hopper can request SS" });
+
+      const existing = await db.select().from(spontaneousStops).where(
+        and(
+          eq(spontaneousStops.hopId, hopId),
+          sql`${spontaneousStops.status} IN ('requested', 'approved', 'active')`
+        )
+      );
+      if (existing.length > 0) return res.status(400).json({ message: "SS already pending or in progress" });
+
+      const [stop] = await db.insert(spontaneousStops).values({
+        hopId,
+        hopperId: hop.walkerId,
+        driverId: hop.driverId!,
+        status: "requested",
+        baseFee: 200,
+        extraMinutesFee: 0,
+      }).returning();
+
+      res.json(stop);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to request SS" });
+    }
+  });
+
+  app.post('/api/hops/:id/ss-approve', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.driverId !== req.user.id) return res.status(403).json({ message: "Only driver can approve SS" });
+
+      const [stop] = await db.select().from(spontaneousStops).where(
+        and(eq(spontaneousStops.hopId, hopId), eq(spontaneousStops.status, "requested"))
+      );
+      if (!stop) return res.status(404).json({ message: "No pending SS request" });
+
+      const [updated] = await db.update(spontaneousStops)
+        .set({ status: "approved" })
+        .where(eq(spontaneousStops.id, stop.id))
+        .returning();
+
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to approve SS" });
+    }
+  });
+
+  app.post('/api/hops/:id/ss-deny', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.driverId !== req.user.id) return res.status(403).json({ message: "Only driver can deny SS" });
+
+      const [stop] = await db.select().from(spontaneousStops).where(
+        and(eq(spontaneousStops.hopId, hopId), eq(spontaneousStops.status, "requested"))
+      );
+      if (!stop) return res.status(404).json({ message: "No pending SS request" });
+
+      const [updated] = await db.update(spontaneousStops)
+        .set({ status: "denied" })
+        .where(eq(spontaneousStops.id, stop.id))
+        .returning();
+
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to deny SS" });
+    }
+  });
+
+  app.post('/api/hops/:id/ss-arrive', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.driverId !== req.user.id) return res.status(403).json({ message: "Only driver can mark arrival" });
+
+      const [stop] = await db.select().from(spontaneousStops).where(
+        and(eq(spontaneousStops.hopId, hopId), eq(spontaneousStops.status, "approved"))
+      );
+      if (!stop) return res.status(404).json({ message: "No approved SS" });
+
+      const [updated] = await db.update(spontaneousStops)
+        .set({ status: "active", driverArrivedAt: new Date() })
+        .where(eq(spontaneousStops.id, stop.id))
+        .returning();
+
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to mark SS arrival" });
+    }
+  });
+
+  app.post('/api/hops/:id/ss-complete', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.driverId !== req.user.id && hop.walkerId !== req.user.id) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      const [stop] = await db.select().from(spontaneousStops).where(
+        and(eq(spontaneousStops.hopId, hopId), eq(spontaneousStops.status, "active"))
+      );
+      if (!stop) return res.status(404).json({ message: "No active SS" });
+
+      let extraFee = 0;
+      if (stop.driverArrivedAt) {
+        const elapsedMs = Date.now() - new Date(stop.driverArrivedAt).getTime();
+        const elapsedMinutes = elapsedMs / 60000;
+        if (elapsedMinutes > 3) {
+          const extraMinutes = Math.ceil(elapsedMinutes - 3);
+          extraFee = extraMinutes * 50;
+        }
+      }
+
+      const [updated] = await db.update(spontaneousStops)
+        .set({ status: "completed", completedAt: new Date(), extraMinutesFee: extraFee })
+        .where(eq(spontaneousStops.id, stop.id))
+        .returning();
+
+      const totalSsFee = 200 + extraFee;
+      const currentPrice = hop.priceCents || 0;
+      await db.update(shortHops)
+        .set({ priceCents: currentPrice + totalSsFee })
+        .where(eq(shortHops.id, hopId));
+
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to complete SS" });
+    }
+  });
+
+  app.get('/api/hops/:id/ss-status', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const stops = await db.select().from(spontaneousStops)
+        .where(eq(spontaneousStops.hopId, hopId))
+        .orderBy(desc(spontaneousStops.createdAt))
+        .limit(1);
+
+      if (stops.length === 0) return res.json({ active: false });
+
+      const stop = stops[0];
+      let elapsedSeconds = 0;
+      let extraFee = 0;
+      if (stop.driverArrivedAt && (stop.status === "active")) {
+        elapsedSeconds = Math.floor((Date.now() - new Date(stop.driverArrivedAt).getTime()) / 1000);
+        const elapsedMinutes = elapsedSeconds / 60;
+        if (elapsedMinutes > 3) {
+          extraFee = Math.ceil(elapsedMinutes - 3) * 50;
+        }
+      }
+
+      const isLive = stop.status === "requested" || stop.status === "approved" || stop.status === "active";
+      const recentlyDenied = stop.status === "denied" && stop.createdAt && (Date.now() - new Date(stop.createdAt).getTime() < 30000);
+
+      res.json({
+        active: isLive || recentlyDenied,
+        stop: {
+          ...stop,
+          elapsedSeconds,
+          currentExtraFee: extraFee,
+          totalFee: 200 + extraFee,
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to get SS status" });
     }
   });
 
