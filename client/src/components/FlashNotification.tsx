@@ -29,6 +29,7 @@ let flashId = 0;
 let globalAddFlash: ((msg: FlashPayload) => void) | null = null;
 
 export function showFlash(emoji: string, text: string, type: FlashType = "success", username?: string) {
+  if (type === "success" || type === "info") return;
   globalAddFlash?.({ emoji, text, type, username });
 }
 

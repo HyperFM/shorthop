@@ -2812,6 +2812,16 @@ export async function registerRoutes(
       } else {
         liveLocations.delete(req.user.id);
         await db.delete(routineRoutes).where(eq(routineRoutes.driverId, req.user.id));
+
+        const driverHops = await storage.getHopsForDriver(req.user.id);
+        for (const hop of driverHops) {
+          if (hop.status === "requested" || hop.status === "matched") {
+            await db.update(shortHops)
+              .set({ status: "cancelled", driverId: null })
+              .where(eq(shortHops.id, hop.id));
+            console.log(`Driver ${req.user.id} went offline — cancelled hop ${hop.id} (was ${hop.status})`);
+          }
+        }
       }
 
       res.json(updated);

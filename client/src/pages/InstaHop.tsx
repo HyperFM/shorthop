@@ -1370,76 +1370,112 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
   const commonTraits = getCommonTraits(user, driverInfo);
   const isInRide = activeHop.status === "in_ride";
   const isMatched = activeHop.status === "matched";
+  const [collapsed, setCollapsed] = useState(false);
+
+  const etaNum = tracking.etaMinutes ? parseInt(tracking.etaMinutes) : null;
+  const showApproaching = isMatched && etaNum !== null && etaNum <= 3;
 
   return (
     <motion.div
       className="absolute bottom-0 left-0 right-0 z-30"
       data-testid="card-active-ride"
       initial={{ y: 400, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ type: "spring", damping: 22, stiffness: 260, delay: 0.05 }}
+      animate={{ y: collapsed ? 260 : 0, opacity: 1 }}
+      transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0.05 }}
     >
-      <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-t-[2rem] shadow-2xl shadow-blue-900/40 px-5 pt-5 pb-6 min-h-[52vh] flex flex-col">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 rounded-t-[2rem] shadow-2xl shadow-blue-900/50 px-5 pt-3 pb-6 min-h-[44vh] flex flex-col">
+        <motion.div
+          className="flex justify-center mb-2 cursor-grab active:cursor-grabbing py-2 -my-1 touch-none"
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={0}
+          onDrag={(_e, info) => {
+            if (Math.abs(info.offset.y) > 60) {
+              setCollapsed(info.offset.y > 0);
+            }
+          }}
+          onDragEnd={() => {}}
+        >
+          <div className="w-10 h-1 rounded-full bg-white/30" />
+        </motion.div>
+
+        {showApproaching && (
+          <motion.div
+            className="bg-green-400/25 border border-green-300/40 rounded-2xl px-4 py-3 mb-3 flex items-center gap-3"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            data-testid="display-approaching-timer"
+          >
+            <div className="w-10 h-10 rounded-full bg-green-400/30 flex items-center justify-center shrink-0">
+              <Car className="w-5 h-5 text-green-200" />
+            </div>
+            <div>
+              <p className="text-white text-sm font-black">Driver arriving soon!</p>
+              <p className="text-green-200 text-xs font-bold">~{etaNum} min away — get ready</p>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             {isMatched ? (
-              <div className="bg-white/15 rounded-full px-3 py-1.5 flex items-center gap-1.5">
+              <div className="bg-white/20 rounded-full px-3.5 py-1.5 flex items-center gap-1.5">
                 <Car className="w-4 h-4 text-white" />
-                <span className="text-white text-xs font-bold">Driver on the way</span>
+                <span className="text-white text-sm font-black">Driver on the way</span>
               </div>
             ) : (
-              <div className="bg-green-400/20 rounded-full px-3 py-1.5 flex items-center gap-1.5">
-                <Navigation className="w-4 h-4 text-green-300" />
-                <span className="text-green-200 text-xs font-bold">In Ride</span>
+              <div className="bg-green-400/25 rounded-full px-3.5 py-1.5 flex items-center gap-1.5">
+                <Navigation className="w-4 h-4 text-green-200" />
+                <span className="text-green-100 text-sm font-black">In Ride</span>
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
             {tracking.available && tracking.distance !== null && (
-              <div className="bg-white/15 rounded-full px-2.5 py-1" data-testid="text-tracking-distance">
-                <span className="text-white text-[11px] font-bold">
+              <div className="bg-white/20 rounded-full px-3 py-1" data-testid="text-tracking-distance">
+                <span className="text-white text-xs font-black">
                   {tracking.distance < 0.1 ? "< 0.1 mi" : `${tracking.distance.toFixed(1)} mi`}
                 </span>
               </div>
             )}
             {tracking.etaMinutes && isMatched && (
-              <div className="bg-white/20 rounded-full px-2.5 py-1" data-testid="display-pickup-eta">
-                <span className="text-white text-[11px] font-bold">~{tracking.etaMinutes} min</span>
+              <div className="bg-white/25 rounded-full px-3 py-1" data-testid="display-pickup-eta">
+                <span className="text-white text-xs font-black">~{tracking.etaMinutes} min</span>
               </div>
             )}
           </div>
         </div>
 
         {driverInfo && (
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 mb-3" data-testid="driver-profile-section">
+          <div className="bg-white/12 backdrop-blur-sm rounded-2xl p-4 mb-3" data-testid="driver-profile-section">
             <div className="flex items-center gap-3.5">
               {driverInfo.profilePhoto ? (
                 <img
                   src={driverInfo.profilePhoto}
-                  className="w-14 h-14 rounded-2xl object-cover shrink-0 border-2 border-white/40 shadow-lg"
+                  className="w-14 h-14 rounded-2xl object-cover shrink-0 border-2 border-white/50 shadow-lg"
                   alt=""
                   data-testid="img-driver-photo"
                 />
               ) : (
-                <div className="w-14 h-14 rounded-2xl bg-white/15 border-2 border-white/30 flex items-center justify-center shrink-0">
-                  <Car className="w-6 h-6 text-white/70" />
+                <div className="w-14 h-14 rounded-2xl bg-white/20 border-2 border-white/40 flex items-center justify-center shrink-0">
+                  <Car className="w-6 h-6 text-white/80" />
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-base font-black text-white truncate flex items-center gap-1.5" data-testid="text-driver-name">
+                <p className="text-lg font-black text-white truncate flex items-center gap-1.5" data-testid="text-driver-name">
                   {driverInfo.username}
-                  {driverInfo.idVerified && <Shield className="w-3.5 h-3.5 text-blue-200 shrink-0" />}
+                  {driverInfo.idVerified && <Shield className="w-4 h-4 text-blue-200 shrink-0" />}
                 </p>
-                <p className="text-[11px] text-white/60 truncate mt-0.5" data-testid="text-driver-vehicle">
+                <p className="text-xs text-white/80 font-bold truncate mt-0.5" data-testid="text-driver-vehicle">
                   {[driverInfo.vehicleColor, driverInfo.vehicleMake, driverInfo.vehicleModel].filter(Boolean).join(" ")}
                   {driverInfo.licensePlate && ` · ${driverInfo.licensePlate}`}
                 </p>
                 {driverInfo.totalHops !== undefined && driverInfo.totalHops > 0 && (
-                  <p className="text-[10px] text-white/40 mt-0.5">{driverInfo.totalHops} hops completed</p>
+                  <p className="text-[11px] text-white/60 font-semibold mt-0.5">{driverInfo.totalHops} hops completed</p>
                 )}
               </div>
             </div>
-            <p className="text-[9px] text-white/35 italic mt-2.5 text-center" data-testid="display-driver-preference-advisory">
+            <p className="text-[10px] text-white/50 italic mt-2.5 text-center font-medium" data-testid="display-driver-preference-advisory">
               {driverInfo.driverConvoComfort === "quiet_ride" ? "🤫 prefers quiet" : driverInfo.driverConvoComfort === "social" ? "🤝 loves chatting" : "😊 friendly vibes"} · please be kind & respect all preferences
             </p>
           </div>
@@ -1447,9 +1483,9 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
 
         <div className="flex-1 space-y-2.5 overflow-y-auto">
           {pickupTimerRemaining !== null && isMatched && (
-            <div className={`flex items-center gap-2.5 rounded-xl p-3 ${pickupTimerRemaining <= 30 ? 'bg-red-500/20 border border-red-400/30' : 'bg-white/10 border border-white/10'}`} data-testid="display-pickup-timer">
-              <Timer className={`w-4 h-4 shrink-0 ${pickupTimerRemaining <= 30 ? 'text-red-300' : 'text-white/70'}`} />
-              <p className={`text-xs font-bold ${pickupTimerRemaining <= 30 ? 'text-red-200' : 'text-white/80'}`}>
+            <div className={`flex items-center gap-2.5 rounded-xl p-3 ${pickupTimerRemaining <= 30 ? 'bg-red-500/25 border border-red-400/40' : 'bg-white/12 border border-white/15'}`} data-testid="display-pickup-timer">
+              <Timer className={`w-4 h-4 shrink-0 ${pickupTimerRemaining <= 30 ? 'text-red-300' : 'text-white/80'}`} />
+              <p className={`text-xs font-black ${pickupTimerRemaining <= 30 ? 'text-red-200' : 'text-white/90'}`}>
                 Pickup window: {Math.floor(pickupTimerRemaining / 60)}:{String(pickupTimerRemaining % 60).padStart(2, '0')}
                 {pickupTimerRemaining <= 0 && " — Time expired"}
               </p>
@@ -1457,24 +1493,24 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
           )}
 
           {tracking.pickupSide && isMatched && (
-            <div className="flex items-center gap-2.5 bg-white/10 rounded-xl p-3 border border-white/10" data-testid="display-pickup-side">
+            <div className="flex items-center gap-2.5 bg-white/12 rounded-xl p-3 border border-white/15" data-testid="display-pickup-side">
               <MapPin className="w-4 h-4 text-blue-200 shrink-0" />
-              <p className="text-xs font-semibold text-white/90">{tracking.pickupSide}</p>
+              <p className="text-xs font-bold text-white">{tracking.pickupSide}</p>
             </div>
           )}
 
           {tracking.available && tracking.direction && isMatched && (
-            <p className="text-[11px] text-white/50 px-1">
+            <p className="text-xs text-white/70 font-semibold px-1">
               Driver heading {tracking.direction} toward you
             </p>
           )}
 
           {commonTraits.length > 0 && (
-            <div className="bg-white/10 rounded-xl px-3.5 py-2.5 border border-white/10" data-testid="common-traits">
-              <p className="text-[9px] font-bold text-white/50 uppercase tracking-wider mb-1">In Common</p>
+            <div className="bg-white/12 rounded-xl px-3.5 py-2.5 border border-white/15" data-testid="common-traits">
+              <p className="text-[10px] font-black text-white/60 uppercase tracking-wider mb-1">In Common</p>
               <div className="flex flex-wrap gap-1.5">
                 {commonTraits.map((trait, i) => (
-                  <span key={i} className="text-[10px] text-white/80 bg-white/10 rounded-full px-2 py-0.5 flex items-center gap-1">
+                  <span key={i} className="text-[11px] text-white font-semibold bg-white/12 rounded-full px-2.5 py-0.5 flex items-center gap-1">
                     <Star className="w-2.5 h-2.5 shrink-0 text-yellow-300" /> {trait}
                   </span>
                 ))}
@@ -1489,7 +1525,6 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
                 try {
                   await apiRequest("POST", `/api/hops/${activeHop.id}/start-ride`);
                   queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
-                  showFlash("🚗", "Ride started!", "success");
                 } catch {
                   showFlash("⚠️", "Couldn't start ride", "error");
                 }
@@ -1503,9 +1538,9 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
           {isInRide && <SafetyMessageRotator />}
 
           {isInRide && (
-            <div className="bg-white/10 rounded-xl p-3 border border-white/10 text-[10px] text-white/70" data-testid="gps-ride-info">
-              <p className="font-medium flex items-center gap-1.5"><span>📡</span> GPS is tracking this ride for your protection</p>
-              <p className="mt-0.5 text-white/40">Keep location services enabled for refund eligibility.</p>
+            <div className="bg-white/12 rounded-xl p-3 border border-white/15 text-[11px] text-white/80" data-testid="gps-ride-info">
+              <p className="font-bold flex items-center gap-1.5"><span>📡</span> GPS is tracking this ride for your protection</p>
+              <p className="mt-0.5 text-white/50 font-medium">Keep location services enabled for refund eligibility.</p>
             </div>
           )}
 
