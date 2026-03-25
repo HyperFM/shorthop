@@ -3102,6 +3102,25 @@ function DriverAutoNotificationsEffect({ hopsCount }: { hopsCount: number }) {
   );
 }
 
+const globalAudioUnlocked = { current: false };
+function unlockAudioOnInteraction() {
+  if (globalAudioUnlocked.current) return;
+  globalAudioUnlocked.current = true;
+  try {
+    const silent = new Audio("/driver-approaching-alert.m4a");
+    silent.volume = 0;
+    silent.play().then(() => { silent.pause(); silent.currentTime = 0; }).catch(() => {});
+  } catch {}
+}
+if (typeof window !== "undefined") {
+  const events = ["touchstart", "click", "keydown"];
+  const handler = () => {
+    unlockAudioOnInteraction();
+    events.forEach(e => document.removeEventListener(e, handler, true));
+  };
+  events.forEach(e => document.addEventListener(e, handler, { once: true, capture: true }));
+}
+
 function InstaHopView({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -3514,11 +3533,38 @@ function InstaHopView({ user }: { user: User }) {
   }, [hasActiveRide]);
 
 
+  const hopperMatchAudioRef = useRef<HTMLAudioElement | null>(null);
+  const hopperMatchPlayedRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (activeHop && activeHop.status === "matched") {
       setIsMatching(false);
+
+      if (mode !== "drive" && hopperMatchPlayedRef.current !== activeHop.id) {
+        hopperMatchPlayedRef.current = activeHop.id;
+        try {
+          if (!hopperMatchAudioRef.current) {
+            hopperMatchAudioRef.current = new Audio("/driver-approaching-alert.m4a");
+            hopperMatchAudioRef.current.volume = 0.9;
+          }
+          hopperMatchAudioRef.current.currentTime = 0;
+          const playPromise = hopperMatchAudioRef.current.play();
+          if (playPromise) {
+            playPromise.catch(() => {
+              setTimeout(() => {
+                hopperMatchAudioRef.current?.play().catch(() => {});
+              }, 500);
+            });
+          }
+        } catch {}
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+      }
     }
-  }, [activeHop]);
+
+    if (!activeHop || activeHop.status !== "matched") {
+      hopperMatchPlayedRef.current = null;
+    }
+  }, [activeHop?.id, activeHop?.status, mode]);
 
   useEffect(() => {
     if (!activeHop || activeHop.status !== "requested") return;
