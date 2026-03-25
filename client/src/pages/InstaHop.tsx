@@ -2143,10 +2143,60 @@ const DEPARTURE_OPTIONS = [
   { value: -1, label: "Custom" },
 ];
 
-function QuickLocationButtons({ user, onSelectStart, onSelectEnd, mode }: { user: User; onSelectStart: (addr: string) => void; onSelectEnd: (addr: string) => void; mode: "hopper" | "driver" }) {
+function SavedLocationChips({ user, onSelect, mode, target }: { user: User; onSelect: (addr: string) => void; mode: "hopper" | "driver"; target: "start" | "end" }) {
   const hasHome = !!(user as any).homeAddress;
   const hasWork = !!(user as any).workAddress;
   const hasCustom = !!(user as any).customLocationAddress;
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap px-1">
+      {target === "start" && (
+        <button
+          type="button"
+          onClick={() => onSelect("🌍 Current Location")}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-700/40 hover:bg-blue-100 dark:hover:bg-blue-900/70 transition-all"
+          data-testid={`button-${mode}-${target}-current`}
+        >
+          🌍 Current
+        </button>
+      )}
+      {hasHome && (
+        <button
+          type="button"
+          onClick={() => onSelect((user as any).homeAddress)}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all"
+          data-testid={`button-${mode}-${target}-home`}
+        >
+          <Home className="w-3 h-3" /> Home
+        </button>
+      )}
+      {hasWork && (
+        <button
+          type="button"
+          onClick={() => onSelect((user as any).workAddress)}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all"
+          data-testid={`button-${mode}-${target}-work`}
+        >
+          <Briefcase className="w-3 h-3" /> Work
+        </button>
+      )}
+      {hasCustom && (
+        <button
+          type="button"
+          onClick={() => onSelect((user as any).customLocationAddress)}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all"
+          data-testid={`button-${mode}-${target}-fav`}
+        >
+          <Star className="w-3 h-3" /> {(user as any).customLocationName || "Fav"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function QuickLocationButtons({ user, onSelectStart, onSelectEnd, mode }: { user: User; onSelectStart: (addr: string) => void; onSelectEnd: (addr: string) => void; mode: "hopper" | "driver" }) {
+  const hasHome = !!(user as any).homeAddress;
+  const hasWork = !!(user as any).workAddress;
   const [showSetup, setShowSetup] = useState<"home" | "work" | "custom" | null>(null);
   const queryClient = useQueryClient();
 
@@ -2195,58 +2245,28 @@ function QuickLocationButtons({ user, onSelectStart, onSelectEnd, mode }: { user
             <button
               type="button"
               onClick={() => handleQuickFill("home_to_work")}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-700/40 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-700/40 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-all"
               data-testid={`button-${mode}-home-to-work`}
             >
-              <Home className="w-3 h-3" />→<Briefcase className="w-3 h-3" />
+              <Home className="w-3 h-3" /> → <Briefcase className="w-3 h-3" />
             </button>
             <button
               type="button"
               onClick={() => handleQuickFill("work_to_home")}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border border-purple-200/60 dark:border-purple-700/40 hover:bg-purple-100 dark:hover:bg-purple-950/50 transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border border-purple-200/60 dark:border-purple-700/40 hover:bg-purple-100 dark:hover:bg-purple-950/50 transition-all"
               data-testid={`button-${mode}-work-to-home`}
             >
-              <Briefcase className="w-3 h-3" />→<Home className="w-3 h-3" />
+              <Briefcase className="w-3 h-3" /> → <Home className="w-3 h-3" />
             </button>
           </>
-        )}
-        {hasHome && (
-          <button
-            type="button"
-            onClick={() => onSelectEnd((user as any).homeAddress)}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all"
-            data-testid={`button-${mode}-home`}
-          >
-            <Home className="w-3 h-3" /> Home
-          </button>
-        )}
-        {hasWork && (
-          <button
-            type="button"
-            onClick={() => onSelectEnd((user as any).workAddress)}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all"
-            data-testid={`button-${mode}-work`}
-          >
-            <Briefcase className="w-3 h-3" /> Work
-          </button>
-        )}
-        {hasCustom && (
-          <button
-            type="button"
-            onClick={() => onSelectEnd((user as any).customLocationAddress)}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-all"
-            data-testid={`button-${mode}-custom`}
-          >
-            <Star className="w-3 h-3" /> {(user as any).customLocationName || "Fav"}
-          </button>
         )}
         <button
           type="button"
           onClick={() => setShowSetup(showSetup ? null : (!hasHome ? "home" : !hasWork ? "work" : "custom"))}
-          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-700/40 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-all"
+          className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-700/40 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-all"
           data-testid={`button-${mode}-set-location`}
         >
-          <Settings2 className="w-3 h-3" /> {!hasHome ? "Set Home" : !hasWork ? "Set Work" : "Edit"}
+          <Settings2 className="w-3 h-3" /> {!hasHome ? "Set Home" : !hasWork ? "Set Work" : "Edit Saved"}
         </button>
       </div>
 
@@ -2275,13 +2295,15 @@ function QuickLocationButtons({ user, onSelectStart, onSelectEnd, mode }: { user
                 </div>
               </div>
               <div className="flex gap-1.5">
-                <Input
-                  placeholder={showSetup === "home" ? "Home address" : showSetup === "work" ? "Work address" : "Custom address"}
-                  value={setupInput}
-                  onChange={(e) => setSetupInput(e.target.value)}
-                  className="h-8 text-xs rounded-lg flex-1"
-                  data-testid={`input-${mode}-setup-address`}
-                />
+                <div className="flex-1">
+                  <AddressAutocomplete
+                    value={setupInput}
+                    onChange={(val) => setSetupInput(val)}
+                    placeholder={showSetup === "home" ? "Home address" : showSetup === "work" ? "Work address" : "Custom address"}
+                    className="h-8 text-xs rounded-lg"
+                    dataTestId={`input-${mode}-setup-address`}
+                  />
+                </div>
                 <Button
                   size="sm"
                   onClick={handleSave}
@@ -2593,52 +2615,40 @@ function DriveNowPanel({ user }: { user: User }) {
           />
           <div className="space-y-1.5">
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-              <div
-                className="h-11 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 pr-3 flex items-center justify-between text-green-700 dark:text-green-400 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
-                data-testid="display-driver-start"
-                onClick={() => driverStartInput === "" && setDriverStartInput("🌍 Current Location")}
-              >
-                <span>{driverStartInput || "Select starting point..."}</span>
-              </div>
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse z-10" />
+              {driverStartInput === "🌍 Current Location" ? (
+                <div
+                  className="h-11 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 pr-3 flex items-center justify-between text-green-700 dark:text-green-400 cursor-pointer"
+                  data-testid="display-driver-start"
+                  onClick={() => setDriverStartInput("")}
+                >
+                  <span>🌍 Current Location</span>
+                  <span className="text-[10px] text-muted-foreground ml-1">tap to edit</span>
+                </div>
+              ) : (
+                <AddressAutocomplete
+                  value={driverStartInput}
+                  onChange={(val) => setDriverStartInput(val)}
+                  placeholder="Enter pickup address..."
+                  className="h-11 text-sm rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 font-semibold"
+                  dataTestId="input-driver-start"
+                />
+              )}
             </div>
-            {driverStartInput && (
-              <div className="flex gap-1 flex-wrap px-1">
-                <button
-                  type="button"
-                  onClick={() => setDriverStartInput("🌍 Current Location")}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                    driverStartInput === "🌍 Current Location"
-                      ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
-                      : "bg-muted/50 text-muted-foreground dark:text-gray-300 hover:bg-muted"
-                  }`}
-                  data-testid="button-driver-start-current"
-                >
-                  🌍 Current
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const custom = prompt("Enter starting location:");
-                    if (custom?.trim()) setDriverStartInput(custom.trim());
-                  }}
-                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-muted/50 text-muted-foreground dark:text-gray-300 hover:bg-muted transition-all"
-                  data-testid="button-driver-start-custom"
-                >
-                  + Custom
-                </button>
-              </div>
-            )}
+            <SavedLocationChips user={user} onSelect={(addr) => setDriverStartInput(addr)} mode="driver" target="start" />
           </div>
-          <div className="relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500" />
-            <Input
-              placeholder="Where are you headed?"
-              className="h-11 text-sm rounded-xl bg-muted/40 dark:bg-white/5 border-border/50 dark:border-white/10 pl-9 focus:bg-background dark:text-white font-semibold"
-              value={driverDestInput}
-              onChange={(e) => setDriverDestInput(e.target.value)}
-              data-testid="input-driver-destination"
-            />
+          <div className="space-y-1.5">
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500 z-10" />
+              <AddressAutocomplete
+                value={driverDestInput}
+                onChange={(val) => setDriverDestInput(val)}
+                placeholder="Where are you headed?"
+                className="h-11 text-sm rounded-xl bg-muted/40 dark:bg-white/5 border-border/50 dark:border-white/10 pl-9 focus:bg-background dark:text-white font-semibold"
+                dataTestId="input-driver-destination"
+              />
+            </div>
+            <SavedLocationChips user={user} onSelect={(addr) => setDriverDestInput(addr)} mode="driver" target="end" />
           </div>
 
           {routeGenerated && routeInfo && (
@@ -3301,7 +3311,6 @@ function InstaHopView({ user }: { user: User }) {
 
   const [cardHoldUrl, setCardHoldUrl] = useState<string | null>(null);
   const [tooFarForInstahop, setTooFarForInstahop] = useState(false);
-  const [showCustomStart, setShowCustomStart] = useState(false);
   const [pricePreview, setPricePreview] = useState<{
     distanceMiles: number;
     etaMinutes: number;
@@ -3983,68 +3992,46 @@ function InstaHopView({ user }: { user: User }) {
                   <div className="space-y-2">
                     <div className="space-y-1.5">
                       <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                        <div
-                          className="h-11 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 pr-3 flex items-center justify-between text-green-700 dark:text-green-400 cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
-                          data-testid="display-instahop-start"
-                          onClick={() => form.watch("startLocation") === "" && form.setValue("startLocation", "🌍 Current Location")}
-                        >
-                          <span>{form.watch("startLocation") || "Select starting point..."}</span>
-                          {walkingInfo && form.watch("startLocation") && (
-                            <span className="text-[10px] font-semibold text-orange-500 shrink-0 ml-2">{walkingInfo.duration} · {walkingInfo.distance}</span>
-                          )}
-                        </div>
-                        <input type="hidden" {...form.register("startLocation")} />
-                      </div>
-                      {form.watch("startLocation") && (
-                        <div className="flex gap-1 flex-wrap px-1">
-                          <button
-                            type="button"
-                            onClick={() => { form.setValue("startLocation", "🌍 Current Location"); setShowCustomStart(false); }}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                              form.watch("startLocation") === "🌍 Current Location"
-                                ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                            }`}
-                            data-testid="button-hopper-start-current"
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse z-10" />
+                        {form.watch("startLocation") === "🌍 Current Location" ? (
+                          <div
+                            className="h-11 text-sm font-bold rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 pr-3 flex items-center justify-between text-green-700 dark:text-green-400 cursor-pointer"
+                            data-testid="display-instahop-start"
+                            onClick={() => form.setValue("startLocation", "")}
                           >
-                            🌍 Current
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              form.setValue("startLocation", "");
-                              setShowCustomStart(true);
-                            }}
-                            className="px-2 py-1 rounded-lg text-[10px] font-bold bg-muted/50 text-muted-foreground hover:bg-muted transition-all"
-                            data-testid="button-hopper-start-custom"
-                          >
-                            + Custom
-                          </button>
-                        </div>
-                      )}
-                      {showCustomStart && form.watch("startLocation") !== "🌍 Current Location" && (
-                        <div className="relative mt-1">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-green-500 z-10" />
+                            <span>🌍 Current Location</span>
+                            <span className="text-[10px] text-muted-foreground ml-1">tap to edit</span>
+                          </div>
+                        ) : (
                           <AddressAutocomplete
                             value={form.watch("startLocation") || ""}
                             onChange={(val) => form.setValue("startLocation", val)}
                             placeholder="Enter pickup address..."
                             className="h-11 text-sm rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-700/40 pl-9 font-semibold"
-                            dataTestId="input-instahop-start-custom"
+                            dataTestId="input-instahop-start"
                           />
+                        )}
+                        <input type="hidden" {...form.register("startLocation")} />
+                      </div>
+                      {walkingInfo && form.watch("startLocation") && (
+                        <div className="flex items-center gap-1 px-1">
+                          <span className="text-[10px] font-semibold text-orange-500">{walkingInfo.duration} · {walkingInfo.distance}</span>
                         </div>
                       )}
+                      <SavedLocationChips user={user} onSelect={(addr) => form.setValue("startLocation", addr)} mode="hopper" target="start" />
                     </div>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500 z-10" />
-                      <AddressAutocomplete
-                        value={form.watch("endLocation") || ""}
-                        onChange={(val) => form.setValue("endLocation", val)}
-                        placeholder="Where to?"
-                        className="h-11 text-sm rounded-xl bg-muted/40 dark:bg-white/5 border-border/50 dark:border-white/10 pl-9 focus:bg-background dark:text-white font-semibold"
-                        dataTestId="input-instahop-destination"
-                      />
+                    <div className="space-y-1.5">
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-sm bg-orange-500 z-10" />
+                        <AddressAutocomplete
+                          value={form.watch("endLocation") || ""}
+                          onChange={(val) => form.setValue("endLocation", val)}
+                          placeholder="Where to?"
+                          className="h-11 text-sm rounded-xl bg-muted/40 dark:bg-white/5 border-border/50 dark:border-white/10 pl-9 focus:bg-background dark:text-white font-semibold"
+                          dataTestId="input-instahop-destination"
+                        />
+                      </div>
+                      <SavedLocationChips user={user} onSelect={(addr) => form.setValue("endLocation", addr)} mode="hopper" target="end" />
                     </div>
                   </div>
 
