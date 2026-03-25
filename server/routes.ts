@@ -3923,6 +3923,21 @@ export async function registerRoutes(
     }
   });
 
+  const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 182;
+  const ONE_DAY_MS = 1000 * 60 * 60 * 24;
+  async function purgeOldInboxMessages() {
+    try {
+      const cutoff = new Date(Date.now() - SIX_MONTHS_MS);
+      await db.delete(contactMessages).where(lt(contactMessages.createdAt, cutoff));
+    } catch (e) {
+      console.error("[inbox-cleanup] Failed:", e);
+    }
+  }
+  setTimeout(() => {
+    purgeOldInboxMessages();
+    setInterval(purgeOldInboxMessages, ONE_DAY_MS);
+  }, 5000);
+
   app.delete('/api/admin/inbox/:id', requireAdmin, async (req, res) => {
     try {
       await db.delete(contactMessages).where(eq(contactMessages.id, Number(req.params.id)));
