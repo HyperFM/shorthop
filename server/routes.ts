@@ -2545,7 +2545,64 @@ export async function registerRoutes(
         .set({ priceCents: currentPrice + totalSsFee })
         .where(eq(shortHops.id, hopId));
 
-      res.json(updated);
+      let ssFeeCharged = false;
+      if (hop.walkerId && totalSsFee > 0) {
+        if (hop.paymentIntentId?.startsWith("wheels_")) {
+          const walker = await storage.getUser(hop.walkerId);
+          if (walker && (walker.credits || 0) >= totalSsFee / 100) {
+            await db.update(users).set({ credits: (walker.credits || 0) - totalSsFee / 100 }).where(eq(users.id, hop.walkerId));
+            if (hop.driverId) {
+              const driver = await storage.getUser(hop.driverId);
+              if (driver) {
+                await db.update(users).set({ credits: (driver.credits || 0) + totalSsFee / 100 }).where(eq(users.id, hop.driverId));
+              }
+            }
+            ssFeeCharged = true;
+            console.log(`[PAYMENT] SS FEE WHEELS: ${(totalSsFee / 100).toFixed(2)} wheels charged to user${hop.walkerId} for hop${hopId} SS stop`);
+          }
+        } else {
+          try {
+            const walker = await storage.getUser(hop.walkerId);
+            if (walker?.stripeCustomerId) {
+              const stripe = await getUncachableStripeClient();
+              const paymentMethods = await stripe.paymentMethods.list({ customer: walker.stripeCustomerId, type: 'card' });
+              if (paymentMethods.data.length > 0) {
+                const ssPi = await stripe.paymentIntents.create({
+                  amount: totalSsFee,
+                  currency: 'usd',
+                  customer: walker.stripeCustomerId,
+                  payment_method: paymentMethods.data[0].id,
+                  off_session: true,
+                  confirm: true,
+                  metadata: {
+                    userId: String(hop.walkerId),
+                    type: 'ss_fee',
+                    hopId: String(hopId),
+                    driverId: String(hop.driverId),
+                    baseFee: '200',
+                    extraFee: String(extraFee),
+                  },
+                  automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
+                });
+                if (ssPi.status === 'succeeded') {
+                  if (hop.driverId) {
+                    const driver = await storage.getUser(hop.driverId);
+                    if (driver) {
+                      await db.update(users).set({ credits: (driver.credits || 0) + totalSsFee / 100 }).where(eq(users.id, hop.driverId));
+                    }
+                  }
+                  ssFeeCharged = true;
+                  console.log(`[PAYMENT] SS FEE CARD: PI ${ssPi.id} $${(totalSsFee / 100).toFixed(2)} charged to user${hop.walkerId} for hop${hopId} SS stop`);
+                }
+              }
+            }
+          } catch (ssChargeErr: any) {
+            console.error(`[PAYMENT] SS FEE CHARGE FAILED: hop${hopId}:`, ssChargeErr.message);
+          }
+        }
+      }
+
+      res.json({ ...updated, ssFeeCharged, totalSsFee });
     } catch (err) {
       res.status(500).json({ message: "Failed to complete SS" });
     }

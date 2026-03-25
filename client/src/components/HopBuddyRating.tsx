@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { DollarSign, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import { showFlash } from "@/components/FlashNotification";
+import driverIconUrl from "@assets/Untitled_design_1773938700510.png";
+import hopperIconUrl from "@assets/Untitled_design_1773938781771.png";
 
 const TIP_OPTIONS = [
   { label: "$1", cents: 100 },
@@ -17,6 +19,7 @@ interface HopBuddyRatingProps {
   ratedUserId: number;
   ratedUsername?: string;
   ratedPhoto?: string | null;
+  partnerRole?: "driver" | "hopper";
   userCredits?: number;
   showTip?: boolean;
   onDismiss: () => void;
@@ -27,10 +30,12 @@ export function HopBuddyRating({
   ratedUserId,
   ratedUsername,
   ratedPhoto,
+  partnerRole = "driver",
   userCredits = 0,
   showTip = false,
   onDismiss,
 }: HopBuddyRatingProps) {
+  const fallbackIcon = partnerRole === "driver" ? driverIconUrl : hopperIconUrl;
   const [tipCents, setTipCents] = useState<number | null>(null);
   const [customTip, setCustomTip] = useState("");
   const [showCustom, setShowCustom] = useState(false);
@@ -102,9 +107,7 @@ export function HopBuddyRating({
         {ratedPhoto ? (
           <img src={ratedPhoto} className="w-9 h-9 rounded-full border-2 border-orange-400 object-cover flex-shrink-0" alt="" data-testid="display-rating-photo" />
         ) : (
-          <div className="w-9 h-9 rounded-full bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-400 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm">🧡</span>
-          </div>
+          <img src={fallbackIcon} className="w-9 h-9 rounded-full border-2 border-orange-400 object-contain flex-shrink-0 bg-white dark:bg-gray-800" alt={partnerRole} data-testid="display-rating-photo" />
         )}
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-foreground dark:text-white truncate" data-testid="text-rating-title">

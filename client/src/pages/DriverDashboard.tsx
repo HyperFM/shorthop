@@ -236,6 +236,7 @@ export default function DriverDashboard({ user }: { user: User }) {
           ratedUserId={ratingHop.ratedUserId}
           ratedUsername={ratingHop.ratedUsername}
           ratedPhoto={ratingHop.ratedPhoto}
+          partnerRole="hopper"
           userCredits={user.credits || 0}
           showTip={false}
           onDismiss={() => { setRatingDismissed(true); setRatingHop(null); }}

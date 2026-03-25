@@ -344,6 +344,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
           ratedUserId={ratingHop.driverId}
           ratedUsername={ratingHop.driverName}
           ratedPhoto={ratingHop.driverPhoto}
+          partnerRole="driver"
           userCredits={user.credits || 0}
           showTip={true}
           onDismiss={() => { setRatingDismissed(true); setRatingHop(null); }}
