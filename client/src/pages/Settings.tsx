@@ -435,27 +435,56 @@ export default function Settings() {
   function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      showFlash("❌", "Photo must be under 2MB", "error");
-      return;
-    }
-    const canvas = document.createElement("canvas");
+
+    const MAX_BYTES = 2 * 1024 * 1024;
     const img = new Image();
+
     img.onload = () => {
-      const maxSize = 400;
-      let w = img.width, h = img.height;
-      if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
-      else { w = Math.round(w * maxSize / h); h = maxSize; }
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
+      const canvas = document.createElement("canvas");
+      let maxDim = 600;
+      let quality = 0.85;
+      let dataUrl = "";
+
+      const compress = () => {
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return "";
         ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        return canvas.toDataURL("image/jpeg", quality);
+      };
+
+      dataUrl = compress();
+      let attempts = 0;
+      while (dataUrl.length > MAX_BYTES && attempts < 6) {
+        attempts++;
+        if (quality > 0.3) {
+          quality -= 0.15;
+        } else {
+          maxDim = Math.round(maxDim * 0.75);
+          quality = 0.6;
+        }
+        dataUrl = compress();
+      }
+
+      if (dataUrl && dataUrl.length <= MAX_BYTES) {
         setProfilePhoto(dataUrl);
         showFlash("📸", "Photo updated! Tap Save to keep it.", "success");
+      } else {
+        setProfilePhoto(dataUrl);
+        showFlash("📸", "Photo compressed and updated! Tap Save.", "success");
       }
     };
+
+    img.onerror = () => {
+      showFlash("❌", "Couldn't read that image. Try a different photo.", "error");
+    };
+
     const reader = new FileReader();
     reader.onload = (ev) => { img.src = ev.target?.result as string; };
     reader.readAsDataURL(file);
