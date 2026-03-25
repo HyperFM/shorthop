@@ -75,7 +75,8 @@ function OrangeGlow() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={InstaHop} />
+      <Route path="/home" component={Home} />
       <Route path="/auth" component={Auth} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/rewards" component={RewardStore} />
