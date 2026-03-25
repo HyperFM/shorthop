@@ -10,26 +10,6 @@ interface GeolocationState {
   permitted: boolean;
 }
 
-export interface NearbyHopper {
-  id: string;
-  message: string;
-  distance: string;
-  direction: string;
-  timestamp: number;
-}
-
-const HOPPER_MESSAGES = [
-  "Hop Hop — a rider is ahead",
-  "Someone nearby needs a hop",
-  "A Hopper is walking your route",
-  "Hop alert — rider spotted nearby",
-  "A fellow Hopper is close by",
-  "Quick hop opportunity nearby",
-];
-
-const DIRECTIONS = ["north", "south", "east", "west", "ahead", "nearby"];
-
-const DISTANCES = ["0.2 mi", "0.3 mi", "0.5 mi", "0.1 mi", "0.4 mi", "0.6 mi"];
 
 export function useGeolocation() {
   const [state, setState] = useState<GeolocationState>({
@@ -117,59 +97,6 @@ export function useBrowserNotifications() {
   return { permission, requestPermission, showNotification };
 }
 
-export function useNearbyHopperSimulation(enabled: boolean = true) {
-  const [currentHopper, setCurrentHopper] = useState<NearbyHopper | null>(null);
-  const { showNotification, permission } = useBrowserNotifications();
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const dismiss = useCallback(() => {
-    setCurrentHopper(null);
-  }, []);
-
-  useEffect(() => {
-    if (!enabled) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      return;
-    }
-
-    const generateHopper = () => {
-      const message =
-        HOPPER_MESSAGES[Math.floor(Math.random() * HOPPER_MESSAGES.length)];
-      const distance =
-        DISTANCES[Math.floor(Math.random() * DISTANCES.length)];
-      const direction =
-        DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
-
-      const hopper: NearbyHopper = {
-        id: `hopper-${Date.now()}`,
-        message,
-        distance,
-        direction,
-        timestamp: Date.now(),
-      };
-
-      setCurrentHopper(hopper);
-
-      if (permission === "granted") {
-        showNotification("ShortHop", {
-          body: `${message} (${distance} ${direction})`,
-        });
-      }
-    };
-
-    const initialDelay = setTimeout(() => {
-      generateHopper();
-      timerRef.current = setInterval(generateHopper, 45000 + Math.random() * 30000);
-    }, 10000 + Math.random() * 5000);
-
-    return () => {
-      clearTimeout(initialDelay);
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [enabled, permission, showNotification]);
-
-  return { currentHopper, dismiss };
-}
 
 export function useLiveLocationBroadcast(enabled: boolean = false) {
   const watchIdRef = useRef<number | null>(null);

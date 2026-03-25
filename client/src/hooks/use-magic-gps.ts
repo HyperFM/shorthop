@@ -25,7 +25,6 @@ interface UseMagicGpsOptions {
   savedRoutes: Array<{ id: number; name: string; address: string; lat: string | null; lng: string | null; confirmCount: number | null }>;
   onSuggestion?: (match: SavedRouteMatch | null, movementType: "walking" | "driving") => void;
   onFlowModeActivate?: (match: SavedRouteMatch) => void;
-  onDriftCatch?: () => void;
 }
 
 function calculateBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -46,7 +45,7 @@ function bearingDiff(a: number, b: number): number {
 const FLOW_MODE_CONFIDENCE_THRESHOLD = 3;
 const DRIFT_CATCH_WALK_DURATION = 120000;
 
-export function useMagicGps({ enabled, flowModeEnabled, savedRoutes, onSuggestion, onFlowModeActivate, onDriftCatch }: UseMagicGpsOptions) {
+export function useMagicGps({ enabled, flowModeEnabled, savedRoutes, onSuggestion, onFlowModeActivate }: UseMagicGpsOptions) {
   const [gpsState, setGpsState] = useState<GpsState>({
     speed: null,
     bearing: null,
@@ -66,7 +65,6 @@ export function useMagicGps({ enabled, flowModeEnabled, savedRoutes, onSuggestio
   const consistentDirectionStart = useRef<number | null>(null);
   const lastBearing = useRef<number | null>(null);
   const walkingStartTime = useRef<number | null>(null);
-  const lastDriftCatchTime = useRef<number>(0);
   const flowModeActivatedRef = useRef<boolean>(false);
 
   const checkRouteMatch = useCallback((bearing: number, lat: number, lng: number): SavedRouteMatch | null => {
@@ -167,14 +165,6 @@ export function useMagicGps({ enabled, flowModeEnabled, savedRoutes, onSuggestio
 
       if (movementType === "walking") {
         if (!walkingStartTime.current) walkingStartTime.current = now;
-        const walkDuration = now - walkingStartTime.current;
-        if (walkDuration >= DRIFT_CATCH_WALK_DURATION && onDriftCatch) {
-          const timeSinceDriftCatch = now - lastDriftCatchTime.current;
-          if (timeSinceDriftCatch > 900000) {
-            onDriftCatch();
-            lastDriftCatchTime.current = now;
-          }
-        }
       } else {
         walkingStartTime.current = null;
       }
@@ -239,7 +229,7 @@ export function useMagicGps({ enabled, flowModeEnabled, savedRoutes, onSuggestio
       }
       flowModeActivatedRef.current = false;
     };
-  }, [enabled, flowModeEnabled, checkRouteMatch, onSuggestion, onFlowModeActivate, onDriftCatch, savedRoutes]);
+  }, [enabled, flowModeEnabled, checkRouteMatch, onSuggestion, onFlowModeActivate, savedRoutes]);
 
   return { gpsState, declineSuggestion };
 }

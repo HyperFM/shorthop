@@ -538,44 +538,6 @@ export default function Dashboard() {
                 <Switch checked={false} disabled className="pointer-events-none opacity-50" />
               </div>
 
-              <div className="flex items-center justify-between gap-3 border-t border-border/20 pt-2">
-                <div className="flex items-start gap-2.5">
-                  <Users className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
-                  <div>
-                    <Label className="text-[11px] font-medium">Available Seats</Label>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">How many empty seats for riders?</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5" data-testid="stepper-available-seats">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
-                    data-testid="button-available-seats-minus"
-                    disabled={(user as any)?.availableSeats <= 1}
-                    onClick={() => {
-                      const current = (user as any)?.availableSeats || 1;
-                      if (current > 1) updatePreferences.mutate({ availableSeats: current - 1 });
-                    }}
-                  >
-                    −
-                  </Button>
-                  <span className="text-sm font-bold w-5 text-center" data-testid="text-available-seats-value">{(user as any)?.availableSeats || 1}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
-                    data-testid="button-available-seats-plus"
-                    disabled={(user as any)?.availableSeats >= 6}
-                    onClick={() => {
-                      const current = (user as any)?.availableSeats || 1;
-                      if (current < 6) updatePreferences.mutate({ availableSeats: current + 1 });
-                    }}
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
             </CardContent>
           </Card>
         )}

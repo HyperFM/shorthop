@@ -16,7 +16,7 @@ import { showFlash } from "@/components/FlashNotification";
 import { getDriverSoundDuration } from "@/lib/sounds";
 import { useMagicGps, type SavedRouteMatch } from "@/hooks/use-magic-gps";
 import { useTheme } from "@/components/ThemeProvider";
-import { MagicGpsSuggestion, MagicGpsActivation, MagicGpsStatus, FlowModeNotification, DriftCatchNotification, OnTheWayPing, RepeatRoutePrompt } from "@/components/MagicGpsNotification";
+import { MagicGpsSuggestion, MagicGpsActivation, MagicGpsStatus, FlowModeNotification, RepeatRoutePrompt } from "@/components/MagicGpsNotification";
 import type { SavedRoute } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
@@ -117,25 +117,29 @@ function AddressAutocomplete({ value, onChange, placeholder, className, dataTest
 
   const fetchSuggestions = (query: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (query.length < 3) {
+    if (query.length < 2) {
       setSuggestions([]);
+      setShowSuggestions(false);
       return;
     }
     debounceRef.current = setTimeout(async () => {
       const token = import.meta.env.VITE_MAPBOX_TOKEN;
       if (!token) return;
       try {
-        const encoded = encodeURIComponent(query);
+        const encoded = encodeURIComponent(query + ", Lexington, KY");
         const res = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encoded}.json?access_token=${token}&limit=5&country=US&proximity=-84.5037,38.0406&types=address,poi,neighborhood,place`
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encoded}.json?access_token=${token}&limit=5&country=US&proximity=-84.5037,38.0406&bbox=-84.65,37.90,-84.35,38.15&types=address,poi,neighborhood,place,locality`
         );
         const json = await res.json();
-        if (json.features) {
+        if (json.features && json.features.length > 0) {
           setSuggestions(json.features.map((f: any) => ({ place_name: f.place_name, text: f.text })));
           setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(false);
         }
       } catch {}
-    }, 300);
+    }, 200);
   };
 
   return (
@@ -2665,10 +2669,10 @@ function DriveNowPanel({ user }: { user: User }) {
                 variant="outline"
                 className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
                 data-testid="button-driver-seats-plus"
-                disabled={(user as any)?.availableSeats >= 6}
+                disabled={(user as any)?.availableSeats >= 50}
                 onClick={() => {
                   const current = (user as any)?.availableSeats || 1;
-                  if (current < 6) updatePreferences.mutate({ availableSeats: current + 1 });
+                  if (current < 50) updatePreferences.mutate({ availableSeats: current + 1 });
                 }}
               >
                 +
@@ -2951,9 +2955,7 @@ function InstaHopView({ user }: { user: User }) {
   } | null>(null);
   const [magicGpsActivation, setMagicGpsActivation] = useState<{ routeName: string } | null>(null);
   const [flowModeNotif, setFlowModeNotif] = useState<string | null>(null);
-  const [driftCatchVisible, setDriftCatchVisible] = useState(false);
   const [repeatRouteVisible, setRepeatRouteVisible] = useState(true);
-  const [onTheWayPingVisible, setOnTheWayPingVisible] = useState(false);
 
   const prevDriverHopCountRef = useRef(driverActiveHops.length);
   const driverMatchAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -3023,18 +3025,12 @@ function InstaHopView({ user }: { user: User }) {
     setTimeout(() => setFlowModeNotif(null), 5000);
   }, []);
 
-  const handleDriftCatch = useCallback(() => {
-    if (mode === "drive" || isMatching) return;
-    setDriftCatchVisible(true);
-  }, [mode, isMatching]);
-
   const { gpsState, declineSuggestion } = useMagicGps({
     enabled: magicGpsActiveForHopper,
     flowModeEnabled: magicGpsActiveForHopper && !!user.flowModeEnabled,
     savedRoutes: magicGpsRoutes,
     onSuggestion: handleMagicGpsSuggestion,
     onFlowModeActivate: handleFlowModeActivate,
-    onDriftCatch: handleDriftCatch,
   });
 
   useEffect(() => {
@@ -3147,23 +3143,6 @@ function InstaHopView({ user }: { user: User }) {
     }
   }, [hasActiveRide]);
 
-  useEffect(() => {
-    if (mode === "drive" || activeHop || !user.magicGpsEnabled || !magicGpsActiveForHopper) return;
-    const checkNearby = async () => {
-      try {
-        const res = await fetch("/api/on-the-way", { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.driversNearby && !onTheWayPingVisible) {
-            setOnTheWayPingVisible(true);
-          }
-        }
-      } catch {}
-    };
-    const interval = setInterval(checkNearby, 30000);
-    checkNearby();
-    return () => clearInterval(interval);
-  }, [mode, activeHop, user.magicGpsEnabled, onTheWayPingVisible]);
 
   useEffect(() => {
     if (activeHop && activeHop.status === "matched") {
@@ -3622,29 +3601,6 @@ function InstaHopView({ user }: { user: User }) {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {driftCatchVisible && (
-          <DriftCatchNotification
-            onRequestHop={() => {
-              setDriftCatchVisible(false);
-              showFlash("🚗", "Looking for a hop...", "info");
-            }}
-            onDismiss={() => setDriftCatchVisible(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {onTheWayPingVisible && !activeHop && (
-          <OnTheWayPing
-            onRequestHop={() => {
-              setOnTheWayPingVisible(false);
-              showFlash("🚗", "Looking for a hop...", "info");
-            }}
-            onDismiss={() => setOnTheWayPingVisible(false)}
-          />
-        )}
-      </AnimatePresence>
 
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
         <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} driverNavRoute={isDriverMode && isDriverActive ? driverNavRoute : null} isDark={isDark} />
@@ -4057,10 +4013,10 @@ function InstaHopView({ user }: { user: User }) {
                             variant="outline"
                             className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
                             data-testid="button-hopper-seats-plus"
-                            disabled={(user as any)?.seatsNeeded >= 6}
+                            disabled={(user as any)?.seatsNeeded >= 50}
                             onClick={() => {
                               const current = (user as any)?.seatsNeeded || 1;
-                              if (current < 6) updatePreferences.mutate({ seatsNeeded: current + 1 });
+                              if (current < 50) updatePreferences.mutate({ seatsNeeded: current + 1 });
                             }}
                           >
                             +
