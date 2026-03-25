@@ -814,7 +814,8 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
   const isFull = occupiedSeats >= totalSeats;
 
   const hopperUser = hop ? (hop as any).walker : null;
-  const rideStyleEmoji = hop?.rideStyle === "quiet" ? "🤫" : hop?.rideStyle === "friendly" ? "😊" : hop?.rideStyle === "social" ? "🫱🏻‍🫲🏿" : null;
+  const hopperVibe = hopperUser?.rideVibe || "friendly_chat";
+  const rideStyleEmoji = hopperVibe === "quiet_ride" ? "🤫" : hopperVibe === "social" ? "🤝" : "😊";
 
   return (
     <motion.div
@@ -883,7 +884,7 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-white text-sm font-bold truncate leading-tight">
-                  {hopperUser?.firstName || hop.walkerName || "Hopper"} {hopperUser?.lastName ? hopperUser.lastName[0] + "." : ""}
+                  {hopperUser?.username || hop.walkerName || "Hopper"}
                   {rideStyleEmoji && <span className="ml-1">{rideStyleEmoji}</span>}
                 </p>
                 <p className="text-white/60 text-[10px] truncate">heading to pickup</p>
@@ -909,7 +910,7 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-white text-sm font-bold truncate leading-tight">
-                  {hopperUser?.firstName || hop.walkerName || "Hopper"} {hopperUser?.lastName ? hopperUser.lastName[0] + "." : ""}
+                  {hopperUser?.username || hop.walkerName || "Hopper"}
                   {rideStyleEmoji && <span className="ml-1">{rideStyleEmoji}</span>}
                 </p>
                 <p className="text-green-200 text-[10px] font-semibold truncate">in ride</p>
@@ -926,6 +927,14 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
           {hop && hop.status === "in_ride" && (
             <div className="mt-2">
               <SpontaneousStopDriver hopId={hop.id} />
+            </div>
+          )}
+
+          {hop && hopperUser && (
+            <div className="mt-1.5 flex items-center gap-1.5" data-testid="display-ride-preference-advisory">
+              <span className="text-[9px] text-white/50 italic truncate">
+                {rideStyleEmoji} {hopperVibe === "quiet_ride" ? "prefers quiet" : hopperVibe === "social" ? "loves chatting" : "friendly vibes"} · please be kind & respect all preferences
+              </span>
             </div>
           )}
         </div>
@@ -1368,6 +1377,14 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
                 {tracking.distance < 0.1 ? "< 0.1 mi" : `${tracking.distance.toFixed(1)} mi`}
               </span>
             )}
+          </div>
+        )}
+
+        {driverInfo && (
+          <div className="flex items-center gap-1.5 -mt-0.5 mb-1" data-testid="display-driver-preference-advisory">
+            <span className="text-[9px] text-foreground/40 dark:text-gray-500 italic truncate">
+              {driverInfo.driverConvoComfort === "quiet_ride" ? "🤫 prefers quiet" : driverInfo.driverConvoComfort === "social" ? "🤝 loves chatting" : "😊 friendly vibes"} · please be kind & respect all preferences
+            </span>
           </div>
         )}
 

@@ -54,8 +54,26 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const [savedRoutesOpen, setSavedRoutesOpen] = useState(false);
   const [addRouteOpen, setAddRouteOpen] = useState(false);
   const [ratingOpen, setRatingOpen] = useState(false);
-  const [ratingHop, setRatingHop] = useState<{ tripId: number; driverId: number; driverName: string } | null>(null);
-  const lastCompletedRef = useRef<number | null>(null);
+  const [ratingHop, setRatingHop] = useState<{ tripId: number; driverId: number; driverName: string; driverPhoto?: string | null } | null>(null);
+
+  const { data: pendingRating } = useQuery<{
+    tripId: number; partnerId: number; partnerName: string; partnerPhoto: string | null;
+    partnerRideVibe: string; role: string; distanceMiles: string; priceCents: number;
+  } | null>({
+    queryKey: ['/api/pending-rating'],
+  });
+
+  useEffect(() => {
+    if (pendingRating && pendingRating.role === "hopper" && !ratingOpen && !ratingHop) {
+      setRatingHop({
+        tripId: pendingRating.tripId,
+        driverId: pendingRating.partnerId,
+        driverName: pendingRating.partnerName,
+        driverPhoto: pendingRating.partnerPhoto,
+      });
+      setRatingOpen(true);
+    }
+  }, [pendingRating]);
   const [showInsightBubble, setShowInsightBubble] = useState(false);
   const [roadSideInfo, setRoadSideInfo] = useState<RoadSideInfo | null>(null);
   const [scheduleBannerDismissed, setScheduleBannerDismissed] = useState(() => {
@@ -278,22 +296,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
     }
   }, [activeHop, hopStats?.completedHops]);
 
-  useEffect(() => {
-    if (!hops) return;
-    const completedWithDriver = hops
-      .filter(h => h.status === "completed" && h.driverId)
-      .sort((a, b) => b.id - a.id);
-    const latest = completedWithDriver[0];
-    if (latest && lastCompletedRef.current !== latest.id) {
-      lastCompletedRef.current = latest.id;
-      setRatingHop({
-        tripId: latest.id,
-        driverId: latest.driverId!,
-        driverName: "your driver",
-      });
-      setRatingOpen(true);
-    }
-  }, [hops]);
 
   const [walkerProfileColor, setWalkerProfileColor] = useState(() => {
     try { return localStorage.getItem("sh-profile-tab-color") || ""; } catch { return ""; }
@@ -814,7 +816,9 @@ export default function WalkerDashboard({ user }: { user: User }) {
           tripId={ratingHop.tripId}
           ratedUserId={ratingHop.driverId}
           ratedUsername={ratingHop.driverName}
+          ratedPhoto={ratingHop.driverPhoto}
           userTier={user.tier}
+          userCredits={user.credits || 0}
           showTip={true}
         />
       )}

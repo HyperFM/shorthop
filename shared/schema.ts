@@ -188,6 +188,8 @@ export const shortHops = pgTable("short_hops", {
   greenlight2: boolean("greenlight2").default(false),
   greenlight2At: timestamp("greenlight2_at"),
   gpsComplete: boolean("gps_complete").default(true),
+  ratedByWalker: boolean("rated_by_walker").default(false),
+  ratedByDriver: boolean("rated_by_driver").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -845,7 +845,16 @@ export async function registerRoutes(
     
     if (req.user.isDriver) {
       const driverHops = await storage.getHopsForDriver(req.user.id);
-      res.json(driverHops);
+      const enriched = await Promise.all(driverHops.map(async (hop) => {
+        if ((hop.status === "matched" || hop.status === "in_ride") && hop.walkerId) {
+          const walker = await storage.getUser(hop.walkerId);
+          if (walker) {
+            return { ...hop, walker: { username: walker.username, profilePhoto: walker.profilePhoto, rideVibe: walker.rideVibe, bio: walker.bio } };
+          }
+        }
+        return hop;
+      }));
+      res.json(enriched);
     } else {
       const hops = await storage.getHopsForWalker(req.user.id);
       res.json(hops);
@@ -1077,16 +1086,65 @@ export async function registerRoutes(
     try {
       const hopId = Number(req.params.id);
       const tipCents = Number(req.body.tipCents);
-      if (!tipCents || tipCents < 50 || tipCents > 5000) {
-        return res.status(400).json({ message: "Tip must be between $0.50 and $50" });
+      const useWheels = req.body.useWheels === true;
+      if (!tipCents || tipCents < 100 || tipCents > 10000) {
+        return res.status(400).json({ message: "Tip must be between $1 and $100" });
       }
       const hop = await storage.getHop(hopId);
       if (!hop) return res.status(404).json({ message: "Hop not found" });
       if (hop.walkerId !== req.user.id) return res.status(403).json({ message: "Not your hop" });
       if (hop.status !== "completed") return res.status(400).json({ message: "Hop not completed" });
 
+      const tipWheels = tipCents / 100;
+
+      if (useWheels) {
+        const tipper = await storage.getUser(req.user.id);
+        if (!tipper || (tipper.credits || 0) < tipWheels) {
+          return res.status(400).json({ message: "Not enough wheels" });
+        }
+        await db.update(users).set({ credits: (tipper.credits || 0) - tipWheels }).where(eq(users.id, req.user.id));
+        if (hop.driverId) {
+          const driver = await storage.getUser(hop.driverId);
+          if (driver) {
+            const driverTipWheels = tipCents >= 3000 ? tipWheels * 0.9 : tipWheels;
+            await db.update(users).set({ credits: (driver.credits || 0) + driverTipWheels }).where(eq(users.id, hop.driverId));
+          }
+        }
+        await db.update(shortHops).set({ tipCents: (hop.tipCents || 0) + tipCents }).where(eq(shortHops.id, hopId));
+        return res.json({ success: true, method: "wheels" });
+      }
+
       const stripe = await getUncachableStripeClient();
       const domain = process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000';
+
+      const tipper = await storage.getUser(req.user.id);
+      if (tipper?.stripeCustomerId) {
+        const paymentMethods = await stripe.paymentMethods.list({ customer: tipper.stripeCustomerId, type: 'card' });
+        if (paymentMethods.data.length > 0) {
+          const applicationFee = tipCents >= 3000 ? Math.round(tipCents * 0.10) : 0;
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: tipCents,
+            currency: 'usd',
+            customer: tipper.stripeCustomerId,
+            payment_method: paymentMethods.data[0].id,
+            off_session: true,
+            confirm: true,
+            metadata: { userId: String(req.user.id), type: 'tip', hopId: String(hopId), driverId: String(hop.driverId), tipCents: String(tipCents), applicationFee: String(applicationFee) },
+          });
+          if (paymentIntent.status === 'succeeded') {
+            await db.update(shortHops).set({ tipCents: (hop.tipCents || 0) + tipCents }).where(eq(shortHops.id, hopId));
+            if (hop.driverId) {
+              const driver = await storage.getUser(hop.driverId);
+              if (driver) {
+                const driverTipWheels = tipCents >= 3000 ? (tipCents * 0.9) / 100 : tipCents / 100;
+                await db.update(users).set({ credits: (driver.credits || 0) + driverTipWheels }).where(eq(users.id, hop.driverId));
+              }
+            }
+            return res.json({ success: true, method: "card" });
+          }
+        }
+      }
+
       const checkoutSession = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [{
@@ -1533,6 +1591,13 @@ export async function registerRoutes(
         rating: input.rating,
         wantRideAgain: input.wantRideAgain || false,
       });
+
+      if (isWalker) {
+        await db.update(shortHops).set({ ratedByWalker: true }).where(eq(shortHops.id, input.tripId));
+      } else {
+        await db.update(shortHops).set({ ratedByDriver: true }).where(eq(shortHops.id, input.tripId));
+      }
+
       res.status(201).json(rating);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -1540,6 +1605,41 @@ export async function registerRoutes(
       } else {
         res.status(500).json({ message: "Failed to create rating" });
       }
+    }
+  });
+
+  app.get('/api/pending-rating', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const walkerHops = await storage.getHopsForWalker(req.user.id);
+      const driverHops = await storage.getHopsForDriver(req.user.id);
+      const allCompleted = [...walkerHops, ...driverHops]
+        .filter(h => h.status === "completed" && h.driverId)
+        .sort((a, b) => b.id - a.id);
+
+      for (const hop of allCompleted) {
+        const isWalker = hop.walkerId === req.user.id;
+        const alreadyRated = isWalker ? hop.ratedByWalker : hop.ratedByDriver;
+        if (alreadyRated) continue;
+
+        const partnerId = isWalker ? hop.driverId! : hop.walkerId;
+        const partner = await storage.getUser(partnerId);
+        if (!partner) continue;
+
+        return res.json({
+          tripId: hop.id,
+          partnerId,
+          partnerName: partner.username,
+          partnerPhoto: partner.profilePhoto || null,
+          partnerRideVibe: isWalker ? (partner.driverConvoComfort || "friendly_chat") : (partner.rideVibe || "friendly_chat"),
+          role: isWalker ? "hopper" : "driver",
+          distanceMiles: hop.distanceMiles,
+          priceCents: hop.priceCents,
+        });
+      }
+      res.json(null);
+    } catch {
+      res.status(500).json({ message: "Failed to check pending rating" });
     }
   });
 

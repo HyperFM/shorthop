@@ -97,7 +97,25 @@ export default function DriverDashboard({ user }: { user: User }) {
   const [isRouteOpen, setIsRouteOpen] = useState(false);
   const [completeHopId, setCompleteHopId] = useState<number | null>(null);
   const [distance, setDistance] = useState("1.0");
-  const [ratingHop, setRatingHop] = useState<{ tripId: number; ratedUserId: number } | null>(null);
+  const [ratingHop, setRatingHop] = useState<{ tripId: number; ratedUserId: number; ratedUsername?: string; ratedPhoto?: string | null } | null>(null);
+
+  const { data: pendingRating } = useQuery<{
+    tripId: number; partnerId: number; partnerName: string; partnerPhoto: string | null;
+    partnerRideVibe: string; role: string;
+  } | null>({
+    queryKey: ['/api/pending-rating'],
+  });
+
+  useEffect(() => {
+    if (pendingRating && pendingRating.role === "driver" && !ratingHop) {
+      setRatingHop({
+        tripId: pendingRating.tripId,
+        ratedUserId: pendingRating.partnerId,
+        ratedUsername: pendingRating.partnerName,
+        ratedPhoto: pendingRating.partnerPhoto,
+      });
+    }
+  }, [pendingRating]);
   const [completedHopForShare, setCompletedHopForShare] = useState<ShortHop | null>(null);
   const [driverCurrentLoc, setDriverCurrentLoc] = useState("");
   const [driverDestination, setDriverDestination] = useState("");
@@ -129,9 +147,6 @@ export default function DriverDashboard({ user }: { user: User }) {
           setCompleteHopId(null);
           if (hop) {
             setCompletedHopForShare({ ...hop, status: "completed", distanceMiles: distance });
-          }
-          if (hop?.walkerId) {
-            setRatingHop({ tripId: hop.id, ratedUserId: hop.walkerId });
           }
         }
       });
@@ -544,6 +559,8 @@ export default function DriverDashboard({ user }: { user: User }) {
           onOpenChange={(open) => !open && setRatingHop(null)}
           tripId={ratingHop.tripId}
           ratedUserId={ratingHop.ratedUserId}
+          ratedUsername={ratingHop.ratedUsername}
+          ratedPhoto={ratingHop.ratedPhoto}
           userTier={user.tier}
         />
       )}
