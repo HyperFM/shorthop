@@ -11,7 +11,7 @@ export function useHops() {
       if (!res.ok) throw new Error("Failed to fetch hops");
       return api.hops.list.responses[200].parse(await res.json());
     },
-    refetchInterval: 4000,
+    refetchInterval: 3000,
   });
 }
 

@@ -362,7 +362,7 @@ export default function WalkerDashboard({ user }: { user: User }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-foreground">ShortHop works best with schedules</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Add your regular trips in the scheduled routes section and we'll match you with people going the same way.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Pay in advance — add your regular trips in the scheduled routes section and we'll match you with people going the same way.</p>
                 <div className="flex gap-2 mt-3">
                   <Button
                     size="sm"

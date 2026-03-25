@@ -2672,7 +2672,21 @@ function DriveNowPanel({ user }: { user: User }) {
           <div className="flex items-center justify-between gap-3 px-1 py-1.5">
             <div className="flex items-center gap-2">
               <SeatIcon className="w-10 h-10" />
-              <span className="text-[11px] font-medium text-foreground dark:text-white">0/{(user as any)?.availableSeats || 1}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-foreground dark:text-white">0/{(user as any)?.availableSeats || 1}</span>
+                <AnimatePresence mode="popLayout">
+                  {Array.from({ length: Math.min((user as any)?.availableSeats || 1, 5) }).map((_, i) => (
+                    <motion.span
+                      key={`seat-dollar-${i}-${(user as any)?.availableSeats}`}
+                      initial={{ y: 8, opacity: 0, scale: 0 }}
+                      animate={{ y: 0, opacity: 1, scale: 1 }}
+                      exit={{ y: -8, opacity: 0, scale: 0 }}
+                      transition={{ delay: i * 0.08, type: "spring", stiffness: 400, damping: 15 }}
+                      className={`text-[10px] font-black ${i < 2 ? "text-green-400" : i < 4 ? "text-green-500" : "text-emerald-500"}`}
+                    >$</motion.span>
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
             <div className="flex items-center gap-1.5" data-testid="stepper-driver-seats">
               <Button
@@ -2711,30 +2725,59 @@ function DriveNowPanel({ user }: { user: User }) {
               <span className="text-[11px] font-medium text-foreground dark:text-white">Match Mode</span>
             </div>
             <div className="flex gap-1" data-testid="toggle-match-preference">
-              {[
-                { val: "one_rider", label: "One Rider" },
-                { val: "maximize_seats", label: "Max Seats" },
-              ].map((opt) => (
-                <button
-                  key={opt.val}
-                  type="button"
-                  onClick={async () => {
-                    if ((user as any).matchPreference === opt.val) return;
-                    try {
-                      await apiRequest("PATCH", "/api/user/match-preference", { matchPreference: opt.val });
-                      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
-                    } catch {}
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                    ((user as any).matchPreference || "one_rider") === opt.val
-                      ? "bg-primary text-white shadow-sm"
-                      : "bg-muted/50 text-foreground/60 dark:text-gray-300 hover:bg-muted"
-                  }`}
-                  data-testid={`button-match-${opt.val}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={async () => {
+                  if ((user as any).matchPreference === "one_rider") return;
+                  try {
+                    await apiRequest("PATCH", "/api/user/match-preference", { matchPreference: "one_rider" });
+                    queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+                  } catch {}
+                }}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
+                  ((user as any).matchPreference || "one_rider") === "one_rider"
+                    ? "bg-primary text-white shadow-sm"
+                    : "bg-muted/50 text-foreground/60 dark:text-gray-300 hover:bg-muted"
+                }`}
+                data-testid="button-match-one_rider"
+              >
+                One Rider
+                <motion.span
+                  key="one-dollar"
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-[11px] font-black text-green-300"
+                >$</motion.span>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if ((user as any).matchPreference === "maximize_seats") return;
+                  try {
+                    await apiRequest("PATCH", "/api/user/match-preference", { matchPreference: "maximize_seats" });
+                    queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+                  } catch {}
+                }}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
+                  ((user as any).matchPreference || "one_rider") === "maximize_seats"
+                    ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-sm shadow-green-500/30"
+                    : "bg-muted/50 text-foreground/60 dark:text-gray-300 hover:bg-muted"
+                }`}
+                data-testid="button-match-maximize_seats"
+              >
+                Fill Seats
+                <span className="flex items-center">
+                  {[0, 1, 2].map((i) => (
+                    <motion.span
+                      key={`money-${i}`}
+                      initial={{ y: 6, opacity: 0, scale: 0.3 }}
+                      animate={{ y: [6, -4, 0], opacity: 1, scale: [0.3, 1.3, 1] }}
+                      transition={{ delay: i * 0.12, duration: 0.4, repeat: Infinity, repeatDelay: 2.5 }}
+                      className="text-[11px] font-black text-green-300"
+                    >$</motion.span>
+                  ))}
+                </span>
+              </button>
             </div>
           </div>
 
