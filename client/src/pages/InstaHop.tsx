@@ -1416,7 +1416,7 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
           </motion.div>
         )}
 
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 relative">
           <div className="flex items-center gap-2">
             {isMatched ? (
               <div className="bg-white/20 rounded-full px-3.5 py-1.5 flex items-center gap-1.5">
@@ -1442,6 +1442,9 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
               <div className="bg-white/25 rounded-full px-3 py-1" data-testid="display-pickup-eta">
                 <span className="text-white text-xs font-black">~{tracking.etaMinutes} min</span>
               </div>
+            )}
+            {isInRide && (
+              <SpontaneousStopHopper hopId={activeHop.id} />
             )}
           </div>
         </div>
@@ -1544,10 +1547,6 @@ function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, quer
             </div>
           )}
 
-          {isInRide && (
-            <SpontaneousStopHopper hopId={activeHop.id} />
-          )}
-
           {(isMatched || isInRide) && (
             <RideChat hopId={activeHop.id} currentUserId={user.id} />
           )}
@@ -1590,7 +1589,6 @@ function SpontaneousStopHopper({ hopId }: { hopId: number }) {
     try {
       const res = await fetch(`/api/hops/${hopId}/ss-request`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
       if (res.ok) {
-        showFlash("🛑", "SS request sent to driver!", "success");
         refetchSs();
       } else {
         const data = await res.json().catch(() => ({}));
@@ -1605,7 +1603,6 @@ function SpontaneousStopHopper({ hopId }: { hopId: number }) {
     try {
       const res = await fetch(`/api/hops/${hopId}/ss-complete`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
       if (res.ok) {
-        showFlash("✅", "Spontaneous Stop completed!", "success");
         refetchSs();
         queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
       }
@@ -1614,22 +1611,20 @@ function SpontaneousStopHopper({ hopId }: { hopId: number }) {
 
   if (isActive && stop.status === "requested") {
     return (
-      <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200/50 dark:border-yellow-700/30 rounded-lg p-2.5" data-testid="ss-waiting-approval">
-        <p className="text-[11px] font-bold text-yellow-800 dark:text-yellow-300 flex items-center gap-1.5">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Waiting for driver to approve your stop...
+      <div className="bg-orange-50 border border-orange-300 rounded-lg px-2.5 py-1.5" data-testid="ss-waiting-approval">
+        <p className="text-[10px] font-bold text-orange-600 flex items-center gap-1">
+          <Loader2 className="w-3 h-3 animate-spin" /> Waiting...
         </p>
-        <p className="text-[10px] text-yellow-700/70 dark:text-yellow-400/60 mt-0.5">$2.00 fee will be added if approved</p>
       </div>
     );
   }
 
   if (isActive && stop.status === "approved") {
     return (
-      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-700/30 rounded-lg p-2.5" data-testid="ss-approved">
-        <p className="text-[11px] font-bold text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
-          <Check className="w-3.5 h-3.5" /> Driver approved your stop!
+      <div className="bg-white border border-orange-300 rounded-lg px-2.5 py-1.5" data-testid="ss-approved">
+        <p className="text-[10px] font-bold text-orange-600 flex items-center gap-1">
+          <Check className="w-3 h-3" /> Approved
         </p>
-        <p className="text-[10px] text-blue-700/70 dark:text-blue-400/60 mt-0.5">Waiting for driver to arrive at the stop location</p>
       </div>
     );
   }
@@ -1644,67 +1639,71 @@ function SpontaneousStopHopper({ hopId }: { hopId: number }) {
     const timeLeft = Math.max(0, 180 - localElapsed);
 
     return (
-      <div className={`border rounded-lg p-2.5 ${overTime ? 'bg-red-50 dark:bg-red-950/20 border-red-200/50 dark:border-red-700/30' : 'bg-green-50 dark:bg-green-950/20 border-green-200/50 dark:border-green-700/30'}`} data-testid="ss-active-hopper">
-        <p className={`text-[11px] font-bold flex items-center gap-1.5 ${overTime ? 'text-red-800 dark:text-red-300' : 'text-green-800 dark:text-green-300'}`}>
-          <Timer className="w-3.5 h-3.5" />
-          {overTime ? "⚠️ Over time!" : "Spontaneous Stop Active"}
-        </p>
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-[11px] font-mono font-bold text-foreground dark:text-white">
-            {overTime ? `+${mins - 3}:${String(secs).padStart(2, '0')} over` : `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')} left`}
-          </span>
-          <span className="text-[10px] font-bold text-foreground dark:text-white">${totalFee.toFixed(2)}</span>
+      <div className="absolute top-12 right-0 z-10 w-44" data-testid="ss-active-hopper">
+        <div className={`border-2 rounded-xl p-2.5 shadow-lg ${overTime ? 'bg-white border-red-400' : 'bg-white border-orange-400'}`}>
+          <p className={`text-[10px] font-black flex items-center gap-1 ${overTime ? 'text-red-600' : 'text-orange-600'}`}>
+            <Timer className="w-3 h-3" />
+            {overTime ? "Over time!" : "SS Active"}
+          </p>
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-[11px] font-mono font-black text-orange-700">
+              {overTime ? `+${mins - 3}:${String(secs).padStart(2, '0')}` : `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}`}
+            </span>
+            <span className="text-[10px] font-black text-orange-600">${totalFee.toFixed(2)}</span>
+          </div>
+          {overTime && (
+            <p className="text-[8px] text-red-500 font-bold mt-0.5">+$0.50/min — hurry back!</p>
+          )}
+          <button className="w-full mt-1.5 text-[10px] h-6 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-lg" onClick={handleComplete} data-testid="button-ss-done">
+            Done — Back to Car
+          </button>
         </div>
-        {overTime && (
-          <p className="text-[9px] text-red-600 dark:text-red-400 mt-0.5">$0.50/min being added. Please hurry back!</p>
-        )}
-        <Button size="sm" className="w-full mt-2 text-[10px] h-7 bg-green-600 hover:bg-green-700 text-white" onClick={handleComplete} data-testid="button-ss-done">
-          I'm Done — Back to Car
-        </Button>
       </div>
     );
   }
 
   if (isActive && stop.status === "denied") {
     return (
-      <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/50 dark:border-red-700/30 rounded-lg p-2 text-[10px] text-red-700 dark:text-red-300" data-testid="ss-denied">
-        <p className="font-medium">Driver declined the spontaneous stop request</p>
+      <div className="bg-white border border-red-300 rounded-lg px-2.5 py-1.5" data-testid="ss-denied">
+        <p className="text-[10px] font-bold text-red-500">Denied</p>
       </div>
     );
   }
 
   return (
-    <div data-testid="ss-button-container">
+    <div data-testid="ss-button-container" className="relative">
       {showConfirm ? (
-        <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200/50 dark:border-purple-700/30 rounded-lg p-2.5 space-y-2" data-testid="ss-confirm-dialog">
-          <p className="text-[11px] font-bold text-purple-800 dark:text-purple-300">Want to make a Spontaneous Stop?</p>
-          <div className="text-[10px] text-purple-700/80 dark:text-purple-400/70 space-y-0.5">
-            <p>• Must be along the current route</p>
-            <p>• Quick stop — under 3 minutes</p>
-            <p>• $2.00 fee added to your ride</p>
-            <p>• $0.50/min after 3 minutes</p>
-            <p>• Driver must approve</p>
-          </div>
-          <div className="flex gap-2">
-            <Button size="sm" className="flex-1 text-[10px] h-7 bg-purple-600 hover:bg-purple-700 text-white" onClick={handleRequest} disabled={requesting} data-testid="button-ss-confirm">
-              {requesting ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes, Request SS"}
-            </Button>
-            <Button size="sm" variant="outline" className="flex-1 text-[10px] h-7" onClick={() => setShowConfirm(false)} data-testid="button-ss-cancel">
-              Never mind
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full text-[10px] h-8 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/30"
-          onClick={() => setShowConfirm(true)}
-          data-testid="button-ss-open"
+        <motion.div
+          className="absolute top-8 right-0 z-10 w-44"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", damping: 20, stiffness: 400 }}
         >
-          <Square className="w-3 h-3 mr-1" /> SS — Spontaneous Stop
-        </Button>
-      )}
+          <div className="bg-white border-2 border-orange-400 rounded-xl p-3 shadow-lg space-y-1.5" data-testid="ss-confirm-dialog">
+            <p className="text-[11px] font-black text-orange-600">Spontaneous Stop?</p>
+            <div className="text-[9px] text-orange-500 font-semibold space-y-0.5">
+              <p>• Along current route</p>
+              <p>• Under 3 min — $2.00</p>
+              <p>• +$0.50/min after</p>
+            </div>
+            <div className="flex gap-1.5 pt-0.5">
+              <button className="flex-1 text-[10px] h-6 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-lg" onClick={handleRequest} disabled={requesting} data-testid="button-ss-confirm">
+                {requesting ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : "Request"}
+              </button>
+              <button className="flex-1 text-[10px] h-6 border border-orange-300 text-orange-500 font-bold rounded-lg hover:bg-orange-50" onClick={() => setShowConfirm(false)} data-testid="button-ss-cancel">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      ) : null}
+      <button
+        className="bg-white rounded-lg px-2 py-1 shadow-sm hover:bg-gray-50 transition-colors"
+        onClick={() => setShowConfirm(!showConfirm)}
+        data-testid="button-ss-open"
+      >
+        <span className="text-blue-600 text-xs font-black">SS</span>
+      </button>
     </div>
   );
 }
