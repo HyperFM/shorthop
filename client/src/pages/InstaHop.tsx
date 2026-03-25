@@ -242,21 +242,17 @@ function createMarkerEl(src: string): HTMLElement {
 }
 
 function createDriverNavMarker(): HTMLElement {
-  const size = 52;
-  const border = 3;
-  const arrowH = 16;
-  const totalH = arrowH + size + border * 2;
-  const totalW = size + border * 2;
+  const s = 52;
 
   const outer = document.createElement("div");
-  outer.style.width = totalW + "px";
-  outer.style.height = totalH + "px";
+  outer.style.width = s + "px";
+  outer.style.height = s + "px";
   outer.style.position = "relative";
   outer.style.filter = "drop-shadow(0 2px 6px rgba(0,0,0,0.35))";
 
   const arrowOutline = document.createElement("div");
   arrowOutline.style.position = "absolute";
-  arrowOutline.style.top = "0px";
+  arrowOutline.style.top = "-18px";
   arrowOutline.style.left = "50%";
   arrowOutline.style.transform = "translateX(-50%)";
   arrowOutline.style.width = "0";
@@ -270,7 +266,7 @@ function createDriverNavMarker(): HTMLElement {
   const arrow = document.createElement("div");
   arrow.className = "driver-direction-arrow";
   arrow.style.position = "absolute";
-  arrow.style.top = "3px";
+  arrow.style.top = "-15px";
   arrow.style.left = "50%";
   arrow.style.transform = "translateX(-50%)";
   arrow.style.width = "0";
@@ -283,22 +279,22 @@ function createDriverNavMarker(): HTMLElement {
 
   const circle = document.createElement("div");
   circle.style.position = "absolute";
-  circle.style.top = arrowH + "px";
-  circle.style.left = "0px";
-  circle.style.width = totalW + "px";
-  circle.style.height = totalW + "px";
+  circle.style.top = "0";
+  circle.style.left = "0";
+  circle.style.width = s + "px";
+  circle.style.height = s + "px";
   circle.style.borderRadius = "50%";
-  circle.style.border = border + "px solid #f97316";
+  circle.style.border = "3px solid #f97316";
   circle.style.overflow = "hidden";
   circle.style.zIndex = "3";
   outer.appendChild(circle);
 
   const pulse = document.createElement("div");
   pulse.style.position = "absolute";
-  pulse.style.top = (arrowH - 4) + "px";
+  pulse.style.top = "-4px";
   pulse.style.left = "-4px";
-  pulse.style.width = (totalW + 8) + "px";
-  pulse.style.height = (totalW + 8) + "px";
+  pulse.style.width = (s + 8) + "px";
+  pulse.style.height = (s + 8) + "px";
   pulse.style.borderRadius = "50%";
   pulse.style.border = "2px solid rgba(59,130,246,0.35)";
   pulse.style.animation = "driver-pulse 2.5s ease-in-out infinite";
@@ -429,12 +425,13 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
           const lat = prevLatLngRef.current?.lat;
           const lng = prevLatLngRef.current?.lng;
           if (lat && lng) {
+            mapRef.current.stop();
             mapRef.current.flyTo({
               center: [lng, lat],
               zoom: getSpeedZoom(speedRef.current),
               pitch: NAV_PITCH,
               bearing: smoothBearingRef.current,
-              duration: 1000,
+              duration: 800,
               offset: FORWARD_OFFSET,
             });
           }
@@ -562,19 +559,20 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
         const el = createDriverNavMarker();
         const img = el.querySelector("img");
         if (img) img.src = iconSrc;
-        markerRef.current = new mapboxgl.Marker({ element: el, rotationAlignment: "viewport", pitchAlignment: "viewport", anchor: "center", offset: [0, 8] })
+        markerRef.current = new mapboxgl.Marker({ element: el, anchor: "center" })
           .setLngLat(lngLat)
           .addTo(mapRef.current);
       }
 
       if (!userDraggedRef.current && navTransitionDoneRef.current) {
         const targetZoom = getSpeedZoom(speedRef.current);
+        mapRef.current.stop();
         mapRef.current.easeTo({
           center: lngLat,
           bearing: smoothBearingRef.current,
           zoom: targetZoom,
           pitch: NAV_PITCH,
-          duration: 1200,
+          duration: 800,
           offset: FORWARD_OFFSET,
           easing: (t) => t * (2 - t),
         });
@@ -588,13 +586,14 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
         if (img) swapMarkerIcon(img as HTMLImageElement, iconSrc);
       } else {
         const el = createMarkerEl(iconSrc);
-        markerRef.current = new mapboxgl.Marker({ element: el })
+        markerRef.current = new mapboxgl.Marker({ element: el, anchor: "center" })
           .setLngLat(lngLat)
           .addTo(mapRef.current);
       }
 
       if (!walkingRoute && !driverNavRoute && movedEnough) {
-        mapRef.current.easeTo({ center: lngLat, duration: 1200, easing: (t) => t * (2 - t) });
+        mapRef.current.stop();
+        mapRef.current.easeTo({ center: lngLat, duration: 800, easing: (t) => t * (2 - t) });
       }
     }
   }, [latitude, longitude, mode, hasMatchedRide, rideStatus, isNavMode]);
@@ -795,6 +794,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
     userDraggedRef.current = false;
     setShowRecenter(false);
     if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+    mapRef.current.stop();
     mapRef.current.flyTo({
       center: [longitude, latitude],
       zoom: getSpeedZoom(speedRef.current),
