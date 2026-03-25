@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import ReactDOM from "react-dom";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
@@ -88,6 +89,8 @@ const CORRIDORS: Corridor[] = [
   { id: 40, name: "Athens-Boonesboro Rd", lat: 38.0300, lng: -84.4500, widthRank: 4 },
 ];
 
+let _autoCompleteIdCounter = 0;
+
 function AddressAutocomplete({ value, onChange, placeholder, className, dataTestId }: {
   value: string;
   onChange: (val: string) => void;
@@ -100,20 +103,44 @@ function AddressAutocomplete({ value, onChange, placeholder, className, dataTest
   const [inputValue, setInputValue] = useState(value);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const uniqueId = useRef(`ac-${++_autoCompleteIdCounter}`).current;
 
   useEffect(() => {
     setInputValue(value);
   }, [value]);
 
+  const updateDropdownPos = useCallback(() => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showSuggestions) return;
+    const onScroll = () => updateDropdownPos();
+    const onResize = () => updateDropdownPos();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [showSuggestions, updateDropdownPos]);
+
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        const dropdown = document.getElementById(uniqueId);
+        if (dropdown && dropdown.contains(e.target as Node)) return;
         setShowSuggestions(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  }, [uniqueId]);
 
   const fetchSuggestions = (query: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -133,6 +160,7 @@ function AddressAutocomplete({ value, onChange, placeholder, className, dataTest
         const json = await res.json();
         if (json.features && json.features.length > 0) {
           setSuggestions(json.features.map((f: any) => ({ place_name: f.place_name, text: f.text })));
+          updateDropdownPos();
           setShowSuggestions(true);
         } else {
           setSuggestions([]);
@@ -145,24 +173,35 @@ function AddressAutocomplete({ value, onChange, placeholder, className, dataTest
   return (
     <div ref={containerRef} className="relative">
       <Input
+        ref={inputRef}
         value={inputValue}
         onChange={(e) => {
           setInputValue(e.target.value);
           onChange(e.target.value);
           fetchSuggestions(e.target.value);
         }}
-        onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+        onFocus={() => {
+          if (suggestions.length > 0) {
+            updateDropdownPos();
+            setShowSuggestions(true);
+          }
+        }}
         placeholder={placeholder}
         className={className}
         data-testid={dataTestId}
       />
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-border dark:border-gray-700 rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto" data-testid="address-suggestions">
+      {showSuggestions && suggestions.length > 0 && dropdownPos && ReactDOM.createPortal(
+        <div
+          id={uniqueId}
+          className="bg-white dark:bg-gray-900 border border-border dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden max-h-52 overflow-y-auto"
+          style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 99999 }}
+          data-testid="address-suggestions"
+        >
           {suggestions.map((s, i) => (
             <button
               key={i}
               type="button"
-              className="w-full text-left px-3 py-2.5 hover:bg-muted/50 dark:hover:bg-gray-800 transition-colors border-b border-border/20 last:border-0"
+              className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors border-b border-border/20 last:border-0"
               onClick={() => {
                 setInputValue(s.place_name);
                 onChange(s.place_name);
@@ -175,7 +214,8 @@ function AddressAutocomplete({ value, onChange, placeholder, className, dataTest
               <p className="text-[10px] text-muted-foreground dark:text-gray-400 truncate">{s.place_name}</p>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -2337,7 +2377,7 @@ function DriveNowPanel({ user }: { user: User }) {
   const geo = useGeolocation();
   const [driverStartInput, setDriverStartInput] = useState("");
   const [driverDestInput, setDriverDestInput] = useState("");
-  const [driverDepartureMin, setDriverDepartureMin] = useState<number | null>(null);
+  const [driverDepartureMin, setDriverDepartureMin] = useState<number | null>(5);
   const [customTimeInput, setCustomTimeInput] = useState("");
   const [showCustomTime, setShowCustomTime] = useState(false);
   const [routeGenerated, setRouteGenerated] = useState(false);
