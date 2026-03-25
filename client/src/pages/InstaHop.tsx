@@ -8,7 +8,6 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send, Square, Timer, DollarSign, UserPlus } from "lucide-react";
-import { HopBuddyRating } from "@/components/HopBuddyRating";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -3962,21 +3961,6 @@ function InstaHopView({ user }: { user: User }) {
           <div className="px-4 pt-3 pb-2 h-full overflow-y-auto">
             {isDriverMode ? (
               <>
-                {showRatingBanner && pendingRating && pendingRating.role === "driver" && !user.tipRatingOptOut && (
-                  <HopBuddyRating
-                    tripId={pendingRating.tripId}
-                    ratedUserId={pendingRating.partnerId}
-                    ratedUsername={pendingRating.partnerName}
-                    ratedPhoto={pendingRating.partnerPhoto}
-                    partnerRole="hopper"
-                    partnerInterests={pendingRating.partnerInterests || []}
-                    partnerBio={pendingRating.partnerBio || null}
-                    userCredits={user.credits || 0}
-                    showTip={false}
-                    dismissCount={ratingDismissCount}
-                    onDismiss={handleRatingDismiss}
-                  />
-                )}
                 <DriveNowPanel user={user} />
               </>
             ) : (
@@ -4063,21 +4047,6 @@ function InstaHopView({ user }: { user: User }) {
                   />
                 )}
 
-                {showRatingBanner && pendingRating && pendingRating.role === "hopper" && !user.tipRatingOptOut && (
-                  <HopBuddyRating
-                    tripId={pendingRating.tripId}
-                    ratedUserId={pendingRating.partnerId}
-                    ratedUsername={pendingRating.partnerName}
-                    ratedPhoto={pendingRating.partnerPhoto}
-                    partnerRole="driver"
-                    partnerInterests={pendingRating.partnerInterests || []}
-                    partnerBio={pendingRating.partnerBio || null}
-                    userCredits={user.credits || 0}
-                    showTip={true}
-                    dismissCount={ratingDismissCount}
-                    onDismiss={handleRatingDismiss}
-                  />
-                )}
 
                 {!isMatching && !pricePreview && !hasActiveRide && mode === "hop" && (
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium mb-1 bg-gray-50 dark:bg-gray-900/40 text-foreground/70 dark:text-gray-200 border border-border/30" data-testid="display-driver-availability">
