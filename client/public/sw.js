@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shorthop-v4';
+const CACHE_NAME = 'shorthop-v5';
 const SHELL_ASSETS = [
   '/',
   '/instahop',
@@ -29,6 +29,23 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (event.request.url.includes('/api/')) return;
+
+  const isNavigate = event.request.mode === 'navigate';
+
+  if (isNavigate) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('/')))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
