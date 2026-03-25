@@ -11,7 +11,7 @@ import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
 import { db } from "./db";
-import { notifications, founderMessages, vipMessages, shortHops, users, donations, routineRoutes, spontaneousStops } from "@shared/schema";
+import { notifications, founderMessages, vipMessages, shortHops, users, donations, routineRoutes, spontaneousStops, contactMessages } from "@shared/schema";
 import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
@@ -3920,6 +3920,15 @@ export async function registerRoutes(
       res.json(msg);
     } catch {
       res.status(500).json({ message: "Failed to reply" });
+    }
+  });
+
+  app.delete('/api/admin/inbox/:id', requireAdmin, async (req, res) => {
+    try {
+      await db.delete(contactMessages).where(eq(contactMessages.id, Number(req.params.id)));
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Failed to delete message" });
     }
   });
 

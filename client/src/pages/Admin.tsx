@@ -282,6 +282,16 @@ export default function Admin() {
     },
   });
 
+  const deleteInboxMsg = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/admin/inbox/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/inbox"] });
+      showFlash("🗑️", "Message deleted", "success");
+    },
+  });
+
   const grantWheelsMut = useMutation({
     mutationFn: async ({ id, amount }: { id: number; amount: number }) => {
       const res = await apiRequest("POST", `/api/admin/users/${id}/grant-wheels`, { amount });
@@ -475,6 +485,16 @@ export default function Admin() {
                       {msg.category}
                     </Badge>
                     {msg.status === "unread" && <Badge className="text-[9px] bg-blue-500 text-white border-0">New</Badge>}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => { if (confirm("Delete this message?")) deleteInboxMsg.mutate(msg.id); }}
+                      disabled={deleteInboxMsg.isPending}
+                      data-testid={`button-delete-inbox-${msg.id}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
                 <p className="text-xs font-bold">{msg.subject}</p>
