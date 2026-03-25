@@ -13,7 +13,6 @@ import { showFlash } from "@/components/FlashNotification";
 import { NetworkProgress } from "@/components/NetworkProgress";
 import { ChatBubbleActions } from "@/components/ChatBubbleActions";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
-import { HopBuddyRating } from "@/components/HopBuddyRating";
 
 function timeAgo(date: string | null): string {
   if (!date) return "";
@@ -988,59 +987,6 @@ export default function Community() {
   const [connectTab, setConnectTab] = useState<"feed" | "community" | "requests">("feed");
   const [globalDmTarget, setGlobalDmTarget] = useState<{ id: number; username: string; profilePhoto: string | null } | null>(null);
 
-  const { data: pendingRating } = useQuery<{
-    tripId: number; partnerId: number; partnerName: string; partnerPhoto: string | null;
-    partnerRideVibe: string; partnerInterests: string[]; partnerBio: string | null;
-    role: string; distanceMiles: string; priceCents: number;
-  } | null>({
-    queryKey: ['/api/pending-rating'],
-  });
-  const [ratingDismissCount, setRatingDismissCount] = useState(0);
-  const [ratingFullyDismissed, setRatingFullyDismissed] = useState(false);
-  const [ratingTripId, setRatingTripId] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!pendingRating) return;
-    const tid = pendingRating.tripId;
-    if (tid !== ratingTripId) {
-      setRatingTripId(tid);
-      try {
-        const stored = sessionStorage.getItem(`sh_rating_dismissed_${tid}`);
-        if (stored === '1') {
-          setRatingFullyDismissed(true);
-          setRatingDismissCount(3);
-        } else {
-          const cnt = parseInt(sessionStorage.getItem(`sh_rating_cnt_${tid}`) || '0', 10);
-          setRatingDismissCount(cnt);
-          setRatingFullyDismissed(false);
-        }
-      } catch {
-        setRatingDismissCount(0);
-        setRatingFullyDismissed(false);
-      }
-    }
-  }, [pendingRating?.tripId, ratingTripId]);
-
-  const handleRatingDismiss = () => {
-    const next = ratingDismissCount + 1;
-    setRatingDismissCount(next);
-    const tid = pendingRating?.tripId;
-    if (tid) {
-      try { sessionStorage.setItem(`sh_rating_cnt_${tid}`, String(next)); } catch {}
-    }
-    if (next >= 3) {
-      setRatingFullyDismissed(true);
-      if (tid) {
-        try { sessionStorage.setItem(`sh_rating_dismissed_${tid}`, '1'); } catch {}
-        apiRequest("POST", `/api/pending-rating/${tid}/dismiss`, {}).then(() => {
-          qc.invalidateQueries({ queryKey: ['/api/pending-rating'] });
-        }).catch(() => {});
-      }
-    }
-  };
-
-  const showRatingBanner = !!pendingRating && !ratingFullyDismissed && !user?.tipRatingOptOut;
-
   const { data: requestCount } = useQuery<{ id: number }[]>({
     queryKey: ["/api/friends/requests"],
     select: (data: any) => data,
@@ -1176,23 +1122,6 @@ export default function Community() {
 
       {connectTab !== "feed" ? null : (
       <>
-      {showRatingBanner && pendingRating && (
-        <div className="mb-4">
-          <HopBuddyRating
-            tripId={pendingRating.tripId}
-            ratedUserId={pendingRating.partnerId}
-            ratedUsername={pendingRating.partnerName}
-            ratedPhoto={pendingRating.partnerPhoto}
-            partnerRole={pendingRating.role === "hopper" ? "driver" : "hopper"}
-            partnerInterests={pendingRating.partnerInterests || []}
-            partnerBio={pendingRating.partnerBio || null}
-            userCredits={user?.credits || 0}
-            showTip={pendingRating.role === "hopper"}
-            dismissCount={ratingDismissCount}
-            onDismiss={handleRatingDismiss}
-          />
-        </div>
-      )}
       <Card className="mb-4 border-border/50 shadow-sm rounded-2xl" data-testid="card-live-activity">
         <CardContent className="p-3">
           <div className="flex items-center gap-2 mb-2.5">
