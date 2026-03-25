@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send, Square, Timer, DollarSign, UserPlus } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send, Square, Timer, DollarSign, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -480,10 +480,11 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
     const lngLat: [number, number] = [longitude, latitude];
     const iconSrc = getMarkerIcon(mode, hasMatchedRide, rideStatus);
     const now = Date.now();
+    const prevPos = prevLatLngRef.current;
 
-    if (prevLatLngRef.current && isNavMode) {
-      const dLat = latitude - prevLatLngRef.current.lat;
-      const dLng = longitude - prevLatLngRef.current.lng;
+    if (prevPos && isNavMode) {
+      const dLat = latitude - prevPos.lat;
+      const dLng = longitude - prevPos.lng;
       const distDeg = Math.sqrt(dLat * dLat + dLng * dLng);
       const dtSec = Math.max((now - prevTimeRef.current) / 1000, 0.1);
 
@@ -497,6 +498,8 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
         speedRef.current = speedRef.current * 0.7 + mph * 0.3;
       }
     }
+
+    const movedEnough = !prevPos || Math.abs(latitude - prevPos.lat) > 0.00005 || Math.abs(longitude - prevPos.lng) > 0.00005;
     prevLatLngRef.current = { lat: latitude, lng: longitude };
     prevTimeRef.current = now;
 
@@ -549,7 +552,9 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
       }
     } else {
       if (markerRef.current) {
-        markerRef.current.setLngLat(lngLat);
+        if (movedEnough) {
+          markerRef.current.setLngLat(lngLat);
+        }
         const img = markerRef.current.getElement().querySelector("img");
         if (img) swapMarkerIcon(img as HTMLImageElement, iconSrc);
       } else {
@@ -559,8 +564,8 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
           .addTo(mapRef.current);
       }
 
-      if (!walkingRoute && !driverNavRoute) {
-        mapRef.current.easeTo({ center: lngLat, duration: 800 });
+      if (!walkingRoute && !driverNavRoute && movedEnough) {
+        mapRef.current.easeTo({ center: lngLat, duration: 1200, easing: (t) => t * (2 - t) });
       }
     }
   }, [latitude, longitude, mode, hasMatchedRide, rideStatus, isNavMode]);
@@ -2536,19 +2541,11 @@ function DriveNowPanel({ user }: { user: User }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-base font-extrabold text-foreground dark:text-orange-400 dark:[text-shadow:0_0_6px_rgba(249,115,22,0.7),0_0_2px_rgba(0,0,0,0.8)] text-center flex-1" data-testid="text-driver-greeting">
+      <div className="flex items-center justify-center gap-2">
+        <p className="text-base font-extrabold text-foreground dark:text-orange-400 dark:[text-shadow:0_0_6px_rgba(249,115,22,0.7),0_0_2px_rgba(0,0,0,0.8)] text-center" data-testid="text-driver-greeting">
           happy driving,{" "}
           <span className="font-black text-foreground dark:text-orange-300 dark:[text-shadow:0_0_8px_rgba(249,115,22,0.8),0_0_2px_rgba(0,0,0,0.9)]">{user.username}</span>
         </p>
-        <a
-          href="tel:8594202312"
-          className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all active:scale-95"
-          title="Call for help: (859) 420-2312"
-          data-testid="button-call-help"
-        >
-          <Phone className="w-5 h-5" />
-        </a>
       </div>
 
       {needsOnboarding && (
@@ -3982,15 +3979,6 @@ function InstaHopView({ user }: { user: User }) {
                       )}
                     </AnimatePresence>
                   </div>
-
-                  <a
-                    href="tel:8594202312"
-                    className="shrink-0 flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all active:scale-95"
-                    title="Call for help: (859) 420-2312"
-                    data-testid="button-call-help-hopper"
-                  >
-                    <Phone className="w-5 h-5" />
-                  </a>
 
                   <div className="shrink-0 scale-75 origin-top-right">
                     <GlowingCarousel user={user} />
