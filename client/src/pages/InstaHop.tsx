@@ -23,9 +23,9 @@ import { apiRequest } from "@/lib/queryClient";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { User } from "@shared/routes";
-import hopperAloneUrl from "@assets/Untitled_design_1773399128365.png";
-import driverAloneUrl from "@assets/Untitled_design_1774360166484.png";
-import driverWithHopperUrl from "@assets/Untitled_design_1773399128366.png";
+import driverAloneUrl from "@assets/Untitled_design_1773938700510.png";
+import hopperAloneUrl from "@assets/Untitled_design_1773938781771.png";
+import driverWithHopperUrl from "@assets/Untitled_design_1773938803778.png";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
 
@@ -219,11 +219,13 @@ function createMarkerEl(src: string): HTMLElement {
   el.style.width = "56px";
   el.style.height = "56px";
   el.style.filter = "drop-shadow(0 3px 6px rgba(0,0,0,0.35))";
+  el.style.transition = "transform 0.4s ease";
   const img = document.createElement("img");
   img.src = src;
   img.style.width = "100%";
   img.style.height = "100%";
   img.style.objectFit = "contain";
+  img.style.transition = "opacity 0.3s ease";
   el.appendChild(img);
   return el;
 }
@@ -253,10 +255,11 @@ function createDriverNavMarker(): HTMLElement {
   return outer;
 }
 
-function getMarkerIcon(mode: HopMode, hasMatchedRide: boolean): string {
-  if (hasMatchedRide) return driverWithHopperUrl;
+function getMarkerIcon(mode: HopMode, hasMatchedRide: boolean, rideStatus?: string): string {
+  if (rideStatus === "in_ride") return driverWithHopperUrl;
   if (mode === "drive") return driverAloneUrl;
-  return hopperAloneUrl;
+  if (hasMatchedRide && mode === "hop") return hopperAloneUrl;
+  return mode === "drive" ? driverAloneUrl : hopperAloneUrl;
 }
 
 type DriverNavRoute = {
@@ -290,7 +293,7 @@ function findClosestPointIndex(coords: [number, number][], pos: [number, number]
   return minIdx;
 }
 
-function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driverNavRoute, isDark }: { mode: HopMode; latitude: number | null; longitude: number | null; hasMatchedRide: boolean; walkingRoute: GeoJSON.LineString | null; driverNavRoute: DriverNavRoute | null; isDark: boolean }) {
+function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkingRoute, driverNavRoute, isDark }: { mode: HopMode; latitude: number | null; longitude: number | null; hasMatchedRide: boolean; rideStatus?: string; walkingRoute: GeoJSON.LineString | null; driverNavRoute: DriverNavRoute | null; isDark: boolean }) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
@@ -435,7 +438,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
     if (!mapRef.current || !latitude || !longitude) return;
 
     const lngLat: [number, number] = [longitude, latitude];
-    const iconSrc = getMarkerIcon(mode, hasMatchedRide);
+    const iconSrc = getMarkerIcon(mode, hasMatchedRide, rideStatus);
     const now = Date.now();
 
     if (prevLatLngRef.current && isNavMode) {
@@ -457,11 +460,32 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
     prevLatLngRef.current = { lat: latitude, lng: longitude };
     prevTimeRef.current = now;
 
+    const swapMarkerIcon = (img: HTMLImageElement, newSrc: string) => {
+      if (img.src !== newSrc && img.getAttribute("data-src") !== newSrc) {
+        img.setAttribute("data-src", newSrc);
+        const el = img.parentElement;
+        if (el) {
+          el.style.transform = "scale(0.85)";
+          img.style.opacity = "0.3";
+        }
+        setTimeout(() => {
+          img.src = newSrc;
+          if (el) {
+            el.style.transform = "scale(1.1)";
+            img.style.opacity = "1";
+          }
+          setTimeout(() => {
+            if (el) el.style.transform = "scale(1)";
+          }, 200);
+        }, 150);
+      }
+    };
+
     if (isNavMode) {
       if (markerRef.current) {
         markerRef.current.setLngLat(lngLat);
         const img = markerRef.current.getElement().querySelector("img");
-        if (img) img.src = iconSrc;
+        if (img) swapMarkerIcon(img as HTMLImageElement, iconSrc);
       } else {
         const el = createDriverNavMarker();
         const img = el.querySelector("img");
@@ -487,7 +511,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
       if (markerRef.current) {
         markerRef.current.setLngLat(lngLat);
         const img = markerRef.current.getElement().querySelector("img");
-        if (img) img.src = iconSrc;
+        if (img) swapMarkerIcon(img as HTMLImageElement, iconSrc);
       } else {
         const el = createMarkerEl(iconSrc);
         markerRef.current = new mapboxgl.Marker({ element: el })
@@ -499,7 +523,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
         mapRef.current.easeTo({ center: lngLat, duration: 800 });
       }
     }
-  }, [latitude, longitude, mode, hasMatchedRide, isNavMode]);
+  }, [latitude, longitude, mode, hasMatchedRide, rideStatus, isNavMode]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -639,8 +663,9 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, walkingRoute, driv
 
       if (driverNavRoute) {
         if (driverNavRoute.pickupMarker) {
-          const pEl = document.createElement("div");
-          pEl.innerHTML = `<div style="width:28px;height:28px;background:#f97316;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="color:white;font-size:13px">🧍</span></div>`;
+          const pEl = createMarkerEl(hopperAloneUrl);
+          pEl.style.width = "44px";
+          pEl.style.height = "44px";
           pickupMarkerRef.current = new mapboxgl.Marker({ element: pEl })
             .setLngLat([driverNavRoute.pickupMarker.lng, driverNavRoute.pickupMarker.lat])
             .addTo(map!);
@@ -3603,7 +3628,7 @@ function InstaHopView({ user }: { user: User }) {
 
 
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
-        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} walkingRoute={walkingRoute} driverNavRoute={isDriverMode && isDriverActive ? driverNavRoute : null} isDark={isDark} />
+        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} rideStatus={activeHop?.status} walkingRoute={walkingRoute} driverNavRoute={isDriverMode && isDriverActive ? driverNavRoute : null} isDark={isDark} />
 
         <AnimatePresence>
           {!isDriverMode && pricePreview && !isMatching && (
