@@ -1678,6 +1678,8 @@ export async function registerRoutes(
           partnerName: partner.username,
           partnerPhoto: partner.profilePhoto || null,
           partnerRideVibe: isWalker ? (partner.driverConvoComfort || "friendly_chat") : (partner.rideVibe || "friendly_chat"),
+          partnerInterests: partner.interests || [],
+          partnerBio: partner.bio || null,
           role: isWalker ? "hopper" : "driver",
           distanceMiles: hop.distanceMiles,
           priceCents: hop.priceCents,

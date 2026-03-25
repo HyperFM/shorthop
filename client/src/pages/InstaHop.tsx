@@ -7,7 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send, Square, Timer, DollarSign } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Phone, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send, Square, Timer, DollarSign, UserPlus } from "lucide-react";
+import { HopBuddyRating } from "@/components/HopBuddyRating";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -3070,6 +3071,57 @@ function InstaHopView({ user }: { user: User }) {
       queryClient.invalidateQueries({ queryKey: ['/api/me'] });
     },
   });
+  const { data: pendingRating } = useQuery<{
+    tripId: number; partnerId: number; partnerName: string; partnerPhoto: string | null;
+    partnerRideVibe: string; partnerInterests: string[]; partnerBio: string | null;
+    role: string; distanceMiles: string; priceCents: number;
+  } | null>({
+    queryKey: ['/api/pending-rating'],
+  });
+
+  const [ratingTripId, setRatingTripId] = useState<number | null>(null);
+  const [ratingDismissCount, setRatingDismissCount] = useState(0);
+  const [ratingFullyDismissed, setRatingFullyDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!pendingRating) return;
+    const tid = pendingRating.tripId;
+    if (tid !== ratingTripId) {
+      setRatingTripId(tid);
+      try {
+        const stored = sessionStorage.getItem(`sh_rating_dismissed_${tid}`);
+        if (stored === '1') {
+          setRatingFullyDismissed(true);
+          setRatingDismissCount(3);
+        } else {
+          const cnt = parseInt(sessionStorage.getItem(`sh_rating_cnt_${tid}`) || '0', 10);
+          setRatingDismissCount(cnt);
+          setRatingFullyDismissed(false);
+        }
+      } catch {
+        setRatingDismissCount(0);
+        setRatingFullyDismissed(false);
+      }
+    }
+  }, [pendingRating?.tripId, ratingTripId]);
+
+  const handleRatingDismiss = useCallback(() => {
+    const next = ratingDismissCount + 1;
+    setRatingDismissCount(next);
+    const tid = pendingRating?.tripId;
+    if (tid) {
+      try { sessionStorage.setItem(`sh_rating_cnt_${tid}`, String(next)); } catch {}
+    }
+    if (next >= 3) {
+      setRatingFullyDismissed(true);
+      if (tid) {
+        try { sessionStorage.setItem(`sh_rating_dismissed_${tid}`, '1'); } catch {}
+      }
+    }
+  }, [ratingDismissCount, pendingRating?.tripId]);
+
+  const showRatingBanner = !!pendingRating && !ratingFullyDismissed;
+
   const userModeLock = user?.modeLock || "none";
   const [mode, setMode] = useState<HopMode>(() => {
     try {
@@ -3891,7 +3943,24 @@ function InstaHopView({ user }: { user: User }) {
         >
           <div className="px-4 pt-3 pb-2 h-full overflow-y-auto">
             {isDriverMode ? (
-              <DriveNowPanel user={user} />
+              <>
+                {showRatingBanner && pendingRating && pendingRating.role === "driver" && (
+                  <HopBuddyRating
+                    tripId={pendingRating.tripId}
+                    ratedUserId={pendingRating.partnerId}
+                    ratedUsername={pendingRating.partnerName}
+                    ratedPhoto={pendingRating.partnerPhoto}
+                    partnerRole="hopper"
+                    partnerInterests={pendingRating.partnerInterests || []}
+                    partnerBio={pendingRating.partnerBio || null}
+                    userCredits={user.credits || 0}
+                    showTip={false}
+                    dismissCount={ratingDismissCount}
+                    onDismiss={handleRatingDismiss}
+                  />
+                )}
+                <DriveNowPanel user={user} />
+              </>
             ) : (
               <>
                 <div className="flex gap-2 mb-2 items-start">
@@ -3973,6 +4042,22 @@ function InstaHopView({ user }: { user: User }) {
                     tracking={tracking}
                     pickupTimerRemaining={pickupTimerRemaining}
                     queryClient={queryClient}
+                  />
+                )}
+
+                {showRatingBanner && pendingRating && pendingRating.role === "hopper" && (
+                  <HopBuddyRating
+                    tripId={pendingRating.tripId}
+                    ratedUserId={pendingRating.partnerId}
+                    ratedUsername={pendingRating.partnerName}
+                    ratedPhoto={pendingRating.partnerPhoto}
+                    partnerRole="driver"
+                    partnerInterests={pendingRating.partnerInterests || []}
+                    partnerBio={pendingRating.partnerBio || null}
+                    userCredits={user.credits || 0}
+                    showTip={true}
+                    dismissCount={ratingDismissCount}
+                    onDismiss={handleRatingDismiss}
                   />
                 )}
 

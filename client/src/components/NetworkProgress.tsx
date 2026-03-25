@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { api } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
+import { apiRequest } from "@/lib/queryClient";
 import { motion } from "framer-motion";
-import { Share2, Check, Copy, Eye } from "lucide-react";
+import { Share2, Check, Eye, UserPlus, MessageCircle, X } from "lucide-react";
 import { FlyersModal } from "@/components/FlyersModal";
+import { showFlash } from "@/components/FlashNotification";
 import type { User } from "@shared/routes";
 import driverIconUrl from "@assets/Untitled_design_1773938700510.png";
 import hopperIconUrl from "@assets/Untitled_design_1773938781771.png";
@@ -21,13 +23,49 @@ interface NetworkStats {
   foundingDriversRemaining: number;
 }
 
+interface PendingRatingData {
+  tripId: number;
+  partnerId: number;
+  partnerName: string;
+  partnerPhoto: string | null;
+  partnerInterests: string[];
+  partnerBio: string | null;
+  role: string;
+}
+
 export function NetworkProgress() {
   const [copied, setCopied] = useState(false);
   const [flyersOpen, setFlyersOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const [networkBuddy, setNetworkBuddy] = useState<PendingRatingData | null>(() => {
+    try {
+      const raw = sessionStorage.getItem("sh_network_buddy");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
 
   const { data: user } = useQuery<User>({
     queryKey: [api.auth.me.path],
   });
+
+  const followUser = useMutation({
+    mutationFn: async (userId: number) => {
+      const url = buildUrl(api.follows.follow.path, { id: userId });
+      await apiRequest(api.follows.follow.method, url);
+    },
+    onSuccess: () => {
+      showFlash("👥", `Added ${networkBuddy?.partnerName || "user"} as a friend!`, "success");
+      queryClient.invalidateQueries({ queryKey: [api.follows.list.path] });
+    },
+  });
+
+  const handleNetworkRatingDismiss = () => {
+    try { sessionStorage.removeItem("sh_network_buddy"); } catch {}
+    setNetworkBuddy(null);
+  };
+
+  const showNetworkRating = !!networkBuddy;
 
   const { data: stats, isLoading } = useQuery<NetworkStats>({
     queryKey: [api.network.stats.path],
@@ -82,6 +120,69 @@ export function NetworkProgress() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {showNetworkRating && networkBuddy && (
+            <div className="rounded-xl border border-orange-200 dark:border-orange-800/40 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 p-3 space-y-2.5" data-testid="network-hop-buddy">
+              <div className="flex items-center gap-3">
+                {networkBuddy.partnerPhoto ? (
+                  <img src={networkBuddy.partnerPhoto} className="w-11 h-11 rounded-full border-2 border-orange-400 object-cover flex-shrink-0" alt="" />
+                ) : (
+                  <img src={networkBuddy.role === "driver" ? driverIconUrl : hopperIconUrl} className="w-11 h-11 rounded-full border-2 border-orange-400 object-contain flex-shrink-0 bg-white dark:bg-gray-800" alt="" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground dark:text-white truncate">
+                    <span className="text-orange-500">{networkBuddy.partnerName}</span>
+                  </p>
+                  {networkBuddy.partnerBio && (
+                    <p className="text-[10px] text-muted-foreground dark:text-gray-400 truncate">{networkBuddy.partnerBio}</p>
+                  )}
+                </div>
+                <button type="button" onClick={handleNetworkRatingDismiss} className="p-1 rounded-full hover:bg-orange-100 dark:hover:bg-orange-900/40 flex-shrink-0" data-testid="button-dismiss-network-rating">
+                  <X className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+              </div>
+              {networkBuddy.partnerInterests && networkBuddy.partnerInterests.length > 0 && user?.interests && (user.interests as string[]).length > 0 && (
+                (() => {
+                  const common = (networkBuddy.partnerInterests as string[]).filter(i => (user.interests as string[]).includes(i));
+                  if (common.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-1">
+                      {common.map(interest => (
+                        <span key={interest} className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-200/50 dark:border-orange-700/30">
+                          ✨ {interest}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()
+              )}
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-7 text-[10px] font-bold gap-1 rounded-lg border-orange-200 dark:border-orange-700/40 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                  onClick={() => followUser.mutate(networkBuddy.partnerId)}
+                  disabled={followUser.isPending}
+                  data-testid="button-add-friend-network"
+                >
+                  <UserPlus className="w-3 h-3" />
+                  Add Friend
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-7 text-[10px] font-bold gap-1 rounded-lg border-blue-200 dark:border-blue-700/40 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  onClick={() => {
+                    handleNetworkRatingDismiss();
+                    window.dispatchEvent(new CustomEvent("sh-open-chat", { detail: { userId: networkBuddy.partnerId, username: networkBuddy.partnerName } }));
+                  }}
+                  data-testid="button-chat-network"
+                >
+                  <MessageCircle className="w-3 h-3" />
+                  Chat
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-3">
             <motion.div 
               whileHover={{ scale: 1.05 }}

@@ -15,7 +15,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRoutes, useCreateRoute, useDeleteRoute } from "@/hooks/use-routes";
 import { useHops, useAcceptHop, useCompleteHop } from "@/hooks/use-hops";
 import { TrustedHoppers } from "@/components/TrustedHoppers";
-import { HopBuddyRating } from "@/components/HopBuddyRating";
 import { ShareRideCard } from "@/components/ShareRideCard";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking } from "@/hooks/use-location";
 import { apiRequest } from "@/lib/queryClient";
@@ -93,26 +92,6 @@ export default function DriverDashboard({ user }: { user: User }) {
   useLiveLocationBroadcast(hasMatchedHop || (driverStatus?.isActive ?? false));
   
   const [isRouteOpen, setIsRouteOpen] = useState(false);
-  const [ratingHop, setRatingHop] = useState<{ tripId: number; ratedUserId: number; ratedUsername?: string; ratedPhoto?: string | null } | null>(null);
-  const [ratingDismissed, setRatingDismissed] = useState(false);
-
-  const { data: pendingRating } = useQuery<{
-    tripId: number; partnerId: number; partnerName: string; partnerPhoto: string | null;
-    partnerRideVibe: string; role: string;
-  } | null>({
-    queryKey: ['/api/pending-rating'],
-  });
-
-  useEffect(() => {
-    if (pendingRating && pendingRating.role === "driver" && !ratingDismissed && !ratingHop) {
-      setRatingHop({
-        tripId: pendingRating.tripId,
-        ratedUserId: pendingRating.partnerId,
-        ratedUsername: pendingRating.partnerName,
-        ratedPhoto: pendingRating.partnerPhoto,
-      });
-    }
-  }, [pendingRating]);
   const [completedHopForShare, setCompletedHopForShare] = useState<ShortHop | null>(null);
   const [driverCurrentLoc, setDriverCurrentLoc] = useState("");
   const [driverDestination, setDriverDestination] = useState("");
@@ -230,18 +209,6 @@ export default function DriverDashboard({ user }: { user: User }) {
         onViewTrip={() => {}}
       />
 
-      {ratingHop && !ratingDismissed && (
-        <HopBuddyRating
-          tripId={ratingHop.tripId}
-          ratedUserId={ratingHop.ratedUserId}
-          ratedUsername={ratingHop.ratedUsername}
-          ratedPhoto={ratingHop.ratedPhoto}
-          partnerRole="hopper"
-          userCredits={user.credits || 0}
-          showTip={false}
-          onDismiss={() => { setRatingDismissed(true); setRatingHop(null); }}
-        />
-      )}
       
       <motion.div 
         initial={{ opacity: 0, y: -10 }}

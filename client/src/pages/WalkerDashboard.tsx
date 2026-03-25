@@ -11,7 +11,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useHops, useCancelHop } from "@/hooks/use-hops";
-import { HopBuddyRating } from "@/components/HopBuddyRating";
 import { useGeolocation, useLiveLocationBroadcast, useHopTracking } from "@/hooks/use-location";
 import { MatchInsightBubble } from "@/components/MatchInsightBubble";
 import { InterestTags, SharedInterestsBadge } from "@/components/InterestBubbles";
@@ -53,26 +52,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const [hopsOpen, setHopsOpen] = useState(false);
   const [savedRoutesOpen, setSavedRoutesOpen] = useState(false);
   const [addRouteOpen, setAddRouteOpen] = useState(false);
-  const [ratingHop, setRatingHop] = useState<{ tripId: number; driverId: number; driverName: string; driverPhoto?: string | null } | null>(null);
-  const [ratingDismissed, setRatingDismissed] = useState(false);
-
-  const { data: pendingRating } = useQuery<{
-    tripId: number; partnerId: number; partnerName: string; partnerPhoto: string | null;
-    partnerRideVibe: string; role: string; distanceMiles: string; priceCents: number;
-  } | null>({
-    queryKey: ['/api/pending-rating'],
-  });
-
-  useEffect(() => {
-    if (pendingRating && pendingRating.role === "hopper" && !ratingDismissed && !ratingHop) {
-      setRatingHop({
-        tripId: pendingRating.tripId,
-        driverId: pendingRating.partnerId,
-        driverName: pendingRating.partnerName,
-        driverPhoto: pendingRating.partnerPhoto,
-      });
-    }
-  }, [pendingRating]);
   const [showInsightBubble, setShowInsightBubble] = useState(false);
   const [roadSideInfo, setRoadSideInfo] = useState<RoadSideInfo | null>(null);
   const [scheduleBannerDismissed, setScheduleBannerDismissed] = useState(() => {
@@ -338,18 +317,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
         onViewTrip={() => setLocation("/instahop")}
       />
 
-      {ratingHop && !ratingDismissed && (
-        <HopBuddyRating
-          tripId={ratingHop.tripId}
-          ratedUserId={ratingHop.driverId}
-          ratedUsername={ratingHop.driverName}
-          ratedPhoto={ratingHop.driverPhoto}
-          partnerRole="driver"
-          userCredits={user.credits || 0}
-          showTip={true}
-          onDismiss={() => { setRatingDismissed(true); setRatingHop(null); }}
-        />
-      )}
 
       <div className="flex items-center justify-between mb-3">
         <div>

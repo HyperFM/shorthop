@@ -20,8 +20,11 @@ interface HopBuddyRatingProps {
   ratedUsername?: string;
   ratedPhoto?: string | null;
   partnerRole?: "driver" | "hopper";
+  partnerInterests?: string[];
+  partnerBio?: string | null;
   userCredits?: number;
   showTip?: boolean;
+  dismissCount?: number;
   onDismiss: () => void;
 }
 
@@ -31,8 +34,11 @@ export function HopBuddyRating({
   ratedUsername,
   ratedPhoto,
   partnerRole = "driver",
+  partnerInterests = [],
+  partnerBio = null,
   userCredits = 0,
   showTip = false,
+  dismissCount = 0,
   onDismiss,
 }: HopBuddyRatingProps) {
   const fallbackIcon = partnerRole === "driver" ? driverIconUrl : hopperIconUrl;
@@ -41,6 +47,7 @@ export function HopBuddyRating({
   const [showCustom, setShowCustom] = useState(false);
   const [tipMethod, setTipMethod] = useState<"card" | "wheels">("card");
   const queryClient = useQueryClient();
+  const remaining = 3 - dismissCount;
 
   const markRated = useMutation({
     mutationFn: async () => {
@@ -86,7 +93,20 @@ export function HopBuddyRating({
   });
 
   const handleDismiss = () => {
-    markRated.mutate();
+    if (remaining <= 1) {
+      try {
+        sessionStorage.setItem("sh_network_buddy", JSON.stringify({
+          tripId,
+          partnerId: ratedUserId,
+          partnerName: ratedUsername || "your buddy",
+          partnerPhoto: ratedPhoto || null,
+          partnerInterests: partnerInterests || [],
+          partnerBio: partnerBio || null,
+          role: partnerRole,
+        }));
+      } catch {}
+      markRated.mutate();
+    }
     onDismiss();
   };
 
@@ -102,33 +122,43 @@ export function HopBuddyRating({
   const canSend = (effectiveTip || 0) >= 100 && (tipMethod !== "wheels" || canAffordWheels);
 
   return (
-    <div className="mx-2 mb-2 rounded-xl border border-orange-200 dark:border-orange-800/50 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 overflow-hidden" data-testid="hop-buddy-tip-banner">
-      <div className="flex items-center gap-2.5 px-3 py-2">
+    <div className="mb-2 rounded-xl border border-orange-200 dark:border-orange-800/50 bg-gradient-to-r from-orange-50/80 to-amber-50/80 dark:from-orange-950/20 dark:to-amber-950/20 overflow-hidden" data-testid="hop-buddy-tip-banner">
+      <div className="flex items-center gap-2 px-3 py-1.5">
         {ratedPhoto ? (
-          <img src={ratedPhoto} className="w-9 h-9 rounded-full border-2 border-orange-400 object-cover flex-shrink-0" alt="" data-testid="display-rating-photo" />
+          <img src={ratedPhoto} className="w-8 h-8 rounded-full border-2 border-orange-400 object-cover flex-shrink-0" alt="" data-testid="display-rating-photo" />
         ) : (
-          <img src={fallbackIcon} className="w-9 h-9 rounded-full border-2 border-orange-400 object-contain flex-shrink-0 bg-white dark:bg-gray-800" alt={partnerRole} data-testid="display-rating-photo" />
+          <img src={fallbackIcon} className="w-8 h-8 rounded-full border-2 border-orange-400 object-contain flex-shrink-0 bg-white dark:bg-gray-800" alt={partnerRole} data-testid="display-rating-photo" />
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-foreground dark:text-white truncate" data-testid="text-rating-title">
-            Hop with <span className="text-orange-500">{ratedUsername || "your buddy"}</span> complete!
+          <p className="text-[11px] font-semibold text-foreground dark:text-white truncate" data-testid="text-rating-title">
+            <span className="text-orange-500 font-bold">{ratedUsername || "your buddy"}</span>
           </p>
           {showTip && (
-            <p className="text-[10px] text-muted-foreground dark:text-gray-400">Leave a tip? 100% goes to your driver</p>
+            <p className="text-[9px] text-muted-foreground dark:text-gray-400">tip your driver</p>
+          )}
+          {!showTip && (
+            <p className="text-[9px] text-muted-foreground dark:text-gray-400">hop complete</p>
           )}
         </div>
-        <button type="button" onClick={handleDismiss} className="p-1 rounded-full hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors flex-shrink-0" data-testid="button-dismiss-rating">
-          <X className="w-3.5 h-3.5 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex gap-0.5 mr-1">
+            {[0, 1, 2].map(i => (
+              <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < dismissCount ? "bg-orange-400" : "bg-orange-200 dark:bg-orange-800/50"}`} />
+            ))}
+          </div>
+          <button type="button" onClick={handleDismiss} className="p-0.5 rounded-full hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors" data-testid="button-dismiss-rating">
+            <X className="w-3 h-3 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
       {showTip && (
-        <div className="px-3 pb-2.5 space-y-1.5">
+        <div className="px-3 pb-2 space-y-1">
           <div className="flex gap-1">
             <button
               type="button"
               onClick={() => setTipMethod("card")}
-              className={`flex-1 py-1 rounded-md text-[10px] font-bold transition-all ${
+              className={`flex-1 py-0.5 rounded text-[9px] font-bold transition-all ${
                 tipMethod === "card"
                   ? "bg-green-500 text-white"
                   : "bg-white dark:bg-gray-800 border border-border text-foreground dark:text-white"
@@ -140,7 +170,7 @@ export function HopBuddyRating({
             <button
               type="button"
               onClick={() => setTipMethod("wheels")}
-              className={`flex-1 py-1 rounded-md text-[10px] font-bold transition-all ${
+              className={`flex-1 py-0.5 rounded text-[9px] font-bold transition-all ${
                 tipMethod === "wheels"
                   ? "bg-orange-500 text-white"
                   : "bg-white dark:bg-gray-800 border border-border text-foreground dark:text-white"
@@ -157,7 +187,7 @@ export function HopBuddyRating({
                 key={t.cents}
                 type="button"
                 onClick={() => { setTipCents(t.cents); setShowCustom(false); }}
-                className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${
+                className={`flex-1 py-1 rounded text-[10px] font-bold transition-all ${
                   tipCents === t.cents && !showCustom
                     ? "bg-green-500 text-white shadow-sm"
                     : "bg-white dark:bg-gray-800 border border-border hover:border-green-300 text-foreground dark:text-white"
@@ -170,7 +200,7 @@ export function HopBuddyRating({
             <button
               type="button"
               onClick={() => { setShowCustom(true); setTipCents(null); }}
-              className={`flex-1 py-1.5 rounded-md text-[10px] font-bold transition-all ${
+              className={`flex-1 py-1 rounded text-[9px] font-bold transition-all ${
                 showCustom
                   ? "bg-green-500 text-white shadow-sm"
                   : "bg-white dark:bg-gray-800 border border-border hover:border-green-300 text-foreground dark:text-white"
@@ -182,8 +212,8 @@ export function HopBuddyRating({
           </div>
 
           {showCustom && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-green-600">$</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-bold text-green-600">$</span>
               <input
                 type="number"
                 step="1"
@@ -192,14 +222,14 @@ export function HopBuddyRating({
                 placeholder="0"
                 value={customTip}
                 onChange={e => setCustomTip(e.target.value)}
-                className="flex-1 h-7 rounded-md border border-green-200 px-2 text-xs bg-white dark:bg-gray-800 text-foreground dark:text-white"
+                className="flex-1 h-6 rounded border border-green-200 px-2 text-[10px] bg-white dark:bg-gray-800 text-foreground dark:text-white"
                 data-testid="input-custom-tip"
               />
             </div>
           )}
 
           {tipMethod === "wheels" && (effectiveTip || 0) >= 100 && !canAffordWheels && (
-            <p className="text-[10px] text-red-500 font-medium text-center">Not enough wheels</p>
+            <p className="text-[9px] text-red-500 font-medium text-center">Not enough wheels</p>
           )}
 
           {canSend && (
@@ -207,10 +237,10 @@ export function HopBuddyRating({
               type="button"
               onClick={handleSendTip}
               disabled={sendTip.isPending}
-              className="w-full py-1.5 rounded-md bg-green-500 hover:bg-green-600 text-white text-xs font-bold transition-all disabled:opacity-50"
+              className="w-full py-1 rounded bg-green-500 hover:bg-green-600 text-white text-[10px] font-bold transition-all disabled:opacity-50"
               data-testid="button-send-tip"
             >
-              {sendTip.isPending ? "Sending..." : `Send $${((effectiveTip || 0) / 100).toFixed(2)} Tip`}
+              {sendTip.isPending ? "Sending..." : `Tip $${((effectiveTip || 0) / 100).toFixed(2)}`}
             </button>
           )}
         </div>
