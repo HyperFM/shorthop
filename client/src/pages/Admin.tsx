@@ -990,8 +990,8 @@ export default function Admin() {
                 placeholder="Notification message..."
                 value={notifyAllMsg}
                 onChange={e => setNotifyAllMsg(e.target.value)}
-                className="text-sm"
-                rows={3}
+                className="text-sm min-h-[120px]"
+                rows={6}
                 data-testid="input-notify-all-message"
               />
               <Button
@@ -1017,8 +1017,8 @@ export default function Admin() {
                 placeholder="HOP REQUEST NEAR YOU — A rider needs a pickup at..."
                 value={notifyMsg}
                 onChange={e => setNotifyMsg(e.target.value)}
-                className="text-sm"
-                rows={3}
+                className="text-sm min-h-[120px]"
+                rows={6}
                 data-testid="input-notify-message"
               />
               <Button
