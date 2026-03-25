@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -104,6 +104,23 @@ declare global {
   }
 }
 
+function AppStartRedirect() {
+  const [, setLocation] = useLocation();
+  const [location] = useLocation();
+
+  useEffect(() => {
+    const alreadyRedirected = sessionStorage.getItem("sh_session_start");
+    if (!alreadyRedirected) {
+      sessionStorage.setItem("sh_session_start", "1");
+      if (location !== "/" && location !== "/auth" && location !== "/instahop" && location !== "/hop" && location !== "/privacy" && location !== "/terms" && location !== "/support" && location !== "/artist" && location !== "/widget" && location !== "/install" && !location.startsWith("/auth")) {
+        setLocation("/instahop");
+      }
+    }
+  }, []);
+
+  return null;
+}
+
 function App() {
   useEffect(() => {
     try {
@@ -116,6 +133,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <TooltipProvider>
+          <AppStartRedirect />
           <OrangeGlow />
           <Toaster />
           <FlashNotificationContainer />
