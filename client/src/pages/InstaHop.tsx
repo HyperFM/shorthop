@@ -3123,9 +3123,12 @@ function InstaHopView({ user }: { user: User }) {
       setRatingFullyDismissed(true);
       if (tid) {
         try { sessionStorage.setItem(`sh_rating_dismissed_${tid}`, '1'); } catch {}
+        apiRequest("POST", `/api/pending-rating/${tid}/dismiss`, {}).then(() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/pending-rating'] });
+        }).catch(() => {});
       }
     }
-  }, [ratingDismissCount, pendingRating?.tripId]);
+  }, [ratingDismissCount, pendingRating?.tripId, queryClient]);
 
   const showRatingBanner = !!pendingRating && !ratingFullyDismissed;
 
