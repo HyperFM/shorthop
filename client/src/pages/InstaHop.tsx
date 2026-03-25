@@ -3735,6 +3735,23 @@ function InstaHopView({ user }: { user: User }) {
     }
   }, [activeHop?.id, activeHop?.status, mode]);
 
+  const prevHopStatusRef = useRef<string | null>(null);
+  const [driverDroppedMsg, setDriverDroppedMsg] = useState(false);
+
+  useEffect(() => {
+    const prevStatus = prevHopStatusRef.current;
+    const curStatus = activeHop?.status || null;
+
+    if (prevStatus && (prevStatus === "matched" || prevStatus === "in_ride") && curStatus === "requested" && mode !== "drive") {
+      setDriverDroppedMsg(true);
+      setIsMatching(true);
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      setTimeout(() => setDriverDroppedMsg(false), 8000);
+    }
+
+    prevHopStatusRef.current = curStatus;
+  }, [activeHop?.status, mode]);
+
   useEffect(() => {
     if (!activeHop || activeHop.status !== "requested") return;
 
@@ -4290,20 +4307,42 @@ function InstaHopView({ user }: { user: User }) {
               className="absolute top-0 left-0 right-0 z-30 px-3 pt-3"
               data-testid="top-matching-banner"
             >
-              <div className="bg-white/95 dark:bg-black/95 backdrop-blur-xl rounded-2xl shadow-lg border border-blue-200/40 dark:border-blue-700/30 px-4 py-2.5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-foreground dark:text-white truncate">Waiting for a match...</p>
-                    <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">${(prepaidInfo.amount / 100).toFixed(2)} authorized</p>
+              {driverDroppedMsg ? (
+                <div className="bg-orange-50/95 dark:bg-orange-950/90 backdrop-blur-xl rounded-2xl shadow-lg border border-orange-300/50 dark:border-orange-700/40 px-4 py-3" data-testid="driver-dropped-apology">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center shrink-0 mt-0.5">
+                      <Car className="w-4.5 h-4.5 text-orange-500" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-orange-800 dark:text-orange-200 leading-tight">
+                        Hey, heads up!
+                      </p>
+                      <p className="text-xs text-orange-700/80 dark:text-orange-300/70 mt-1 leading-relaxed">
+                        Your driver had to step away — totally not your fault. We're already looking for another ride for you. Sit tight!
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Loader2 className="w-3 h-3 animate-spin text-orange-500 shrink-0" />
+                        <p className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">Finding you a new driver...</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                {matchCountdown !== null && (
-                  <span className="text-xs font-mono font-bold text-foreground dark:text-white shrink-0 bg-blue-50 dark:bg-blue-950/30 px-2 py-1 rounded-lg" data-testid="text-top-match-countdown">
-                    {Math.floor(matchCountdown / 60)}:{String(matchCountdown % 60).padStart(2, '0')}
-                  </span>
-                )}
-              </div>
+              ) : (
+                <div className="bg-white/95 dark:bg-black/95 backdrop-blur-xl rounded-2xl shadow-lg border border-blue-200/40 dark:border-blue-700/30 px-4 py-2.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-foreground dark:text-white truncate">Waiting for a match...</p>
+                      <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">${(prepaidInfo.amount / 100).toFixed(2)} authorized</p>
+                    </div>
+                  </div>
+                  {matchCountdown !== null && (
+                    <span className="text-xs font-mono font-bold text-foreground dark:text-white shrink-0 bg-blue-50 dark:bg-blue-950/30 px-2 py-1 rounded-lg" data-testid="text-top-match-countdown">
+                      {Math.floor(matchCountdown / 60)}:{String(matchCountdown % 60).padStart(2, '0')}
+                    </span>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

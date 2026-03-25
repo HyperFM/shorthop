@@ -2938,11 +2938,28 @@ export async function registerRoutes(
 
         const driverHops = await storage.getHopsForDriver(req.user.id);
         for (const hop of driverHops) {
-          if (hop.status === "requested" || hop.status === "matched") {
+          if (hop.status === "matched" || hop.status === "in_ride") {
             await db.update(shortHops)
-              .set({ status: "cancelled", driverId: null })
+              .set({
+                status: "requested",
+                driverId: null,
+                driverConfirmedPickup: false,
+                hopperConfirmedPickup: false,
+                driverConfirmedPickupAt: null,
+              })
               .where(eq(shortHops.id, hop.id));
-            console.log(`Driver ${req.user.id} went offline — cancelled hop ${hop.id} (was ${hop.status})`);
+
+            if (hop.walkerId) {
+              await storage.createNotification({
+                userId: hop.walkerId,
+                type: "driver_cancelled",
+                title: "Driver Unavailable",
+                message: "Your driver had to step away — hang tight, we're finding you another ride!",
+                isRead: false,
+              });
+            }
+
+            console.log(`Driver ${req.user.id} went offline — hop ${hop.id} returned to matching queue (was ${hop.status})`);
           }
         }
       }
