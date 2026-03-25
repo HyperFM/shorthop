@@ -1657,6 +1657,11 @@ export async function registerRoutes(
   app.get('/api/pending-rating', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (currentUser?.tipRatingOptOut) {
+        return res.json(null);
+      }
+
       const walkerHops = await storage.getHopsForWalker(req.user.id);
       const driverHops = await storage.getHopsForDriver(req.user.id);
       const allCompleted = [...walkerHops, ...driverHops]
@@ -1688,6 +1693,27 @@ export async function registerRoutes(
       res.json(null);
     } catch {
       res.status(500).json({ message: "Failed to check pending rating" });
+    }
+  });
+
+  app.post('/api/pending-rating/:hopId/dismiss', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = parseInt(req.params.hopId);
+      if (isNaN(hopId)) return res.status(400).json({ message: "Invalid hop ID" });
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      const isWalker = hop.walkerId === req.user.id;
+      const isDriver = hop.driverId === req.user.id;
+      if (!isWalker && !isDriver) return res.status(403).json({ message: "Not your hop" });
+      if (isWalker) {
+        await db.update(shortHops).set({ ratedByWalker: true }).where(eq(shortHops.id, hopId));
+      } else {
+        await db.update(shortHops).set({ ratedByDriver: true }).where(eq(shortHops.id, hopId));
+      }
+      res.json({ message: "Dismissed" });
+    } catch {
+      res.status(500).json({ message: "Failed to dismiss rating" });
     }
   });
 
