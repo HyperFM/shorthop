@@ -242,29 +242,21 @@ function createMarkerEl(src: string): HTMLElement {
 }
 
 function createDriverNavMarker(): HTMLElement {
+  const size = 52;
+  const border = 3;
+  const arrowH = 16;
+  const totalH = arrowH + size + border * 2;
+  const totalW = size + border * 2;
+
   const outer = document.createElement("div");
-  outer.style.width = "60px";
-  outer.style.height = "80px";
+  outer.style.width = totalW + "px";
+  outer.style.height = totalH + "px";
   outer.style.position = "relative";
   outer.style.filter = "drop-shadow(0 2px 6px rgba(0,0,0,0.35))";
 
-  const arrow = document.createElement("div");
-  arrow.className = "driver-direction-arrow";
-  arrow.style.position = "absolute";
-  arrow.style.top = "-2px";
-  arrow.style.left = "50%";
-  arrow.style.transform = "translateX(-50%)";
-  arrow.style.width = "0";
-  arrow.style.height = "0";
-  arrow.style.borderLeft = "10px solid transparent";
-  arrow.style.borderRight = "10px solid transparent";
-  arrow.style.borderBottom = "16px solid #3b82f6";
-  arrow.style.zIndex = "2";
-  outer.appendChild(arrow);
-
   const arrowOutline = document.createElement("div");
   arrowOutline.style.position = "absolute";
-  arrowOutline.style.top = "-5px";
+  arrowOutline.style.top = "0px";
   arrowOutline.style.left = "50%";
   arrowOutline.style.transform = "translateX(-50%)";
   arrowOutline.style.width = "0";
@@ -275,26 +267,38 @@ function createDriverNavMarker(): HTMLElement {
   arrowOutline.style.zIndex = "1";
   outer.appendChild(arrowOutline);
 
+  const arrow = document.createElement("div");
+  arrow.className = "driver-direction-arrow";
+  arrow.style.position = "absolute";
+  arrow.style.top = "3px";
+  arrow.style.left = "50%";
+  arrow.style.transform = "translateX(-50%)";
+  arrow.style.width = "0";
+  arrow.style.height = "0";
+  arrow.style.borderLeft = "10px solid transparent";
+  arrow.style.borderRight = "10px solid transparent";
+  arrow.style.borderBottom = "16px solid #3b82f6";
+  arrow.style.zIndex = "2";
+  outer.appendChild(arrow);
+
   const circle = document.createElement("div");
   circle.style.position = "absolute";
-  circle.style.top = "12px";
-  circle.style.left = "50%";
-  circle.style.transform = "translateX(-50%)";
-  circle.style.width = "52px";
-  circle.style.height = "52px";
+  circle.style.top = arrowH + "px";
+  circle.style.left = "0px";
+  circle.style.width = totalW + "px";
+  circle.style.height = totalW + "px";
   circle.style.borderRadius = "50%";
-  circle.style.border = "3px solid #f97316";
+  circle.style.border = border + "px solid #f97316";
   circle.style.overflow = "hidden";
   circle.style.zIndex = "3";
   outer.appendChild(circle);
 
   const pulse = document.createElement("div");
   pulse.style.position = "absolute";
-  pulse.style.top = "8px";
-  pulse.style.left = "50%";
-  pulse.style.transform = "translateX(-50%)";
-  pulse.style.width = "60px";
-  pulse.style.height = "60px";
+  pulse.style.top = (arrowH - 4) + "px";
+  pulse.style.left = "-4px";
+  pulse.style.width = (totalW + 8) + "px";
+  pulse.style.height = (totalW + 8) + "px";
   pulse.style.borderRadius = "50%";
   pulse.style.border = "2px solid rgba(59,130,246,0.35)";
   pulse.style.animation = "driver-pulse 2.5s ease-in-out infinite";
@@ -558,7 +562,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
         const el = createDriverNavMarker();
         const img = el.querySelector("img");
         if (img) img.src = iconSrc;
-        markerRef.current = new mapboxgl.Marker({ element: el, rotationAlignment: "viewport", pitchAlignment: "viewport" })
+        markerRef.current = new mapboxgl.Marker({ element: el, rotationAlignment: "viewport", pitchAlignment: "viewport", anchor: "center", offset: [0, 8] })
           .setLngLat(lngLat)
           .addTo(mapRef.current);
       }
