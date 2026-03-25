@@ -94,6 +94,7 @@ export default function DriverDashboard({ user }: { user: User }) {
   
   const [isRouteOpen, setIsRouteOpen] = useState(false);
   const [ratingHop, setRatingHop] = useState<{ tripId: number; ratedUserId: number; ratedUsername?: string; ratedPhoto?: string | null } | null>(null);
+  const [ratingDismissed, setRatingDismissed] = useState(false);
 
   const { data: pendingRating } = useQuery<{
     tripId: number; partnerId: number; partnerName: string; partnerPhoto: string | null;
@@ -103,7 +104,7 @@ export default function DriverDashboard({ user }: { user: User }) {
   });
 
   useEffect(() => {
-    if (pendingRating && pendingRating.role === "driver" && !ratingHop) {
+    if (pendingRating && pendingRating.role === "driver" && !ratingDismissed && !ratingHop) {
       setRatingHop({
         tripId: pendingRating.tripId,
         ratedUserId: pendingRating.partnerId,
@@ -228,6 +229,18 @@ export default function DriverDashboard({ user }: { user: User }) {
         onDismiss={() => setShowDriverMatchModal(false)}
         onViewTrip={() => {}}
       />
+
+      {ratingHop && !ratingDismissed && (
+        <HopBuddyRating
+          tripId={ratingHop.tripId}
+          ratedUserId={ratingHop.ratedUserId}
+          ratedUsername={ratingHop.ratedUsername}
+          ratedPhoto={ratingHop.ratedPhoto}
+          userCredits={user.credits || 0}
+          showTip={false}
+          onDismiss={() => { setRatingDismissed(true); setRatingHop(null); }}
+        />
+      )}
       
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
@@ -525,17 +538,6 @@ export default function DriverDashboard({ user }: { user: User }) {
         </div>
       )}
 
-      {ratingHop && (
-        <HopBuddyRating
-          open={!!ratingHop}
-          onOpenChange={(open) => !open && setRatingHop(null)}
-          tripId={ratingHop.tripId}
-          ratedUserId={ratingHop.ratedUserId}
-          ratedUsername={ratingHop.ratedUsername}
-          ratedPhoto={ratingHop.ratedPhoto}
-          userTier={user.tier}
-        />
-      )}
 
       {completedHopForShare && (
         <Dialog open={!!completedHopForShare} onOpenChange={(open) => !open && setCompletedHopForShare(null)}>

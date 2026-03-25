@@ -53,8 +53,8 @@ export default function WalkerDashboard({ user }: { user: User }) {
   const [hopsOpen, setHopsOpen] = useState(false);
   const [savedRoutesOpen, setSavedRoutesOpen] = useState(false);
   const [addRouteOpen, setAddRouteOpen] = useState(false);
-  const [ratingOpen, setRatingOpen] = useState(false);
   const [ratingHop, setRatingHop] = useState<{ tripId: number; driverId: number; driverName: string; driverPhoto?: string | null } | null>(null);
+  const [ratingDismissed, setRatingDismissed] = useState(false);
 
   const { data: pendingRating } = useQuery<{
     tripId: number; partnerId: number; partnerName: string; partnerPhoto: string | null;
@@ -64,14 +64,13 @@ export default function WalkerDashboard({ user }: { user: User }) {
   });
 
   useEffect(() => {
-    if (pendingRating && pendingRating.role === "hopper" && !ratingOpen && !ratingHop) {
+    if (pendingRating && pendingRating.role === "hopper" && !ratingDismissed && !ratingHop) {
       setRatingHop({
         tripId: pendingRating.tripId,
         driverId: pendingRating.partnerId,
         driverName: pendingRating.partnerName,
         driverPhoto: pendingRating.partnerPhoto,
       });
-      setRatingOpen(true);
     }
   }, [pendingRating]);
   const [showInsightBubble, setShowInsightBubble] = useState(false);
@@ -338,6 +337,18 @@ export default function WalkerDashboard({ user }: { user: User }) {
         onDismiss={() => setShowMatchModal(false)}
         onViewTrip={() => setLocation("/instahop")}
       />
+
+      {ratingHop && !ratingDismissed && (
+        <HopBuddyRating
+          tripId={ratingHop.tripId}
+          ratedUserId={ratingHop.driverId}
+          ratedUsername={ratingHop.driverName}
+          ratedPhoto={ratingHop.driverPhoto}
+          userCredits={user.credits || 0}
+          showTip={true}
+          onDismiss={() => { setRatingDismissed(true); setRatingHop(null); }}
+        />
+      )}
 
       <div className="flex items-center justify-between mb-3">
         <div>
@@ -809,19 +820,6 @@ export default function WalkerDashboard({ user }: { user: User }) {
         </DialogContent>
       </Dialog>
 
-      {ratingHop && (
-        <HopBuddyRating
-          open={ratingOpen}
-          onOpenChange={setRatingOpen}
-          tripId={ratingHop.tripId}
-          ratedUserId={ratingHop.driverId}
-          ratedUsername={ratingHop.driverName}
-          ratedPhoto={ratingHop.driverPhoto}
-          userTier={user.tier}
-          userCredits={user.credits || 0}
-          showTip={true}
-        />
-      )}
 
       <FirstHopCelebration
         show={showCelebration}
