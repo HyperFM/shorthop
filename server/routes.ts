@@ -3963,7 +3963,7 @@ export async function registerRoutes(
       for (const driver of targets) {
         await storage.createNotification({
           userId: driver.id,
-          type: "hop_nearby",
+          type: "admin_broadcast",
           title: "HOP REQUEST NEAR YOU",
           message,
           isRead: false,
@@ -3985,7 +3985,7 @@ export async function registerRoutes(
         if (u.isAdmin) continue;
         await storage.createNotification({
           userId: u.id,
-          type: "general",
+          type: "admin_broadcast",
           title,
           message,
           isRead: false,

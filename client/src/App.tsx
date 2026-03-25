@@ -150,7 +150,7 @@ function AdminNotificationOverlay() {
 
   useEffect(() => {
     const unread = notifications.filter(
-      n => !n.isRead && (n.type === "general" || n.type === "hop_nearby") && !shownIdsRef.current.has(n.id)
+      n => !n.isRead && n.type === "admin_broadcast" && !shownIdsRef.current.has(n.id)
     );
     if (unread.length > 0 && !visible) {
       const newest = unread[0];
@@ -224,11 +224,11 @@ function AdminNotificationOverlay() {
                 </div>
               )}
 
-              <div>
+              <div className="max-h-[50vh] overflow-y-auto w-full">
                 <p className="text-white font-black text-base leading-tight">
                   {visible.title}
                 </p>
-                <p className="text-white/85 text-sm mt-2 leading-relaxed font-medium">
+                <p className="text-white/85 text-sm mt-2 leading-relaxed font-medium whitespace-pre-wrap break-words">
                   {visible.message}
                 </p>
               </div>
