@@ -1152,11 +1152,14 @@ export async function registerRoutes(
       const tipWheels = tipCents / 100;
 
       if (useWheels) {
-        const tipper = await storage.getUser(req.user.id);
-        if (!tipper || (tipper.credits || 0) < tipWheels) {
+        const tipDeduct = await db.execute(sql`
+          UPDATE users SET credits = credits - ${tipWheels}
+          WHERE id = ${req.user.id} AND credits >= ${tipWheels}
+          RETURNING credits
+        `);
+        if (!tipDeduct.rows || tipDeduct.rows.length === 0) {
           return res.status(400).json({ message: "Not enough wheels" });
         }
-        await db.update(users).set({ credits: (tipper.credits || 0) - tipWheels }).where(eq(users.id, req.user.id));
         if (hop.driverId) {
           const driver = await storage.getUser(hop.driverId);
           if (driver) {
@@ -4676,9 +4679,14 @@ export async function registerRoutes(
         return res.status(400).json({ message: `Not enough Wheels. You have ${userWheels.toFixed(2)} but need ${wheelsCost.toFixed(2)}.` });
       }
 
-      await db.update(users)
-        .set({ credits: userWheels - wheelsCost })
-        .where(eq(users.id, user.id));
+      const deductResult = await db.execute(sql`
+        UPDATE users SET credits = credits - ${wheelsCost}
+        WHERE id = ${user.id} AND credits >= ${wheelsCost}
+        RETURNING credits
+      `);
+      if (!deductResult.rows || deductResult.rows.length === 0) {
+        return res.status(400).json({ message: "Not enough Wheels (balance changed)" });
+      }
 
       const depTime = departureTime ? new Date(departureTime) : new Date(Date.now() + 5 * 60000);
       const arrTime = arrivalDeadline ? new Date(arrivalDeadline) : new Date(depTime.getTime() + 45 * 60000);

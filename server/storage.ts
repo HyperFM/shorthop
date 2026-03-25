@@ -286,8 +286,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserFlexibility(id: number, updates: any): Promise<User> {
+    const safeKeys = ['isFlexibleDriver', 'maxDetourDistance', 'maxDetourTime', 'detourAvailable'];
+    const safeUpdates: Record<string, any> = {};
+    for (const key of safeKeys) {
+      if (updates[key] !== undefined) safeUpdates[key] = updates[key];
+    }
+    if (Object.keys(safeUpdates).length === 0) throw new Error("No valid fields");
     const [user] = await db.update(users)
-      .set(updates)
+      .set(safeUpdates)
       .where(eq(users.id, id))
       .returning();
     if (!user) throw new Error("User not found");
@@ -688,8 +694,12 @@ export class DatabaseStorage implements IStorage {
     const [reward] = await db.select().from(rewards).where(eq(rewards.id, rewardId));
     if (!reward) throw new Error("Reward not found");
 
-    const user = await this.getUser(userId);
-    if (!user || user.credits < reward.wheelsCost) {
+    const deductResult = await db.execute(sql`
+      UPDATE users SET credits = credits - ${reward.wheelsCost}
+      WHERE id = ${userId} AND credits >= ${reward.wheelsCost}
+      RETURNING credits
+    `);
+    if (!deductResult.rows || deductResult.rows.length === 0) {
       throw new Error("Insufficient wheels");
     }
 
@@ -700,10 +710,6 @@ export class DatabaseStorage implements IStorage {
       rewardId,
       code,
     });
-
-    await db.update(users)
-      .set({ credits: user.credits - reward.wheelsCost })
-      .where(eq(users.id, userId));
 
     return { code, reward };
   }
@@ -721,11 +727,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deductCredits(userId: number, amount: number): Promise<void> {
-    const user = await this.getUser(userId);
-    if (!user || user.credits < amount) throw new Error("Insufficient wheels");
-    await db.update(users)
-      .set({ credits: user.credits - amount })
-      .where(eq(users.id, userId));
+    const result = await db.execute(sql`
+      UPDATE users SET credits = credits - ${amount}
+      WHERE id = ${userId} AND credits >= ${amount}
+      RETURNING credits
+    `);
+    if (!result.rows || result.rows.length === 0) {
+      throw new Error("Insufficient wheels");
+    }
   }
 
   async getUserRedemptions(userId: number): Promise<UserRedemption[]> {
