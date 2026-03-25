@@ -105,7 +105,7 @@ export default function Home() {
 
   useEffect(() => {
     if (user) {
-      setLocation("/community");
+      setLocation("/instahop");
     }
   }, [user, setLocation]);
 

@@ -62,7 +62,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      setLocation("/community");
+      setLocation("/instahop");
     }
   }, [user, authLoading, setLocation]);
 

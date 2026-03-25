@@ -2156,6 +2156,7 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
                       queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
                       showFlash("✅", "Ride completed!", "success");
                       onClose();
+                      setTimeout(() => window.dispatchEvent(new CustomEvent("sh-ride-completed")), 300);
                     } catch {
                       showFlash("⚠️", "Couldn't complete ride", "error");
                     }
@@ -2971,6 +2972,12 @@ function InstaHopView({ user }: { user: User }) {
   const [driverRouteInfo, setDriverRouteInfo] = useState<{ distance: string; eta: string } | null>(null);
   const prevRouteKeyRef = useRef<string>("");
 
+  useEffect(() => {
+    const handler = () => setTimeout(() => setLocation("/community"), 400);
+    window.addEventListener("sh-ride-completed", handler);
+    return () => window.removeEventListener("sh-ride-completed", handler);
+  }, [setLocation]);
+
   const driverActiveHops = hops?.filter(h =>
     (h.status === "matched" || h.status === "in_ride") && h.driverId === user.id
   ) || [];
@@ -3244,6 +3251,13 @@ function InstaHopView({ user }: { user: User }) {
   const [pickupTimerRemaining, setPickupTimerRemaining] = useState<number | null>(null);
 
   const hasActiveRide = !!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"));
+  const prevHasActiveRideRef = useRef(hasActiveRide);
+  useEffect(() => {
+    if (prevHasActiveRideRef.current && !hasActiveRide && mode === "hop") {
+      setTimeout(() => setLocation("/community"), 600);
+    }
+    prevHasActiveRideRef.current = hasActiveRide;
+  }, [hasActiveRide, mode, setLocation]);
   useLiveLocationBroadcast(hasActiveRide || mode === "drive");
   const tracking = useHopTracking(activeHop?.id, hasActiveRide);
 
@@ -3926,6 +3940,7 @@ function InstaHopView({ user }: { user: User }) {
                 queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
                 prevRouteKeyRef.current = "";
                 showFlash("✅", "Ride completed!", "success");
+                setTimeout(() => setLocation("/community"), 600);
               } catch {
                 showFlash("⚠️", "Couldn't complete ride", "error");
               }
@@ -3944,7 +3959,7 @@ function InstaHopView({ user }: { user: User }) {
           <div className="px-4 pt-3 pb-2 h-full overflow-y-auto">
             {isDriverMode ? (
               <>
-                {showRatingBanner && pendingRating && pendingRating.role === "driver" && (
+                {showRatingBanner && pendingRating && pendingRating.role === "driver" && !user.tipRatingOptOut && (
                   <HopBuddyRating
                     tripId={pendingRating.tripId}
                     ratedUserId={pendingRating.partnerId}
@@ -4045,7 +4060,7 @@ function InstaHopView({ user }: { user: User }) {
                   />
                 )}
 
-                {showRatingBanner && pendingRating && pendingRating.role === "hopper" && (
+                {showRatingBanner && pendingRating && pendingRating.role === "hopper" && !user.tipRatingOptOut && (
                   <HopBuddyRating
                     tripId={pendingRating.tripId}
                     ratedUserId={pendingRating.partnerId}

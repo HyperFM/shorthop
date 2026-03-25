@@ -100,6 +100,7 @@ export const users = pgTable("users", {
   customLocationLat: text("custom_location_lat"),
   customLocationLng: text("custom_location_lng"),
   profileColor: text("profile_color").default("text-orange-500"),
+  tipRatingOptOut: boolean("tip_rating_opt_out").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

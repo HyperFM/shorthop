@@ -37,7 +37,7 @@ export function useLogin() {
     },
     onSuccess: (user) => {
       queryClient.setQueryData([api.auth.me.path], user);
-      setLocation("/community");
+      setLocation("/instahop");
     },
     onError: (err: Error) => {
       toast({ title: "Login failed", description: err.message, variant: "destructive" });
@@ -70,7 +70,7 @@ export function useRegister() {
     onSuccess: (user) => {
       queryClient.setQueryData([api.auth.me.path], user);
       toast({ title: "Account created!" });
-      setLocation("/community");
+      setLocation("/instahop");
     },
     onError: (err: Error) => {
       toast({ title: "Registration failed", description: err.message, variant: "destructive" });

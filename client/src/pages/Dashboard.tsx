@@ -5,7 +5,7 @@ import WalkerDashboard from "./WalkerDashboard";
 import DriverDashboard from "./DriverDashboard";
 import { showFlash } from "@/components/FlashNotification";
 import { useTheme } from "@/components/ThemeProvider";
-import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil, Users, Phone, MessageCircle, X, Sun, Moon, Monitor, Clock, Lock } from "lucide-react";
+import { Loader2, Bell, BellOff, ChevronRight, Volume2, Eye, EyeOff, Shield, MapPin, Navigation, Lightbulb, Sparkles, Plus, Trash2, Pencil, Users, Phone, MessageCircle, X, Sun, Moon, Monitor, Clock, Lock, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -136,6 +136,7 @@ export default function Dashboard() {
   const [magicGpsEnabled, setMagicGpsEnabled] = useState(user?.magicGpsEnabled || false);
   const [flowModeEnabled, setFlowModeEnabled] = useState(user?.flowModeEnabled || false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [tipRatingOptOut, setTipRatingOptOut] = useState(user?.tipRatingOptOut || false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -178,7 +179,8 @@ export default function Dashboard() {
     if (user?.allowDetourDrivers !== undefined) setAllowDetourDrivers(user.allowDetourDrivers || "both");
     if (user?.magicGpsEnabled !== undefined) setMagicGpsEnabled(user.magicGpsEnabled || false);
     if ((user as any)?.littleEarly !== undefined) setLittleEarly((user as any).littleEarly || false);
-  }, [user?.hopperFlexRange, user?.driverFlexRange, user?.isFlexibleDriver, user?.hopperDropoffFlex, user?.sharedCommute, user?.modeLock, user?.allowDetourDrivers, user?.magicGpsEnabled, (user as any)?.littleEarly]);
+    if (user?.tipRatingOptOut !== undefined) setTipRatingOptOut(user.tipRatingOptOut || false);
+  }, [user?.hopperFlexRange, user?.driverFlexRange, user?.isFlexibleDriver, user?.hopperDropoffFlex, user?.sharedCommute, user?.modeLock, user?.allowDetourDrivers, user?.magicGpsEnabled, (user as any)?.littleEarly, user?.tipRatingOptOut]);
 
   useEffect(() => {
     savePreferences(prefs);
@@ -514,6 +516,37 @@ export default function Dashboard() {
               updatePreferences.mutate({ flowModeEnabled: checked });
             }}
           />
+        )}
+
+        {(user?.isFounder || user?.subscription === "power_hop" || user?.username?.toLowerCase() === "hyperfm") && (
+          <Card className="border-border/40" data-testid="card-tip-rating-opt-out">
+            <CardContent className="py-3 px-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <Star className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
+                  <div>
+                    <span className="text-[11px] font-medium text-foreground dark:text-white">Skip Tip & Rating Prompt</span>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Don't show the tip and rating screen after rides</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={tipRatingOptOut}
+                  onCheckedChange={async (checked) => {
+                    setTipRatingOptOut(checked);
+                    try {
+                      await apiRequest("PATCH", "/api/user/profile", { tipRatingOptOut: checked });
+                      queryClient.invalidateQueries({ queryKey: ['/api/me'] });
+                      showFlash("✨", checked ? "Tip & rating prompt disabled" : "Tip & rating prompt enabled", "success");
+                    } catch {
+                      setTipRatingOptOut(!checked);
+                      showFlash("⚠️", "Failed to update preference", "error");
+                    }
+                  }}
+                  data-testid="switch-tip-rating-opt-out"
+                />
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {activeTab === "driver" && (
