@@ -99,6 +99,7 @@ export const users = pgTable("users", {
   customLocationAddress: text("custom_location_address"),
   customLocationLat: text("custom_location_lat"),
   customLocationLng: text("custom_location_lng"),
+  profileColor: text("profile_color").default("text-orange-500"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

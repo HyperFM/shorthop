@@ -1563,7 +1563,7 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const SUPPORTED_LANGUAGES = Object.keys(getLanguages());
-      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility', 'legalName'];
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility', 'legalName', 'profileColor'];
       const updates: Record<string, any> = {};
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -2568,12 +2568,13 @@ export async function registerRoutes(
     try {
       const hopId = Number(req.params.id);
       const hops = await storage.getHopsForWalker(req.user.id);
-      const hop = hops.find(h => h.id === hopId && h.status === 'matched');
+      const hop = hops.find(h => h.id === hopId && (h.status === 'matched' || h.status === 'in_ride'));
       if (!hop || !hop.driverId) return res.json(null);
       const driver = await storage.getUser(hop.driverId);
       if (!driver) return res.json(null);
       res.json({
         username: driver.username,
+        profilePhoto: driver.profilePhoto,
         vehicleMake: driver.vehicleMake,
         vehicleModel: driver.vehicleModel,
         vehicleColor: driver.vehicleColor,
@@ -2587,6 +2588,13 @@ export async function registerRoutes(
         rideVibe: driver.rideVibe,
         bio: driver.bio,
         interests: driver.interests,
+        subscription: driver.subscription,
+        profileColor: driver.profileColor || "text-orange-500",
+        favoritePlaces: driver.favoritePlaces,
+        travelTime: driver.travelTime,
+        city: driver.city,
+        totalHops: driver.totalHops,
+        idVerified: driver.idVerified,
       });
     } catch {
       res.status(500).json({ message: "Failed to get driver info" });

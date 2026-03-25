@@ -1172,6 +1172,271 @@ function PendingHopperPrompt() {
   );
 }
 
+const SAFETY_MESSAGES = [
+  "Click click — seatbelt check?",
+  "Stay aware, stay safe 🤝",
+  "Respect each other's ride preferences",
+  "Keep it kind, keep it smooth",
+  "Got everything with you?",
+  "Short Hop's got your back",
+  "Safe rides = better vibes",
+  "Eyes up, phone down when stepping out",
+];
+
+function SafetyMessageRotator() {
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    const delay = 5000 + Math.random() * 3000;
+    const timer = setTimeout(() => {
+      setIdx(prev => (prev + 1) % SAFETY_MESSAGES.length);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [idx]);
+
+  return (
+    <div className="bg-green-50/50 dark:bg-green-950/10 border border-green-200/30 dark:border-green-800/20 rounded-lg px-2.5 py-1.5" data-testid="safety-message-rotator">
+      <AnimatePresence mode="wait">
+        <motion.p
+          key={idx}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.3 }}
+          className="text-[10px] text-green-700 dark:text-green-400 font-medium flex items-center gap-1.5"
+        >
+          <Shield className="w-3 h-3 shrink-0" />
+          {SAFETY_MESSAGES[idx]}
+        </motion.p>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function getCommonTraits(user: any, driverInfo: any): string[] {
+  const common: string[] = [];
+  if (!driverInfo) return common;
+
+  if (user.rideVibe && driverInfo.rideVibe && user.rideVibe === driverInfo.rideVibe) {
+    const vibeLabels: Record<string, string> = { friendly_chat: "Friendly Chat", quiet_ride: "Quiet Ride", music_vibes: "Music Vibes" };
+    common.push(`Both prefer: ${vibeLabels[user.rideVibe] || user.rideVibe}`);
+  }
+
+  if (user.interests && driverInfo.interests) {
+    const myInterests = user.interests.toLowerCase().split(/[,;|]+/).map((s: string) => s.trim()).filter(Boolean);
+    const theirInterests = driverInfo.interests.toLowerCase().split(/[,;|]+/).map((s: string) => s.trim()).filter(Boolean);
+    const shared = myInterests.filter((i: string) => theirInterests.some((t: string) => t.includes(i) || i.includes(t)));
+    shared.slice(0, 2).forEach((s: string) => common.push(`Shared interest: ${s}`));
+  }
+
+  if (user.driverMusicPref && driverInfo.driverMusicPref && user.driverMusicPref === driverInfo.driverMusicPref) {
+    common.push(`Same music taste: ${driverInfo.driverMusicPref}`);
+  }
+
+  if (user.favoritePlaces && driverInfo.favoritePlaces) {
+    const myPlaces = user.favoritePlaces.toLowerCase().split(/[,;|]+/).map((s: string) => s.trim()).filter(Boolean);
+    const theirPlaces = driverInfo.favoritePlaces.toLowerCase().split(/[,;|]+/).map((s: string) => s.trim()).filter(Boolean);
+    const sharedPlaces = myPlaces.filter((p: string) => theirPlaces.some((t: string) => t.includes(p) || p.includes(t)));
+    if (sharedPlaces.length > 0) common.push(`Both like: ${sharedPlaces[0]}`);
+  }
+
+  if (user.city && driverInfo.city && user.city.toLowerCase() === driverInfo.city.toLowerCase()) {
+    common.push(`Same city: ${driverInfo.city}`);
+  }
+
+  return common.slice(0, 3);
+}
+
+function colorClassToHex(colorClass: string): string {
+  const map: Record<string, string> = {
+    "text-orange-500": "#f97316",
+    "text-violet-500": "#8b5cf6",
+    "text-cyan-500": "#06b6d4",
+    "text-rose-500": "#f43f5e",
+    "text-lime-500": "#84cc16",
+    "text-amber-500": "#fbbf24",
+    "text-sky-500": "#0ea5e9",
+    "text-fuchsia-500": "#d946ef",
+    "text-orange-400": "#fb923c",
+    "text-violet-400": "#a78bfa",
+    "text-cyan-400": "#22d3ee",
+    "text-rose-400": "#fb7185",
+    "text-lime-400": "#a3e635",
+    "text-amber-400": "#fbbf24",
+    "text-sky-400": "#38bdf8",
+    "text-fuchsia-400": "#e879f9",
+  };
+  return map[colorClass] || "#22c55e";
+}
+
+function HopperRidePanel({ activeHop, user, tracking, pickupTimerRemaining, queryClient }: {
+  activeHop: any;
+  user: any;
+  tracking: any;
+  pickupTimerRemaining: number | null;
+  queryClient: any;
+}) {
+  const { data: driverInfo } = useQuery({
+    queryKey: ['/api/hops', activeHop.id, 'driver-info'],
+    queryFn: async () => {
+      const res = await fetch(`/api/hops/${activeHop.id}/driver-info`, { credentials: 'include' });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    staleTime: 30000,
+    enabled: !!(activeHop?.id),
+  });
+
+  const isDriverPowerHop = driverInfo?.subscription === "power_hop";
+  const driverColor = isDriverPowerHop && driverInfo?.profileColor ? driverInfo.profileColor : null;
+  const panelBorderColor = driverColor ? colorClassToHex(driverColor) : "#22c55e";
+  const panelBgGradient = driverColor
+    ? `linear-gradient(135deg, ${colorClassToHex(driverColor)}08, transparent)`
+    : "linear-gradient(135deg, rgba(34,197,94,0.05), transparent)";
+
+  const commonTraits = getCommonTraits(user, driverInfo);
+
+  return (
+    <Card
+      className="mb-2 overflow-hidden"
+      style={{ borderColor: `${panelBorderColor}66`, background: panelBgGradient }}
+      data-testid="card-active-ride"
+    >
+      <CardContent className="py-3 px-4 space-y-2">
+        {driverInfo && (
+          <div className="flex items-center gap-3 pb-2 border-b border-border/20" data-testid="driver-profile-section">
+            {driverInfo.profilePhoto ? (
+              <img
+                src={driverInfo.profilePhoto}
+                className="w-11 h-11 rounded-full object-cover shrink-0"
+                style={{ borderWidth: 2, borderStyle: "solid", borderColor: panelBorderColor }}
+                alt=""
+                data-testid="img-driver-photo"
+              />
+            ) : (
+              <div
+                className="w-11 h-11 rounded-full flex items-center justify-center shrink-0 bg-gray-100 dark:bg-gray-800"
+                style={{ borderWidth: 2, borderStyle: "solid", borderColor: panelBorderColor }}
+              >
+                <Car className="w-5 h-5 text-gray-500" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-foreground dark:text-white truncate flex items-center gap-1" data-testid="text-driver-name">
+                {driverInfo.username}
+                {driverInfo.idVerified && <Shield className="w-3 h-3 text-blue-500 shrink-0" />}
+              </p>
+              <p className="text-[10px] text-foreground/60 dark:text-gray-400 truncate" data-testid="text-driver-vehicle">
+                {[driverInfo.vehicleColor, driverInfo.vehicleMake, driverInfo.vehicleModel].filter(Boolean).join(" ")}
+                {driverInfo.licensePlate && ` · ${driverInfo.licensePlate}`}
+              </p>
+              {driverInfo.totalHops !== undefined && driverInfo.totalHops > 0 && (
+                <p className="text-[9px] text-foreground/50 dark:text-gray-500">{driverInfo.totalHops} hops completed</p>
+              )}
+            </div>
+            {tracking.available && tracking.distance !== null && (
+              <span className="text-[10px] font-bold px-2 py-1 rounded-full shrink-0" style={{ color: panelBorderColor, backgroundColor: `${panelBorderColor}15` }} data-testid="text-tracking-distance">
+                {tracking.distance < 0.1 ? "< 0.1 mi" : `${tracking.distance.toFixed(1)} mi`}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold text-foreground dark:text-white flex items-center gap-1.5">
+            {activeHop.status === "matched" ? (
+              <>
+                <Car className="w-4 h-4" style={{ color: panelBorderColor }} />
+                Driver on the way
+              </>
+            ) : (
+              <>
+                <Navigation className="w-4 h-4 text-green-500" />
+                In Ride
+              </>
+            )}
+          </p>
+          {tracking.etaMinutes && activeHop.status === "matched" && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" data-testid="display-pickup-eta">
+              ~{tracking.etaMinutes} min
+            </span>
+          )}
+        </div>
+
+        {pickupTimerRemaining !== null && activeHop.status === "matched" && (
+          <div className={`flex items-center gap-2 rounded-lg p-2 border ${pickupTimerRemaining <= 30 ? 'bg-red-50 dark:bg-red-950/20 border-red-200/50 dark:border-red-700/30' : 'bg-orange-50 dark:bg-orange-950/20 border-orange-200/50 dark:border-orange-700/30'}`} data-testid="display-pickup-timer">
+            <Timer className={`w-3.5 h-3.5 shrink-0 ${pickupTimerRemaining <= 30 ? 'text-red-600 dark:text-red-400' : 'text-orange-600 dark:text-orange-400'}`} />
+            <p className={`text-[11px] font-bold ${pickupTimerRemaining <= 30 ? 'text-red-700 dark:text-red-400' : 'text-orange-700 dark:text-orange-400'}`}>
+              Pickup window: {Math.floor(pickupTimerRemaining / 60)}:{String(pickupTimerRemaining % 60).padStart(2, '0')}
+              {pickupTimerRemaining <= 0 && " — Time expired"}
+            </p>
+          </div>
+        )}
+
+        {tracking.pickupSide && activeHop.status === "matched" && (
+          <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg p-2 border border-blue-200/50 dark:border-blue-700/30" data-testid="display-pickup-side">
+            <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <p className="text-[11px] font-semibold text-blue-700 dark:text-blue-400">{tracking.pickupSide}</p>
+          </div>
+        )}
+
+        {tracking.available && tracking.direction && activeHop.status === "matched" && (
+          <p className="text-xs text-muted-foreground dark:text-gray-300">
+            Driver heading {tracking.direction} toward you
+          </p>
+        )}
+
+        {commonTraits.length > 0 && (
+          <div className="bg-purple-50/50 dark:bg-purple-950/10 border border-purple-200/30 dark:border-purple-800/20 rounded-lg px-2.5 py-1.5 space-y-0.5" data-testid="common-traits">
+            <p className="text-[9px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">In Common</p>
+            {commonTraits.map((trait, i) => (
+              <p key={i} className="text-[10px] text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                <Star className="w-2.5 h-2.5 shrink-0" /> {trait}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {activeHop.status === "matched" && (
+          <Button
+            size="sm"
+            className="w-full text-xs h-8 bg-green-600 hover:bg-green-700 text-white"
+            onClick={async () => {
+              try {
+                await apiRequest("POST", `/api/hops/${activeHop.id}/start-ride`);
+                queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                showFlash("🚗", "Ride started!", "success");
+              } catch {
+                showFlash("⚠️", "Couldn't start ride", "error");
+              }
+            }}
+            data-testid="button-start-ride"
+          >
+            Confirm Pickup - Start Ride
+          </Button>
+        )}
+
+        {activeHop.status === "in_ride" && <SafetyMessageRotator />}
+
+        {activeHop.status === "in_ride" && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-700/30 rounded-lg p-2 text-[10px] text-amber-700 dark:text-amber-300" data-testid="gps-ride-info">
+            <p className="font-medium flex items-center gap-1"><span>📡</span> GPS is tracking this ride for your protection</p>
+            <p className="mt-0.5 text-amber-600/70 dark:text-amber-400/60">Keep location services enabled for refund eligibility.</p>
+          </div>
+        )}
+
+        {activeHop.status === "in_ride" && (
+          <SpontaneousStopHopper hopId={activeHop.id} />
+        )}
+
+        {(activeHop.status === "matched" || activeHop.status === "in_ride") && (
+          <RideChat hopId={activeHop.id} currentUserId={user.id} />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function SpontaneousStopHopper({ hopId }: { hopId: number }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [requesting, setRequesting] = useState(false);
@@ -3531,94 +3796,14 @@ function InstaHopView({ user }: { user: User }) {
                   </Card>
                 )}
 
-                {hasActiveRide && (
-                  <Card className="border-primary/40 bg-gradient-to-br from-primary/5 to-transparent mb-2" data-testid="card-active-ride">
-                    <CardContent className="py-3 px-4 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                          {activeHop?.status === "matched" ? (
-                            <>
-                              <Car className="w-4 h-4 text-primary" />
-                              Driver on the way
-                            </>
-                          ) : (
-                            <>
-                              <Navigation className="w-4 h-4 text-green-500" />
-                              In Ride
-                            </>
-                          )}
-                        </p>
-                        {tracking.available && tracking.distance !== null && (
-                          <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full" data-testid="text-tracking-distance">
-                            {tracking.distance < 0.1 ? "< 0.1 mi" : `${tracking.distance.toFixed(1)} mi`} away
-                          </span>
-                        )}
-                      </div>
-
-                      {tracking.etaMinutes && activeHop?.status === "matched" && (
-                        <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/20 rounded-lg p-2 border border-green-200/50 dark:border-green-700/30" data-testid="display-pickup-eta">
-                          <Clock className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />
-                          <p className="text-[11px] font-bold text-green-700 dark:text-green-400">
-                            Driver arriving in ~{tracking.etaMinutes} min
-                          </p>
-                        </div>
-                      )}
-
-                      {pickupTimerRemaining !== null && activeHop?.status === "matched" && (
-                        <div className={`flex items-center gap-2 rounded-lg p-2 border ${pickupTimerRemaining <= 30 ? 'bg-red-50 dark:bg-red-950/20 border-red-200/50 dark:border-red-700/30' : 'bg-orange-50 dark:bg-orange-950/20 border-orange-200/50 dark:border-orange-700/30'}`} data-testid="display-pickup-timer">
-                          <Timer className={`w-3.5 h-3.5 shrink-0 ${pickupTimerRemaining <= 30 ? 'text-red-600 dark:text-red-400' : 'text-orange-600 dark:text-orange-400'}`} />
-                          <p className={`text-[11px] font-bold ${pickupTimerRemaining <= 30 ? 'text-red-700 dark:text-red-400' : 'text-orange-700 dark:text-orange-400'}`}>
-                            Pickup window: {Math.floor(pickupTimerRemaining / 60)}:{String(pickupTimerRemaining % 60).padStart(2, '0')}
-                            {pickupTimerRemaining <= 0 && " — Time expired"}
-                          </p>
-                        </div>
-                      )}
-
-                      {tracking.pickupSide && activeHop?.status === "matched" && (
-                        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/20 rounded-lg p-2 border border-blue-200/50 dark:border-blue-700/30" data-testid="display-pickup-side">
-                          <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                          <p className="text-[11px] font-semibold text-blue-700 dark:text-blue-400">{tracking.pickupSide}</p>
-                        </div>
-                      )}
-
-                      {tracking.available && tracking.direction && (
-                        <p className="text-xs text-muted-foreground dark:text-gray-300">
-                          Driver heading {tracking.direction} toward you
-                        </p>
-                      )}
-
-                      {activeHop?.status === "matched" && (
-                        <Button
-                          size="sm"
-                          className="w-full text-xs h-8 bg-green-600 hover:bg-green-700 text-white"
-                          onClick={async () => {
-                            try {
-                              await apiRequest("POST", `/api/hops/${activeHop.id}/start-ride`);
-                              queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
-                              showFlash("🚗", "Ride started!", "success");
-                            } catch {
-                              showFlash("⚠️", "Couldn't start ride", "error");
-                            }
-                          }}
-                          data-testid="button-start-ride"
-                        >
-                          Confirm Pickup - Start Ride
-                        </Button>
-                      )}
-                      {activeHop?.status === "in_ride" && (
-                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-700/30 rounded-lg p-2 text-[10px] text-amber-700 dark:text-amber-300" data-testid="gps-ride-info">
-                          <p className="font-medium flex items-center gap-1"><span>📡</span> GPS is tracking this ride for your protection</p>
-                          <p className="mt-0.5 text-amber-600/70 dark:text-amber-400/60">Keep location services enabled for refund eligibility.</p>
-                        </div>
-                      )}
-                      {activeHop?.status === "in_ride" && (
-                        <SpontaneousStopHopper hopId={activeHop.id} />
-                      )}
-                      {(activeHop?.status === "matched" || activeHop?.status === "in_ride") && (
-                        <RideChat hopId={activeHop.id} currentUserId={user.id} />
-                      )}
-                    </CardContent>
-                  </Card>
+                {hasActiveRide && activeHop && (
+                  <HopperRidePanel
+                    activeHop={activeHop}
+                    user={user}
+                    tracking={tracking}
+                    pickupTimerRemaining={pickupTimerRemaining}
+                    queryClient={queryClient}
+                  />
                 )}
 
                 {!isMatching && !pricePreview && !hasActiveRide && mode === "hop" && (

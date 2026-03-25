@@ -337,6 +337,12 @@ export default function Settings() {
     setProfileTabColor(color);
     try { localStorage.setItem("sh-profile-tab-color", color); } catch {}
     window.dispatchEvent(new CustomEvent("sh-profile-color-change", { detail: color }));
+    fetch("/api/user/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ profileColor: color }),
+    }).catch(() => {});
   }
   const [subscriptionPlan, setSubscriptionPlan] = useState<"flex_hop" | "power_hop" | null>(null);
 
