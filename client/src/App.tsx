@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { FlashNotificationContainer } from "@/components/FlashNotification";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,6 +26,8 @@ import Widget from "@/pages/Widget";
 import InstallApp from "@/pages/InstallApp";
 import SchedulePage from "@/pages/Schedule";
 import InstaHop from "@/pages/InstaHop";
+import { apiRequest } from "@/lib/queryClient";
+import type { Notification } from "@shared/schema";
 
 function OrangeGlow() {
   return (
@@ -121,6 +123,131 @@ function AppStartRedirect() {
   return null;
 }
 
+function AdminNotificationOverlay() {
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ["/api/notifications"],
+    queryFn: async () => {
+      const res = await fetch("/api/notifications", { credentials: "include" });
+      if (res.status === 401) return [];
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchInterval: 15000,
+    staleTime: 5000,
+  });
+
+  const qc = useQueryClient();
+  const [visible, setVisible] = useState<Notification | null>(null);
+  const shownIdsRef = useRef<Set<number>>(new Set());
+  const [adminPhoto, setAdminPhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/photo", { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.profilePhoto) setAdminPhoto(data.profilePhoto); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const unread = notifications.filter(
+      n => !n.isRead && (n.type === "general" || n.type === "hop_nearby") && !shownIdsRef.current.has(n.id)
+    );
+    if (unread.length > 0 && !visible) {
+      const newest = unread[0];
+      shownIdsRef.current.add(newest.id);
+      setVisible(newest);
+    }
+  }, [notifications, visible]);
+
+  const dismiss = async () => {
+    if (visible) {
+      try {
+        await apiRequest("POST", `/api/notifications/${visible.id}/read`);
+        qc.invalidateQueries({ queryKey: ["/api/notifications"] });
+      } catch {}
+    }
+    setVisible(null);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6" data-testid="admin-notification-overlay">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={dismiss} />
+
+      <style>{`
+        @keyframes adminCardEnter { 0% { opacity: 0; transform: scale(0.8) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes sparkle { 0%,100% { opacity: 0; transform: scale(0); } 50% { opacity: 1; transform: scale(1); } }
+        @keyframes ringPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4), 0 0 20px rgba(59,130,246,0.2); } 50% { box-shadow: 0 0 0 6px rgba(59,130,246,0), 0 0 30px rgba(59,130,246,0.3); } }
+      `}</style>
+
+      <div
+        className="relative max-w-sm w-full rounded-3xl overflow-visible"
+        style={{ animation: "adminCardEnter 0.4s ease-out forwards" }}
+        data-testid="admin-notification-card"
+      >
+        {[
+          { top: "-6px", left: "10%", delay: "0s", size: "8px" },
+          { top: "-8px", right: "15%", delay: "0.3s", size: "6px" },
+          { top: "20%", left: "-8px", delay: "0.6s", size: "7px" },
+          { top: "15%", right: "-6px", delay: "0.9s", size: "5px" },
+          { bottom: "-5px", left: "25%", delay: "0.2s", size: "6px" },
+          { bottom: "-7px", right: "20%", delay: "0.5s", size: "8px" },
+          { top: "50%", left: "-10px", delay: "0.8s", size: "5px" },
+          { top: "40%", right: "-8px", delay: "1.1s", size: "7px" },
+        ].map((s, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-blue-400"
+            style={{
+              ...s,
+              width: s.size,
+              height: s.size,
+              animation: `sparkle 2s ease-in-out ${s.delay} infinite`,
+              zIndex: 10,
+            }}
+          />
+        ))}
+
+        <div
+          className="rounded-3xl p-[3px]"
+          style={{
+            background: "linear-gradient(135deg, #3b82f6, #60a5fa, #3b82f6, #93c5fd)",
+            animation: "ringPulse 2.5s ease-in-out infinite",
+          }}
+        >
+          <div className="bg-gradient-to-br from-orange-500 via-orange-500 to-orange-600 rounded-[21px] px-5 py-6">
+            <div className="flex flex-col items-center text-center gap-3">
+              {adminPhoto && (
+                <div className="w-16 h-16 rounded-full border-[3px] border-white/80 overflow-hidden shadow-lg shadow-orange-700/30">
+                  <img src={adminPhoto} alt="ShortHop" className="w-full h-full object-cover" />
+                </div>
+              )}
+
+              <div>
+                <p className="text-white font-black text-base leading-tight">
+                  {visible.title}
+                </p>
+                <p className="text-white/85 text-sm mt-2 leading-relaxed font-medium">
+                  {visible.message}
+                </p>
+              </div>
+
+              <button
+                onClick={dismiss}
+                className="mt-2 px-6 py-2.5 bg-white/20 hover:bg-white/30 border border-white/30 text-white font-bold text-sm rounded-full transition-all active:scale-95"
+                data-testid="button-dismiss-admin-notification"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   useEffect(() => {
     try {
@@ -137,6 +264,7 @@ function App() {
           <OrangeGlow />
           <Toaster />
           <FlashNotificationContainer />
+          <AdminNotificationOverlay />
           <NavBar />
           <main className="min-h-screen pb-32">
             <Router />

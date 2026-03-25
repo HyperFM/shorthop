@@ -3247,25 +3247,6 @@ function DriverAutoNotificationsEffect({ hopsCount }: { hopsCount: number }) {
   );
 }
 
-const globalAudioUnlocked = { current: false };
-function unlockAudioOnInteraction() {
-  if (globalAudioUnlocked.current) return;
-  globalAudioUnlocked.current = true;
-  try {
-    const silent = new Audio("/driver-approaching-alert.m4a");
-    silent.volume = 0;
-    silent.play().then(() => { silent.pause(); silent.currentTime = 0; }).catch(() => {});
-  } catch {}
-}
-if (typeof window !== "undefined") {
-  const events = ["touchstart", "click", "keydown"];
-  const handler = () => {
-    unlockAudioOnInteraction();
-    events.forEach(e => document.removeEventListener(e, handler, true));
-  };
-  events.forEach(e => document.addEventListener(e, handler, { once: true, capture: true }));
-}
-
 function InstaHopView({ user }: { user: User }) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -3513,11 +3494,18 @@ function InstaHopView({ user }: { user: User }) {
   const [flowModeNotif, setFlowModeNotif] = useState<string | null>(null);
   const [repeatRouteVisible, setRepeatRouteVisible] = useState(true);
 
-  const prevDriverHopCountRef = useRef(driverActiveHops.length);
+  const prevDriverHopIdsRef = useRef<Set<number>>(new Set(driverActiveHops.map(h => h.id)));
   const driverMatchAudioRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
-    if (mode !== "drive") return;
-    if (driverActiveHops.length > prevDriverHopCountRef.current) {
+    if (mode !== "drive") {
+      prevDriverHopIdsRef.current = new Set(driverActiveHops.map(h => h.id));
+      return;
+    }
+    const currentIds = new Set(driverActiveHops.map((h: any) => h.id));
+    const hasNewHop = [...currentIds].some(id => !prevDriverHopIdsRef.current.has(id));
+    prevDriverHopIdsRef.current = currentIds;
+
+    if (hasNewHop) {
       if (!driverMatchAudioRef.current) {
         driverMatchAudioRef.current = new Audio("/driver-approaching-alert.m4a");
         driverMatchAudioRef.current.volume = 0.8;
@@ -3527,8 +3515,7 @@ function InstaHopView({ user }: { user: User }) {
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       prevRouteKeyRef.current = "";
     }
-    prevDriverHopCountRef.current = driverActiveHops.length;
-  }, [driverActiveHops.length, mode]);
+  }, [driverActiveHops, mode]);
 
   const magicGpsActiveForHopper = false;
 
@@ -3717,21 +3704,10 @@ function InstaHopView({ user }: { user: User }) {
             hopperMatchAudioRef.current.volume = 0.9;
           }
           hopperMatchAudioRef.current.currentTime = 0;
-          const playPromise = hopperMatchAudioRef.current.play();
-          if (playPromise) {
-            playPromise.catch(() => {
-              setTimeout(() => {
-                hopperMatchAudioRef.current?.play().catch(() => {});
-              }, 500);
-            });
-          }
+          hopperMatchAudioRef.current.play().catch(() => {});
         } catch {}
         if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
       }
-    }
-
-    if (!activeHop || activeHop.status !== "matched") {
-      hopperMatchPlayedRef.current = null;
     }
   }, [activeHop?.id, activeHop?.status, mode]);
 

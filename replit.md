@@ -20,7 +20,7 @@ The application features a mobile-first, app-like interface with bottom tab navi
 - **Pickup Verification System**: A two-step process requiring driver and hopper confirmation. GPS co-movement detection can auto-confirm. False pickup detection triggers auto-cancellation and tracks violations, leading to a 5-strike ban.
 - **Live Ride Features**: Automatic state transitions, live ride visualization, and drop-off proximity notifications. Includes a 3-minute pickup timer for hoppers when the driver is nearby.
 - **Spontaneous Stop (SS)**: Hoppers can request quick, short stops along the route. These stops are driver-approved, time-limited, and incur an additional fee.
-- **Notifications**: In-app center, flash notifications, and browser API integration with user-configurable toggles.
+- **Notifications**: In-app center, flash notifications, and browser API integration with user-configurable toggles. Admin broadcast notifications trigger a full-screen overlay with an orange card, blue pulsing ring, sparkle effects, and HyperFM profile photo (fetched via `/api/admin/photo`).
 - **Community & Social**: A "Network" page for posts, a Friends System with mutual follow requests, and configurable profile privacy. Supports emoji reactions and direct messaging.
 - **Driver Management**: Includes onboarding, verification, a "GO ACTIVE / GO OFFLINE" toggle, routine route support, and a "Wheels" reward system.
 - **Admin Panel**: Restricted access for managing users, drivers, and reports.

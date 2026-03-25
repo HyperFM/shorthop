@@ -3040,6 +3040,19 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/admin/photo', async (_req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const admin = allUsers.find(u => u.username?.toLowerCase() === "hyperfm");
+      if (admin?.profilePhoto) {
+        return res.json({ profilePhoto: admin.profilePhoto, username: admin.username });
+      }
+      res.json({ profilePhoto: null, username: null });
+    } catch {
+      res.json({ profilePhoto: null, username: null });
+    }
+  });
+
   app.get('/api/admin/stats', requireAdmin, async (_req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
