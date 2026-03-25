@@ -3008,7 +3008,7 @@ function InstaHopView({ user }: { user: User }) {
   const driverActiveHop = driverActiveHops[0] || null;
 
   useEffect(() => {
-    if (!isDriverActive || !geo.latitude || !geo.longitude) {
+    if ((!isDriverActive && !driverActiveHop) || !geo.latitude || !geo.longitude) {
       if (driverNavRoute) setDriverNavRoute(null);
       if (driverRouteInfo) setDriverRouteInfo(null);
       prevRouteKeyRef.current = "";
@@ -3259,15 +3259,26 @@ function InstaHopView({ user }: { user: User }) {
     if (userModeLock === "driver_only" && mode !== "drive") setMode("drive");
   }, [userModeLock]);
 
+  const hasDriverActiveHop = hops?.some(h =>
+    (h.status === "matched" || h.status === "in_ride") && h.driverId === user.id
+  ) ?? false;
+
+  useEffect(() => {
+    if (hasDriverActiveHop && mode !== "drive") {
+      setMode("drive");
+    }
+  }, [hasDriverActiveHop]);
+
   useEffect(() => {
     function onModeChange(e: Event) {
+      if (hasDriverActiveHop) return;
       const tab = (e as CustomEvent).detail;
       if (tab === "driver" && userModeLock !== "hopper_only") setMode("drive");
       else if (tab === "hopper" && userModeLock !== "driver_only" && mode === "drive") setMode("hop");
     }
     window.addEventListener("sh-mode-change", onModeChange);
     return () => window.removeEventListener("sh-mode-change", onModeChange);
-  }, [mode, userModeLock]);
+  }, [mode, userModeLock, hasDriverActiveHop]);
 
   const activeHop = hops?.find(h => {
     if (h.status === "completed" || h.status === "cancelled") return false;
@@ -3835,7 +3846,7 @@ function InstaHopView({ user }: { user: User }) {
 
 
       <div className="fixed inset-0 top-0 bottom-[4rem] flex flex-col">
-        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} rideStatus={activeHop?.status} walkingRoute={walkingRoute} driverNavRoute={isDriverMode && isDriverActive ? driverNavRoute : null} isDark={isDark} />
+        <MapView mode={mode} latitude={geo.latitude} longitude={geo.longitude} hasMatchedRide={!!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"))} rideStatus={activeHop?.status} walkingRoute={walkingRoute} driverNavRoute={isDriverMode && (isDriverActive || driverActiveHop) ? driverNavRoute : null} isDark={isDark} />
 
         <AnimatePresence>
           {!isDriverMode && pricePreview && !isMatching && (
@@ -3951,7 +3962,7 @@ function InstaHopView({ user }: { user: User }) {
         <AnimatePresence mode="wait">
         {(!isDriverMode && hasActiveRide && activeHop) ? (
           null
-        ) : isDriverMode && isDriverActive ? (
+        ) : isDriverMode && (isDriverActive || driverActiveHop) ? (
           <DriverNavBar
             key="driver-nav"
             user={user}
