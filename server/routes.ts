@@ -859,6 +859,8 @@ export async function registerRoutes(
   app.get(api.hops.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     
+    const walkerHops = await storage.getHopsForWalker(req.user.id);
+
     if (req.user.isDriver) {
       const driverHops = await storage.getHopsForDriver(req.user.id);
       const enriched = await Promise.all(driverHops.map(async (hop) => {
@@ -870,10 +872,11 @@ export async function registerRoutes(
         }
         return hop;
       }));
-      res.json(enriched);
+      const driverHopIds = new Set(enriched.map(h => h.id));
+      const combined = [...enriched, ...walkerHops.filter(h => !driverHopIds.has(h.id))];
+      res.json(combined);
     } else {
-      const hops = await storage.getHopsForWalker(req.user.id);
-      res.json(hops);
+      res.json(walkerHops);
     }
   });
 

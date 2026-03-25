@@ -3241,7 +3241,12 @@ function InstaHopView({ user }: { user: User }) {
     return () => window.removeEventListener("sh-mode-change", onModeChange);
   }, [mode, userModeLock]);
 
-  const activeHop = hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
+  const activeHop = hops?.find(h => {
+    if (h.status === "completed" || h.status === "cancelled") return false;
+    if (mode === "hop") return h.walkerId === user.id;
+    if (mode === "drive") return h.driverId === user.id;
+    return true;
+  }) || hops?.find(h => h.status !== "completed" && h.status !== "cancelled");
 
   const [proximityAlerted, setProximityAlerted] = useState<{ pickup: boolean; dropoff: boolean }>({ pickup: false, dropoff: false });
   const proximityAudioRef = useRef<HTMLAudioElement | null>(null);
