@@ -21,6 +21,7 @@ export function useGeolocation() {
     permitted: false,
   });
   const watchIdRef = useRef<number | null>(null);
+  const lastGoodRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
 
   const requestPermission = useCallback(() => {
     if (!navigator.geolocation) {
@@ -36,10 +37,25 @@ export function useGeolocation() {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
+        const { latitude: lat, longitude: lng, accuracy } = position.coords;
+        const MAX_ACCURACY = 100;
+        if (accuracy > MAX_ACCURACY && lastGoodRef.current) return;
+
+        const prev = lastGoodRef.current;
+        if (prev) {
+          const dLat = lat - prev.lat;
+          const dLng = lng - prev.lng;
+          const distMeters = Math.sqrt(dLat * dLat + dLng * dLng) * 111_139;
+          const dtSec = (Date.now() - prev.time) / 1000;
+          const speedMps = dtSec > 0 ? distMeters / dtSec : 0;
+          if (speedMps > 67 && distMeters > 50) return;
+        }
+
+        lastGoodRef.current = { lat, lng, time: Date.now() };
         setState({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
+          latitude: lat,
+          longitude: lng,
+          accuracy,
           error: null,
           loading: false,
           permitted: true,

@@ -499,7 +499,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
       }
     }
 
-    const movedEnough = !prevPos || Math.abs(latitude - prevPos.lat) > 0.00005 || Math.abs(longitude - prevPos.lng) > 0.00005;
+    const movedEnough = !prevPos || Math.abs(latitude - prevPos.lat) > 0.0001 || Math.abs(longitude - prevPos.lng) > 0.0001;
     prevLatLngRef.current = { lat: latitude, lng: longitude };
     prevTimeRef.current = now;
 
