@@ -229,14 +229,11 @@ function createMarkerEl(src: string): HTMLElement {
   const el = document.createElement("div");
   el.style.width = "56px";
   el.style.height = "56px";
-  el.style.filter = "drop-shadow(0 3px 6px rgba(0,0,0,0.35))";
-  el.style.transition = "transform 0.4s ease";
   const img = document.createElement("img");
   img.src = src;
   img.style.width = "100%";
   img.style.height = "100%";
   img.style.objectFit = "contain";
-  img.style.transition = "opacity 0.3s ease";
   el.appendChild(img);
   return el;
 }
@@ -248,7 +245,6 @@ function createDriverNavMarker(): HTMLElement {
   outer.style.width = s + "px";
   outer.style.height = s + "px";
   outer.style.position = "relative";
-  outer.style.filter = "drop-shadow(0 2px 6px rgba(0,0,0,0.35))";
 
   const arrowOutline = document.createElement("div");
   arrowOutline.style.position = "absolute";
@@ -339,7 +335,7 @@ const NAV_ZOOM_MIN = 16;
 const NAV_ZOOM_MAX = 18;
 const NAV_PITCH = 50;
 const RECENTER_DELAY_MS = 6000;
-const FORWARD_OFFSET: [number, number] = [0, 100];
+const NAV_PADDING = { top: 0, bottom: 200, left: 0, right: 0 };
 
 function lerpAngle(from: number, to: number, t: number): number {
   let diff = ((to - from + 540) % 360) - 180;
@@ -432,7 +428,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
               pitch: NAV_PITCH,
               bearing: smoothBearingRef.current,
               duration: 800,
-              offset: FORWARD_OFFSET,
+              padding: NAV_PADDING,
             });
           }
         }, RECENTER_DELAY_MS);
@@ -495,7 +491,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
         bearing: smoothBearingRef.current,
         duration: 1200,
         essential: true,
-        offset: FORWARD_OFFSET,
+        padding: NAV_PADDING,
       });
     }
   }, [isNavMode, latitude, longitude]);
@@ -532,21 +528,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
     const swapMarkerIcon = (img: HTMLImageElement, newSrc: string) => {
       if (img.src !== newSrc && img.getAttribute("data-src") !== newSrc) {
         img.setAttribute("data-src", newSrc);
-        const el = img.parentElement;
-        if (el) {
-          el.style.transform = "scale(0.85)";
-          img.style.opacity = "0.3";
-        }
-        setTimeout(() => {
-          img.src = newSrc;
-          if (el) {
-            el.style.transform = "scale(1.1)";
-            img.style.opacity = "1";
-          }
-          setTimeout(() => {
-            if (el) el.style.transform = "scale(1)";
-          }, 200);
-        }, 150);
+        img.src = newSrc;
       }
     };
 
@@ -573,7 +555,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
           zoom: targetZoom,
           pitch: NAV_PITCH,
           duration: 800,
-          offset: FORWARD_OFFSET,
+          padding: NAV_PADDING,
           easing: (t) => t * (2 - t),
         });
       }
@@ -801,7 +783,7 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
       pitch: NAV_PITCH,
       bearing: smoothBearingRef.current,
       duration: 800,
-      offset: FORWARD_OFFSET,
+      padding: NAV_PADDING,
     });
   }, [latitude, longitude]);
 
