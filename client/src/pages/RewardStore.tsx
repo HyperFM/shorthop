@@ -60,8 +60,8 @@ export default function RewardStore() {
     onSuccess: (data: { url: string }) => {
       window.location.href = data.url;
     },
-    onError: () => {
-      showFlash("❌", "Failed to start Stripe setup", "error");
+    onError: (e: any) => {
+      showFlash("❌", e.message || "Failed to start Stripe setup", "error");
     },
   });
 

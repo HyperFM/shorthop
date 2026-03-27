@@ -8,7 +8,7 @@ export async function getUncachableStripeClient(): Promise<Stripe> {
   if (!apiKey) {
     throw new Error("STRIPE_SECRET_KEY not set. Please connect Stripe integration.");
   }
-  return new Stripe(apiKey, { apiVersion: "2025-04-30.basil" as any });
+  return new Stripe(apiKey);
 }
 
 export async function getStripeSync(): Promise<StripeSync> {

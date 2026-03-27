@@ -4482,6 +4482,16 @@ export async function registerRoutes(
 
       let accountId = user.stripeAccountId;
 
+      if (accountId) {
+        try {
+          await stripe.accounts.retrieve(accountId);
+        } catch (retrieveErr: any) {
+          console.error('Stripe account invalid, creating new one:', retrieveErr.message);
+          accountId = null;
+          await storage.updateUser(user.id, { stripeAccountId: null } as any);
+        }
+      }
+
       if (!accountId) {
         const account = await stripe.accounts.create({
           type: 'express',
@@ -4501,8 +4511,8 @@ export async function registerRoutes(
       });
       res.json({ url: accountLink.url });
     } catch (e: any) {
-      console.error('Stripe Connect onboard error:', e.message);
-      res.status(500).json({ message: "Failed to start Stripe setup" });
+      console.error('Stripe Connect onboard error:', e.message, e.type, e.code);
+      res.status(500).json({ message: e.message || "Failed to start Stripe setup" });
     }
   });
 
