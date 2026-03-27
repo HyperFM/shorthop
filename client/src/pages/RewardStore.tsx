@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, DollarSign, Check, Loader2, Clock, Zap, ExternalLink, Shield } from "lucide-react";
+import { Wallet, DollarSign, Check, Loader2, Clock, Zap, ExternalLink, Shield, MapPin, Navigation, Users, Timer } from "lucide-react";
 import { showFlash } from "@/components/FlashNotification";
 
 type CashoutItem = {
@@ -20,6 +20,22 @@ type CashoutItem = {
   processedAt: string | null;
 };
 
+type RideHistoryItem = {
+  id: number;
+  hopperName: string;
+  hopperPhoto: string | null;
+  from: string;
+  to: string;
+  distanceMiles: number;
+  driverEarnedCents: number;
+  tipCents: number;
+  completedAt: string;
+  seatsNeeded: number;
+  hasSpontaneousStop: boolean;
+  ssDurationMin: number;
+  ssTotalCents: number;
+};
+
 export default function RewardStore() {
   const { data: user, isLoading: authLoading } = useAuth();
   const [cashoutAmount, setCashoutAmount] = useState("");
@@ -30,6 +46,10 @@ export default function RewardStore() {
 
   const { data: stripeStatus, isLoading: stripeLoading } = useQuery<{ connected: boolean; payoutsEnabled: boolean; accountId?: string }>({
     queryKey: ["/api/stripe/connect-status"],
+  });
+
+  const { data: rideHistory = [] } = useQuery<RideHistoryItem[]>({
+    queryKey: ["/api/driver/ride-history"],
   });
 
   const stripeOnboard = useMutation({
@@ -336,6 +356,75 @@ export default function RewardStore() {
           Earn Wheels by giving hops. Every completed ride puts Wheels in your balance. Cash out whenever you're ready.
         </p>
       </motion.div>
+
+      {rideHistory.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-8"
+        >
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2" data-testid="text-ride-history-heading">
+            <Navigation className="w-3 h-3" /> Ride History
+          </p>
+          <div className="space-y-2">
+            {rideHistory.map(ride => {
+              const totalEarned = ride.driverEarnedCents + ride.tipCents + ride.ssTotalCents;
+              return (
+                <Card key={ride.id} className="border-border/30" data-testid={`ride-history-${ride.id}`}>
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-sm font-bold shrink-0 overflow-hidden">
+                        {ride.hopperPhoto ? (
+                          <img src={ride.hopperPhoto} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          ride.hopperName.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-sm font-bold text-foreground truncate" data-testid={`ride-hopper-${ride.id}`}>{ride.hopperName}</p>
+                          <p className="text-sm font-black text-green-600 dark:text-green-400 shrink-0 ml-2" data-testid={`ride-earned-${ride.id}`}>
+                            +${(totalEarned / 100).toFixed(2)}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1.5">
+                          <MapPin className="w-2.5 h-2.5 shrink-0" />
+                          <span className="truncate">{ride.from}</span>
+                          <span className="shrink-0">→</span>
+                          <span className="truncate">{ride.to}</span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                          <span>{ride.distanceMiles.toFixed(1)} mi</span>
+                          <span>${(ride.driverEarnedCents / 100).toFixed(2)} ride</span>
+                          {ride.tipCents > 0 && (
+                            <span className="text-green-600 dark:text-green-400 font-medium">+${(ride.tipCents / 100).toFixed(2)} tip</span>
+                          )}
+                          {ride.seatsNeeded > 1 && (
+                            <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5" />{ride.seatsNeeded} seats</span>
+                          )}
+                          <span>{new Date(ride.completedAt).toLocaleDateString([], { month: "short", day: "numeric" })}</span>
+                        </div>
+
+                        {ride.hasSpontaneousStop && (
+                          <div className="mt-1.5 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                            <Timer className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                              Spontaneous Stop — {ride.ssDurationMin} min — ${(ride.ssTotalCents / 100).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

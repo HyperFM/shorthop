@@ -4506,6 +4506,58 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/driver/ride-history', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const driverHops = await db.select().from(shortHops)
+        .where(and(
+          eq(shortHops.driverId, req.user.id),
+          eq(shortHops.status, "completed")
+        ))
+        .orderBy(desc(shortHops.createdAt))
+        .limit(50);
+
+      const enriched = await Promise.all(driverHops.map(async (hop) => {
+        const walker = await storage.getUser(hop.walkerId);
+        const stops = await db.select().from(spontaneousStops)
+          .where(and(
+            eq(spontaneousStops.hopId, hop.id),
+            eq(spontaneousStops.status, "completed")
+          ));
+
+        const ssStop = stops.length > 0 ? stops[0] : null;
+        let ssDurationMin = 0;
+        if (ssStop?.driverArrivedAt && ssStop?.completedAt) {
+          ssDurationMin = Math.round((new Date(ssStop.completedAt).getTime() - new Date(ssStop.driverArrivedAt).getTime()) / 60000);
+        }
+
+        const miles = parseFloat(hop.distanceMiles?.toString() || "0");
+        const driverEarnedCents = Math.max(Math.round(miles * 100), 150);
+        const ssTotalCents = ssStop ? ((ssStop.baseFee || 0) + (ssStop.extraMinutesFee || 0)) : 0;
+
+        return {
+          id: hop.id,
+          hopperName: walker?.username || "Unknown",
+          hopperPhoto: walker?.profilePhoto || null,
+          from: hop.startLocation,
+          to: hop.endLocation,
+          distanceMiles: miles,
+          driverEarnedCents,
+          tipCents: hop.tipCents || 0,
+          completedAt: hop.createdAt,
+          seatsNeeded: hop.seatsNeeded || 1,
+          hasSpontaneousStop: !!ssStop,
+          ssDurationMin,
+          ssTotalCents,
+        };
+      }));
+
+      res.json(enriched);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get('/api/stripe/connect-status', async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
