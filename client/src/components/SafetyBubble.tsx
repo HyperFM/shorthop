@@ -74,7 +74,7 @@ export function SafetyBubble({ isOpen, onReasonSelected, onNeedAssistance, dista
               data-testid="button-need-assistance"
             >
               <AlertTriangle className="w-4 h-4 mr-2" />
-              I need assistance
+              Call 911
             </Button>
           </div>
         </div>

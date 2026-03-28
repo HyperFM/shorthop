@@ -1088,8 +1088,8 @@ export async function registerRoutes(
     try {
       const existingHop = await storage.getHop(Number(req.params.id));
 
-      if (existingHop && (existingHop.status === "matched" || existingHop.status === "in_ride") && existingHop.paymentIntentId && existingHop.walkerId === req.user.id) {
-        return res.status(400).json({ message: "Cannot cancel a ride after payment. Contact support if there's an issue." });
+      if (existingHop && existingHop.status === "in_ride" && existingHop.paymentIntentId && existingHop.walkerId === req.user.id) {
+        return res.status(400).json({ message: "Cannot cancel a ride that's already in progress. Contact support if there's an issue." });
       }
 
       const hop = await storage.cancelHop(Number(req.params.id), req.user.id);

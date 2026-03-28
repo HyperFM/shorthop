@@ -3680,10 +3680,16 @@ function InstaHopView({ user }: { user: User }) {
     }
   }, [hasActiveRide]);
 
+  const offRouteStartRef = useRef<number | null>(null);
+
   useEffect(() => {
-    if (!activeHop || activeHop.status !== "in_ride" || !geo.latitude || !geo.longitude) {
+    if (!activeHop || activeHop.status !== "in_ride" || !geo.latitude || !geo.longitude || mode === "drive") {
+      offRouteStartRef.current = null;
+      setSafetyBubbleOpen(false);
       return;
     }
+
+    if (safetyShownRef.current.has(activeHop.id)) return;
 
     const startLat = parseFloat(activeHop.startLat || "0");
     const startLng = parseFloat(activeHop.startLng || "0");
@@ -3696,21 +3702,29 @@ function InstaHopView({ user }: { user: User }) {
 
     const offRoute = isOffRoute(geo.latitude, geo.longitude, startLat, startLng, endLat, endLng);
 
-    if (offRoute && !safetyShownRef.current.has(activeHop.id)) {
-      const distMiles = distanceFromPointToRoute(
-        geo.latitude,
-        geo.longitude,
-        startLat,
-        startLng,
-        endLat,
-        endLng
-      );
-      const distFeet = milesToFeet(distMiles);
-      setOffRouteDistance(distFeet);
-      setSafetyBubbleOpen(true);
-      safetyShownRef.current.add(activeHop.id);
+    if (offRoute) {
+      if (!offRouteStartRef.current) {
+        offRouteStartRef.current = Date.now();
+      }
+      const elapsedMs = Date.now() - offRouteStartRef.current;
+      if (elapsedMs >= 5 * 60 * 1000) {
+        const distMiles = distanceFromPointToRoute(
+          geo.latitude,
+          geo.longitude,
+          startLat,
+          startLng,
+          endLat,
+          endLng
+        );
+        const distFeet = milesToFeet(distMiles);
+        setOffRouteDistance(distFeet);
+        setSafetyBubbleOpen(true);
+        safetyShownRef.current.add(activeHop.id);
+      }
+    } else {
+      offRouteStartRef.current = null;
     }
-  }, [activeHop, geo.latitude, geo.longitude]);
+  }, [activeHop, geo.latitude, geo.longitude, mode]);
 
   const hopperMatchAudioRef = useRef<HTMLAudioElement | null>(null);
   const hopperMatchPlayedRef = useRef<number | null>(null);
@@ -4170,15 +4184,15 @@ function InstaHopView({ user }: { user: User }) {
   };
 
   const handleRouteDevNeedAssistance = () => {
-    showFlash("🆘", "Assistance requested - support team will contact you", "info");
-    
     if (activeHop?.id) {
       apiRequest("POST", `/api/hops/${activeHop.id}/route-deviation-assistance`, {
         distanceFeet: offRouteDistance,
       }).catch((err) => {
-        console.error("Failed to request assistance:", err);
+        console.error("Failed to log assistance request:", err);
       });
     }
+    
+    window.location.href = "tel:911";
   };
 
   return (
