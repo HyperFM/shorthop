@@ -4148,18 +4148,37 @@ function InstaHopView({ user }: { user: User }) {
     }
   }
 
-  const handleSafetyAllWell = () => {
-    setSafetyBubbleOpen(false);
-    showFlash("✅", "Safe ride confirmed", "success");
+  const handleRouteDevReasonSelected = (reason: string) => {
+    const reasonLabels: { [key: string]: string } = {
+      traffic: "Traffic / road delay",
+      reroute: "Navigation reroute",
+      detour: "Detour / preferred route",
+      stopping: "Stopping briefly",
+      other: "Other / not listed",
+    };
+    
+    showFlash("✅", `Route reason: ${reasonLabels[reason] || reason}`, "success");
+    
+    if (activeHop?.id) {
+      apiRequest("POST", `/api/hops/${activeHop.id}/route-deviation-checkin`, {
+        reason,
+        distanceFeet: offRouteDistance,
+      }).catch((err) => {
+        console.error("Failed to log route deviation reason:", err);
+      });
+    }
   };
 
-  const handleSafetyEmergency = () => {
-    setSafetyBubbleOpen(false);
-    window.location.href = "tel:911";
-  };
-
-  const handleSafetyDismiss = () => {
-    setSafetyBubbleOpen(false);
+  const handleRouteDevNeedAssistance = () => {
+    showFlash("🆘", "Assistance requested - support team will contact you", "info");
+    
+    if (activeHop?.id) {
+      apiRequest("POST", `/api/hops/${activeHop.id}/route-deviation-assistance`, {
+        distanceFeet: offRouteDistance,
+      }).catch((err) => {
+        console.error("Failed to request assistance:", err);
+      });
+    }
   };
 
   return (
@@ -4200,9 +4219,8 @@ function InstaHopView({ user }: { user: User }) {
       <SafetyBubble
         isOpen={safetyBubbleOpen}
         distanceFeet={offRouteDistance || undefined}
-        onAllWell={handleSafetyAllWell}
-        onEmergency={handleSafetyEmergency}
-        onDismiss={handleSafetyDismiss}
+        onReasonSelected={handleRouteDevReasonSelected}
+        onNeedAssistance={handleRouteDevNeedAssistance}
       />
 
       <AnimatePresence>

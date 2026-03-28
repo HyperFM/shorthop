@@ -1,88 +1,80 @@
 import { useState } from "react";
-import { AlertTriangle, X, Phone } from "lucide-react";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface SafetyBubbleProps {
   isOpen: boolean;
-  onDismiss: () => void;
-  onAllWell: () => void;
-  onEmergency: () => void;
+  onReasonSelected: (reason: string) => void;
+  onNeedAssistance: () => void;
   distanceFeet?: number;
 }
 
-export function SafetyBubble({ isOpen, onDismiss, onAllWell, onEmergency, distanceFeet }: SafetyBubbleProps) {
+const DEVIATION_REASONS = [
+  { id: "traffic", label: "Traffic / road delay" },
+  { id: "reroute", label: "Navigation reroute" },
+  { id: "detour", label: "Detour / preferred route" },
+  { id: "stopping", label: "Stopping briefly" },
+  { id: "other", label: "Other / not listed" },
+];
+
+export function SafetyBubble({ isOpen, onReasonSelected, onNeedAssistance, distanceFeet }: SafetyBubbleProps) {
   const [dismissed, setDismissed] = useState(false);
 
   if (!isOpen || dismissed) return null;
 
-  const handleAllWell = () => {
+  const handleReasonSelect = (reasonId: string) => {
     setDismissed(true);
-    onAllWell();
+    onReasonSelected(reasonId);
   };
 
-  const handleEmergency = () => {
-    onEmergency();
-  };
-
-  const handleDismiss = () => {
+  const handleAssistance = () => {
     setDismissed(true);
-    onDismiss();
+    onNeedAssistance();
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full border-2 border-amber-400 dark:border-amber-600 animate-pulse">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 dark:border-slate-700">
         <div className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0">
-              <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+          <div className="flex items-start gap-3 mb-4">
+            <div className="flex-shrink-0 mt-0.5">
+              <AlertCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="flex-1">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                Route Deviation Alert 🚨
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                Route change detected — what's the reason?
               </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
-                We noticed you've gone {distanceFeet ? `${Math.round(distanceFeet)} feet` : "significantly"} off your planned route.
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
-                Is everything okay? Please let us know so we can help if needed.
-              </p>
+              {distanceFeet && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  ({Math.round(distanceFeet)} feet off route)
+                </p>
+              )}
             </div>
-            <button
-              onClick={handleDismiss}
-              className="flex-shrink-0 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition"
-              data-testid="button-dismiss-safety-bubble"
-              aria-label="Dismiss"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
 
-          <div className="flex flex-col gap-3 mt-6">
-            <Button
-              onClick={handleAllWell}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2"
-              data-testid="button-all-is-well"
-            >
-              ✅ All is Well
-            </Button>
+          <div className="space-y-2">
+            {DEVIATION_REASONS.map((reason) => (
+              <Button
+                key={reason.id}
+                onClick={() => handleReasonSelect(reason.id)}
+                variant="outline"
+                className="w-full justify-start text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-slate-800 py-2 h-auto"
+                data-testid={`button-reason-${reason.id}`}
+              >
+                {reason.label}
+              </Button>
+            ))}
+          </div>
 
+          <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
             <Button
-              onClick={handleEmergency}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 flex items-center justify-center gap-2"
-              data-testid="button-call-emergency"
+              onClick={handleAssistance}
+              variant="ghost"
+              className="w-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 py-2"
+              data-testid="button-need-assistance"
             >
-              <Phone className="w-4 h-4" />
-              Call 911
-            </Button>
-
-            <Button
-              onClick={handleDismiss}
-              variant="outline"
-              className="border-slate-300 dark:border-slate-600 py-2"
-              data-testid="button-dismiss-alert"
-            >
-              Dismiss
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              I need assistance
             </Button>
           </div>
         </div>
