@@ -39,6 +39,7 @@ type RideHistoryItem = {
 export default function RewardStore() {
   const { data: user, isLoading: authLoading } = useAuth();
   const [cashoutAmount, setCashoutAmount] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const { data: cashouts = [] } = useQuery<CashoutItem[]>({
     queryKey: ["/api/cashouts"],
@@ -74,10 +75,12 @@ export default function RewardStore() {
       queryClient.invalidateQueries({ queryKey: ["/api/me"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cashouts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stripe/connect-status"] });
-      setCashoutAmount("");
+      setShowConfirm(false);
       showFlash("💰", `$${cashoutAmount} sent to your bank!`, "success");
+      setCashoutAmount("");
     },
     onError: (e: any) => {
+      setShowConfirm(false);
       showFlash("❌", e.message || "Cashout failed", "error");
     },
   });
@@ -106,7 +109,8 @@ export default function RewardStore() {
 
   const isConnected = stripeStatus?.connected && stripeStatus?.payoutsEnabled;
   const isPartial = stripeStatus?.connected && !stripeStatus?.payoutsEnabled;
-  const canCashout = isConnected && (user.credits || 0) >= 5 && Number(cashoutAmount) >= 5 && Number(cashoutAmount) <= (user.credits || 0);
+  const hasPendingCashout = cashouts.some(c => c.status === "pending");
+  const canCashout = isConnected && (user.credits || 0) >= 5 && Number(cashoutAmount) >= 5 && Number(cashoutAmount) <= (user.credits || 0) && !hasPendingCashout;
 
   return (
     <motion.div
@@ -292,6 +296,12 @@ export default function RewardStore() {
               </div>
             ) : (
               <div className="space-y-3">
+                {hasPendingCashout && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20" data-testid="notice-pending-cashout">
+                    <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <p className="text-[11px] font-medium text-amber-700 dark:text-amber-300">One payout at a time — yours is still processing.</p>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -303,6 +313,7 @@ export default function RewardStore() {
                       value={cashoutAmount}
                       onChange={e => setCashoutAmount(e.target.value)}
                       className="pl-8 text-lg font-bold"
+                      disabled={hasPendingCashout}
                       data-testid="input-cashout-amount"
                     />
                   </div>
@@ -311,6 +322,7 @@ export default function RewardStore() {
                     size="sm"
                     className="text-xs font-bold h-10 px-3"
                     onClick={() => setCashoutAmount(String(Math.floor(user.credits || 0)))}
+                    disabled={hasPendingCashout}
                     data-testid="button-cashout-max"
                   >
                     Max
@@ -319,21 +331,72 @@ export default function RewardStore() {
                 <Button
                   className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold text-base"
                   disabled={!canCashout || stripeCashout.isPending}
-                  onClick={() => stripeCashout.mutate()}
+                  onClick={() => setShowConfirm(true)}
                   data-testid="button-cashout"
                 >
-                  {stripeCashout.isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <DollarSign className="w-5 h-5 mr-1" />
-                      Cash Out {cashoutAmount ? `$${Number(cashoutAmount).toFixed(2)}` : ""}
-                    </>
-                  )}
+                  <DollarSign className="w-5 h-5 mr-1" />
+                  Cash Out {cashoutAmount ? `$${Number(cashoutAmount).toFixed(2)}` : ""}
                 </Button>
                 <p className="text-[10px] text-center text-muted-foreground">
                   Sent directly to your bank. Usually arrives in 1-2 business days.
                 </p>
+
+                {showConfirm && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6"
+                    onClick={() => !stripeCashout.isPending && setShowConfirm(false)}
+                  >
+                    <div
+                      className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-5 space-y-4"
+                      onClick={e => e.stopPropagation()}
+                      data-testid="card-cashout-confirm"
+                    >
+                      <div className="text-center space-y-1">
+                        <p className="text-lg font-black">Confirm Cash Out</p>
+                        <p className="text-3xl font-black text-green-500">${Number(cashoutAmount).toFixed(2)}</p>
+                      </div>
+                      <div className="space-y-1.5 text-[11px] text-muted-foreground">
+                        <div className="flex items-start gap-2">
+                          <Shield className="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0" />
+                          <span>This amount will be sent directly to your linked bank account.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Clock className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+                          <span><strong>One payout at a time.</strong> You can't request another until this one finishes.</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Info className="w-3.5 h-3.5 text-blue-400 mt-0.5 shrink-0" />
+                          <span>Want the full amount? Go back and hit <strong>Max</strong> before confirming.</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <Button
+                          variant="outline"
+                          className="flex-1 h-11 font-bold"
+                          disabled={stripeCashout.isPending}
+                          onClick={() => setShowConfirm(false)}
+                          data-testid="button-cashout-cancel"
+                        >
+                          Go Back
+                        </Button>
+                        <Button
+                          className="flex-1 h-11 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold"
+                          disabled={stripeCashout.isPending}
+                          onClick={() => stripeCashout.mutate()}
+                          data-testid="button-cashout-confirm"
+                        >
+                          {stripeCashout.isPending ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : (
+                            "Confirm"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
             )}
           </CardContent>

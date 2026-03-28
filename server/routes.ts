@@ -11,7 +11,7 @@ import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
 import { db } from "./db";
-import { notifications, founderMessages, vipMessages, shortHops, users, donations, routineRoutes, spontaneousStops, contactMessages } from "@shared/schema";
+import { notifications, founderMessages, vipMessages, shortHops, users, donations, routineRoutes, spontaneousStops, contactMessages, cashoutRequests } from "@shared/schema";
 import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
@@ -4606,6 +4606,15 @@ export async function registerRoutes(
       if (!user.stripeAccountId) return res.status(400).json({ message: "Stripe not connected" });
       if ((user.credits || 0) < amount) {
         return res.status(400).json({ message: `Not enough Wheels. You have ${(user.credits || 0).toFixed(2)}.` });
+      }
+
+      const existingPending = await db.select().from(cashoutRequests)
+        .where(and(
+          eq(cashoutRequests.userId, user.id),
+          eq(cashoutRequests.status, "pending")
+        )).limit(1);
+      if (existingPending.length > 0) {
+        return res.status(400).json({ message: "One payout at a time. Wait for your current one to finish." });
       }
 
       const stripe = await getUncachableStripeClient();
