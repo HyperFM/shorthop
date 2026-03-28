@@ -1161,7 +1161,7 @@ function GlowingCarousel({ user }: { user: User }) {
   const items = [
     { emoji: "🔥", value: user.hopStreak || 0, label: "streak" },
     { emoji: "⭐", value: user.totalHops || 0, label: "hops" },
-    { emoji: "🛞", value: (user.credits || 0).toFixed(2), label: "wheels" },
+    { emoji: "🛞", value: (user.riderCredits || 0).toFixed(2), label: "credits" },
   ];
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -4049,7 +4049,7 @@ function InstaHopView({ user }: { user: User }) {
   const payWithWheels = async () => {
     if (!pricePreview) return;
     const wheelsCost = pricePreview.priceCents / 100;
-    const userWheels = user.credits || 0;
+    const userWheels = user.riderCredits || 0;
 
     if (userWheels < wheelsCost) {
       showFlash("🛞", `Not enough Wheels. You have ${userWheels.toFixed(2)} but need ${wheelsCost.toFixed(2)}.`, "error");
@@ -4238,20 +4238,20 @@ function InstaHopView({ user }: { user: User }) {
                     )}
                     {isAuthorizing ? "Processing..." : `Confirm & Pay $${(pricePreview.priceCents / 100).toFixed(2)}`}
                   </Button>
-                  {(user.credits || 0) > 0 && (
+                  {(user.riderCredits || 0) > 0 && (
                     <Button
                       variant="outline"
                       className={`w-full font-bold text-xs h-9 rounded-xl border-2 ${
-                        (user.credits || 0) >= pricePreview.priceCents / 100
+                        (user.riderCredits || 0) >= pricePreview.priceCents / 100
                           ? "border-amber-500/60 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
                           : "border-muted text-muted-foreground opacity-60 cursor-not-allowed"
                       }`}
                       onClick={payWithWheels}
-                      disabled={requestHop.isPending || isAuthorizing || (user.credits || 0) < pricePreview.priceCents / 100}
+                      disabled={requestHop.isPending || isAuthorizing || (user.riderCredits || 0) < pricePreview.priceCents / 100}
                       data-testid="button-top-pay-wheels"
                     >
                       🛞 Pay with {(pricePreview.priceCents / 100).toFixed(2)} Wheels
-                      <span className="text-[10px] ml-1.5 opacity-70">(bal: {(user.credits || 0).toFixed(2)})</span>
+                      <span className="text-[10px] ml-1.5 opacity-70">(bal: {(user.riderCredits || 0).toFixed(2)})</span>
                     </Button>
                   )}
                 </div>

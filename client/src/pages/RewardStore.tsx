@@ -110,7 +110,9 @@ export default function RewardStore() {
   const isConnected = stripeStatus?.connected && stripeStatus?.payoutsEnabled;
   const isPartial = stripeStatus?.connected && !stripeStatus?.payoutsEnabled;
   const hasPendingCashout = cashouts.some(c => c.status === "pending");
-  const canCashout = isConnected && (user.credits || 0) >= 5 && Number(cashoutAmount) >= 5 && Number(cashoutAmount) <= (user.credits || 0) && !hasPendingCashout;
+  const driverBal = user.driverEarnings || 0;
+  const riderBal = user.riderCredits || 0;
+  const canCashout = isConnected && driverBal >= 5 && Number(cashoutAmount) >= 5 && Number(cashoutAmount) <= driverBal && !hasPendingCashout;
 
   return (
     <motion.div
@@ -146,20 +148,44 @@ export default function RewardStore() {
               </motion.div>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Your Balance</p>
-              <motion.p
-                key={user.credits}
-                initial={{ scale: 1.2 }}
-                animate={{ scale: 1 }}
-                className="text-5xl font-black text-foreground leading-none"
-                data-testid="text-wheels-balance"
-              >
-                {(user.credits || 0).toFixed(2)}
-              </motion.p>
-              <p className="text-lg font-bold text-secondary mt-1">${(user.credits || 0).toFixed(2)}</p>
-              <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed max-w-[240px] mx-auto">
-                1 Wheel = $1. Cash out anytime with a 5 Wheel minimum.
-              </p>
+              {user.isDriver ? (
+                <>
+                  <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Driver Earnings</p>
+                  <motion.p
+                    key={driverBal}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: 1 }}
+                    className="text-5xl font-black text-foreground leading-none"
+                    data-testid="text-wheels-balance"
+                  >
+                    {driverBal.toFixed(2)}
+                  </motion.p>
+                  <p className="text-lg font-bold text-secondary mt-1">${driverBal.toFixed(2)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed max-w-[240px] mx-auto">
+                    Cash out anytime with a $5 minimum via Stripe.
+                  </p>
+                  {riderBal > 0 && (
+                    <p className="text-[10px] text-blue-500 mt-1">+ {riderBal.toFixed(2)} ride credits</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-[10px] font-bold text-secondary uppercase tracking-widest mb-1">Ride Credits</p>
+                  <motion.p
+                    key={riderBal}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: 1 }}
+                    className="text-5xl font-black text-foreground leading-none"
+                    data-testid="text-wheels-balance"
+                  >
+                    {riderBal.toFixed(2)}
+                  </motion.p>
+                  <p className="text-lg font-bold text-secondary mt-1">${riderBal.toFixed(2)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed max-w-[240px] mx-auto">
+                    Use ride credits to pay for hops. Earn through referrals and promotions.
+                  </p>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -269,30 +295,30 @@ export default function RewardStore() {
         transition={{ delay: 0.2 }}
         className="mb-6"
       >
-        <Card className={`border-2 ${isConnected && user.credits >= 5 ? "border-green-500/30" : "border-border/30"}`} data-testid="card-cashout">
+        <Card className={`border-2 ${isConnected && driverBal >= 5 ? "border-green-500/30" : "border-border/30"}`} data-testid="card-cashout">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <DollarSign className="w-4 h-4 text-green-500" />
-              <p className="text-sm font-bold">Cash Out</p>
-              {(user.credits || 0) < 5 && (
+              <p className="text-sm font-bold">Cash Out Earnings</p>
+              {driverBal < 5 && (
                 <Badge className="text-[8px] bg-muted text-muted-foreground border-0 ml-auto">
-                  Need {(5 - (user.credits || 0)).toFixed(2)} more Wheels
+                  Need ${(5 - driverBal).toFixed(2)} more
                 </Badge>
               )}
             </div>
 
             {!isConnected ? (
               <p className="text-xs text-muted-foreground">Connect your bank account above to start cashing out.</p>
-            ) : (user.credits || 0) < 5 ? (
+            ) : driverBal < 5 ? (
               <div className="text-center py-4">
-                <p className="text-xs text-muted-foreground">You need at least 5 Wheels to cash out.</p>
+                <p className="text-xs text-muted-foreground">You need at least $5 in driver earnings to cash out.</p>
                 <div className="w-full bg-muted rounded-full h-2 mt-3">
                   <div
                     className="bg-gradient-to-r from-secondary to-green-500 h-2 rounded-full transition-all"
-                    style={{ width: `${Math.min(100, ((user.credits || 0) / 5) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (driverBal / 5) * 100)}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1">{(user.credits || 0).toFixed(2)}/5 Wheels</p>
+                <p className="text-[10px] text-muted-foreground mt-1">${driverBal.toFixed(2)}/$5.00</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -308,7 +334,7 @@ export default function RewardStore() {
                     <Input
                       type="number"
                       min="5"
-                      max={user.credits}
+                      max={driverBal}
                       placeholder="Amount"
                       value={cashoutAmount}
                       onChange={e => setCashoutAmount(e.target.value)}
@@ -321,7 +347,7 @@ export default function RewardStore() {
                     variant="outline"
                     size="sm"
                     className="text-xs font-bold h-10 px-3"
-                    onClick={() => setCashoutAmount(String(Math.floor(user.credits || 0)))}
+                    onClick={() => setCashoutAmount(String(Math.floor(driverBal)))}
                     disabled={hasPendingCashout}
                     data-testid="button-cashout-max"
                   >

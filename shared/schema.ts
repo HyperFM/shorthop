@@ -102,6 +102,8 @@ export const users = pgTable("users", {
   customLocationLng: text("custom_location_lng"),
   profileColor: text("profile_color").default("text-orange-500"),
   tipRatingOptOut: boolean("tip_rating_opt_out").default(false),
+  riderCredits: doublePrecision("rider_credits").default(0),
+  driverEarnings: doublePrecision("driver_earnings").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -195,8 +197,25 @@ export const shortHops = pgTable("short_hops", {
   driverConfirmedPickupAt: timestamp("driver_confirmed_pickup_at"),
   ratedByWalker: boolean("rated_by_walker").default(false),
   ratedByDriver: boolean("rated_by_driver").default(false),
+  earningsProcessed: boolean("earnings_processed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const financialLedger = pgTable("financial_ledger", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  type: text("type").notNull(),
+  amount: doublePrecision("amount").notNull(),
+  balanceType: text("balance_type").notNull(),
+  hopId: integer("hop_id").references(() => shortHops.id),
+  stripeTransactionId: text("stripe_transaction_id"),
+  description: text("description").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFinancialLedgerSchema = createInsertSchema(financialLedger).omit({ id: true, createdAt: true });
+export type FinancialLedgerEntry = typeof financialLedger.$inferSelect;
+export type InsertFinancialLedgerEntry = z.infer<typeof insertFinancialLedgerSchema>;
 
 export const donations = pgTable("donations", {
   id: serial("id").primaryKey(),

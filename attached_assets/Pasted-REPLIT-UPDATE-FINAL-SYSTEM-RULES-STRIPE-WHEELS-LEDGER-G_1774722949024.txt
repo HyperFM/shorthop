@@ -1,0 +1,176 @@
+REPLIT UPDATE — FINAL SYSTEM RULES (STRIPE + WHEELS + LEDGER + GPS + REFERRALS)
+
+We are finalizing the ride and payment system. The goal is strict safety, no payout mistakes, and full Stripe-controlled money handling.
+
+⸻
+
+1. CORE SYSTEM STRUCTURE
+
+The app uses one visible wallet for users, but internally there are two completely separate balance systems.
+
+One system is for rider credits only.
+The other system is for driver earnings only.
+
+These two systems must never mix under any circumstance.
+
+⸻
+
+2. RIDER SYSTEM (CREDITS ONLY)
+
+The rider balance is only for in-app use.
+
+It can be increased through things like:
+	•	referral rewards
+	•	promotions
+	•	admin gifts
+
+It can only be used for paying for rides.
+
+It cannot be withdrawn, cashed out, or converted into real money.
+
+It must never interact with driver earnings in any way.
+
+⸻
+
+3. DRIVER SYSTEM (REAL MONEY EARNINGS)
+
+The driver balance represents real earnings from completed rides.
+
+Drivers only earn after a ride is fully completed and paid through Stripe.
+
+Drivers cannot receive promotional credits or referral rewards.
+
+Drivers can only cash out through Stripe-connected payouts.
+
+⸻
+
+4. STRICT SEPARATION RULE
+
+The rider system and driver system must never transfer value between each other.
+
+No credits, rewards, or balances can move from rider side to driver side or vice versa.
+
+Each system is completely independent.
+
+⸻
+
+5. MONEY TRACKING REQUIREMENTS
+
+Every financial action must always clearly record:
+	•	where it came from (ride, referral, promotion, admin)
+	•	whether it belongs to rider system or driver system
+	•	which ride it is connected to when applicable
+	•	whether it is connected to a Stripe transaction
+
+This is required for all money-related actions.
+
+⸻
+
+6. DUPLICATE PROTECTION RULE
+
+The system must never give rewards or payouts more than once for the same event.
+
+If the same event is processed again (for example due to retries or system refresh), it must not create another payout or reward.
+
+⸻
+
+7. WALLET DISPLAY RULE
+
+Users see a wallet balance, but:
+	•	riders only see their rider credits
+	•	drivers only see their earnings
+
+The system must not incorrectly combine or mix balances behind the scenes.
+
+Any combined display is only for viewing and must not affect actual money handling.
+
+⸻
+
+8. RIDE FLOW RULES
+
+A ride must always go through these stages in order:
+	•	ride is created
+	•	ride is in progress
+	•	driver arrives and location is confirmed
+	•	ride is marked ready for final payment
+	•	payment is completed through Stripe
+	•	ride is finalized
+	•	earnings are assigned to driver system
+
+No step can be skipped.
+
+⸻
+
+9. LOCATION COMPLETION RULE
+
+A ride is only considered complete when:
+	•	the driver is within a safe distance of the destination (roughly half a kilometer range)
+	•	the driver stays within that area briefly to confirm arrival consistency
+
+This prevents accidental or false completions.
+
+⸻
+
+10. PAYMENT RULE
+
+Stripe is the only system allowed to handle real money.
+
+A ride is not finalized until Stripe confirms payment success.
+
+Only after that confirmation can driver earnings be created.
+
+⸻
+
+11. DRIVER EARNING RULE
+
+Drivers only receive earnings after:
+	•	the ride is fully completed
+	•	Stripe payment is confirmed successful
+	•	the system confirms the event has not already been processed
+
+No early or manual earnings are allowed.
+
+⸻
+
+12. REFERRAL RULE
+
+Referral rewards only happen when:
+	•	a referred user completes their first ride
+	•	payment for that ride is successfully confirmed through Stripe
+	•	the reward has not already been issued for that user
+
+Referral rewards always go to the rider system only.
+
+They never become cash or driver earnings.
+
+⸻
+
+13. DRIVER VERIFICATION RULE
+
+Drivers must be verified before they can earn or withdraw.
+
+This includes identity and vehicle verification.
+
+No driver can receive payouts until they are approved.
+
+⸻
+
+14. DRIVER ACTIVATION RULE
+
+Drivers must complete a small number of successful rides before full payout access is enabled.
+
+This is a safety requirement to prevent abuse.
+
+⸻
+
+15. FINAL SAFETY RULES
+
+The system must guarantee:
+	•	no fake or duplicate payouts
+	•	no mixing of rider and driver money systems
+	•	no bypassing Stripe for payments
+	•	no rewards turning into cash incorrectly
+	•	no earnings created before real payment confirmation
+	•	no location-based fake completions without validation
+
+Stripe is the only source of real money truth in the system.

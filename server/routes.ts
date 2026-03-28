@@ -1005,8 +1005,31 @@ export async function registerRoutes(
          distanceMiles = String(Math.max(0.1, Math.round(calcDist * 10) / 10));
        }
 
+       const { driverLat, driverLng } = req.body;
+       if (targetHop.endLat && targetHop.endLng && driverLat && driverLng) {
+         const distToDestination = getDistance(
+           parseFloat(String(driverLat)),
+           parseFloat(String(driverLng)),
+           parseFloat(String(targetHop.endLat)),
+           parseFloat(String(targetHop.endLng))
+         );
+         if (distToDestination > 0.31) {
+           return res.status(400).json({ 
+             message: "Too far from destination to complete ride. Drive closer to the drop-off point.",
+             distanceToDestination: Math.round(distToDestination * 100) / 100
+           });
+         }
+       }
+
        const hop = await storage.completeHop(Number(req.params.id), distanceMiles);
        console.log(`[PAYMENT] HOP COMPLETED: hop${hop.id} | distance=${distanceMiles}mi | PI=${targetHop.paymentIntentId || 'none'} | paymentStatus=${targetHop.paymentStatus} | driver=${req.user.id}`);
+
+       try {
+         const earnings = await storage.processDriverEarnings(hop.id, distanceMiles, targetHop.paymentIntentId || undefined);
+         console.log(`[PAYMENT] DRIVER EARNINGS: hop${hop.id} | ${earnings} Wheels credited to driver ${req.user.id}`);
+       } catch (earningsErr: any) {
+         console.error(`[PAYMENT] EARNINGS DEFERRED: hop${hop.id} | ${earningsErr.message}`);
+       }
 
        const driverStreak = await storage.updateHopStreak(req.user.id);
        for (const badge of driverStreak.newBadges) {
@@ -1099,13 +1122,10 @@ export async function registerRoutes(
         try {
           const wheelsCost = (existingHop.priceCents || 0) / 100;
           if (wheelsCost > 0 && existingHop.walkerId) {
-            const walker = await storage.getUser(existingHop.walkerId);
-            if (walker) {
-              await db.update(users).set({ credits: (walker.credits || 0) + wheelsCost }).where(eq(users.id, existingHop.walkerId));
-              await db.update(shortHops).set({ paymentStatus: "refunded" }).where(eq(shortHops.id, hop.id));
-              paymentRefunded = true;
-              console.log(`[PAYMENT] WHEELS REFUNDED: ${wheelsCost.toFixed(2)} wheels returned to user${existingHop.walkerId} for hop${hop.id} | was ${existingHop.status}`);
-            }
+            await db.update(users).set({ riderCredits: sql`rider_credits + ${wheelsCost}` }).where(eq(users.id, existingHop.walkerId));
+            await db.update(shortHops).set({ paymentStatus: "refunded" }).where(eq(shortHops.id, hop.id));
+            paymentRefunded = true;
+            console.log(`[PAYMENT] WHEELS REFUNDED: ${wheelsCost.toFixed(2)} ride credits returned to user${existingHop.walkerId} for hop${hop.id} | was ${existingHop.status}`);
           }
         } catch (wheelErr: any) {
           console.error(`[PAYMENT] WHEEL REFUND FAILED: hop${hop.id}:`, wheelErr.message);
@@ -1153,19 +1173,16 @@ export async function registerRoutes(
 
       if (useWheels) {
         const tipDeduct = await db.execute(sql`
-          UPDATE users SET credits = credits - ${tipWheels}
-          WHERE id = ${req.user.id} AND credits >= ${tipWheels}
-          RETURNING credits
+          UPDATE users SET rider_credits = rider_credits - ${tipWheels}
+          WHERE id = ${req.user.id} AND rider_credits >= ${tipWheels}
+          RETURNING rider_credits
         `);
         if (!tipDeduct.rows || tipDeduct.rows.length === 0) {
-          return res.status(400).json({ message: "Not enough wheels" });
+          return res.status(400).json({ message: "Not enough ride credits" });
         }
         if (hop.driverId) {
-          const driver = await storage.getUser(hop.driverId);
-          if (driver) {
-            const driverTipWheels = tipCents >= 3000 ? tipWheels * 0.9 : tipWheels;
-            await db.update(users).set({ credits: (driver.credits || 0) + driverTipWheels }).where(eq(users.id, hop.driverId));
-          }
+          const driverTipWheels = tipCents >= 3000 ? tipWheels * 0.9 : tipWheels;
+          await storage.addDriverEarnings(hop.driverId, driverTipWheels, "tip_earning", `Tip from hop#${hopId} (wheels)`, hopId);
         }
         await db.update(shortHops).set({ tipCents: (hop.tipCents || 0) + tipCents }).where(eq(shortHops.id, hopId));
         return res.json({ success: true, method: "wheels" });
@@ -1191,11 +1208,8 @@ export async function registerRoutes(
           if (paymentIntent.status === 'succeeded') {
             await db.update(shortHops).set({ tipCents: (hop.tipCents || 0) + tipCents }).where(eq(shortHops.id, hopId));
             if (hop.driverId) {
-              const driver = await storage.getUser(hop.driverId);
-              if (driver) {
-                const driverTipWheels = tipCents >= 3000 ? (tipCents * 0.9) / 100 : tipCents / 100;
-                await db.update(users).set({ credits: (driver.credits || 0) + driverTipWheels }).where(eq(users.id, hop.driverId));
-              }
+              const driverTipWheels = tipCents >= 3000 ? (tipCents * 0.9) / 100 : tipCents / 100;
+              await storage.addDriverEarnings(hop.driverId, driverTipWheels, "tip_earning", `Tip from hop#${hopId} (card)`, hopId, paymentIntent.id);
             }
             return res.json({ success: true, method: "card" });
           }
@@ -2707,13 +2721,10 @@ export async function registerRoutes(
       if (hop.walkerId && totalSsFee > 0) {
         if (hop.paymentIntentId?.startsWith("wheels_")) {
           const walker = await storage.getUser(hop.walkerId);
-          if (walker && (walker.credits || 0) >= totalSsFee / 100) {
-            await db.update(users).set({ credits: (walker.credits || 0) - totalSsFee / 100 }).where(eq(users.id, hop.walkerId));
+          if (walker && (walker.riderCredits || 0) >= totalSsFee / 100) {
+            await db.update(users).set({ riderCredits: (walker.riderCredits || 0) - totalSsFee / 100 }).where(eq(users.id, hop.walkerId));
             if (hop.driverId) {
-              const driver = await storage.getUser(hop.driverId);
-              if (driver) {
-                await db.update(users).set({ credits: (driver.credits || 0) + totalSsFee / 100 }).where(eq(users.id, hop.driverId));
-              }
+              await storage.addDriverEarnings(hop.driverId, totalSsFee / 100, "ss_earning", `SS fee from hop#${hopId} (wheels)`, hopId);
             }
             ssFeeCharged = true;
             console.log(`[PAYMENT] SS FEE WHEELS: ${(totalSsFee / 100).toFixed(2)} wheels charged to user${hop.walkerId} for hop${hopId} SS stop`);
@@ -2744,10 +2755,7 @@ export async function registerRoutes(
                 });
                 if (ssPi.status === 'succeeded') {
                   if (hop.driverId) {
-                    const driver = await storage.getUser(hop.driverId);
-                    if (driver) {
-                      await db.update(users).set({ credits: (driver.credits || 0) + totalSsFee / 100 }).where(eq(users.id, hop.driverId));
-                    }
+                    await storage.addDriverEarnings(hop.driverId, totalSsFee / 100, "ss_earning", `SS fee from hop#${hopId} (card)`, hopId, ssPi.id);
                   }
                   ssFeeCharged = true;
                   console.log(`[PAYMENT] SS FEE CARD: PI ${ssPi.id} $${(totalSsFee / 100).toFixed(2)} charged to user${hop.walkerId} for hop${hopId} SS stop`);
@@ -4028,19 +4036,32 @@ export async function registerRoutes(
     try {
       const userId = Number(req.params.id);
       const amount = Number(req.body.amount);
+      const targetSystem = req.body.targetSystem || "rider";
       if (!amount || amount < 1 || amount > 1000) {
         return res.status(400).json({ message: "Amount must be between 1 and 1000" });
       }
       const targetUser = await storage.getUser(userId);
       if (!targetUser) return res.status(404).json({ message: "User not found" });
-      await storage.addCredits(userId, amount);
-      await storage.createNotification({
-        userId,
-        type: "reward",
-        title: "You received Wheels! 🛞",
-        message: `The ShortHop team gifted you ${amount} Wheel${amount !== 1 ? 's' : ''}. Check your Rewards page!`,
-      });
-      res.json({ message: `Granted ${amount} Wheels to ${targetUser.username}`, newBalance: (targetUser.credits || 0) + amount });
+
+      if (targetSystem === "driver") {
+        await storage.addDriverEarnings(userId, amount, "admin_grant", `Admin granted ${amount} driver earnings`);
+        await storage.createNotification({
+          userId,
+          type: "reward",
+          title: "Driver Earnings Added! 🛞",
+          message: `The ShortHop team added $${amount} to your driver earnings.`,
+        });
+        res.json({ message: `Granted $${amount} driver earnings to ${targetUser.username}`, newBalance: (targetUser.driverEarnings || 0) + amount });
+      } else {
+        await storage.addRiderCredits(userId, amount, "admin_grant", `Admin granted ${amount} ride credits`);
+        await storage.createNotification({
+          userId,
+          type: "reward",
+          title: "You received ride credits! 🛞",
+          message: `The ShortHop team gifted you ${amount} ride credit${amount !== 1 ? 's' : ''}. Use them for your next hop!`,
+        });
+        res.json({ message: `Granted ${amount} ride credits to ${targetUser.username}`, newBalance: (targetUser.riderCredits || 0) + amount });
+      }
     } catch {
       res.status(500).json({ message: "Failed to grant wheels" });
     }
@@ -4604,8 +4625,17 @@ export async function registerRoutes(
       const user = await storage.getUser(req.user.id);
       if (!user) return res.status(404).json({ message: "User not found" });
       if (!user.stripeAccountId) return res.status(400).json({ message: "Stripe not connected" });
-      if ((user.credits || 0) < amount) {
-        return res.status(400).json({ message: `Not enough Wheels. You have ${(user.credits || 0).toFixed(2)}.` });
+      if (!user.driverVerified || !user.idVerified) {
+        return res.status(400).json({ message: "Driver verification required before cashout. Complete ID and vehicle verification first." });
+      }
+
+      const completedHopCount = await storage.getUserCompletedHopCount(user.id);
+      if (completedHopCount < 3) {
+        return res.status(400).json({ message: `Complete at least 3 rides before your first cashout. You have ${completedHopCount} so far.` });
+      }
+
+      if ((user.driverEarnings || 0) < amount) {
+        return res.status(400).json({ message: `Not enough earnings. You have $${(user.driverEarnings || 0).toFixed(2)}.` });
       }
 
       const existingPending = await db.select().from(cashoutRequests)
@@ -4775,18 +4805,18 @@ export async function registerRoutes(
       const user = await storage.getUser(req.user.id);
       if (!user) return res.status(404).json({ message: "User not found" });
 
-      const userWheels = user.credits || 0;
-      if (userWheels < wheelsCost) {
-        return res.status(400).json({ message: `Not enough Wheels. You have ${userWheels.toFixed(2)} but need ${wheelsCost.toFixed(2)}.` });
+      const userRiderCredits = user.riderCredits || 0;
+      if (userRiderCredits < wheelsCost) {
+        return res.status(400).json({ message: `Not enough ride credits. You have ${userRiderCredits.toFixed(2)} but need ${wheelsCost.toFixed(2)}.` });
       }
 
       const deductResult = await db.execute(sql`
-        UPDATE users SET credits = credits - ${wheelsCost}
-        WHERE id = ${user.id} AND credits >= ${wheelsCost}
-        RETURNING credits
+        UPDATE users SET rider_credits = rider_credits - ${wheelsCost}
+        WHERE id = ${user.id} AND rider_credits >= ${wheelsCost}
+        RETURNING rider_credits
       `);
       if (!deductResult.rows || deductResult.rows.length === 0) {
-        return res.status(400).json({ message: "Not enough Wheels (balance changed)" });
+        return res.status(400).json({ message: "Not enough ride credits (balance changed)" });
       }
 
       const depTime = departureTime ? new Date(departureTime) : new Date(Date.now() + 5 * 60000);

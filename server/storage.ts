@@ -82,6 +82,8 @@ import {
   type UserActivityWindow,
   rideMessages,
   type RideMessage,
+  financialLedger,
+  type InsertFinancialLedgerEntry,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -435,19 +437,48 @@ export class DatabaseStorage implements IStorage {
       .returning();
       
     if (!updatedHop) throw new Error("Hop not found");
-    
-    const dist = parseFloat(distanceMiles);
-    if (updatedHop.driverId) {
-       const driver = await this.getUser(updatedHop.driverId);
-       if (driver) {
-          const driverEarnings = Math.max(1, Math.floor(dist));
-          await db.update(users)
-            .set({ credits: (driver.credits || 0) + driverEarnings })
-            .where(eq(users.id, driver.id));
-       }
-    }
 
     return updatedHop;
+  }
+
+  async processDriverEarnings(hopId: number, distanceMiles: string, stripeTransactionId?: string): Promise<number> {
+    const hop = await this.getHop(hopId);
+    if (!hop) throw new Error("Hop not found");
+    if (hop.earningsProcessed) return 0;
+    if (hop.status !== "completed") throw new Error("Hop not completed");
+
+    const isStripePayment = hop.paymentIntentId && !hop.paymentIntentId.startsWith("wheels_");
+    if (isStripePayment && hop.paymentStatus !== "captured") {
+      throw new Error("Stripe payment not confirmed");
+    }
+
+    const dist = parseFloat(distanceMiles);
+    const earningsAmount = Math.max(1, Math.floor(dist));
+
+    if (hop.driverId) {
+      const driver = await this.getUser(hop.driverId);
+      if (driver) {
+        await db.update(users)
+          .set({ driverEarnings: (driver.driverEarnings || 0) + earningsAmount })
+          .where(eq(users.id, driver.id));
+
+        await db.insert(financialLedger).values({
+          userId: driver.id,
+          type: "ride_earning",
+          amount: earningsAmount,
+          balanceType: "driver",
+          hopId: hopId,
+          stripeTransactionId: stripeTransactionId || hop.paymentIntentId || null,
+          description: `Ride earning: ${dist}mi hop#${hopId}`,
+        });
+      }
+    }
+
+    await db.update(shortHops)
+      .set({ earningsProcessed: true })
+      .where(eq(shortHops.id, hopId));
+
+    return earningsAmount;
   }
 
   async cancelHop(hopId: number, walkerId: number): Promise<ShortHop> {
@@ -695,12 +726,12 @@ export class DatabaseStorage implements IStorage {
     if (!reward) throw new Error("Reward not found");
 
     const deductResult = await db.execute(sql`
-      UPDATE users SET credits = credits - ${reward.wheelsCost}
-      WHERE id = ${userId} AND credits >= ${reward.wheelsCost}
-      RETURNING credits
+      UPDATE users SET rider_credits = rider_credits - ${reward.wheelsCost}
+      WHERE id = ${userId} AND rider_credits >= ${reward.wheelsCost}
+      RETURNING rider_credits
     `);
     if (!deductResult.rows || deductResult.rows.length === 0) {
-      throw new Error("Insufficient wheels");
+      throw new Error("Insufficient ride credits");
     }
 
     const code = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -709,6 +740,11 @@ export class DatabaseStorage implements IStorage {
       userId,
       rewardId,
       code,
+    });
+
+    await db.insert(financialLedger).values({
+      userId, type: "reward_redemption", amount: -reward.wheelsCost, balanceType: "rider",
+      description: `Redeemed reward: ${reward.name}`,
     });
 
     return { code, reward };
@@ -724,6 +760,42 @@ export class DatabaseStorage implements IStorage {
     await db.update(users)
       .set({ credits: (user.credits || 0) + amount })
       .where(eq(users.id, userId));
+  }
+
+  async addRiderCredits(userId: number, amount: number, type: string, description: string, hopId?: number): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+    await db.update(users)
+      .set({ riderCredits: (user.riderCredits || 0) + amount })
+      .where(eq(users.id, userId));
+    await db.insert(financialLedger).values({
+      userId, type, amount, balanceType: "rider", hopId: hopId || null,
+      description,
+    });
+  }
+
+  async deductRiderCredits(userId: number, amount: number): Promise<void> {
+    const result = await db.execute(sql`
+      UPDATE users SET rider_credits = rider_credits - ${amount}
+      WHERE id = ${userId} AND rider_credits >= ${amount}
+      RETURNING rider_credits
+    `);
+    if (!result.rows || result.rows.length === 0) {
+      throw new Error("Insufficient rider credits");
+    }
+  }
+
+  async addDriverEarnings(userId: number, amount: number, type: string, description: string, hopId?: number, stripeTransactionId?: string): Promise<void> {
+    const user = await this.getUser(userId);
+    if (!user) throw new Error("User not found");
+    await db.update(users)
+      .set({ driverEarnings: (user.driverEarnings || 0) + amount })
+      .where(eq(users.id, userId));
+    await db.insert(financialLedger).values({
+      userId, type, amount, balanceType: "driver", hopId: hopId || null,
+      stripeTransactionId: stripeTransactionId || null,
+      description,
+    });
   }
 
   async deductCredits(userId: number, amount: number): Promise<void> {
@@ -748,16 +820,22 @@ export class DatabaseStorage implements IStorage {
 
   async createCashoutAtomic(userId: number, amount: number, paymentMethod: string, paymentHandle: string): Promise<CashoutRequest> {
     const result = await db.execute(sql`
-      UPDATE users SET credits = credits - ${amount}
-      WHERE id = ${userId} AND credits >= ${amount}
-      RETURNING credits
+      UPDATE users SET driver_earnings = driver_earnings - ${amount}
+      WHERE id = ${userId} AND driver_earnings >= ${amount}
+      RETURNING driver_earnings
     `);
     if (!result.rows || result.rows.length === 0) {
-      throw new Error("Insufficient Wheels balance");
+      throw new Error("Insufficient driver earnings balance");
     }
     const [created] = await db.insert(cashoutRequests).values({
       userId, amount, paymentMethod, paymentHandle,
     }).returning();
+
+    await db.insert(financialLedger).values({
+      userId, type: "cashout", amount: -amount, balanceType: "driver",
+      description: `Cashout $${amount} via ${paymentMethod}`,
+    });
+
     return created;
   }
 
@@ -1155,11 +1233,11 @@ export class DatabaseStorage implements IStorage {
 
     const topDrivers = await db.select({
       username: users.username,
-      credits: users.credits,
+      credits: users.driverEarnings,
     })
       .from(users)
       .where(and(eq(users.isDriver, true), excludeTest))
-      .orderBy(desc(users.credits))
+      .orderBy(desc(users.driverEarnings))
       .limit(10);
 
     const communityHoppers = await db.select({
@@ -1187,14 +1265,35 @@ export class DatabaseStorage implements IStorage {
     const referrerId = referrer[0].id;
     if (referrerId === newUserId) return false;
 
-    await db.update(users).set({ credits: sql`${users.credits} + 5` }).where(eq(users.id, referrerId));
-    await db.update(users).set({ credits: sql`${users.credits} + 3`, referredBy: referralCode }).where(eq(users.id, newUserId));
+    const newUser = await this.getUser(newUserId);
+    if (newUser?.referredBy) return false;
+
+    const existingLedger = await db.select().from(financialLedger).where(
+      and(
+        eq(financialLedger.userId, referrerId),
+        eq(financialLedger.type, "referral_reward"),
+        sql`${financialLedger.description} LIKE ${'%referred user#' + newUserId + '%'}`
+      )
+    ).limit(1);
+    if (existingLedger.length > 0) return false;
+
+    await db.update(users).set({ riderCredits: sql`${users.riderCredits} + 5` }).where(eq(users.id, referrerId));
+    await db.update(users).set({ riderCredits: sql`${users.riderCredits} + 3`, referredBy: referralCode }).where(eq(users.id, newUserId));
+
+    await db.insert(financialLedger).values({
+      userId: referrerId, type: "referral_reward", amount: 5, balanceType: "rider",
+      description: `Referral reward: referred user#${newUserId}`,
+    });
+    await db.insert(financialLedger).values({
+      userId: newUserId, type: "referral_reward", amount: 3, balanceType: "rider",
+      description: `Referral welcome bonus from code ${referralCode}`,
+    });
 
     await this.createNotification({
       userId: referrerId,
       type: "referral",
       title: "Referral Reward! 🎉",
-      message: "Someone joined ShortHop using your referral code! You earned 5 Wheels.",
+      message: "Someone joined ShortHop using your referral code! You earned 5 ride credits.",
       isRead: false,
     });
 
@@ -1202,7 +1301,7 @@ export class DatabaseStorage implements IStorage {
       userId: newUserId,
       type: "referral",
       title: "Welcome Bonus! 🎉",
-      message: "You joined with a referral code and earned 3 bonus Wheels!",
+      message: "You joined with a referral code and earned 3 bonus ride credits!",
       isRead: false,
     });
 
