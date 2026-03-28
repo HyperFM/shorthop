@@ -382,12 +382,36 @@ function scoreHopMatchForDriver(
     return fail;
   }
 
+  const hopBearing = getBearingRad(hopStartLat, hopStartLng, hopEndLat, hopEndLng);
+
   let bestPickupDist = Infinity;
   let bestDropoffDist = Infinity;
   let bestDetour = Infinity;
   let matchedAnyRoute = false;
 
   for (const route of driverRoutes) {
+    if (route.startTime && route.endTime && route.days) {
+      const routeNow = new Date();
+      const currentDay = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][routeNow.getDay()];
+      const routeDays = (route.days as string[]) || [];
+      if (routeDays.length > 0 && !routeDays.some((d: string) => d.toLowerCase() === currentDay)) {
+        console.log(`${tag} Route "${route.name}" skipped: not scheduled today (${currentDay})`);
+        continue;
+      }
+      const currentMinutes = routeNow.getHours() * 60 + routeNow.getMinutes();
+      const startMin = parseTimeToMinutes(route.startTime);
+      const endMin = parseTimeToMinutes(route.endTime);
+      if (startMin !== null && endMin !== null) {
+        const windowStart = startMin - 60;
+        const windowEnd = endMin < startMin ? endMin + 1440 + 30 : endMin + 30;
+        const adjustedCurrent = currentMinutes < windowStart && endMin < startMin ? currentMinutes + 1440 : currentMinutes;
+        if (adjustedCurrent < windowStart || adjustedCurrent > windowEnd) {
+          console.log(`${tag} Route "${route.name}" skipped: outside time window (now=${currentMinutes}min, window=${windowStart < 0 ? windowStart + 1440 : windowStart}-${(windowEnd % 1440)}min)`);
+          continue;
+        }
+      }
+    }
+
     const rStartLat = parseFloat(route.startLat || "0");
     const rStartLng = parseFloat(route.startLng || "0");
     const rEndLat = parseFloat(route.endLat || "0");
@@ -405,7 +429,17 @@ function scoreHopMatchForDriver(
       routePoints = [[driverLoc.latitude, driverLoc.longitude], ...routePoints.slice(routePoints.length > 1 ? 1 : 0)];
     }
 
-    console.log(`${tag} Route "${route.name}": ${routePoints.map(p => `(${p[0].toFixed(4)},${p[1].toFixed(4)})`).join('→')}`);
+    const routeStart = routePoints[0];
+    const routeEnd = routePoints[routePoints.length - 1];
+    const routeBearing = getBearingRad(routeStart[0], routeStart[1], routeEnd[0], routeEnd[1]);
+    let dirAngleDiff = Math.abs(hopBearing - routeBearing);
+    if (dirAngleDiff > Math.PI) dirAngleDiff = 2 * Math.PI - dirAngleDiff;
+    console.log(`${tag} Route "${route.name}": ${routePoints.map(p => `(${p[0].toFixed(4)},${p[1].toFixed(4)})`).join('→')} | hopDir=${(hopBearing * 180 / Math.PI).toFixed(0)}° routeDir=${(routeBearing * 180 / Math.PI).toFixed(0)}° diff=${(dirAngleDiff * 180 / Math.PI).toFixed(0)}°`);
+
+    if (dirAngleDiff > Math.PI / 2) {
+      console.log(`${tag}   SKIP: rider traveling opposite direction (${(dirAngleDiff * 180 / Math.PI).toFixed(0)}° > 90°)`);
+      continue;
+    }
 
     const pickupToRoute = distToPolyline(hopStartLat, hopStartLng, routePoints);
     console.log(`${tag}   pickup dist to route: ${pickupToRoute.toFixed(3)}mi (max ${MAX_DEVIATION_MILES})`);
@@ -493,10 +527,53 @@ async function executeMatch(hopId: number, driverId: number, isStar: boolean, ho
 
 let matchingCycleRunning = false;
 
+function parseTimeToMinutes(t: string): number | null {
+  const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!m) return null;
+  let h = parseInt(m[1]);
+  const mn = parseInt(m[2]);
+  if (m[3]) {
+    if (m[3].toUpperCase() === "PM" && h !== 12) h += 12;
+    if (m[3].toUpperCase() === "AM" && h === 12) h = 0;
+  }
+  return h * 60 + mn;
+}
+
+async function autoActivateScheduledDrivers() {
+  try {
+    const now = new Date();
+    const currentDay = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][now.getDay()];
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const allRoutes = await db.select().from(routineRoutes).where(eq(routineRoutes.isActive, true));
+    for (const route of allRoutes) {
+      const days = (route.days as string[]) || [];
+      if (!days.some(d => d.toLowerCase() === currentDay)) continue;
+
+      const routeStartMinutes = parseTimeToMinutes(route.startTime || "");
+      if (routeStartMinutes === null) continue;
+
+      const diffMinutes = routeStartMinutes - currentMinutes;
+
+      if (diffMinutes > 0 && diffMinutes <= 60) {
+        const driver = await storage.getUser(route.driverId);
+        if (driver && driver.isDriver && driver.driverVerified && !driver.isDisabled && !driver.isActive) {
+          await storage.setDriverActive(route.driverId, true);
+          console.log(`[AUTO-ACTIVATE] Driver ${route.driverId} auto-activated ${diffMinutes}min before route "${route.name}" (${route.startTime})`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[AUTO-ACTIVATE] Error:", err);
+  }
+}
+
 async function runMatchingCycle() {
   if (matchingCycleRunning) return;
   matchingCycleRunning = true;
   try {
+    await autoActivateScheduledDrivers();
+
     const allAvailable = await storage.getAvailableHops();
     if (allAvailable.length === 0) { return; }
 
@@ -887,6 +964,10 @@ export async function registerRoutes(
 
       const currentUser = await storage.getUser(req.user.id);
       if (!currentUser) return res.status(401).json({ message: "Unauthorized" });
+
+      if (!currentUser.phone) {
+        return res.status(400).json({ message: "A phone number is required to request a hop. Please add your phone number in your profile settings." });
+      }
 
       if (input.hopType === "flex_hop" && currentUser.subscription !== "flex_hop" && currentUser.subscription !== "power_hop") {
         return res.status(403).json({ message: "Flex Hop requires an active Flex Hop or Power Hop subscription." });

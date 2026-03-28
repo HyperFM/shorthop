@@ -1,0 +1,30 @@
+We’re now in final testing and behavior tuning for the matching system. The goal is not perfection, but making sure matches feel natural, logical, and aligned with the driver’s route and direction of travel.
+
+The main expectation is that riders (hoppers) should only be matched if they are generally “on the way” of the driver’s route. This includes riders slightly off the route or even slightly behind, as long as their movement logically reconnects with the driver’s path.
+
+Here’s the intended behavior in plain terms:
+
+- Riders ahead of the driver and moving in the same direction should match.
+- Riders further ahead on the same route should still match as long as they fall within distance and time constraints.
+- Riders ahead but traveling in the opposite direction should NOT match under any circumstances.
+- Riders slightly behind the driver can still match IF they are heading toward the route and would naturally rejoin it (small detour, acceptable).
+- Riders slightly behind but moving away from the route or in the wrong direction should NOT match.
+
+So overall, matching should be based not just on distance to the route, but also on direction and intent — whether the rider’s trip aligns with the driver’s forward movement.
+
+In addition to direction logic, scheduling behavior should work as follows:
+
+- Drivers should automatically become active for matching 1 hour before their scheduled route start time.
+- Matching should only occur for riders whose timing aligns with the driver’s route window.
+- The system should not match riders outside of this time alignment.
+
+For rider requirements and expectations:
+
+- Riders must provide a valid phone number (required field).
+- Riders are expected to be awake, ready, and responsive at their scheduled time.
+- Drivers may optionally make a courtesy call, but this is not required.
+- Refunds should only be issued if no match is made — not for missed rides due to unresponsiveness.
+
+If any part of the current matching logic does not behave this way during testing, it should be adjusted to prioritize direction alignment and “on-the-way” matching over purely distance-based decisions.
+
+The system does not need to be perfect — it just needs to behave in a way that feels intuitive and avoids obviously incorrect matches.
