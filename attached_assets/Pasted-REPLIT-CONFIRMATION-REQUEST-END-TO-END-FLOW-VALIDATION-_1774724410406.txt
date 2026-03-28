@@ -1,0 +1,71 @@
+REPLIT CONFIRMATION REQUEST — END-TO-END FLOW VALIDATION
+
+Please confirm that the current system behaves exactly as follows in a full test transaction (real or sandbox Stripe flow):
+
+⸻
+
+1. PAYMENT CONFIRMATION (STRIPE)
+
+When a Stripe payment succeeds:
+	•	The system must receive a successful payment confirmation from Stripe
+	•	No driver or rider balances should update before this confirmation
+
+⸻
+
+2. RIDE COMPLETION LOGIC
+
+After payment confirmation:
+	•	The ride must move through the full state flow
+	•	The ride cannot be marked complete unless GPS validation passes
+	•	GPS validation requires driver to be within the defined destination radius for the required confirmation period
+
+⸻
+
+3. DRIVER EARNINGS CREDIT
+
+Only after:
+	•	Stripe payment success
+	•	Ride reaches completed status
+
+Then:
+	•	Driver earnings must be credited exactly once
+	•	No duplicate credits are allowed even if webhooks retry or events repeat
+
+⸻
+
+4. RIDER / REFERRAL REWARDS
+
+Referral rewards (if applicable) must only trigger when:
+	•	Ride is fully completed
+	•	Payment is confirmed successful by Stripe
+	•	The system confirms this is the first valid completion for that referral event
+
+Referral rewards must also:
+	•	Only trigger once per qualifying ride
+	•	Never duplicate under retries or repeated processing
+
+⸻
+
+5. SYSTEM INTEGRITY CHECK
+
+Please confirm there is no scenario where:
+	•	Driver earnings are created before Stripe confirmation
+	•	Referral rewards trigger before ride completion
+	•	Any event causes duplicate credits or payouts
+	•	Rider and driver balances ever mix or overlap
+	•	GPS alone can trigger financial actions
+
+⸻
+
+EXPECTED RESULT
+
+If the system is correct:
+	•	One Stripe payment → one ride completion → one driver credit → optional single referral reward
+	•	No duplicates under any retry conditions
+	•	Strict ordering is enforced in all cases
+
+⸻
+
+FINAL REQUEST
+
+Please run or validate a full test flow and confirm whether the current implementation fully satisfies all conditions above or if any gaps remain.
