@@ -1136,13 +1136,19 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
                   </p>
                   <p className="text-green-200 text-[10px] font-semibold">in ride</p>
                 </div>
-                <button
-                  onClick={() => onCompleteRide(hop.id)}
-                  className="px-4 py-2.5 bg-green-400 text-green-900 text-xs font-black rounded-xl shrink-0 shadow-lg hover:bg-green-300 transition-colors"
-                  data-testid="button-driver-complete-ride-bar"
-                >
-                  Complete
-                </button>
+                {hop.driverConfirmedComplete ? (
+                  <span className="px-4 py-2.5 bg-white/20 text-green-200 text-[10px] font-bold rounded-xl shrink-0">
+                    Waiting for hopper
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => onCompleteRide(hop.id)}
+                    className="px-4 py-2.5 bg-green-400 text-green-900 text-xs font-black rounded-xl shrink-0 shadow-lg hover:bg-green-300 transition-colors"
+                    data-testid="button-driver-complete-ride-bar"
+                  >
+                    Complete
+                  </button>
+                )}
               </div>
             </div>
             <SpontaneousStopDriver hopId={hop.id} />
@@ -1799,11 +1805,82 @@ function HopperRidePanel({ activeHop, user, tracking, queryClient }: {
 
           {isInRide && <SafetyMessageRotator />}
 
+          {isInRide && activeHop.driverConfirmedComplete && !activeHop.hopperConfirmedComplete && (
+            <motion.div
+              className="bg-white rounded-2xl px-4 py-4 mb-3 shadow-xl space-y-3"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              data-testid="card-hopper-confirm-complete"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center shrink-0">
+                  <Navigation className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-gray-900 text-sm font-black">
+                    Have you arrived at your destination?
+                  </p>
+                  <p className="text-gray-500 text-xs mt-0.5">Your driver says the ride is complete</p>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/hops/${activeHop.id}/hopper-confirm-complete`, {
+                      method: "POST",
+                      credentials: "include",
+                      headers: { "Content-Type": "application/json" },
+                    });
+                    if (res.ok) {
+                      queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                      showFlash("✅", "Ride completed", "success");
+                    }
+                  } catch {}
+                }}
+                className="w-full px-3 py-3 bg-green-500 text-white text-sm font-black rounded-xl shadow-lg"
+                data-testid="button-hopper-confirm-complete"
+              >
+                Yes — I've Arrived
+              </button>
+              <p className="text-gray-400 text-[10px] text-center">
+                Only confirm once you've safely exited the vehicle at your destination
+              </p>
+            </motion.div>
+          )}
+
+          {isInRide && !activeHop.driverConfirmedComplete && activeHop.hopperConfirmedComplete && (
+            <div className="bg-white/12 rounded-xl px-4 py-3 text-center">
+              <p className="text-white/70 text-xs font-semibold">Waiting for driver to confirm ride is complete</p>
+            </div>
+          )}
+
           {isInRide && (
             <div className="bg-white/12 rounded-xl p-3 border border-white/15 text-[11px] text-white/80" data-testid="gps-ride-info">
               <p className="font-bold flex items-center gap-1.5"><span>📡</span> GPS is tracking this ride for your protection</p>
               <p className="mt-0.5 text-white/50 font-medium">Keep location services enabled for refund eligibility.</p>
             </div>
+          )}
+
+          {isInRide && !activeHop.driverConfirmedComplete && !activeHop.hopperConfirmedComplete && (
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/hops/${activeHop.id}/hopper-confirm-complete`, {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                  });
+                  if (res.ok) {
+                    queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                    showFlash("✅", "Arrival confirmed — waiting for driver", "info");
+                  }
+                } catch {}
+              }}
+              className="w-full px-3 py-2.5 bg-white/15 text-white text-xs font-bold rounded-xl border border-white/20 hover:bg-white/20 transition-colors"
+              data-testid="button-hopper-confirm-arrived"
+            >
+              I've Arrived at My Destination
+            </button>
           )}
 
           {(isMatched || isInRide) && (
@@ -1899,10 +1976,10 @@ function SpontaneousStopHopper({ hopId }: { hopId: number }) {
 
     return (
       <div className="absolute top-12 right-0 z-10 w-44" data-testid="ss-active-hopper">
-        <div className={`border-2 rounded-xl p-2.5 shadow-lg ${overTime ? 'bg-white border-red-400' : 'bg-white border-orange-400'}`}>
-          <p className={`text-[10px] font-black flex items-center gap-1 ${overTime ? 'text-red-600' : 'text-orange-600'}`}>
+        <div className="border-2 rounded-xl p-2.5 shadow-lg bg-white border-orange-400">
+          <p className="text-[10px] font-black flex items-center gap-1 text-orange-600">
             <Timer className="w-3 h-3" />
-            {overTime ? "Over time!" : "SS Active"}
+            {overTime ? "Over time" : "SS Active"}
           </p>
           <div className="flex items-center justify-between mt-1">
             <span className="text-[11px] font-mono font-black text-orange-700">
@@ -1911,7 +1988,7 @@ function SpontaneousStopHopper({ hopId }: { hopId: number }) {
             <span className="text-[10px] font-black text-orange-600">${totalFee.toFixed(2)}</span>
           </div>
           {overTime && (
-            <p className="text-[8px] text-red-500 font-bold mt-0.5">+$0.50/min — hurry back!</p>
+            <p className="text-[8px] text-orange-500 font-medium mt-0.5">+$0.50/min after 3 min</p>
           )}
           <button className="w-full mt-1.5 text-[10px] h-6 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-lg" onClick={handleComplete} data-testid="button-ss-done">
             Done — Back to Car
@@ -1940,6 +2017,7 @@ function SpontaneousStopHopper({ hopId }: { hopId: number }) {
         >
           <div className="bg-white border-2 border-orange-400 rounded-xl p-3 shadow-lg space-y-1.5" data-testid="ss-confirm-dialog">
             <p className="text-[11px] font-black text-orange-600">Spontaneous Stop?</p>
+            <p className="text-[9px] text-orange-500/80 font-medium">Just point and tell your driver where to stop — no address needed. Must be along the way.</p>
             <div className="text-[9px] text-orange-500 font-semibold space-y-0.5">
               <p>• Along current route</p>
               <p>• Under 3 min — $2.00</p>
@@ -2070,9 +2148,9 @@ function SpontaneousStopDriver({ hopId }: { hopId: number }) {
     const totalFee = 2.00 + extraFee;
 
     return (
-      <div className={`border-2 rounded-xl p-3 space-y-2 ${overTime ? 'bg-red-50 dark:bg-red-950/20 border-red-400 dark:border-red-600' : 'bg-green-50 dark:bg-green-950/20 border-green-400 dark:border-green-600'}`} data-testid="ss-driver-active">
+      <div className={`border-2 rounded-xl p-3 space-y-2 ${overTime ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-400 dark:border-orange-600' : 'bg-green-50 dark:bg-green-950/20 border-green-400 dark:border-green-600'}`} data-testid="ss-driver-active">
         <div className="flex items-center justify-between">
-          <p className={`text-sm font-bold flex items-center gap-1.5 ${overTime ? 'text-red-800 dark:text-red-300' : 'text-green-800 dark:text-green-300'}`}>
+          <p className={`text-sm font-bold flex items-center gap-1.5 ${overTime ? 'text-orange-700 dark:text-orange-300' : 'text-green-800 dark:text-green-300'}`}>
             <Timer className="w-4 h-4" /> SS Timer
           </p>
           <span className="text-lg font-mono font-black text-foreground dark:text-white" data-testid="text-ss-timer">
@@ -2439,23 +2517,28 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
                   <p className="text-[10px] text-amber-700/80 dark:text-amber-400/60 mt-0.5">Please take your hopper all the way to their destination marker.</p>
                 </div>
                 <SpontaneousStopDriver hopId={hop.id} />
-                <Button
-                  className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm rounded-xl"
-                  onClick={async () => {
-                    try {
-                      await apiRequest("POST", `/api/hops/${hop.id}/complete`, {});
-                      queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
-                      showFlash("✅", "Ride completed!", "success");
-                      onClose();
-                      setTimeout(() => window.dispatchEvent(new CustomEvent("sh-ride-completed")), 300);
-                    } catch {
-                      showFlash("⚠️", "Couldn't complete ride", "error");
-                    }
-                  }}
-                  data-testid="button-complete-ride"
-                >
-                  Complete Ride
-                </Button>
+                {hop.driverConfirmedComplete ? (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200/50 dark:border-green-700/30 rounded-xl p-3 text-center space-y-1" data-testid="display-waiting-hopper-confirm">
+                    <p className="text-sm font-bold text-green-700 dark:text-green-300">Waiting for hopper to confirm arrival</p>
+                    <p className="text-[10px] text-green-600/70 dark:text-green-400/60">The hopper needs to confirm they've arrived before the ride completes</p>
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm rounded-xl"
+                    onClick={async () => {
+                      try {
+                        await apiRequest("POST", `/api/hops/${hop.id}/complete`, {});
+                        queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                        showFlash("✅", "Completion confirmed — waiting for hopper", "success");
+                      } catch {
+                        showFlash("⚠️", "Couldn't complete ride", "error");
+                      }
+                    }}
+                    data-testid="button-complete-ride"
+                  >
+                    Confirm Ride Complete
+                  </Button>
+                )}
               </>
             )}
           </div>
@@ -4433,8 +4516,7 @@ function InstaHopView({ user }: { user: User }) {
                 await apiRequest("POST", `/api/hops/${hopId}/complete`, {});
                 queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
                 prevRouteKeyRef.current = "";
-                showFlash("✅", "Ride completed!", "success");
-                setTimeout(() => setLocation("/community"), 600);
+                showFlash("✅", "Completion confirmed — waiting for hopper", "success");
               } catch {
                 showFlash("⚠️", "Couldn't complete ride", "error");
               }

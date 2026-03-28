@@ -195,6 +195,8 @@ export const shortHops = pgTable("short_hops", {
   driverConfirmedPickup: boolean("driver_confirmed_pickup").default(false),
   hopperConfirmedPickup: boolean("hopper_confirmed_pickup").default(false),
   driverConfirmedPickupAt: timestamp("driver_confirmed_pickup_at"),
+  driverConfirmedComplete: boolean("driver_confirmed_complete").default(false),
+  hopperConfirmedComplete: boolean("hopper_confirmed_complete").default(false),
   ratedByWalker: boolean("rated_by_walker").default(false),
   ratedByDriver: boolean("rated_by_driver").default(false),
   earningsProcessed: boolean("earnings_processed").default(false),

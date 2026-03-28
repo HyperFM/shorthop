@@ -987,23 +987,86 @@ export async function registerRoutes(
     }
   });
 
+  async function finalizeHopCompletion(hopId: number, driverId: number) {
+    const [targetHop] = await db.select().from(shortHops).where(eq(shortHops.id, hopId));
+    if (!targetHop) throw new Error("Hop not found");
+
+    let distanceMiles = targetHop.distanceMiles || "1";
+    if (targetHop.startLat && targetHop.startLng && targetHop.endLat && targetHop.endLng) {
+      const calcDist = getDistance(
+        parseFloat(String(targetHop.startLat)),
+        parseFloat(String(targetHop.startLng)),
+        parseFloat(String(targetHop.endLat)),
+        parseFloat(String(targetHop.endLng))
+      );
+      distanceMiles = String(Math.max(0.1, Math.round(calcDist * 10) / 10));
+    }
+
+    const hop = await storage.completeHop(hopId, distanceMiles);
+    console.log(`[PAYMENT] HOP COMPLETED: hop${hop.id} | distance=${distanceMiles}mi | PI=${targetHop.paymentIntentId || 'none'} | paymentStatus=${targetHop.paymentStatus} | driver=${driverId}`);
+
+    try {
+      const earnings = await storage.processDriverEarnings(hop.id, distanceMiles, targetHop.paymentIntentId || undefined);
+      console.log(`[PAYMENT] DRIVER EARNINGS: hop${hop.id} | ${earnings} Wheels credited to driver ${driverId}`);
+    } catch (earningsErr: any) {
+      console.error(`[PAYMENT] EARNINGS DEFERRED: hop${hop.id} | ${earningsErr.message}`);
+    }
+
+    const driverStreak = await storage.updateHopStreak(driverId);
+    for (const badge of driverStreak.newBadges) {
+      const todayCount = await storage.getNotificationCountToday(driverId);
+      if (todayCount < 5) {
+        await storage.createNotification({
+          userId: driverId,
+          type: "badge",
+          title: "New Badge Earned! 🏆",
+          message: `You earned: ${badge}`,
+          isRead: false,
+        });
+      }
+    }
+
+    if (hop.walkerId) {
+      const walkerStreak = await storage.updateHopStreak(hop.walkerId);
+      for (const badge of walkerStreak.newBadges) {
+        const todayCount = await storage.getNotificationCountToday(hop.walkerId);
+        if (todayCount < 5) {
+          await storage.createNotification({
+            userId: hop.walkerId,
+            type: "badge",
+            title: "New Badge Earned! 🏆",
+            message: `You earned: ${badge}`,
+            isRead: false,
+          });
+        }
+      }
+    }
+
+    if (hop.endLocation) {
+      await db.update(users).set({
+        lastCompletedRouteId: hop.id,
+        lastCompletedRouteName: hop.endLocation,
+      }).where(eq(users.id, driverId));
+      if (hop.walkerId) {
+        await db.update(users).set({
+          lastCompletedRouteId: hop.id,
+          lastCompletedRouteName: hop.endLocation,
+        }).where(eq(users.id, hop.walkerId));
+      }
+    }
+
+    const now = new Date();
+    await storage.upsertActivityWindow(driverId, now.getDay(), now.getHours(), Math.min(now.getHours() + 1, 23));
+
+    return hop;
+  }
+
   app.post(api.hops.complete.path, async (req, res) => {
     if (!req.isAuthenticated() || !req.user.isDriver) return res.status(401).json({ message: "Unauthorized" });
     try {
        const existingHops = await storage.getHopsForDriver(req.user.id);
-       const targetHop = existingHops.find(h => h.id === Number(req.params.id) && (h.status === "matched" || h.status === "in_ride"));
+       const targetHop = existingHops.find(h => h.id === Number(req.params.id) && h.status === "in_ride");
        if (!targetHop) return res.status(403).json({ message: "Not authorized to complete this hop" });
-
-       let distanceMiles = targetHop.distanceMiles || "1";
-       if (targetHop.startLat && targetHop.startLng && targetHop.endLat && targetHop.endLng) {
-         const calcDist = getDistance(
-           parseFloat(String(targetHop.startLat)),
-           parseFloat(String(targetHop.startLng)),
-           parseFloat(String(targetHop.endLat)),
-           parseFloat(String(targetHop.endLng))
-         );
-         distanceMiles = String(Math.max(0.1, Math.round(calcDist * 10) / 10));
-       }
 
        const { driverLat, driverLng } = req.body;
        if (targetHop.endLat && targetHop.endLng && driverLat && driverLng) {
@@ -1021,65 +1084,56 @@ export async function registerRoutes(
          }
        }
 
-       const hop = await storage.completeHop(Number(req.params.id), distanceMiles);
-       console.log(`[PAYMENT] HOP COMPLETED: hop${hop.id} | distance=${distanceMiles}mi | PI=${targetHop.paymentIntentId || 'none'} | paymentStatus=${targetHop.paymentStatus} | driver=${req.user.id}`);
+       await db.update(shortHops).set({ driverConfirmedComplete: true }).where(eq(shortHops.id, targetHop.id));
+       const [refreshedHop] = await db.select().from(shortHops).where(eq(shortHops.id, targetHop.id));
+       console.log(`[RIDE] DRIVER CONFIRMED COMPLETE: hop${targetHop.id} | driver=${req.user.id} | hopperConfirmed=${refreshedHop.hopperConfirmedComplete}`);
 
-       try {
-         const earnings = await storage.processDriverEarnings(hop.id, distanceMiles, targetHop.paymentIntentId || undefined);
-         console.log(`[PAYMENT] DRIVER EARNINGS: hop${hop.id} | ${earnings} Wheels credited to driver ${req.user.id}`);
-       } catch (earningsErr: any) {
-         console.error(`[PAYMENT] EARNINGS DEFERRED: hop${hop.id} | ${earningsErr.message}`);
+       if (refreshedHop.hopperConfirmedComplete) {
+         const hop = await finalizeHopCompletion(targetHop.id, req.user.id);
+         return res.json({ ...hop, bothConfirmed: true });
        }
 
-       const driverStreak = await storage.updateHopStreak(req.user.id);
-       for (const badge of driverStreak.newBadges) {
-         const todayCount = await storage.getNotificationCountToday(req.user.id);
-         if (todayCount < 5) {
+       if (targetHop.walkerId) {
+         const todayCount = await storage.getNotificationCountToday(targetHop.walkerId);
+         if (todayCount < 10) {
            await storage.createNotification({
-             userId: req.user.id,
-             type: "badge",
-             title: "New Badge Earned! 🏆",
-             message: `You earned: ${badge}`,
+             userId: targetHop.walkerId,
+             type: "ride_complete_confirm",
+             title: "Confirm Arrival",
+             message: "Your driver says you've arrived. Please confirm to complete the ride.",
              isRead: false,
            });
          }
        }
 
-       if (hop.walkerId) {
-         const walkerStreak = await storage.updateHopStreak(hop.walkerId);
-         for (const badge of walkerStreak.newBadges) {
-           const todayCount = await storage.getNotificationCountToday(hop.walkerId);
-           if (todayCount < 5) {
-             await storage.createNotification({
-               userId: hop.walkerId,
-               type: "badge",
-               title: "New Badge Earned! 🏆",
-               message: `You earned: ${badge}`,
-               isRead: false,
-             });
-           }
-         }
-       }
-
-       if (hop.endLocation) {
-         await db.update(users).set({
-           lastCompletedRouteId: hop.id,
-           lastCompletedRouteName: hop.endLocation,
-         }).where(eq(users.id, req.user.id));
-         if (hop.walkerId) {
-           await db.update(users).set({
-             lastCompletedRouteId: hop.id,
-             lastCompletedRouteName: hop.endLocation,
-           }).where(eq(users.id, hop.walkerId));
-         }
-       }
-
-       const now = new Date();
-       await storage.upsertActivityWindow(req.user.id, now.getDay(), now.getHours(), Math.min(now.getHours() + 1, 23));
-
-       res.json(hop);
+       const [updated] = await db.select().from(shortHops).where(eq(shortHops.id, targetHop.id));
+       res.json({ ...updated, bothConfirmed: false, waitingForHopper: true });
     } catch (e) {
        res.status(404).json({ message: "Hop not found" });
+    }
+  });
+
+  app.post('/api/hops/:id/hopper-confirm-complete', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const [hop] = await db.select().from(shortHops).where(eq(shortHops.id, hopId));
+      if (!hop || hop.walkerId !== req.user.id) return res.status(403).json({ message: "Not authorized" });
+      if (hop.status === "completed") return res.json({ ...hop, bothConfirmed: true });
+
+      await db.update(shortHops).set({ hopperConfirmedComplete: true }).where(eq(shortHops.id, hopId));
+      const [refreshedHop] = await db.select().from(shortHops).where(eq(shortHops.id, hopId));
+      console.log(`[RIDE] HOPPER CONFIRMED COMPLETE: hop${hopId} | hopper=${req.user.id} | driverConfirmed=${refreshedHop.driverConfirmedComplete}`);
+
+      if (refreshedHop.driverConfirmedComplete && refreshedHop.driverId) {
+        const completed = await finalizeHopCompletion(hopId, refreshedHop.driverId);
+        return res.json({ ...completed, bothConfirmed: true });
+      }
+
+      const [updated] = await db.select().from(shortHops).where(eq(shortHops.id, hopId));
+      res.json({ ...updated, bothConfirmed: false, waitingForDriver: true });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message || "Failed to confirm completion" });
     }
   });
 
@@ -2531,47 +2585,31 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const hopId = Number(req.params.id);
-      const hop = await storage.getHop(hopId);
+      const [hop] = await db.select().from(shortHops).where(eq(shortHops.id, hopId));
       if (!hop) return res.status(404).json({ message: "Hop not found" });
       if (hop.status !== "in_ride") return res.status(400).json({ message: "Hop must be in_ride to auto-complete" });
       if (hop.walkerId !== req.user.id && hop.driverId !== req.user.id) {
         return res.status(403).json({ message: "Not your hop" });
       }
-      const distanceMiles = hop.distanceMiles || "1";
-      const completed = await storage.completeHop(hopId, distanceMiles);
 
-      if (hop.walkerId) {
-        const walkerStreak = await storage.updateHopStreak(hop.walkerId);
-        for (const badge of walkerStreak.newBadges) {
-          const todayCount = await storage.getNotificationCountToday(hop.walkerId);
-          if (todayCount < 5) {
-            await storage.createNotification({
-              userId: hop.walkerId,
-              type: "badge",
-              title: "New Badge Earned!",
-              message: `You earned: ${badge}`,
-              isRead: false,
-            });
-          }
-        }
+      const isHopper = hop.walkerId === req.user.id;
+      const isDriver = hop.driverId === req.user.id;
+
+      if (isHopper) {
+        await db.update(shortHops).set({ hopperConfirmedComplete: true }).where(eq(shortHops.id, hopId));
       }
-      if (hop.driverId) {
-        const driverStreak = await storage.updateHopStreak(hop.driverId);
-        for (const badge of driverStreak.newBadges) {
-          const todayCount = await storage.getNotificationCountToday(hop.driverId);
-          if (todayCount < 5) {
-            await storage.createNotification({
-              userId: hop.driverId,
-              type: "badge",
-              title: "New Badge Earned!",
-              message: `You earned: ${badge}`,
-              isRead: false,
-            });
-          }
-        }
+      if (isDriver) {
+        await db.update(shortHops).set({ driverConfirmedComplete: true }).where(eq(shortHops.id, hopId));
       }
 
-      res.json(completed);
+      const [refreshed] = await db.select().from(shortHops).where(eq(shortHops.id, hopId));
+      if (refreshed.driverConfirmedComplete && refreshed.hopperConfirmedComplete && refreshed.driverId) {
+        const completed = await finalizeHopCompletion(hopId, refreshed.driverId);
+        return res.json({ ...completed, bothConfirmed: true });
+      }
+
+      console.log(`[RIDE] AUTO-COMPLETE partial: hop${hopId} | by=${isHopper ? 'hopper' : 'driver'} | driverConfirmed=${refreshed.driverConfirmedComplete} | hopperConfirmed=${refreshed.hopperConfirmedComplete}`);
+      res.json({ ...refreshed, bothConfirmed: false });
     } catch (err) {
       res.status(500).json({ message: "Failed to auto-complete ride" });
     }
