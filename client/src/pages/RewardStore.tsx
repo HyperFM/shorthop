@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, DollarSign, Check, Loader2, Clock, Zap, ExternalLink, Shield, MapPin, Navigation, Users, Timer } from "lucide-react";
+import { Wallet, DollarSign, Check, Loader2, Clock, Zap, ExternalLink, Shield, MapPin, Navigation, Users, Timer, Info, ChevronRight } from "lucide-react";
 import { showFlash } from "@/components/FlashNotification";
 
 type CashoutItem = {
@@ -210,6 +210,36 @@ export default function RewardStore() {
                 <p className="text-xs text-muted-foreground">
                   Link your bank account to cash out your Wheels. Powered by Stripe — fast, secure, and direct to your bank.
                 </p>
+
+                <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-3 space-y-2" data-testid="card-stripe-setup-guide">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Info className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300">Quick Setup Guide</p>
+                  </div>
+                  <div className="space-y-1.5 text-[11px] text-foreground dark:text-gray-200">
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-indigo-500 mt-px">1.</span>
+                      <span>Select <strong>"Individual"</strong> as your account type.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-indigo-500 mt-px">2.</span>
+                      <span>Enter your <strong>real legal name</strong> (first & last) and <strong>email</strong>.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-indigo-500 mt-px">3.</span>
+                      <span>When it asks for a website — <strong>skip it!</strong> Tap the small link right above the save button. It'll switch to "Product Description" — just type <strong>"Short Hop Driver"</strong>.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-indigo-500 mt-px">4.</span>
+                      <span>Add your <strong>bank account details</strong>. Everything is encrypted & secure.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-indigo-500 mt-px">5.</span>
+                      <span><strong>Agree & Submit</strong> — you're all set!</span>
+                    </div>
+                  </div>
+                </div>
+
                 <Button
                   className="w-full h-11 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold"
                   disabled={stripeOnboard.isPending}
