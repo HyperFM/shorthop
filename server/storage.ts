@@ -474,6 +474,56 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    if (hop.walkerId) {
+      const walker = await this.getUser(hop.walkerId);
+      if (walker?.referredBy) {
+        const completedCount = await db.select({ cnt: count(shortHops.id) })
+          .from(shortHops)
+          .where(and(
+            eq(shortHops.walkerId, walker.id),
+            eq(shortHops.status, "completed")
+          ));
+        
+        if (Number(completedCount[0]?.cnt || 0) === 1) {
+          const existingFee = await db.select().from(financialLedger).where(
+            and(
+              eq(financialLedger.userId, walker.id),
+              eq(financialLedger.type, "referral_reward"),
+              sql`${financialLedger.description} LIKE ${'%referral fee%'}`
+            )
+          ).limit(1);
+
+          if (existingFee.length === 0) {
+            const referrer = await db.select().from(users).where(eq(users.referralCode, walker.referredBy)).limit(1);
+            if (referrer.length > 0) {
+              const referrerId = referrer[0].id;
+              await db.update(users)
+                .set({ riderCredits: (referrer[0].riderCredits || 0) + 1 })
+                .where(eq(users.id, referrerId));
+
+              await db.insert(financialLedger).values({
+                userId: referrerId,
+                type: "referral_reward",
+                amount: 1,
+                balanceType: "rider",
+                hopId: hopId,
+                stripeTransactionId: stripeTransactionId || hop.paymentIntentId || null,
+                description: `Referral fee earned from referred user#${walker.id} (their first ride)`,
+              });
+
+              await this.createNotification({
+                userId: referrerId,
+                type: "referral",
+                title: "Referral Reward! 🎉",
+                message: `Your referral completed their first ride! You earned 1 wheel.`,
+                isRead: false,
+              });
+            }
+          }
+        }
+      }
+    }
+
     await db.update(shortHops)
       .set({ earningsProcessed: true })
       .where(eq(shortHops.id, hopId));
@@ -1268,42 +1318,7 @@ export class DatabaseStorage implements IStorage {
     const newUser = await this.getUser(newUserId);
     if (newUser?.referredBy) return false;
 
-    const existingLedger = await db.select().from(financialLedger).where(
-      and(
-        eq(financialLedger.userId, referrerId),
-        eq(financialLedger.type, "referral_reward"),
-        sql`${financialLedger.description} LIKE ${'%referred user#' + newUserId + '%'}`
-      )
-    ).limit(1);
-    if (existingLedger.length > 0) return false;
-
-    await db.update(users).set({ riderCredits: sql`${users.riderCredits} + 5` }).where(eq(users.id, referrerId));
-    await db.update(users).set({ riderCredits: sql`${users.riderCredits} + 3`, referredBy: referralCode }).where(eq(users.id, newUserId));
-
-    await db.insert(financialLedger).values({
-      userId: referrerId, type: "referral_reward", amount: 5, balanceType: "rider",
-      description: `Referral reward: referred user#${newUserId}`,
-    });
-    await db.insert(financialLedger).values({
-      userId: newUserId, type: "referral_reward", amount: 3, balanceType: "rider",
-      description: `Referral welcome bonus from code ${referralCode}`,
-    });
-
-    await this.createNotification({
-      userId: referrerId,
-      type: "referral",
-      title: "Referral Reward! 🎉",
-      message: "Someone joined ShortHop using your referral code! You earned 5 ride credits.",
-      isRead: false,
-    });
-
-    await this.createNotification({
-      userId: newUserId,
-      type: "referral",
-      title: "Welcome Bonus! 🎉",
-      message: "You joined with a referral code and earned 3 bonus ride credits!",
-      isRead: false,
-    });
+    await db.update(users).set({ referredBy: referralCode }).where(eq(users.id, newUserId));
 
     return true;
   }
