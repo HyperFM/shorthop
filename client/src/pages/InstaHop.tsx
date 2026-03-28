@@ -26,6 +26,8 @@ import type { User } from "@shared/routes";
 import driverAloneUrl from "@assets/Untitled_design_1773938700510.png";
 import hopperAloneUrl from "@assets/Untitled_design_1773938781771.png";
 import driverWithHopperUrl from "@assets/Untitled_design_1773938803778.png";
+import { SafetyBubble } from "@/components/SafetyBubble";
+import { isOffRoute, milesToFeet, distanceFromPointToRoute } from "@/lib/route-distance";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
 
@@ -3243,6 +3245,10 @@ function InstaHopView({ user }: { user: User }) {
   const geo = useGeolocation();
   const [greetingVisible, setGreetingVisible] = useState(true);
 
+  const [safetyBubbleOpen, setSafetyBubbleOpen] = useState(false);
+  const [offRouteDistance, setOffRouteDistance] = useState<number | null>(null);
+  const safetyShownRef = useRef<Set<number>>(new Set());
+
   const { data: driverStatusTop } = useQuery<DriverStatus>({
     queryKey: ['/api/driver/status'],
     refetchInterval: 5000,
@@ -3674,6 +3680,37 @@ function InstaHopView({ user }: { user: User }) {
     }
   }, [hasActiveRide]);
 
+  useEffect(() => {
+    if (!activeHop || activeHop.status !== "in_ride" || !geo.latitude || !geo.longitude) {
+      return;
+    }
+
+    const startLat = parseFloat(activeHop.startLat || "0");
+    const startLng = parseFloat(activeHop.startLng || "0");
+    const endLat = parseFloat(activeHop.endLat || "0");
+    const endLng = parseFloat(activeHop.endLng || "0");
+
+    if (!isFinite(startLat) || !isFinite(startLng) || !isFinite(endLat) || !isFinite(endLng) || startLat === 0 || startLng === 0 || endLat === 0 || endLng === 0) {
+      return;
+    }
+
+    const offRoute = isOffRoute(geo.latitude, geo.longitude, startLat, startLng, endLat, endLng);
+
+    if (offRoute && !safetyShownRef.current.has(activeHop.id)) {
+      const distMiles = distanceFromPointToRoute(
+        geo.latitude,
+        geo.longitude,
+        startLat,
+        startLng,
+        endLat,
+        endLng
+      );
+      const distFeet = milesToFeet(distMiles);
+      setOffRouteDistance(distFeet);
+      setSafetyBubbleOpen(true);
+      safetyShownRef.current.add(activeHop.id);
+    }
+  }, [activeHop, geo.latitude, geo.longitude]);
 
   const hopperMatchAudioRef = useRef<HTMLAudioElement | null>(null);
   const hopperMatchPlayedRef = useRef<number | null>(null);
@@ -4111,6 +4148,20 @@ function InstaHopView({ user }: { user: User }) {
     }
   }
 
+  const handleSafetyAllWell = () => {
+    setSafetyBubbleOpen(false);
+    showFlash("✅", "Safe ride confirmed", "success");
+  };
+
+  const handleSafetyEmergency = () => {
+    setSafetyBubbleOpen(false);
+    window.location.href = "tel:911";
+  };
+
+  const handleSafetyDismiss = () => {
+    setSafetyBubbleOpen(false);
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -4145,6 +4196,14 @@ function InstaHopView({ user }: { user: User }) {
           />
         )}
       </AnimatePresence>
+
+      <SafetyBubble
+        isOpen={safetyBubbleOpen}
+        distanceFeet={offRouteDistance || undefined}
+        onAllWell={handleSafetyAllWell}
+        onEmergency={handleSafetyEmergency}
+        onDismiss={handleSafetyDismiss}
+      />
 
       <AnimatePresence>
         {magicGpsActivation && (
