@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send, Square, Timer, DollarSign, UserPlus, Volume2, VolumeX, ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, ArrowUpRight, ArrowUpLeft } from "lucide-react";
+import { Zap, Navigation, Bookmark, MapPin, Mail, Car, X, Shield, Clock, AlertTriangle, Power, Bell, BellOff, Users, Home, Briefcase, Star, Settings2, Check, MessageCircle, Send, Square, Timer, DollarSign, UserPlus, Volume2, VolumeX, ArrowUp, ArrowLeft, ArrowRight, CornerUpLeft, CornerUpRight, ArrowUpRight, ArrowUpLeft, Phone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -1047,9 +1047,16 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-white text-sm font-bold truncate">
-                  {hopperUser?.username || hop.walkerName || "Hopper"} {rideStyleEmoji}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-white text-sm font-bold truncate">
+                    {hopperUser?.username || hop.walkerName || "Hopper"} {rideStyleEmoji}
+                  </p>
+                  {hopperUser?.phone && (
+                    <a href={`tel:${hopperUser.phone}`} className="shrink-0" data-testid="button-call-hopper-bar">
+                      <Phone className="w-4 h-4 text-blue-400" />
+                    </a>
+                  )}
+                </div>
                 <p className="text-white/50 text-[10px]">
                   {driverAlreadyConfirmed ? "waiting for hopper to confirm" : "heading to pickup"}
                 </p>
@@ -1131,9 +1138,16 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-white text-sm font-bold truncate">
-                    {hopperUser?.username || hop.walkerName || "Hopper"} {rideStyleEmoji}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-white text-sm font-bold truncate">
+                      {hopperUser?.username || hop.walkerName || "Hopper"} {rideStyleEmoji}
+                    </p>
+                    {hopperUser?.phone && (
+                      <a href={`tel:${hopperUser.phone}`} className="shrink-0" data-testid="button-call-hopper-ride">
+                        <Phone className="w-4 h-4 text-blue-400" />
+                      </a>
+                    )}
+                  </div>
                   <p className="text-green-200 text-[10px] font-semibold">in ride</p>
                 </div>
                 {hop.driverConfirmedComplete ? (
@@ -2488,6 +2502,13 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
                 <Navigation className="w-4 h-4 mr-2" />
                 Open in Maps
               </Button>
+              {(hop as any).walker?.phone && (
+                <a href={`tel:${(hop as any).walker.phone}`} data-testid="button-call-hopper-card">
+                  <Button variant="outline" className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-600 dark:text-blue-300 font-bold text-sm rounded-xl px-3">
+                    <Phone className="w-4 h-4" />
+                  </Button>
+                </a>
+              )}
             </div>
             <RideChat hopId={hop.id} currentUserId={hop.driverId || 0} />
             <PendingHopperPrompt />

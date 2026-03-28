@@ -944,7 +944,7 @@ export async function registerRoutes(
         if ((hop.status === "matched" || hop.status === "in_ride") && hop.walkerId) {
           const walker = await storage.getUser(hop.walkerId);
           if (walker) {
-            return { ...hop, walker: { username: walker.username, profilePhoto: walker.profilePhoto, rideVibe: walker.rideVibe, bio: walker.bio } };
+            return { ...hop, walker: { username: walker.username, profilePhoto: walker.profilePhoto, rideVibe: walker.rideVibe, bio: walker.bio, phone: walker.phone } };
           }
         }
         return hop;
