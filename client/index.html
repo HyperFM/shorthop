@@ -89,7 +89,27 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js').catch(function() {});
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            reg.update();
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+            reg.addEventListener('updatefound', function() {
+              var newWorker = reg.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', function() {
+                  if (newWorker.state === 'activated') {
+                    caches.keys().then(function(keys) {
+                      keys.forEach(function(k) { if (k !== 'shorthop-v7') caches.delete(k); });
+                    });
+                  }
+                });
+              }
+            });
+          }).catch(function() {});
+        });
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          window.location.reload();
         });
       }
     </script>
