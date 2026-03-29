@@ -2773,7 +2773,7 @@ function DriveNowPanel({ user }: { user: User }) {
   const geo = useGeolocation();
   const [driverStartInput, setDriverStartInput] = useState("");
   const [driverDestInput, setDriverDestInput] = useState("");
-  const [driverDepartureMin, setDriverDepartureMin] = useState<number | null>(5);
+  const [driverDepartureMin, setDriverDepartureMin] = useState<number | null>(0);
   const [customTimeInput, setCustomTimeInput] = useState("");
   const [showCustomTime, setShowCustomTime] = useState(false);
   const [routeGenerated, setRouteGenerated] = useState(false);
@@ -3107,22 +3107,40 @@ function DriveNowPanel({ user }: { user: User }) {
               <Clock className="w-3.5 h-3.5 text-foreground/50 dark:text-gray-400 shrink-0" />
               <span className="text-[11px] text-foreground/60 dark:text-gray-300">How long until you head out?</span>
             </div>
-            <div className="flex flex-wrap gap-1">
-              {DEPARTURE_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => handleSelectDeparture(opt.value)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                    (opt.value === -1 && showCustomTime) || (opt.value !== -1 && driverDepartureMin === opt.value)
-                      ? "bg-primary text-white shadow-sm"
-                      : "bg-muted/50 text-foreground/60 dark:text-gray-300 hover:bg-muted"
-                  }`}
-                  data-testid={`button-driver-depart-${opt.value}`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="flex gap-1 overflow-x-auto no-scrollbar">
+              {DEPARTURE_OPTIONS.map(opt => {
+                const isCustom = opt.value === -1;
+                const isNow = opt.value === 0;
+                const isSelected = isCustom ? showCustomTime : (!showCustomTime && driverDepartureMin === opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleSelectDeparture(opt.value)}
+                    className={`shrink-0 rounded-lg font-bold transition-all active:scale-95 ${
+                      isNow
+                        ? isSelected
+                          ? "px-3 py-1.5 text-[11px] text-white shadow-md"
+                          : "px-3 py-1.5 text-[11px] text-orange-600 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50"
+                        : isSelected
+                          ? "px-2 py-1 text-[10px] text-white shadow-sm"
+                          : "px-2 py-1 text-[10px] text-foreground/60 dark:text-gray-300 hover:bg-muted"
+                    }`}
+                    style={{
+                      backgroundColor: isNow
+                        ? isSelected
+                          ? "#f97316"
+                          : "#fed7aa"
+                        : isSelected
+                          ? "#22c55e"
+                          : "var(--muted)"
+                    }}
+                    data-testid={`button-driver-depart-${opt.value}`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
             {showCustomTime && (
               <div className="flex items-center gap-2">
