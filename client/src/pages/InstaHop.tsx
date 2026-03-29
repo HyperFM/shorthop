@@ -3960,6 +3960,12 @@ function InstaHopView({ user }: { user: User }) {
   const [showCustomDeparture, setShowCustomDeparture] = useState(false);
   const [customMinutesInput, setCustomMinutesInput] = useState<number | null>(null);
 
+  useEffect(() => {
+    setDepartureMinutes(0);
+    setShowCustomDeparture(false);
+    setCustomMinutesInput(null);
+  }, []);
+
 
   useEffect(() => {
     if (!prepaidInfo || !isMatching) {
@@ -4757,15 +4763,24 @@ function InstaHopView({ user }: { user: User }) {
                                     setDepartureMinutes(opt.value);
                                   }
                                 }}
-                                className={`shrink-0 rounded-lg font-bold transition-all ${
+                                className={`shrink-0 rounded-lg font-bold transition-all active:scale-95 ${
                                   isNow
                                     ? isSelected
-                                      ? "px-3 py-1.5 text-[11px] bg-orange-500 text-white shadow-md"
-                                      : "px-3 py-1.5 text-[11px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50"
+                                      ? "px-3 py-1.5 text-[11px] text-white shadow-md"
+                                      : "px-3 py-1.5 text-[11px] text-orange-600 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50"
                                     : isSelected
-                                      ? "px-2 py-1 text-[10px] bg-green-500 text-white shadow-sm"
-                                      : "px-2 py-1 text-[10px] bg-muted/50 text-foreground/60 dark:text-gray-300 hover:bg-muted"
+                                      ? "px-2 py-1 text-[10px] text-white shadow-sm"
+                                      : "px-2 py-1 text-[10px] text-foreground/60 dark:text-gray-300 hover:bg-muted"
                                 }`}
+                                style={{
+                                  backgroundColor: isNow
+                                    ? isSelected
+                                      ? "#f97316"
+                                      : "#fed7aa"
+                                    : isSelected
+                                      ? "#22c55e"
+                                      : "var(--muted)"
+                                }}
                                 data-testid={`button-depart-${opt.value}`}
                               >
                                 {opt.label}
