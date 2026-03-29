@@ -3509,6 +3509,22 @@ function InstaHopView({ user }: { user: User }) {
     mutationFn: async (updates: { seatsNeeded?: number }) => {
       await apiRequest("PUT", "/api/profile/preferences", updates);
     },
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ['/api/me'] });
+      const prevData = queryClient.getQueryData(['/api/me']);
+      if (prevData && updates.seatsNeeded !== undefined) {
+        queryClient.setQueryData(['/api/me'], (old: any) => ({
+          ...old,
+          seatsNeeded: updates.seatsNeeded,
+        }));
+      }
+      return { prevData };
+    },
+    onError: (err, updates, context: any) => {
+      if (context?.prevData) {
+        queryClient.setQueryData(['/api/me'], context.prevData);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/me'] });
     },
@@ -4820,12 +4836,12 @@ function InstaHopView({ user }: { user: User }) {
                           <SeatIcon className="w-8 h-8" />
                           <span className="text-[11px] text-foreground/60 dark:text-foreground/70">{(user as any)?.seatsNeeded || 1} seat{((user as any)?.seatsNeeded || 1) > 1 ? "s" : ""}</span>
                         </div>
-                        <div className="flex items-center gap-1.5" data-testid="stepper-hopper-seats">
+                        <div className="flex items-center gap-2" data-testid="stepper-hopper-seats">
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                            className="w-8 h-8 p-0 rounded-lg text-base font-bold active:scale-90 transition-transform"
                             data-testid="button-hopper-seats-minus"
                             disabled={(user as any)?.seatsNeeded <= 1}
                             onClick={() => {
@@ -4835,12 +4851,12 @@ function InstaHopView({ user }: { user: User }) {
                           >
                             −
                           </Button>
-                          <span className="text-sm font-bold w-5 text-center" data-testid="text-hopper-seats-value">{(user as any)?.seatsNeeded || 1}</span>
+                          <span className="text-sm font-bold w-6 text-center" data-testid="text-hopper-seats-value">{(user as any)?.seatsNeeded || 1}</span>
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                            className="w-8 h-8 p-0 rounded-lg text-base font-bold active:scale-90 transition-transform"
                             data-testid="button-hopper-seats-plus"
                             disabled={(user as any)?.seatsNeeded >= 50}
                             onClick={() => {
