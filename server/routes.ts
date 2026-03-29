@@ -3057,6 +3057,9 @@ export async function registerRoutes(
             startLng: String(lng),
             endLat: String(endLat),
             endLng: String(endLng),
+            startTime: "00:00",
+            endTime: "23:59",
+            days: JSON.stringify(["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]),
           });
           console.log(`Driver ${req.user.id} active route saved: (${lat},${lng}) → (${endLat},${endLng})`);
         }
