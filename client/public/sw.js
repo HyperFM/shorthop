@@ -1,7 +1,5 @@
-const CACHE_NAME = 'shorthop-v5';
+const CACHE_NAME = 'shorthop-v6';
 const SHELL_ASSETS = [
-  '/',
-  '/instahop',
   '/app-icon-192.png',
   '/app-icon.png',
   '/apple-touch-icon.png',
@@ -30,9 +28,11 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (event.request.url.includes('/api/')) return;
 
+  const url = new URL(event.request.url);
   const isNavigate = event.request.mode === 'navigate';
+  const isAsset = url.pathname.match(/\.(js|css|woff2?|ttf|eot)(\?|$)/);
 
-  if (isNavigate) {
+  if (isNavigate || isAsset) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {

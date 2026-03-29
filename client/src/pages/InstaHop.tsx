@@ -2791,6 +2791,22 @@ function DriveNowPanel({ user }: { user: User }) {
     mutationFn: async (updates: { availableSeats?: number }) => {
       await apiRequest("PUT", "/api/profile/preferences", updates);
     },
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ['/api/me'] });
+      const prevData = queryClient.getQueryData(['/api/me']);
+      if (prevData && updates.availableSeats !== undefined) {
+        queryClient.setQueryData(['/api/me'], (old: any) => ({
+          ...old,
+          availableSeats: updates.availableSeats,
+        }));
+      }
+      return { prevData };
+    },
+    onError: (_err: any, _updates: any, context: any) => {
+      if (context?.prevData) {
+        queryClient.setQueryData(['/api/me'], context.prevData);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/me'] });
     },
@@ -3143,11 +3159,11 @@ function DriveNowPanel({ user }: { user: User }) {
                 </AnimatePresence>
               </div>
             </div>
-            <div className="flex items-center gap-1.5" data-testid="stepper-driver-seats">
+            <div className="flex items-center gap-2" data-testid="stepper-driver-seats">
               <Button
                 size="sm"
                 variant="outline"
-                className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                className="w-8 h-8 p-0 rounded-lg text-base font-bold active:scale-90 transition-transform"
                 data-testid="button-driver-seats-minus"
                 disabled={(user as any)?.availableSeats <= 1}
                 onClick={() => {
@@ -3157,11 +3173,11 @@ function DriveNowPanel({ user }: { user: User }) {
               >
                 −
               </Button>
-              <span className="text-sm font-bold w-5 text-center" data-testid="text-driver-seats-value">{(user as any)?.availableSeats || 1}</span>
+              <span className="text-sm font-bold w-6 text-center" data-testid="text-driver-seats-value">{(user as any)?.availableSeats || 1}</span>
               <Button
                 size="sm"
                 variant="outline"
-                className="w-7 h-7 p-0 rounded-lg text-sm font-bold"
+                className="w-8 h-8 p-0 rounded-lg text-base font-bold active:scale-90 transition-transform"
                 data-testid="button-driver-seats-plus"
                 disabled={(user as any)?.availableSeats >= 50}
                 onClick={() => {
