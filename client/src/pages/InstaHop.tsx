@@ -2824,6 +2824,9 @@ function DriveNowPanel({ user }: { user: User }) {
     onError: (err: any) => {
       showFlash("⚠️", err?.message || "Can't toggle status", "error");
     },
+    onSettled: () => {
+      setActivating(false);
+    },
   });
 
   const TUTORIAL_KEY = "sh-driver-tutorial-clicks";
@@ -2892,21 +2895,17 @@ function DriveNowPanel({ user }: { user: User }) {
   const canGoActive = driverDestInput.trim().length > 0 && routeGenerated && driverDepartureMin !== null;
 
   const handleGoActive = async () => {
-    if (!canGoActive) return;
+    if (!canGoActive || activating || toggleActive.isPending) return;
     setActivating(true);
-    try {
-      toggleActive.mutate({
-        active: true,
-        startLat: geo.latitude || undefined,
-        startLng: geo.longitude || undefined,
-        endLat: routeCoords?.endLat,
-        endLng: routeCoords?.endLng,
-        startLocation: driverStartInput || "Current Location",
-        endLocation: driverDestInput,
-      });
-    } finally {
-      setActivating(false);
-    }
+    toggleActive.mutate({
+      active: true,
+      startLat: geo.latitude || undefined,
+      startLng: geo.longitude || undefined,
+      endLat: routeCoords?.endLat,
+      endLng: routeCoords?.endLng,
+      startLocation: driverStartInput || "Current Location",
+      endLocation: driverDestInput,
+    });
   };
 
   const handleSelectDeparture = (val: number) => {
