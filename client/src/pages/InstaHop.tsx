@@ -3785,10 +3785,12 @@ function InstaHopView({ user }: { user: User }) {
   const prevHasActiveRideRef = useRef(hasActiveRide);
   useEffect(() => {
     if (prevHasActiveRideRef.current && !hasActiveRide && mode === "hop") {
-      setTimeout(() => setLocation("/community"), 600);
+      if (!driverDroppedMsg && !isMatching) {
+        setTimeout(() => setLocation("/community"), 600);
+      }
     }
     prevHasActiveRideRef.current = hasActiveRide;
-  }, [hasActiveRide, mode, setLocation]);
+  }, [hasActiveRide, mode, setLocation, driverDroppedMsg, isMatching]);
   useLiveLocationBroadcast(hasActiveRide || mode === "drive");
   const tracking = useHopTracking(activeHop?.id, hasActiveRide);
 
@@ -3936,7 +3938,10 @@ function InstaHopView({ user }: { user: User }) {
       setDriverDroppedMsg(true);
       setIsMatching(true);
       if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      setTimeout(() => setDriverDroppedMsg(false), 8000);
+    }
+
+    if (prevStatus === "requested" && (curStatus === "matched" || curStatus === "in_ride")) {
+      setDriverDroppedMsg(false);
     }
 
     prevHopStatusRef.current = curStatus;
@@ -4553,42 +4558,20 @@ function InstaHopView({ user }: { user: User }) {
               className="absolute top-0 left-0 right-0 z-30 px-3 pt-3"
               data-testid="top-matching-banner"
             >
-              {driverDroppedMsg ? (
-                <div className="bg-orange-50/95 dark:bg-orange-950/90 backdrop-blur-xl rounded-2xl shadow-lg border border-orange-300/50 dark:border-orange-700/40 px-4 py-3" data-testid="driver-dropped-apology">
-                  <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center shrink-0 mt-0.5">
-                      <Car className="w-4.5 h-4.5 text-orange-500" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-orange-800 dark:text-orange-200 leading-tight">
-                        Hey, heads up!
-                      </p>
-                      <p className="text-xs text-orange-700/80 dark:text-orange-300/70 mt-1 leading-relaxed">
-                        Your driver had to step away — totally not your fault. We're already looking for another ride for you. Sit tight!
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Loader2 className="w-3 h-3 animate-spin text-orange-500 shrink-0" />
-                        <p className="text-[10px] font-semibold text-orange-600 dark:text-orange-400">Finding you a new driver...</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-white/95 dark:bg-black/95 backdrop-blur-xl rounded-2xl shadow-lg border border-blue-200/40 dark:border-blue-700/30 px-4 py-2.5 flex items-center justify-between gap-3">
+              <div className="bg-white/95 dark:bg-black/95 backdrop-blur-xl rounded-2xl shadow-lg border border-blue-200/40 dark:border-blue-700/30 px-4 py-2.5 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0" />
+                    <Loader2 className="w-4 h-4 animate-spin text-orange-500 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-foreground dark:text-white truncate">Waiting for a match...</p>
+                      <p className="text-xs font-bold text-foreground dark:text-white truncate">{driverDroppedMsg ? "Still finding a driver..." : "Waiting for a match..."}</p>
                       <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">${(prepaidInfo.amount / 100).toFixed(2)} authorized</p>
                     </div>
                   </div>
-                  {matchCountdown !== null && (
+                  {matchCountdown !== null && !driverDroppedMsg && (
                     <span className="text-xs font-mono font-bold text-foreground dark:text-white shrink-0 bg-blue-50 dark:bg-blue-950/30 px-2 py-1 rounded-lg" data-testid="text-top-match-countdown">
                       {Math.floor(matchCountdown / 60)}:{String(matchCountdown % 60).padStart(2, '0')}
                     </span>
                   )}
                 </div>
-              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -4660,8 +4643,14 @@ function InstaHopView({ user }: { user: User }) {
                           className="text-base font-extrabold text-center mb-1 text-foreground dark:text-orange-400 dark:[text-shadow:0_0_6px_rgba(249,115,22,0.7),0_0_2px_rgba(0,0,0,0.8)]"
                           data-testid="text-instahop-greeting"
                         >
-                          happy hopping,{" "}
-                          <span className="font-black text-foreground dark:text-orange-300 dark:[text-shadow:0_0_8px_rgba(249,115,22,0.8),0_0_2px_rgba(0,0,0,0.9)]">{user.username}</span>
+                          {driverDroppedMsg ? (
+                            <span className="text-orange-600 dark:text-orange-400">Sorry, your driver canceled</span>
+                          ) : (
+                            <>
+                              happy hopping,{" "}
+                              <span className="font-black text-foreground dark:text-orange-300 dark:[text-shadow:0_0_8px_rgba(249,115,22,0.8),0_0_2px_rgba(0,0,0,0.9)]">{user.username}</span>
+                            </>
+                          )}
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -4757,14 +4746,17 @@ function InstaHopView({ user }: { user: User }) {
                   </Card>
                 )}
 
-                <QuickLocationButtons
-                  user={user}
-                  mode="hopper"
-                  onSelectStart={(addr) => form.setValue("startLocation", addr)}
-                  onSelectEnd={(addr) => form.setValue("endLocation", addr)}
-                />
+                {!isMatching && !hasActiveRide && (
+                  <QuickLocationButtons
+                    user={user}
+                    mode="hopper"
+                    onSelectStart={(addr) => form.setValue("startLocation", addr)}
+                    onSelectEnd={(addr) => form.setValue("endLocation", addr)}
+                  />
+                )}
 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+                  {!isMatching && !hasActiveRide && (
                   <div className="space-y-2">
                     <div className="space-y-1.5">
                       <div className="relative">
@@ -4810,6 +4802,20 @@ function InstaHopView({ user }: { user: User }) {
                       <SavedLocationChips user={user} onSelect={(addr) => form.setValue("endLocation", addr)} mode="hopper" target="end" />
                     </div>
                   </div>
+                  )}
+
+                  {isMatching && activeHop && (
+                    <div className="space-y-1.5 mb-2">
+                      <div className="flex items-center gap-2 px-2 py-2 rounded-xl bg-green-50/80 dark:bg-green-950/20 border border-green-200/50 dark:border-green-700/30">
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" />
+                        <p className="text-xs font-semibold text-foreground dark:text-white truncate">{activeHop.startLocation || "Current Location"}</p>
+                      </div>
+                      <div className="flex items-center gap-2 px-2 py-2 rounded-xl bg-orange-50/80 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30">
+                        <div className="w-2.5 h-2.5 rounded-sm bg-orange-500 shrink-0" />
+                        <p className="text-xs font-semibold text-foreground dark:text-white truncate">{activeHop.endLocation || "Destination"}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {mode === "hop" && !isMatching && (
                     <div className="space-y-1.5">
