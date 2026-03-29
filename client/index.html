@@ -16,7 +16,6 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/app-icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#000000" />
-    <link rel="preload" as="image" href="/app-icon-192.png" />
     <style>
       html, body {
         margin: 0;
@@ -47,22 +46,35 @@
         position: fixed;
         inset: 0;
         z-index: 99999;
-        background: #fff;
+        background: #000;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 24px;
       }
       #sh-splash img {
         max-width: 60%;
         max-height: 50%;
         object-fit: contain;
       }
+      #sh-splash .sh-loader {
+        width: 32px;
+        height: 32px;
+        border: 3px solid rgba(249,115,22,0.2);
+        border-top-color: #f97316;
+        border-radius: 50%;
+        animation: sh-spin 0.8s linear infinite;
+      }
+      @keyframes sh-spin {
+        to { transform: rotate(360deg); }
+      }
       #sh-splash.fade-out {
         opacity: 0;
-        transition: opacity 0.5s ease-out;
+        transition: opacity 0.4s ease-out;
+        pointer-events: none;
       }
     </style>
-    <link rel="preload" as="image" href="/splash.jpeg" />
     <meta property="og:title" content="ShortHop" />
     <meta property="og:description" content="Shared routes. Real connections. A micro-rideshare for Lexington, KY." />
     <meta property="og:image" content="/app-icon.png" />
@@ -74,17 +86,9 @@
   <body>
     <div id="sh-splash">
       <img src="/splash.jpeg" alt="ShortHop" />
+      <div class="sh-loader"></div>
     </div>
     <div id="root"></div>
-    <script>
-      (function() {
-        var splash = document.getElementById('sh-splash');
-        setTimeout(function() {
-          splash.classList.add('fade-out');
-          setTimeout(function() { splash.remove(); }, 600);
-        }, 10000);
-      })();
-    </script>
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(regs) {

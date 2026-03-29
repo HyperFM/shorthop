@@ -254,6 +254,12 @@ function App() {
       const count = parseInt(localStorage.getItem('sh_app_open_count') || '0', 10);
       localStorage.setItem('sh_app_open_count', String(count + 1));
     } catch {}
+
+    const splash = document.getElementById('sh-splash');
+    if (splash) {
+      splash.classList.add('fade-out');
+      setTimeout(() => { try { splash.remove(); } catch {} }, 500);
+    }
   }, []);
 
   return (
