@@ -400,7 +400,7 @@ function scoreHopMatchForDriver(
       const routeNow = new Date();
       const currentDay = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][routeNow.getDay()];
       const routeDays = (route.days as string[]) || [];
-      if (routeDays.length > 0 && !routeDays.some((d: string) => d.toLowerCase() === currentDay)) {
+      if (routeDays.length > 0 && !routeDays.some((d: string) => currentDay.startsWith(d.toLowerCase()) || d.toLowerCase() === currentDay)) {
         console.log(`${tag} Route "${route.name}" skipped: not scheduled today (${currentDay})`);
         continue;
       }
