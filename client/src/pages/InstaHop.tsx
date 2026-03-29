@@ -2814,7 +2814,18 @@ function DriveNowPanel({ user }: { user: User }) {
 
   const toggleActive = useMutation({
     mutationFn: async (payload: { active: boolean; startLat?: number; startLng?: number; endLat?: number; endLng?: number; startLocation?: string; endLocation?: string }) => {
-      await apiRequest("POST", "/api/driver/active", payload);
+      let lastError: any;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await apiRequest("POST", "/api/driver/active", payload);
+          return;
+        } catch (e: any) {
+          lastError = e;
+          if (e?.message?.includes("401") || e?.message?.includes("403")) throw e;
+          if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        }
+      }
+      throw lastError;
     },
     onSuccess: (_data, payload) => {
       queryClient.invalidateQueries({ queryKey: ['/api/driver/status'] });
@@ -2822,7 +2833,13 @@ function DriveNowPanel({ user }: { user: User }) {
       showFlash(payload.active ? "🟢" : "🔴", payload.active ? "You're active!" : "You're offline", payload.active ? "success" : "info");
     },
     onError: (err: any) => {
-      showFlash("⚠️", err?.message || "Can't toggle status", "error");
+      const msg = err?.message || "";
+      if (msg.includes("403")) {
+        const serverMsg = msg.replace(/^403:\s*/, "").replace(/^"(.*)"$/, "$1");
+        showFlash("⚠️", serverMsg || "Can't go active right now", "error");
+      } else {
+        showFlash("⚠️", "Connection issue — please try again", "error");
+      }
     },
     onSettled: () => {
       setActivating(false);
