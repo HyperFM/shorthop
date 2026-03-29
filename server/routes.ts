@@ -360,9 +360,15 @@ function scoreHopMatchForDriver(
   }
 
   if (hop.departureTime) {
-    const timeDiff = Math.abs(new Date(hop.departureTime).getTime() - now.getTime());
-    if (timeDiff > MAX_TIME_DIFF_MS) {
-      console.log(`${tag} FAIL: departure time too far (${Math.round(timeDiff / 60000)}min diff)`);
+    const depTime = new Date(hop.departureTime).getTime();
+    const nowMs = now.getTime();
+    if (depTime > nowMs) {
+      console.log(`${tag} FAIL: departure not yet (departs in ${Math.round((depTime - nowMs) / 60000)}min)`);
+      return fail;
+    }
+    const pastDiff = nowMs - depTime;
+    if (pastDiff > MAX_TIME_DIFF_MS) {
+      console.log(`${tag} FAIL: departure window expired (${Math.round(pastDiff / 60000)}min ago)`);
       return fail;
     }
   }

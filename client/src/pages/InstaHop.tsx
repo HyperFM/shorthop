@@ -2570,14 +2570,13 @@ function PickupNavigationView({ hop, driverLat, driverLng, onClose }: {
 }
 
 const DEPARTURE_OPTIONS = [
-  { value: 0, label: "Now" },
+  { value: 0, label: "NOW" },
   { value: 5, label: "5m" },
   { value: 10, label: "10m" },
   { value: 15, label: "15m" },
   { value: 30, label: "30m" },
-  { value: 45, label: "45m" },
-  { value: 60, label: "1hr" },
-  { value: -1, label: "Custom" },
+  { value: 60, label: "1h" },
+  { value: -1, label: "+ Custom" },
 ];
 
 function SavedLocationChips({ user, onSelect, mode, target }: { user: User; onSelect: (addr: string) => void; mode: "hopper" | "driver"; target: "start" | "end" }) {
@@ -3958,6 +3957,8 @@ function InstaHopView({ user }: { user: User }) {
   const [matchCountdown, setMatchCountdown] = useState<number | null>(null);
   const [paymentRefunded, setPaymentRefunded] = useState(false);
   const [departureMinutes, setDepartureMinutes] = useState(0);
+  const [showCustomDeparture, setShowCustomDeparture] = useState(false);
+  const [customMinutesInput, setCustomMinutesInput] = useState<number | null>(null);
 
 
   useEffect(() => {
@@ -4135,6 +4136,10 @@ function InstaHopView({ user }: { user: User }) {
 
   const confirmAndPay = async () => {
     if (!pricePreview || isAuthorizing) return;
+    if (showCustomDeparture && (customMinutesInput === null || customMinutesInput < 1)) {
+      showFlash("⏱️", "Please enter a valid custom departure time", "error");
+      return;
+    }
     setIsAuthorizing(true);
 
     if (!user.stripeSetupCompleted) {
@@ -4203,6 +4208,10 @@ function InstaHopView({ user }: { user: User }) {
 
   const payWithWheels = async () => {
     if (!pricePreview) return;
+    if (showCustomDeparture && (customMinutesInput === null || customMinutesInput < 1)) {
+      showFlash("⏱️", "Please enter a valid custom departure time", "error");
+      return;
+    }
     const wheelsCost = pricePreview.priceCents / 100;
     const userWheels = user.riderCredits || 0;
 
@@ -4724,26 +4733,72 @@ function InstaHopView({ user }: { user: User }) {
 
                   {mode === "hop" && !isMatching && (
                     <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 px-1">
-                        <Clock className="w-3.5 h-3.5 text-foreground/50 dark:text-foreground/60 shrink-0" />
-                        <span className="text-[11px] text-foreground/60 dark:text-foreground/70 whitespace-nowrap">Depart in</span>
-                        <div className="flex flex-wrap gap-1">
-                          {DEPARTURE_OPTIONS.filter(o => o.value !== -1).map(opt => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => setDepartureMinutes(opt.value)}
-                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                                departureMinutes === opt.value
-                                  ? "bg-primary text-white shadow-sm"
-                                  : "bg-muted/50 text-foreground/60 dark:text-gray-300 hover:bg-muted"
-                              }`}
-                              data-testid={`button-depart-${opt.value}`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
+                      <div className="px-1 space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3 h-3 text-foreground/50 dark:text-foreground/60" />
+                          <span className="text-[11px] text-foreground/60 dark:text-foreground/70">How soon?</span>
                         </div>
+                        <div className="flex gap-1 overflow-x-auto no-scrollbar">
+                          {DEPARTURE_OPTIONS.map(opt => {
+                            const isCustom = opt.value === -1;
+                            const isNow = opt.value === 0;
+                            const isSelected = isCustom ? showCustomDeparture : (!showCustomDeparture && departureMinutes === opt.value);
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => {
+                                  if (isCustom) {
+                                    setShowCustomDeparture(true);
+                                    setCustomMinutesInput(null);
+                                  } else {
+                                    setShowCustomDeparture(false);
+                                    setCustomMinutesInput(null);
+                                    setDepartureMinutes(opt.value);
+                                  }
+                                }}
+                                className={`shrink-0 rounded-lg font-bold transition-all ${
+                                  isNow
+                                    ? isSelected
+                                      ? "px-3 py-1.5 text-[11px] bg-orange-500 text-white shadow-md"
+                                      : "px-3 py-1.5 text-[11px] bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50"
+                                    : isSelected
+                                      ? "px-2 py-1 text-[10px] bg-green-500 text-white shadow-sm"
+                                      : "px-2 py-1 text-[10px] bg-muted/50 text-foreground/60 dark:text-gray-300 hover:bg-muted"
+                                }`}
+                                data-testid={`button-depart-${opt.value}`}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {showCustomDeparture && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <input
+                              type="number"
+                              min="1"
+                              max="240"
+                              placeholder="Minutes"
+                              value={customMinutesInput ?? ""}
+                              className="w-20 px-2 py-1 rounded-lg text-[11px] border border-border bg-background text-foreground"
+                              data-testid="input-custom-departure"
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                if (raw === "") {
+                                  setCustomMinutesInput(null);
+                                  return;
+                                }
+                                const val = parseInt(raw);
+                                if (!isNaN(val) && val >= 1 && val <= 240) {
+                                  setCustomMinutesInput(val);
+                                  setDepartureMinutes(val);
+                                }
+                              }}
+                            />
+                            <span className="text-[10px] text-foreground/50">minutes from now</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center justify-between gap-3 px-1">
                         <div className="flex items-center gap-2">
