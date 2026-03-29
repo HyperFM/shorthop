@@ -3094,7 +3094,7 @@ export async function registerRoutes(
         }
       }
 
-      res.json(updated);
+      res.json({ success: true, isActive: active });
     } catch (e: any) {
       console.error('Driver active toggle error:', e.message);
       res.status(500).json({ message: "Failed to toggle active status" });
@@ -3602,8 +3602,8 @@ export async function registerRoutes(
       if (!matchPreference || !["one_rider", "maximize_seats"].includes(matchPreference)) {
         return res.status(400).json({ message: "Invalid preference" });
       }
-      const updated = await storage.updateUser(req.user.id, { matchPreference });
-      res.json(updated);
+      await storage.updateUser(req.user.id, { matchPreference });
+      res.json({ success: true, matchPreference });
     } catch (err) {
       res.status(500).json({ message: "Failed to update preference" });
     }
