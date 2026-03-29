@@ -284,7 +284,7 @@ function PowerHopGate({ onUpgrade }: { onUpgrade: () => void }) {
           className="w-full h-11 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold shadow-md shadow-purple-500/20"
           data-testid="button-upgrade-powerhop"
         >
-          Upgrade to PowerHop — $25/mo
+          Upgrade to PowerHop — $15/mo
         </Button>
       </CardContent>
     </Card>

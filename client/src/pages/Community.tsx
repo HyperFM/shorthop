@@ -397,7 +397,7 @@ function CityChat({ user }: { user: any }) {
               </p>
               <Badge variant="secondary" className="text-[10px] mt-2">
                 <Sparkles className="w-3 h-3 mr-1" />
-                FlexHop $10/mo
+                FlexHop $7/mo
               </Badge>
             </div>
             <div className="space-y-2 animate-pulse-slow opacity-40">

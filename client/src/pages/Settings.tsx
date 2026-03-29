@@ -889,8 +889,8 @@ export default function Settings() {
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { key: null, label: "Standard", icon: "🚶", desc: "Free tier" },
-                      { key: "flex_hop", label: "FlexHop", icon: "🚀", desc: "$10/mo" },
-                      { key: "power_hop", label: "PowerHop", icon: "⚡", desc: "$25/mo" },
+                      { key: "flex_hop", label: "FlexHop", icon: "🚀", desc: "$7/mo" },
+                      { key: "power_hop", label: "PowerHop", icon: "⚡", desc: "$15/mo" },
                     ].map((tier) => {
                       const isActive = (user.subscription || null) === tier.key;
                       return (
@@ -924,7 +924,7 @@ export default function Settings() {
                           {user.subscription === "power_hop" ? "PowerHop" : "FlexHop"}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {user.subscription === "power_hop" ? "$25/month" : "$10/month"}
+                          {user.subscription === "power_hop" ? "$15/month" : "$7/month"}
                         </p>
                       </div>
                     </div>
@@ -958,7 +958,7 @@ export default function Settings() {
                     >
                       <span className="text-lg">🚀</span>
                       <span className="text-xs font-bold">FlexHop</span>
-                      <span className="text-[10px] text-muted-foreground">$10/mo</span>
+                      <span className="text-[10px] text-muted-foreground">$7/mo</span>
                     </button>
                     <button
                       onClick={() => setSubscriptionPlan("power_hop")}
@@ -967,7 +967,7 @@ export default function Settings() {
                     >
                       <span className="text-lg">⚡</span>
                       <span className="text-xs font-bold">PowerHop</span>
-                      <span className="text-[10px] text-muted-foreground">$25/mo</span>
+                      <span className="text-[10px] text-muted-foreground">$15/mo</span>
                     </button>
                   </div>
                 </div>

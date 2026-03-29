@@ -19,7 +19,7 @@ interface SubscriptionModalProps {
 const PLAN_DETAILS = {
   flex_hop: {
     name: "FlexHop",
-    price: "$10",
+    price: "$7",
     period: "/month",
     icon: CarFront,
     color: "from-blue-500 to-green-500",
@@ -35,7 +35,7 @@ const PLAN_DETAILS = {
   },
   power_hop: {
     name: "PowerHop",
-    price: "$25",
+    price: "$15",
     period: "/month",
     icon: Crown,
     color: "from-orange-500 to-green-500",
