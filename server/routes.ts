@@ -16,16 +16,7 @@ import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
   if (!user) return user;
-  const { password, idPhoto, idSelfie, profilePhoto, driverLicenseUrl, selfieUrl, ...safe } = user;
-  safe.hasProfilePhoto = !!profilePhoto;
-  safe.hasDriverLicense = !!driverLicenseUrl;
-  safe.hasSelfie = !!selfieUrl;
-  return safe;
-}
-
-function sanitizeUserWithPhoto(user: any) {
-  if (!user) return user;
-  const { password, idPhoto, idSelfie, driverLicenseUrl, selfieUrl, ...safe } = user;
+  const { password, idPhoto, idSelfie, ...safe } = user;
   return safe;
 }
 
