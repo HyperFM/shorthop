@@ -4200,17 +4200,25 @@ function InstaHopView({ user }: { user: User }) {
         showFlash("⚡", "Paid & requesting your hop!", "success");
         queryClient.invalidateQueries({ queryKey: ['/api/me'] });
       },
-      onError: async () => {
+      onError: async (err: any) => {
         setIsMatching(false);
         setPrepaidInfo(null);
+        const serverMsg = err?.message || "";
+        const isPhoneIssue = serverMsg.toLowerCase().includes("phone");
         if (authData.paymentIntentId) {
           try {
             await apiRequest("POST", "/api/stripe/refund-failed-hop", { paymentIntentId: authData.paymentIntentId });
-            showFlash("💳", "Payment reversed — please try again", "info");
             setPaymentRefunded(true);
+            if (isPhoneIssue) {
+              showFlash("📱", "Please add a phone number in Settings — we need it for courtesy calls to connect you with your driver", "error");
+            } else {
+              showFlash("💳", "Payment reversed — please try again", "info");
+            }
           } catch {
             showFlash("⚠️", "Hop failed. Contact support if charged.", "error");
           }
+        } else if (isPhoneIssue) {
+          showFlash("📱", "Please add a phone number in Settings — we need it for courtesy calls to connect you with your driver", "error");
         }
       }
     });
@@ -4225,6 +4233,12 @@ function InstaHopView({ user }: { user: User }) {
       return;
     }
     setIsAuthorizing(true);
+
+    if (!user.phoneNumber || !user.phoneNumber.trim()) {
+      showFlash("📱", "Please add a phone number in Settings first — we need it for courtesy calls to connect you with your driver", "error");
+      setIsAuthorizing(false);
+      return;
+    }
 
     if (!user.stripeSetupCompleted) {
       try {
