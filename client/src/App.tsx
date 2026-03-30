@@ -255,14 +255,10 @@ function App() {
       localStorage.setItem('sh_app_open_count', String(count + 1));
     } catch {}
 
-    if (typeof (window as any).__removeSplash === 'function') {
-      (window as any).__removeSplash();
-    } else {
-      const splash = document.getElementById('sh-splash');
-      if (splash) {
-        splash.classList.add('fade-out');
-        setTimeout(() => { try { splash.remove(); } catch {} }, 500);
-      }
+    const splash = document.getElementById('sh-splash');
+    if (splash) {
+      splash.classList.add('fade-out');
+      setTimeout(() => { try { splash.remove(); } catch {} }, 600);
     }
   }, []);
 
