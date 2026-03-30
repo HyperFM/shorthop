@@ -8,6 +8,34 @@ import { Loader2 } from "lucide-react";
 import heroImg from '@assets/660BFE19-0B0D-4EAF-80FF-0BDCB97F3624_1772922571220.png';
 import storesImg from '@assets/Bazaart_5633464A-BA74-45B7-AECE-0A3F1F40971C_1774841408342.jpeg';
 
+function GlowText({ text, glowIndices }: { text: string; glowIndices: Record<number, string> }) {
+  return (
+    <span>
+      {text.split("").map((char, i) => {
+        const glowColor = glowIndices[i];
+        if (glowColor) {
+          return (
+            <span
+              key={i}
+              style={{
+                color: glowColor,
+                textShadow: `0 0 12px ${glowColor}80, 0 0 24px ${glowColor}40, 0 0 4px ${glowColor}60`,
+              }}
+            >
+              {char}
+            </span>
+          );
+        }
+        return <span key={i}>{char}</span>;
+      })}
+    </span>
+  );
+}
+
+const GLOW_ORANGE = "#E8651A";
+const GLOW_GREEN = "#4CAF50";
+const GLOW_GOLD = "#F5A623";
+
 const LANGUAGES = [
   { code: "en", name: "English", flag: "\u{1F1FA}\u{1F1F8}" },
   { code: "es", name: "Espa\u00f1ol", flag: "\u{1F1EA}\u{1F1F8}" },
@@ -163,9 +191,14 @@ export default function Home() {
       </div>
 
       <section className="relative pt-16 pb-20 overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-15 pointer-events-none">
+        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
           <img src={heroImg} alt="Background" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/40 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/30 to-background" />
+        </div>
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full opacity-[0.08]" style={{ background: 'radial-gradient(circle, #E8651A 0%, transparent 70%)' }} />
+          <div className="absolute top-1/3 -right-16 w-64 h-64 rounded-full opacity-[0.06]" style={{ background: 'radial-gradient(circle, #4CAF50 0%, transparent 70%)' }} />
+          <div className="absolute bottom-10 left-1/4 w-56 h-56 rounded-full opacity-[0.07]" style={{ background: 'radial-gradient(circle, #F5A623 0%, transparent 70%)' }} />
         </div>
 
         <div className="container mx-auto px-4 max-w-3xl relative z-10">
@@ -177,7 +210,9 @@ export default function Home() {
               className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-primary/10 text-primary font-medium text-sm border border-primary/20"
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              {t(lang, "tagline")}
+              {lang === "en" ? (
+                <GlowText text="Move Forward with ShortHop" glowIndices={{ 0: GLOW_ORANGE, 5: GLOW_GREEN, 13: GLOW_GOLD, 18: GLOW_ORANGE, 23: GLOW_GREEN }} />
+              ) : t(lang, "tagline")}
             </motion.div>
 
             <motion.p
@@ -186,7 +221,9 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="text-xl md:text-2xl font-bold text-foreground"
             >
-              {t(lang, "subtitle")}
+              {lang === "en" ? (
+                <GlowText text="Affordable, simple, and social." glowIndices={{ 0: GLOW_ORANGE, 12: GLOW_GREEN, 20: GLOW_GOLD, 24: GLOW_ORANGE }} />
+              ) : t(lang, "subtitle")}
             </motion.p>
 
             <motion.div
@@ -197,8 +234,16 @@ export default function Home() {
             >
               <p>{t(lang, "description")}</p>
               <div className="pt-4 space-y-1">
-                <p className="font-semibold text-foreground">{t(lang, "your_route")}</p>
-                <p className="italic">{t(lang, "fun")}</p>
+                <p className="font-semibold text-foreground">
+                  {lang === "en" ? (
+                    <GlowText text="Your route. Your routine." glowIndices={{ 0: GLOW_ORANGE, 5: GLOW_GREEN, 12: GLOW_ORANGE, 17: GLOW_GOLD }} />
+                  ) : t(lang, "your_route")}
+                </p>
+                <p className="italic">
+                  {lang === "en" ? (
+                    <GlowText text="If you're already headed that way, why not have some fun?" glowIndices={{ 3: GLOW_ORANGE, 22: GLOW_GREEN, 37: GLOW_GOLD, 50: GLOW_ORANGE }} />
+                  ) : t(lang, "fun")}
+                </p>
               </div>
             </motion.div>
 
