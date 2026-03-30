@@ -75,7 +75,7 @@ export function FlashNotificationContainer() {
 
   const addFlash = useCallback((msg: FlashPayload) => {
     const id = ++flashId;
-    const dur = msg.type === "welcome" ? 2000 : msg.type === "error" ? 3500 : 1200;
+    const dur = msg.type === "welcome" ? 2000 : msg.type === "error" ? 6000 : 1200;
     setMessages((prev) => [...prev, { ...msg, id }]);
     setTimeout(() => {
       setMessages((prev) => prev.filter((m) => m.id !== id));
