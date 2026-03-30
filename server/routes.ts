@@ -689,21 +689,28 @@ async function runMatchingCycle() {
       const isOneRider = !isMaximize;
 
       if (c.driverInRide) {
-        console.log(`  [hop${c.hop.id}↔drv${c.driver.id}] DIVERT: driver already in ride, adding as pending additional hopper`);
-        if (!pendingAdditionalHops.has(c.hop.id)) {
-          pendingAdditionalHops.set(c.hop.id, {
-            hopId: c.hop.id,
-            driverId: c.driver.id,
-            hopperDest: c.hop.endLocation || "nearby",
-            createdAt: Date.now(),
-          });
-          await storage.createNotification({
-            userId: c.driver.id,
-            type: "additional_hopper",
-            title: "New Hopper Request 🚏",
-            message: `A hopper going to ${c.hop.endLocation || "nearby"} fits your route. Accept or decline from your ride panel.`,
-            isRead: false,
-          });
+        if (isMaximize) {
+          console.log(`  [hop${c.hop.id}↔drv${c.driver.id}] AUTO-ADD: driver in ride with maximize_seats, auto-matching additional hopper (seats=${seatsNeeded}/${remainingSeats})`);
+          await executeMatch(c.hop.id, c.driver.id, c.isStar, c.hop);
+          matchedHopIds.add(c.hop.id);
+          driverSeatTracker.set(c.driver.id, remainingSeats - seatsNeeded);
+        } else {
+          console.log(`  [hop${c.hop.id}↔drv${c.driver.id}] DIVERT: driver already in ride, adding as pending additional hopper`);
+          if (!pendingAdditionalHops.has(c.hop.id)) {
+            pendingAdditionalHops.set(c.hop.id, {
+              hopId: c.hop.id,
+              driverId: c.driver.id,
+              hopperDest: c.hop.endLocation || "nearby",
+              createdAt: Date.now(),
+            });
+            await storage.createNotification({
+              userId: c.driver.id,
+              type: "additional_hopper",
+              title: "New Hopper Request 🚏",
+              message: `A hopper going to ${c.hop.endLocation || "nearby"} fits your route. Accept or decline from your ride panel.`,
+              isRead: false,
+            });
+          }
         }
         continue;
       }
