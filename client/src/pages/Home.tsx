@@ -377,17 +377,17 @@ export default function Home() {
       <footer className="py-10 bg-muted/30 border-t">
         <div className="container mx-auto px-4 max-w-3xl">
           <div className="flex flex-col items-center gap-5">
-            <div className="flex items-center gap-6 text-sm">
-              <Link href="/support" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-support">
+            <div className="flex items-center gap-6 text-sm text-gray-600 hover:text-gray-900">
+              <Link href="/support" className="text-gray-600 hover:text-gray-900 transition-colors" data-testid="link-footer-support">
                 Support & Safety
               </Link>
               <Link href="/artist" className="relative group flex flex-col items-center gap-0 transition-transform hover:scale-105" data-testid="link-footer-artist">
                 <span className="relative">
-                  <img src="/artist-icon.png" alt="" className="w-10 h-10 inline-block dark:invert drop-shadow-md" />
+                  <img src="/artist-icon.jpg" alt="" className="w-10 h-10 rounded-full object-cover inline-block drop-shadow-md" />
                 </span>
                 <span className="text-[10px] bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent font-bold -mt-0.5">Artist</span>
               </Link>
-              <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-privacy">
+              <Link href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors" data-testid="link-footer-privacy">
                 Privacy & Terms
               </Link>
             </div>
