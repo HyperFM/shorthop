@@ -363,12 +363,38 @@ export default function Home() {
                 transition={{ duration: 3, repeat: Infinity }}
                 style={{ filter: "blur(20px)" }}
               />
-              <img
-                src={storesImg}
-                alt="Available on Apple App Store, Google Play, Amazon Appstore, Microsoft Store, Huawei AppGallery, and more"
-                className="relative z-10 w-full rounded-3xl shadow-xl border border-border/30"
-                data-testid="img-hopping-soon-stores"
-              />
+              <div className="relative z-10">
+                <img
+                  src={storesImg}
+                  alt="Available on Apple App Store, Google Play, Amazon Appstore, Microsoft Store, Huawei AppGallery, and more"
+                  className="w-full rounded-3xl shadow-xl border border-border/30"
+                  data-testid="img-hopping-soon-stores"
+                />
+                <div
+                  className="absolute flex items-center justify-center"
+                  style={{
+                    bottom: '7.5%',
+                    right: '14%',
+                    width: '28%',
+                    height: '8%',
+                    background: 'linear-gradient(180deg, #8BC34A 0%, #5D9E3C 50%, #4A8C2A 100%)',
+                    borderRadius: '4px',
+                  }}
+                >
+                  <span
+                    style={{
+                      color: '#E8651A',
+                      fontWeight: 800,
+                      fontSize: 'clamp(14px, 4.5vw, 32px)',
+                      lineHeight: 1,
+                      letterSpacing: '-0.5px',
+                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                    }}
+                  >
+                    now
+                  </span>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
