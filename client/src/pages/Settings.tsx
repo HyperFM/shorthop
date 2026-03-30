@@ -1037,21 +1037,6 @@ export default function Settings() {
           </Card>
         )}
 
-        <Card className="border-green-200/50 dark:border-green-800/40 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/install")} data-testid="card-install-app">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md shadow-green-500/20">
-                <Smartphone className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-extrabold text-foreground">Install ShortHop</p>
-                <p className="text-[10px] text-muted-foreground">Add to your home screen for the best experience</p>
-              </div>
-              <Badge className="text-[9px] bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border-0">NEW</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
         {user?.isAdmin && (
           <Card className="border-red-200/50 dark:border-red-800/40 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/admin")} data-testid="card-admin-link">
             <CardContent className="p-4">

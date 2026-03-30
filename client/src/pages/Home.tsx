@@ -51,8 +51,8 @@ const HOME_TRANSLATIONS: Record<string, Record<string, string>> = {
     safety_reporting_desc: "Flag any safety concerns, misconduct, or emergencies.",
     safety_refunds: "Automatic Refunds",
     safety_refunds_desc: "If a ride doesn't happen, you don't pay.",
-    hopping_soon: "Hopping Soon",
-    hopping_desc: "Coming to all major app stores. Subscribe through your device with Apple Pay, Google Pay, and more.",
+    hopping_soon: "Available Everywhere",
+    hopping_desc: "Download ShortHop on the Apple App Store, Google Play, and more. Subscribe with Apple Pay, Google Pay, or any card.",
   },
   es: {
     tagline: "Avanza con ShortHop",
@@ -79,8 +79,8 @@ const HOME_TRANSLATIONS: Record<string, Record<string, string>> = {
     safety_reporting_desc: "Reporta cualquier preocupaci\u00f3n de seguridad.",
     safety_refunds: "Reembolsos Autom\u00e1ticos",
     safety_refunds_desc: "Si un viaje no ocurre, no pagas.",
-    hopping_soon: "Pr\u00f3ximamente",
-    hopping_desc: "Llegando a todas las tiendas de apps. Suscr\u00edbete con Apple Pay, Google Pay y m\u00e1s.",
+    hopping_soon: "Disponible en Todas Partes",
+    hopping_desc: "Descarga ShortHop en la App Store de Apple, Google Play y m\u00e1s. Suscr\u00edbete con Apple Pay, Google Pay o cualquier tarjeta.",
   },
 };
 
@@ -365,7 +365,7 @@ export default function Home() {
               />
               <img
                 src={storesImg}
-                alt="Coming soon to Apple App Store, Google Play, Amazon Appstore, Microsoft Store, Huawei AppGallery, and more"
+                alt="Available on Apple App Store, Google Play, Amazon Appstore, Microsoft Store, Huawei AppGallery, and more"
                 className="relative z-10 w-full rounded-3xl shadow-xl border border-border/30"
                 data-testid="img-hopping-soon-stores"
               />
