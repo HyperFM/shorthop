@@ -17,7 +17,7 @@ function GlowText({ text, glowIndices }: { text: string; glowIndices: number[] }
     const pickRandom = () => {
       const newGlows: Record<number, string> = {};
       const shuffled = [...glowIndices].sort(() => Math.random() - 0.5);
-      const count = Math.max(2, Math.floor(shuffled.length * 0.4));
+      const count = Math.max(3, Math.floor(shuffled.length * 0.5));
       for (let i = 0; i < count; i++) {
         newGlows[shuffled[i]] = GLOW_COLORS[Math.floor(Math.random() * GLOW_COLORS.length)];
       }
@@ -38,7 +38,7 @@ function GlowText({ text, glowIndices }: { text: string; glowIndices: number[] }
             style={{
               color: 'inherit',
               textShadow: glowColor
-                ? `0 0 18px ${glowColor}90, 0 0 36px ${glowColor}50, 0 0 6px ${glowColor}70`
+                ? `0 0 20px ${glowColor}a0, 0 0 40px ${glowColor}60, 0 0 8px ${glowColor}80`
                 : 'none',
               transition: 'text-shadow 1.2s ease-in-out',
             }}
@@ -75,10 +75,10 @@ const LANGUAGES = [
 const HOME_TRANSLATIONS: Record<string, Record<string, string>> = {
   en: {
     tagline: "Move Forward with ShortHop",
-    subtitle: "Affordable, simple, and social.",
-    description: "ShortHop connects people already heading the same way. Drivers can earn and help others along their route, meet new people, and earn money. Hoppers get a convenient, low-cost ride\u2014no pressure, no extra apps.",
+    subtitle: "Affordable. Simple. Social.",
+    description: "ShortHop connects people already heading the same way. Drivers can earn while helping others along their route, meet new people, and make the most of every trip. Hoppers get a convenient, low-cost ride\u2014hassle-free.",
     your_route: "Your route. Your routine.",
-    fun: "If you're already headed that way, why not have some fun?",
+    fun: "If you're already going that way, why not make it fun?",
     get_started: "Get Started",
     login: "Login to Account",
     for_hoppers: "For Hoppers",
@@ -230,7 +230,7 @@ export default function Home() {
             >
               <Sparkles className="w-4 h-4 mr-2" />
               {lang === "en" ? (
-                <GlowText text="Move Forward with ShortHop" glowIndices={[0, 3, 5, 8, 13, 15, 18, 20, 23, 25]} />
+                <GlowText text="Move Forward with ShortHop" glowIndices={[0, 2, 4, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, 26]} />
               ) : t(lang, "tagline")}
             </motion.div>
 
@@ -241,7 +241,7 @@ export default function Home() {
               className="text-xl md:text-2xl font-bold text-foreground"
             >
               {lang === "en" ? (
-                <GlowText text="Affordable, simple, and social." glowIndices={[0, 4, 8, 12, 15, 20, 24, 28]} />
+                <GlowText text="Affordable. Simple. Social." glowIndices={[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26]} />
               ) : t(lang, "subtitle")}
             </motion.p>
 
@@ -255,12 +255,12 @@ export default function Home() {
               <div className="pt-4 space-y-1">
                 <p className="font-semibold text-foreground">
                   {lang === "en" ? (
-                    <GlowText text="Your route. Your routine." glowIndices={[0, 3, 5, 8, 12, 15, 17, 21]} />
+                    <GlowText text="Your route. Your routine." glowIndices={[0, 2, 3, 5, 7, 8, 10, 12, 14, 15, 17, 19, 21, 23]} />
                   ) : t(lang, "your_route")}
                 </p>
                 <p className="italic">
                   {lang === "en" ? (
-                    <GlowText text="If you're already headed that way, why not have some fun?" glowIndices={[3, 9, 15, 22, 28, 33, 37, 42, 47, 50, 54]} />
+                    <GlowText text="If you're already going that way, why not make it fun?" glowIndices={[0, 3, 5, 8, 10, 13, 16, 19, 22, 25, 27, 30, 33, 36, 38, 41, 44, 47, 50]} />
                   ) : t(lang, "fun")}
                 </p>
               </div>
