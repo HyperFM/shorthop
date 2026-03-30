@@ -4245,7 +4245,7 @@ function InstaHopView({ user }: { user: User }) {
     }
     setIsAuthorizing(true);
 
-    if (!user.phoneNumber || !user.phoneNumber.trim()) {
+    if (!user.phone || !user.phone.trim()) {
       showFlash("📱", "Add your phone number for courtesy calls with your driver", "error", undefined, "Go to Settings", "/settings");
       setIsAuthorizing(false);
       return;
