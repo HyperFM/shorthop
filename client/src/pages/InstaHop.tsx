@@ -4367,6 +4367,7 @@ function InstaHopView({ user }: { user: User }) {
   function cancelMatching() {
     setIsMatching(false);
     setPrepaidInfo(null);
+    setDriverDroppedMsg(false);
     if (activeHop && activeHop.status === "requested") {
       cancelHop.mutate(activeHop.id);
       showFlash("✅", "Cancelled — payment authorization released", "info");
@@ -4723,6 +4724,12 @@ function InstaHopView({ user }: { user: User }) {
 
                 {isMatching && prepaidInfo && (
                   <div className="mb-2 space-y-2" data-testid="card-matching-countdown">
+                    {driverDroppedMsg && (
+                      <div className="rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-300/60 dark:border-orange-700/40 px-4 py-3 space-y-1" data-testid="card-driver-canceled-notice">
+                        <p className="text-sm font-bold text-orange-700 dark:text-orange-300">Your driver canceled</p>
+                        <p className="text-xs text-orange-600/80 dark:text-orange-400/80">We're still looking for another driver near your route. You can keep waiting or cancel for a full refund.</p>
+                      </div>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -4733,15 +4740,18 @@ function InstaHopView({ user }: { user: User }) {
                         }
                         setIsMatching(false);
                         setPrepaidInfo(null);
+                        setDriverDroppedMsg(false);
                         showFlash("✅", "Cancelled — payment authorization released", "info");
                       }}
                       data-testid="button-cancel-matching"
                     >
                       <X className="w-3.5 h-3.5 mr-1.5" /> Cancel & Refund
                     </Button>
-                    <p className="text-[10px] text-center text-foreground/50 dark:text-gray-500">
-                      Refunded automatically if no match found
-                    </p>
+                    {!driverDroppedMsg && (
+                      <p className="text-[10px] text-center text-foreground/50 dark:text-gray-500">
+                        Refunded automatically if no match found
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -4978,11 +4988,15 @@ function InstaHopView({ user }: { user: User }) {
                         type="button"
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        onClick={cancelMatching}
-                        className="w-14 h-14 rounded-2xl bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/25 shrink-0"
-                        data-testid="button-cancel-matching"
+                        onClick={() => {
+                          cancelMatching();
+                          setDriverDroppedMsg(false);
+                        }}
+                        className="h-14 px-3 rounded-2xl bg-red-500 text-white flex flex-col items-center justify-center shadow-lg shadow-red-500/25 shrink-0"
+                        data-testid="button-cancel-matching-x"
                       >
-                        <X className="w-6 h-6" strokeWidth={3} />
+                        <X className="w-5 h-5" strokeWidth={3} />
+                        <span className="text-[8px] font-bold leading-tight">Cancel</span>
                       </motion.button>
                     )}
                   </div>
