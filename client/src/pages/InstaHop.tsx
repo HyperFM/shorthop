@@ -3665,6 +3665,17 @@ function InstaHopView({ user }: { user: User }) {
 
   const prevDriverHopIdsRef = useRef<Set<number>>(new Set(driverActiveHops.map(h => h.id)));
   const driverMatchAudioRef = useRef<HTMLAudioElement | null>(null);
+  
+  useEffect(() => {
+    const handleNavigate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const url = customEvent.detail;
+      if (url) setLocation(url);
+    };
+    window.addEventListener("navigate-to", handleNavigate);
+    return () => window.removeEventListener("navigate-to", handleNavigate);
+  }, [setLocation]);
+
   useEffect(() => {
     if (mode !== "drive") {
       prevDriverHopIdsRef.current = new Set(driverActiveHops.map(h => h.id));
@@ -4210,7 +4221,7 @@ function InstaHopView({ user }: { user: User }) {
             await apiRequest("POST", "/api/stripe/refund-failed-hop", { paymentIntentId: authData.paymentIntentId });
             setPaymentRefunded(true);
             if (isPhoneIssue) {
-              showFlash("📱", "Please add a phone number in Settings — we need it for courtesy calls to connect you with your driver", "error");
+              showFlash("📱", "Add your phone number for courtesy calls with your driver", "error", undefined, "Go to Settings", "/settings");
             } else {
               showFlash("💳", "Payment reversed — please try again", "info");
             }
@@ -4218,7 +4229,7 @@ function InstaHopView({ user }: { user: User }) {
             showFlash("⚠️", "Hop failed. Contact support if charged.", "error");
           }
         } else if (isPhoneIssue) {
-          showFlash("📱", "Please add a phone number in Settings — we need it for courtesy calls to connect you with your driver", "error");
+          showFlash("📱", "Add your phone number for courtesy calls with your driver", "error", undefined, "Go to Settings", "/settings");
         }
       }
     });
@@ -4235,7 +4246,7 @@ function InstaHopView({ user }: { user: User }) {
     setIsAuthorizing(true);
 
     if (!user.phoneNumber || !user.phoneNumber.trim()) {
-      showFlash("📱", "Please add a phone number in Settings first — we need it for courtesy calls to connect you with your driver", "error");
+      showFlash("📱", "Add your phone number for courtesy calls with your driver", "error", undefined, "Go to Settings", "/settings");
       setIsAuthorizing(false);
       return;
     }

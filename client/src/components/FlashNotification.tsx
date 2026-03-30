@@ -9,6 +9,8 @@ interface FlashMessage {
   text: string;
   type: FlashType;
   username?: string;
+  actionLabel?: string;
+  actionUrl?: string;
 }
 
 interface FlashPayload {
@@ -16,6 +18,8 @@ interface FlashPayload {
   text: string;
   type: FlashType;
   username?: string;
+  actionLabel?: string;
+  actionUrl?: string;
 }
 
 const typeStyles: Record<FlashType, string> = {
@@ -28,9 +32,9 @@ const typeStyles: Record<FlashType, string> = {
 let flashId = 0;
 let globalAddFlash: ((msg: FlashPayload) => void) | null = null;
 
-export function showFlash(emoji: string, text: string, type: FlashType = "success", username?: string) {
+export function showFlash(emoji: string, text: string, type: FlashType = "success", username?: string, actionLabel?: string, actionUrl?: string) {
   if (type === "success" || type === "info") return;
-  globalAddFlash?.({ emoji, text, type, username });
+  globalAddFlash?.({ emoji, text, type, username, actionLabel, actionUrl });
 }
 
 function WelcomeFlash({ msg }: { msg: FlashMessage }) {
@@ -101,7 +105,7 @@ export function FlashNotificationContainer() {
             {msg.type === "welcome" ? (
               <WelcomeFlash msg={msg} />
             ) : (
-              <div className={`bg-gradient-to-r ${typeStyles[msg.type]} px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 pointer-events-none`}>
+              <div className={`bg-gradient-to-r ${typeStyles[msg.type]} px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 ${msg.actionUrl ? "pointer-events-auto cursor-pointer" : "pointer-events-none"}`} onClick={() => msg.actionUrl && window.location.href === msg.actionUrl ? null : window.location.pathname !== msg.actionUrl && msg.actionUrl ? window.history.pushState(null, '', msg.actionUrl) : null}>
                 <motion.span
                   className="text-3xl"
                   initial={{ rotate: -20, scale: 0.5 }}
@@ -110,7 +114,18 @@ export function FlashNotificationContainer() {
                 >
                   {msg.emoji}
                 </motion.span>
-                <span className="text-base font-black drop-shadow-sm tracking-wide">{msg.text}</span>
+                <span className="text-base font-black drop-shadow-sm tracking-wide flex-1">{msg.text}</span>
+                {msg.actionLabel && msg.actionUrl && (
+                  <motion.button
+                    className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shrink-0 transition-colors pointer-events-auto"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => window.dispatchEvent(new CustomEvent("navigate-to", { detail: msg.actionUrl }))}
+                  >
+                    <span className="text-xl">+</span>
+                    <span className="text-sm">{msg.actionLabel}</span>
+                  </motion.button>
+                )}
               </div>
             )}
           </motion.div>
