@@ -3781,6 +3781,8 @@ function InstaHopView({ user }: { user: User }) {
   const [proximityAlerted, setProximityAlerted] = useState<{ pickup: boolean; dropoff: boolean }>({ pickup: false, dropoff: false });
   const proximityAudioRef = useRef<HTMLAudioElement | null>(null);
   const proximitySoundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevHopStatusRef = useRef<string | null>(null);
+  const [driverDroppedMsg, setDriverDroppedMsg] = useState(false);
   const hasActiveRide = !!(activeHop && (activeHop.status === "matched" || activeHop.status === "in_ride"));
   const prevHasActiveRideRef = useRef(hasActiveRide);
   useEffect(() => {
@@ -3926,9 +3928,6 @@ function InstaHopView({ user }: { user: User }) {
       }
     }
   }, [activeHop?.id, activeHop?.status, mode]);
-
-  const prevHopStatusRef = useRef<string | null>(null);
-  const [driverDroppedMsg, setDriverDroppedMsg] = useState(false);
 
   useEffect(() => {
     const prevStatus = prevHopStatusRef.current;
