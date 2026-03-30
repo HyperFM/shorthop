@@ -5511,5 +5511,17 @@ export async function registerRoutes(
 
   startMatchingCycle();
 
+  app.get('/api/download-project', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const u = await storage.getUser(req.user.id);
+    if (!u?.isAdmin) return res.status(403).json({ message: "Admin only" });
+    const filePath = '/tmp/shorthop-code.tar.gz';
+    const fs = await import('fs');
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: "Archive not found. Ask agent to regenerate." });
+    res.setHeader('Content-Disposition', 'attachment; filename=shorthop-code.tar.gz');
+    res.setHeader('Content-Type', 'application/gzip');
+    fs.createReadStream(filePath).pipe(res);
+  });
+
   return httpServer;
 }
