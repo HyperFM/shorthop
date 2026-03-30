@@ -328,6 +328,8 @@ type DriverNavRoute = {
   geometry: GeoJSON.LineString;
   pickupMarker?: { lat: number; lng: number; label: string };
   dropoffMarker?: { lat: number; lng: number; label: string };
+  pickupMarkers?: { lat: number; lng: number; label: string }[];
+  dropoffMarkers?: { lat: number; lng: number; label: string }[];
   destMarkerCoord?: { lat: number; lng: number };
   steps?: NavStep[];
 };
@@ -363,6 +365,8 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
   const destMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const pickupMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const dropoffMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const extraPickupMarkersRef = useRef<mapboxgl.Marker[]>([]);
+  const extraDropoffMarkersRef = useRef<mapboxgl.Marker[]>([]);
   const [mapError, setMapError] = useState(false);
   const mapErrorRef = useRef(false);
   const prevLatLngRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -446,6 +450,8 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
       if (destMarkerRef.current) { destMarkerRef.current.remove(); destMarkerRef.current = null; }
       if (pickupMarkerRef.current) { pickupMarkerRef.current.remove(); pickupMarkerRef.current = null; }
       if (dropoffMarkerRef.current) { dropoffMarkerRef.current.remove(); dropoffMarkerRef.current = null; }
+      extraPickupMarkersRef.current.forEach(m => m.remove()); extraPickupMarkersRef.current = [];
+      extraDropoffMarkersRef.current.forEach(m => m.remove()); extraDropoffMarkersRef.current = [];
       if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
       map.remove();
       mapRef.current = null;
@@ -646,6 +652,8 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
 
       if (pickupMarkerRef.current) { pickupMarkerRef.current.remove(); pickupMarkerRef.current = null; }
       if (dropoffMarkerRef.current) { dropoffMarkerRef.current.remove(); dropoffMarkerRef.current = null; }
+      extraPickupMarkersRef.current.forEach(m => m.remove()); extraPickupMarkersRef.current = [];
+      extraDropoffMarkersRef.current.forEach(m => m.remove()); extraDropoffMarkersRef.current = [];
 
       const driverPos: [number, number] | null = (latitude && longitude) ? [longitude, latitude] : null;
 
@@ -741,12 +749,33 @@ function MapView({ mode, latitude, longitude, hasMatchedRide, rideStatus, walkin
             .setLngLat([driverNavRoute.pickupMarker.lng, driverNavRoute.pickupMarker.lat])
             .addTo(map!);
         }
+        if (driverNavRoute.pickupMarkers) {
+          for (const pm of driverNavRoute.pickupMarkers) {
+            const pEl = createMarkerEl(hopperAloneUrl);
+            pEl.style.width = "44px";
+            pEl.style.height = "44px";
+            const m = new mapboxgl.Marker({ element: pEl })
+              .setLngLat([pm.lng, pm.lat])
+              .addTo(map!);
+            extraPickupMarkersRef.current.push(m);
+          }
+        }
         if (driverNavRoute.dropoffMarker) {
           const dEl = document.createElement("div");
           dEl.innerHTML = `<div style="width:28px;height:28px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="color:white;font-size:13px">📍</span></div>`;
           dropoffMarkerRef.current = new mapboxgl.Marker({ element: dEl })
             .setLngLat([driverNavRoute.dropoffMarker.lng, driverNavRoute.dropoffMarker.lat])
             .addTo(map!);
+        }
+        if (driverNavRoute.dropoffMarkers) {
+          for (const dm of driverNavRoute.dropoffMarkers) {
+            const dEl = document.createElement("div");
+            dEl.innerHTML = `<div style="width:28px;height:28px;background:#ef4444;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="color:white;font-size:13px">📍</span></div>`;
+            const m = new mapboxgl.Marker({ element: dEl })
+              .setLngLat([dm.lng, dm.lat])
+              .addTo(map!);
+            extraDropoffMarkersRef.current.push(m);
+          }
         }
 
         if (driverNavRoute.destMarkerCoord) {
@@ -958,37 +987,168 @@ function DriverDirectionsPanel({ steps, voiceEnabled, onToggleVoice }: {
   );
 }
 
-function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRide, onConfirmPickup }: {
-  user: User;
-  hop: any | null;
-  routeInfo: { distance: string; eta: string } | null;
-  onStop: () => void;
-  onStartRide: (hopId: number) => void;
-  onCompleteRide: (hopId: number) => void;
+function HopperCard({ hop, compact, onConfirmPickup, onCompleteRide }: {
+  hop: any;
+  compact: boolean;
   onConfirmPickup: (hopId: number) => Promise<void>;
+  onCompleteRide: (hopId: number) => void;
 }) {
-  const totalSeats = (user as any)?.availableSeats || 1;
-  const { data: hops } = useHops();
-  const activeHops = hops?.filter(h => (h.status === "matched" || h.status === "in_ride") && h.driverId === user.id) || [];
-  const occupiedSeats = activeHops.reduce((sum: number, h: any) => sum + (h.seatsNeeded || 1), 0);
-  const isFull = occupiedSeats >= totalSeats;
-
   const hopperUser = hop ? (hop as any).walker : null;
   const hopperVibe = hopperUser?.rideVibe || "friendly_chat";
   const rideStyleEmoji = hopperVibe === "quiet_ride" ? "🤫" : hopperVibe === "social" ? "🤝" : "😊";
   const [showPickupConfirm, setShowPickupConfirm] = useState(false);
   const [confirmingPickup, setConfirmingPickup] = useState(false);
   const driverAlreadyConfirmed = !!(hop?.driverConfirmedPickup);
+  const photoSize = compact ? "w-8 h-8" : "w-10 h-10";
+  const textSize = compact ? "text-xs" : "text-sm";
+  const btnPad = compact ? "px-2.5 py-1.5 text-[10px]" : "px-4 py-2.5 text-xs";
+
+  if (hop.status === "matched" && showPickupConfirm && !driverAlreadyConfirmed) {
+    return (
+      <div className="bg-white rounded-2xl px-3 py-3 shadow-xl space-y-2" data-testid={`card-pickup-confirm-${hop.id}`}>
+        <div className="flex items-center gap-2">
+          {hopperUser?.profilePhoto ? (
+            <img src={hopperUser.profilePhoto} className={`${photoSize} rounded-full border-2 border-orange-200 object-cover shrink-0`} alt="" />
+          ) : (
+            <div className={`${photoSize} rounded-full bg-gray-100 border-2 border-orange-200 flex items-center justify-center shrink-0`}>
+              <HopperIcon className="w-4 h-4 text-gray-400" />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-gray-900 text-xs font-black truncate">
+              {hopperUser?.username || "Hopper"} in your car?
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setShowPickupConfirm(false)}
+            className="flex-1 px-2 py-1.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-xl"
+            data-testid={`button-pickup-cancel-${hop.id}`}
+          >
+            Not Yet
+          </button>
+          <button
+            onClick={async () => {
+              setConfirmingPickup(true);
+              try {
+                await onConfirmPickup(hop.id);
+                setShowPickupConfirm(false);
+              } finally {
+                setConfirmingPickup(false);
+              }
+            }}
+            disabled={confirmingPickup}
+            className="flex-1 px-2 py-1.5 bg-orange-500 text-white text-[10px] font-black rounded-xl disabled:opacity-50"
+            data-testid={`button-pickup-confirm-${hop.id}`}
+          >
+            {confirmingPickup ? "..." : "Yes"}
+          </button>
+        </div>
+        <p className="text-red-500 text-[8px] font-semibold text-center leading-tight">
+          False confirmations lead to account deactivation
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white/10 rounded-xl px-2.5 py-2" data-testid={`card-hopper-${hop.id}`}>
+      <div className="flex items-center gap-2">
+        {hopperUser?.profilePhoto ? (
+          <img src={hopperUser.profilePhoto} className={`${photoSize} rounded-full border-2 ${hop.status === "in_ride" ? "border-green-300/60" : "border-white/60"} object-cover shrink-0`} alt="" />
+        ) : (
+          <div className={`${photoSize} rounded-full bg-white/15 border-2 ${hop.status === "in_ride" ? "border-green-300/40" : "border-white/40"} flex items-center justify-center shrink-0`}>
+            <HopperIcon className="w-4 h-4" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1">
+            <p className={`text-white ${textSize} font-bold truncate`}>
+              {hopperUser?.username || "Hopper"} {rideStyleEmoji}
+            </p>
+            {hopperUser?.phone && (
+              <a href={`tel:${hopperUser.phone}`} className="shrink-0" data-testid={`button-call-hopper-${hop.id}`}>
+                <Phone className="w-3.5 h-3.5 text-blue-400" />
+              </a>
+            )}
+          </div>
+          <p className={`${hop.status === "in_ride" ? "text-green-200" : "text-white/50"} text-[9px] font-semibold`}>
+            {hop.status === "in_ride" ? "in ride" : driverAlreadyConfirmed ? "awaiting confirm" : "heading to pickup"}
+          </p>
+        </div>
+        {hop.status === "matched" ? (
+          driverAlreadyConfirmed ? (
+            <div className={`${btnPad} bg-yellow-400/20 text-yellow-200 font-bold rounded-xl shrink-0`}>
+              Waiting
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowPickupConfirm(true)}
+              className={`${btnPad} bg-white text-orange-600 font-black rounded-xl shrink-0 shadow-lg`}
+              data-testid={`button-pickup-${hop.id}`}
+            >
+              Pick Up
+            </button>
+          )
+        ) : hop.status === "in_ride" ? (
+          hop.driverConfirmedComplete ? (
+            <span className={`${btnPad} bg-white/20 text-green-200 font-bold rounded-xl shrink-0`}>
+              Waiting
+            </span>
+          ) : (
+            <button
+              onClick={() => onCompleteRide(hop.id)}
+              className={`${btnPad} bg-green-400 text-green-900 font-black rounded-xl shrink-0 shadow-lg`}
+              data-testid={`button-complete-${hop.id}`}
+            >
+              Complete
+            </button>
+          )
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function DriverNavBar({ user, hops: allHops, routeInfo, onStop, onCompleteRide, onConfirmPickup }: {
+  user: User;
+  hops: any[];
+  routeInfo: { distance: string; eta: string } | null;
+  onStop: () => void;
+  onCompleteRide: (hopId: number) => void;
+  onConfirmPickup: (hopId: number) => Promise<void>;
+}) {
+  const totalSeats = (user as any)?.availableSeats || 1;
+  const occupiedSeats = allHops.reduce((sum: number, h: any) => sum + (h.seatsNeeded || 1), 0);
+  const isFull = occupiedSeats >= totalSeats;
+  const hasHops = allHops.length > 0;
+  const isMulti = allHops.length > 1;
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <motion.div
       className="absolute bottom-0 left-0 right-0 z-20 px-3 pb-3"
       data-testid="driver-nav-bar"
       initial={{ y: 200, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      animate={{ y: collapsed && isMulti ? 80 : 0, opacity: 1 }}
       transition={{ type: "spring", damping: 25, stiffness: 300, delay: 0.1 }}
     >
       <div className="bg-gradient-to-br from-orange-500 to-orange-600 backdrop-blur-xl rounded-3xl shadow-2xl shadow-orange-500/30 px-4 py-3 space-y-2.5">
+        {isMulti && (
+          <motion.div
+            className="flex justify-center cursor-grab active:cursor-grabbing py-1 -mt-1 touch-none"
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0}
+            onDrag={(_e: any, info: any) => {
+              if (Math.abs(info.offset.y) > 40) setCollapsed(info.offset.y > 0);
+            }}
+          >
+            <div className="w-8 h-1 rounded-full bg-white/30" />
+          </motion.div>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {routeInfo && (
@@ -1012,7 +1172,7 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
           </div>
 
           <div className="flex items-center gap-2">
-            <HopperIcon className="w-5 h-5" searching={!hop && !isFull} />
+            <HopperIcon className="w-5 h-5" searching={!hasHops && !isFull} />
             <button
               onClick={onStop}
               className="w-8 h-8 rounded-full bg-red-500/30 border border-red-400/50 flex items-center justify-center hover:bg-red-500/50 transition-colors"
@@ -1030,148 +1190,35 @@ function DriverNavBar({ user, hop, routeInfo, onStop, onStartRide, onCompleteRid
           </div>
         )}
 
-        {!hop && !isFull && (
+        {!hasHops && !isFull && (
           <div className="flex items-center justify-center gap-2 py-1">
             <GlowingSearchText />
           </div>
         )}
 
-        {hop && hop.status === "matched" && !showPickupConfirm && (
-          <div className="bg-white/10 rounded-xl px-3 py-2.5" data-testid="display-matched-hopper">
-            <div className="flex items-center gap-3">
-              {hopperUser?.profilePhoto ? (
-                <img src={hopperUser.profilePhoto} className="w-10 h-10 rounded-full border-2 border-white/60 object-cover shrink-0" alt="" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-white/15 border-2 border-white/40 flex items-center justify-center shrink-0">
-                  <HopperIcon className="w-5 h-5" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-white text-sm font-bold truncate">
-                    {hopperUser?.username || hop.walkerName || "Hopper"} {rideStyleEmoji}
-                  </p>
-                  {hopperUser?.phone && (
-                    <a href={`tel:${hopperUser.phone}`} className="shrink-0" data-testid="button-call-hopper-bar">
-                      <Phone className="w-4 h-4 text-blue-400" />
-                    </a>
-                  )}
-                </div>
-                <p className="text-white/50 text-[10px]">
-                  {driverAlreadyConfirmed ? "waiting for hopper to confirm" : "heading to pickup"}
-                </p>
-              </div>
-              {driverAlreadyConfirmed ? (
-                <div className="px-3 py-2 bg-yellow-400/20 text-yellow-200 text-[10px] font-bold rounded-xl shrink-0">
-                  Awaiting Hopper
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowPickupConfirm(true)}
-                  className="px-4 py-2.5 bg-white text-orange-600 text-xs font-black rounded-xl shrink-0 shadow-lg hover:bg-white/90 transition-colors"
-                  data-testid="button-driver-start-ride-bar"
-                >
-                  Pick Up
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {hop && hop.status === "matched" && showPickupConfirm && !driverAlreadyConfirmed && (
-          <div className="bg-white rounded-2xl px-4 py-4 shadow-xl space-y-3" data-testid="card-pickup-confirm">
-            <div className="flex items-center gap-3">
-              {hopperUser?.profilePhoto ? (
-                <img src={hopperUser.profilePhoto} className="w-12 h-12 rounded-full border-2 border-orange-200 object-cover shrink-0" alt="" />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-gray-100 border-2 border-orange-200 flex items-center justify-center shrink-0">
-                  <HopperIcon className="w-6 h-6 text-gray-400" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-gray-900 text-sm font-black">
-                  Is {hopperUser?.username || hop.walkerName || "the hopper"} in your vehicle?
-                </p>
-                <p className="text-gray-500 text-xs mt-0.5">Confirm only when the hopper is physically in your car</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowPickupConfirm(false)}
-                className="flex-1 px-3 py-2.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-xl"
-                data-testid="button-pickup-cancel"
-              >
-                Not Yet
-              </button>
-              <button
-                onClick={async () => {
-                  setConfirmingPickup(true);
-                  try {
-                    await onConfirmPickup(hop.id);
-                    setShowPickupConfirm(false);
-                  } finally {
-                    setConfirmingPickup(false);
-                  }
-                }}
-                disabled={confirmingPickup}
-                className="flex-1 px-3 py-2.5 bg-orange-500 text-white text-xs font-black rounded-xl shadow-lg disabled:opacity-50"
-                data-testid="button-pickup-confirm-yes"
-              >
-                {confirmingPickup ? "Confirming..." : "Yes, Hopper is Here"}
-              </button>
-            </div>
-            <p className="text-red-600 text-[10px] font-semibold text-center leading-tight" data-testid="text-pickup-warning">
-              Falsely confirming a pickup is not tolerated. Disciplinary actions will apply for violations — repeated offenses result in permanent account deactivation.
-            </p>
-          </div>
-        )}
-
-        {hop && hop.status === "in_ride" && (
+        {allHops.length === 1 && (
           <div className="space-y-2">
-            <div className="bg-white/10 rounded-xl px-3 py-2.5" data-testid="display-in-ride-hopper">
-              <div className="flex items-center gap-3">
-                {hopperUser?.profilePhoto ? (
-                  <img src={hopperUser.profilePhoto} className="w-10 h-10 rounded-full border-2 border-green-300/60 object-cover shrink-0" alt="" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-white/15 border-2 border-green-300/40 flex items-center justify-center shrink-0">
-                    <HopperIcon className="w-5 h-5" />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-white text-sm font-bold truncate">
-                      {hopperUser?.username || hop.walkerName || "Hopper"} {rideStyleEmoji}
-                    </p>
-                    {hopperUser?.phone && (
-                      <a href={`tel:${hopperUser.phone}`} className="shrink-0" data-testid="button-call-hopper-ride">
-                        <Phone className="w-4 h-4 text-blue-400" />
-                      </a>
-                    )}
-                  </div>
-                  <p className="text-green-200 text-[10px] font-semibold">in ride</p>
-                </div>
-                {hop.driverConfirmedComplete ? (
-                  <span className="px-4 py-2.5 bg-white/20 text-green-200 text-[10px] font-bold rounded-xl shrink-0">
-                    Waiting for hopper
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => onCompleteRide(hop.id)}
-                    className="px-4 py-2.5 bg-green-400 text-green-900 text-xs font-black rounded-xl shrink-0 shadow-lg hover:bg-green-300 transition-colors"
-                    data-testid="button-driver-complete-ride-bar"
-                  >
-                    Complete
-                  </button>
-                )}
-              </div>
-            </div>
-            <SpontaneousStopDriver hopId={hop.id} />
+            <HopperCard hop={allHops[0]} compact={false} onConfirmPickup={onConfirmPickup} onCompleteRide={onCompleteRide} />
+            {allHops[0].status === "in_ride" && <SpontaneousStopDriver hopId={allHops[0].id} />}
           </div>
         )}
 
-        {hop && hopperUser && (
+        {allHops.length >= 2 && (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              {allHops.map((h: any) => (
+                <HopperCard key={h.id} hop={h} compact={true} onConfirmPickup={onConfirmPickup} onCompleteRide={onCompleteRide} />
+              ))}
+            </div>
+            {allHops.filter((h: any) => h.status === "in_ride").map((h: any) => (
+              <SpontaneousStopDriver key={`ss-${h.id}`} hopId={h.id} />
+            ))}
+          </div>
+        )}
+
+        {hasHops && allHops.length === 1 && allHops[0].walker && (
           <p className="text-[9px] text-white/40 italic text-center" data-testid="display-ride-preference-advisory">
-            {rideStyleEmoji} {hopperVibe === "quiet_ride" ? "prefers quiet" : hopperVibe === "social" ? "loves chatting" : "friendly vibes"} · please be kind & respect all preferences
+            {allHops[0].walker?.rideVibe === "quiet_ride" ? "🤫 prefers quiet" : allHops[0].walker?.rideVibe === "social" ? "🤝 loves chatting" : "😊 friendly vibes"} · please be kind & respect all preferences
           </p>
         )}
       </div>
@@ -3529,6 +3576,14 @@ function InstaHopView({ user }: { user: User }) {
     const token = import.meta.env.VITE_MAPBOX_TOKEN;
     if (!token) return;
 
+    function haversineDist(lat1: number, lng1: number, lat2: number, lng2: number): number {
+      const R = 3958.8;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
     const buildRoute = async () => {
       try {
         const routeRes = await fetch("/api/driver/routine-routes", { credentials: "include" });
@@ -3540,34 +3595,83 @@ function InstaHopView({ user }: { user: User }) {
         const destLng = parseFloat(route.endLng);
         if (!isFinite(destLat) || !isFinite(destLng)) return;
 
-        let waypoints = `${geo.longitude},${geo.latitude}`;
-        let pickupMarker: DriverNavRoute["pickupMarker"];
-        let dropoffMarker: DriverNavRoute["dropoffMarker"];
+        type WP = { lat: number; lng: number; type: "pickup" | "dropoff"; hopId: number; hopperName: string };
+        const pendingPickups: WP[] = [];
+        const pendingDropoffs: WP[] = [];
+        const allPickupMarkers: { lat: number; lng: number; label: string }[] = [];
+        const allDropoffMarkers: { lat: number; lng: number; label: string }[] = [];
 
-        if (driverActiveHop) {
-          const pLat = parseFloat(driverActiveHop.startLat || "0");
-          const pLng = parseFloat(driverActiveHop.startLng || "0");
-          const dLat = parseFloat(driverActiveHop.endLat || "0");
-          const dLng = parseFloat(driverActiveHop.endLng || "0");
+        for (const h of driverActiveHops) {
+          const pLat = parseFloat(h.startLat || "0");
+          const pLng = parseFloat(h.startLng || "0");
+          const dLat = parseFloat(h.endLat || "0");
+          const dLng = parseFloat(h.endLng || "0");
+          const name = (h as any).walker?.username || (h as any).walkerName || "Hopper";
 
-          if (driverActiveHop.status === "matched" && isFinite(pLat) && pLat !== 0) {
-            waypoints += `;${pLng},${pLat}`;
-            pickupMarker = { lat: pLat, lng: pLng, label: "Pickup" };
+          if (h.status === "matched" && isFinite(pLat) && isFinite(pLng) && pLat !== 0 && pLng !== 0) {
+            pendingPickups.push({ lat: pLat, lng: pLng, type: "pickup", hopId: h.id, hopperName: name });
+            allPickupMarkers.push({ lat: pLat, lng: pLng, label: `Pickup ${name}` });
           }
-          if (isFinite(dLat) && dLat !== 0) {
-            waypoints += `;${dLng},${dLat}`;
-            dropoffMarker = { lat: dLat, lng: dLng, label: "Dropoff" };
+          if (isFinite(dLat) && isFinite(dLng) && dLat !== 0 && dLng !== 0) {
+            pendingDropoffs.push({ lat: dLat, lng: dLng, type: "dropoff", hopId: h.id, hopperName: name });
+            allDropoffMarkers.push({ lat: dLat, lng: dLng, label: `Dropoff ${name}` });
           }
         }
 
-        waypoints += `;${destLng},${destLat}`;
+        const orderedWaypoints: { lat: number; lng: number }[] = [];
+        let curLat = geo.latitude!;
+        let curLng = geo.longitude!;
+        const pickedUpIds = new Set<number>();
 
-        const routeKey = waypoints;
+        for (const h of driverActiveHops) {
+          if (h.status === "in_ride") pickedUpIds.add(h.id);
+        }
+
+        const remaining = [...pendingPickups];
+        const dropRemaining = [...pendingDropoffs];
+
+        while (remaining.length > 0 || dropRemaining.length > 0) {
+          let bestDist = Infinity;
+          let bestIdx = -1;
+          let bestSource: "pickup" | "dropoff" = "pickup";
+
+          for (let i = 0; i < remaining.length; i++) {
+            const d = haversineDist(curLat, curLng, remaining[i].lat, remaining[i].lng);
+            if (d < bestDist) { bestDist = d; bestIdx = i; bestSource = "pickup"; }
+          }
+
+          for (let i = 0; i < dropRemaining.length; i++) {
+            if (!pickedUpIds.has(dropRemaining[i].hopId)) continue;
+            const d = haversineDist(curLat, curLng, dropRemaining[i].lat, dropRemaining[i].lng);
+            if (d < bestDist) { bestDist = d; bestIdx = i; bestSource = "dropoff"; }
+          }
+
+          if (bestIdx === -1) break;
+
+          if (bestSource === "pickup") {
+            const wp = remaining.splice(bestIdx, 1)[0];
+            orderedWaypoints.push({ lat: wp.lat, lng: wp.lng });
+            pickedUpIds.add(wp.hopId);
+            curLat = wp.lat; curLng = wp.lng;
+          } else {
+            const wp = dropRemaining.splice(bestIdx, 1)[0];
+            orderedWaypoints.push({ lat: wp.lat, lng: wp.lng });
+            curLat = wp.lat; curLng = wp.lng;
+          }
+        }
+
+        let waypointStr = `${geo.longitude},${geo.latitude}`;
+        for (const wp of orderedWaypoints) {
+          waypointStr += `;${wp.lng},${wp.lat}`;
+        }
+        waypointStr += `;${destLng},${destLat}`;
+
+        const routeKey = waypointStr;
         if (routeKey === prevRouteKeyRef.current) return;
         prevRouteKeyRef.current = routeKey;
 
         const dirRes = await fetch(
-          `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&steps=true&banner_instructions=true&access_token=${token}`
+          `https://api.mapbox.com/directions/v5/mapbox/driving/${waypointStr}?geometries=geojson&overview=full&steps=true&banner_instructions=true&access_token=${token}`
         );
         const dirJson = await dirRes.json();
         if (!dirJson.routes?.[0]) return;
@@ -3598,8 +3702,10 @@ function InstaHopView({ user }: { user: User }) {
         setDriverRouteInfo({ distance: `${distMiles} mi`, eta: `${etaMins} min` });
         setDriverNavRoute({
           geometry: r.geometry,
-          pickupMarker,
-          dropoffMarker,
+          pickupMarker: allPickupMarkers[0],
+          dropoffMarker: allDropoffMarkers[0],
+          pickupMarkers: allPickupMarkers.slice(1),
+          dropoffMarkers: allDropoffMarkers.slice(1),
           destMarkerCoord: { lat: destLat, lng: destLng },
           steps,
         });
@@ -3609,7 +3715,7 @@ function InstaHopView({ user }: { user: User }) {
     buildRoute();
     const interval = setInterval(buildRoute, 15000);
     return () => clearInterval(interval);
-  }, [isDriverActive, geo.latitude, geo.longitude, driverActiveHop?.id, driverActiveHop?.status]);
+  }, [isDriverActive, geo.latitude, geo.longitude, driverActiveHops.map(h => `${h.id}-${h.status}`).join(",")]);
 
   const [voiceDirectionsEnabled, setVoiceDirectionsEnabled] = useState(() => {
     return localStorage.getItem("sh-voice-nav") === "true";
@@ -4695,7 +4801,7 @@ function InstaHopView({ user }: { user: User }) {
           <DriverNavBar
             key="driver-nav"
             user={user}
-            hop={driverActiveHop}
+            hops={driverActiveHops}
             routeInfo={driverRouteInfo}
             onStop={() => toggleActiveTop.mutate(false)}
             onConfirmPickup={async (hopId) => {
@@ -4704,16 +4810,6 @@ function InstaHopView({ user }: { user: User }) {
                 queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
               } catch {
                 showFlash("⚠️", "Couldn't confirm pickup", "error");
-              }
-            }}
-            onStartRide={async (hopId) => {
-              try {
-                await apiRequest("POST", `/api/hops/${hopId}/start-ride`);
-                queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
-                prevRouteKeyRef.current = "";
-                showFlash("🚗", "Ride started!", "success");
-              } catch {
-                showFlash("⚠️", "Couldn't start ride", "error");
               }
             }}
             onCompleteRide={async (hopId) => {
