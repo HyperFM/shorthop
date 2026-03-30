@@ -2712,7 +2712,7 @@ function QuickLocationButtons({ user, onSelectStart, onSelectEnd, mode }: { user
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
+            className="overflow-visible"
           >
             <div className="p-2 rounded-lg bg-muted/40 border border-border/50 space-y-1.5">
               <div className="flex items-center gap-1.5">
