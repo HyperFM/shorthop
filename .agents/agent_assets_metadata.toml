@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "SrwBU7YPMAn89pIdmFDSk"
+uri = "file://shorthop-code.tar.gz"
+type = "unspecified"
+title = "ShortHop Project Code"
