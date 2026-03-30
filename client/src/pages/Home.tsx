@@ -8,25 +8,44 @@ import { Loader2 } from "lucide-react";
 import heroImg from '@assets/660BFE19-0B0D-4EAF-80FF-0BDCB97F3624_1772922571220.png';
 import storesImg from '@assets/Bazaart_5633464A-BA74-45B7-AECE-0A3F1F40971C_1774841408342.jpeg';
 
-function GlowText({ text, glowIndices }: { text: string; glowIndices: Record<number, string> }) {
+const GLOW_COLORS = ["#E8651A", "#4CAF50", "#F5A623", "#E8651A", "#4CAF50"];
+
+function GlowText({ text, glowIndices }: { text: string; glowIndices: number[] }) {
+  const [activeGlows, setActiveGlows] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    const pickRandom = () => {
+      const newGlows: Record<number, string> = {};
+      const shuffled = [...glowIndices].sort(() => Math.random() - 0.5);
+      const count = Math.max(2, Math.floor(shuffled.length * 0.4));
+      for (let i = 0; i < count; i++) {
+        newGlows[shuffled[i]] = GLOW_COLORS[Math.floor(Math.random() * GLOW_COLORS.length)];
+      }
+      setActiveGlows(newGlows);
+    };
+    pickRandom();
+    const interval = setInterval(pickRandom, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <span>
       {text.split("").map((char, i) => {
-        const glowColor = glowIndices[i];
-        if (glowColor) {
-          return (
-            <span
-              key={i}
-              style={{
-                color: glowColor,
-                textShadow: `0 0 12px ${glowColor}80, 0 0 24px ${glowColor}40, 0 0 4px ${glowColor}60`,
-              }}
-            >
-              {char}
-            </span>
-          );
-        }
-        return <span key={i}>{char}</span>;
+        const glowColor = activeGlows[i];
+        return (
+          <span
+            key={i}
+            style={{
+              color: 'inherit',
+              textShadow: glowColor
+                ? `0 0 18px ${glowColor}90, 0 0 36px ${glowColor}50, 0 0 6px ${glowColor}70`
+                : 'none',
+              transition: 'text-shadow 1.2s ease-in-out',
+            }}
+          >
+            {char}
+          </span>
+        );
       })}
     </span>
   );
@@ -211,7 +230,7 @@ export default function Home() {
             >
               <Sparkles className="w-4 h-4 mr-2" />
               {lang === "en" ? (
-                <GlowText text="Move Forward with ShortHop" glowIndices={{ 0: GLOW_ORANGE, 5: GLOW_GREEN, 13: GLOW_GOLD, 18: GLOW_ORANGE, 23: GLOW_GREEN }} />
+                <GlowText text="Move Forward with ShortHop" glowIndices={[0, 3, 5, 8, 13, 15, 18, 20, 23, 25]} />
               ) : t(lang, "tagline")}
             </motion.div>
 
@@ -222,7 +241,7 @@ export default function Home() {
               className="text-xl md:text-2xl font-bold text-foreground"
             >
               {lang === "en" ? (
-                <GlowText text="Affordable, simple, and social." glowIndices={{ 0: GLOW_ORANGE, 12: GLOW_GREEN, 20: GLOW_GOLD, 24: GLOW_ORANGE }} />
+                <GlowText text="Affordable, simple, and social." glowIndices={[0, 4, 8, 12, 15, 20, 24, 28]} />
               ) : t(lang, "subtitle")}
             </motion.p>
 
@@ -236,12 +255,12 @@ export default function Home() {
               <div className="pt-4 space-y-1">
                 <p className="font-semibold text-foreground">
                   {lang === "en" ? (
-                    <GlowText text="Your route. Your routine." glowIndices={{ 0: GLOW_ORANGE, 5: GLOW_GREEN, 12: GLOW_ORANGE, 17: GLOW_GOLD }} />
+                    <GlowText text="Your route. Your routine." glowIndices={[0, 3, 5, 8, 12, 15, 17, 21]} />
                   ) : t(lang, "your_route")}
                 </p>
                 <p className="italic">
                   {lang === "en" ? (
-                    <GlowText text="If you're already headed that way, why not have some fun?" glowIndices={{ 3: GLOW_ORANGE, 22: GLOW_GREEN, 37: GLOW_GOLD, 50: GLOW_ORANGE }} />
+                    <GlowText text="If you're already headed that way, why not have some fun?" glowIndices={[3, 9, 15, 22, 28, 33, 37, 42, 47, 50, 54]} />
                   ) : t(lang, "fun")}
                 </p>
               </div>
