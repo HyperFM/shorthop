@@ -4897,7 +4897,7 @@ function InstaHopView({ user }: { user: User }) {
                       <div className="flex items-center justify-between gap-3 px-1">
                         <div className="flex items-center gap-2">
                           <SeatIcon className="w-8 h-8" />
-                          <span className="text-[11px] text-foreground/60 dark:text-foreground/70">{(user as any)?.seatsNeeded || 1} seat{((user as any)?.seatsNeeded || 1) > 1 ? "s" : ""}</span>
+                          <span className="text-[11px] text-foreground/60 dark:text-foreground/70">Seats needed</span>
                         </div>
                         <div className="flex items-center gap-2" data-testid="stepper-hopper-seats">
                           <Button
