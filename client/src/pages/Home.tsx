@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import heroImg from '@assets/660BFE19-0B0D-4EAF-80FF-0BDCB97F3624_1772922571220.png';
-import storesImg from '@assets/Bazaart_185A494F-721C-4A45-A827-D30BF7419E7D_1773320312839.jpeg';
+import storesImg from '@assets/Bazaart_5633464A-BA74-45B7-AECE-0A3F1F40971C_1774841408342.jpeg';
 
 const LANGUAGES = [
   { code: "en", name: "English", flag: "\u{1F1FA}\u{1F1F8}" },
@@ -363,37 +363,12 @@ export default function Home() {
                 transition={{ duration: 3, repeat: Infinity }}
                 style={{ filter: "blur(20px)" }}
               />
-              <div className="relative z-10">
-                <img
-                  src={storesImg}
-                  alt="Available on Apple App Store, Google Play, Amazon Appstore, Microsoft Store, Huawei AppGallery, and more"
-                  className="w-full rounded-3xl shadow-xl border border-border/30"
-                  data-testid="img-hopping-soon-stores"
-                />
-                <div
-                  className="absolute flex items-center justify-center"
-                  style={{
-                    bottom: '11%',
-                    right: '13%',
-                    width: '30%',
-                    height: '9%',
-                    background: 'radial-gradient(ellipse at center, #ffffff 60%, rgba(255,255,255,0.85) 80%, rgba(255,255,255,0) 100%)',
-                  }}
-                >
-                  <span
-                    style={{
-                      color: '#E8651A',
-                      fontWeight: 800,
-                      fontSize: 'clamp(18px, 5.5vw, 38px)',
-                      lineHeight: 1,
-                      letterSpacing: '-0.5px',
-                      fontFamily: 'system-ui, -apple-system, sans-serif',
-                    }}
-                  >
-                    now
-                  </span>
-                </div>
-              </div>
+              <img
+                src={storesImg}
+                alt="Available on Apple App Store, Google Play, Amazon Appstore, Microsoft Store, Huawei AppGallery, and more — Hopping NOW"
+                className="relative z-10 w-full rounded-3xl shadow-xl border border-border/30"
+                data-testid="img-hopping-now-stores"
+              />
             </div>
           </motion.div>
         </div>
