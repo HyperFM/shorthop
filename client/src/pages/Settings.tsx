@@ -290,6 +290,7 @@ export default function Settings() {
   const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
   const [bio, setBio] = useState((user as any)?.bio || "");
+  const [phoneNumber, setPhoneNumber] = useState((user as any)?.phone || "");
   const [selectedInterests, setSelectedInterests] = useState<string[]>(() => {
     const raw = (user as any)?.interests;
     return raw ? raw.split(',').filter(Boolean) : [];
@@ -349,6 +350,7 @@ export default function Settings() {
   useEffect(() => {
     if (user) {
       setBio((user as any)?.bio || "");
+      setPhoneNumber((user as any)?.phone || "");
       setLanguage((user as any)?.language || "en");
       setTravelTime((user as any)?.travelTime || "");
       setFavoritePlaces((user as any)?.favoritePlaces || "");
@@ -366,6 +368,7 @@ export default function Settings() {
       await apiRequest("PATCH", "/api/user/profile", {
         legalName: legalName.trim() || null,
         bio: bio.trim() || null,
+        phone: phoneNumber.trim() || null,
         interests: selectedInterests.join(',') || null,
         language,
         travelTime: travelTime || null,
@@ -756,6 +759,22 @@ export default function Settings() {
                   data-testid="input-bio"
                 />
                 <p className="text-[9px] text-muted-foreground text-right mt-0.5">{bio.length}/200</p>
+              </div>
+
+              <div>
+                <Label className="text-xs font-bold mb-1.5 block flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5" />
+                  Courtesy Call
+                </Label>
+                <Input
+                  type="tel"
+                  placeholder="Your phone number for courtesy calls"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="text-sm"
+                  data-testid="input-phone-number"
+                />
+                <p className="text-[9px] text-muted-foreground mt-1">Drivers will use this to call you when they arrive. Only visible to matched drivers.</p>
               </div>
 
               <div>

@@ -20,7 +20,7 @@ interface FlashPayload {
 
 const typeStyles: Record<FlashType, string> = {
   success: "from-green-400 to-emerald-500 text-white",
-  error: "from-red-400 to-rose-500 text-white",
+  error: "from-orange-300 to-orange-400 text-gray-800",
   info: "from-blue-400 to-cyan-500 text-white",
   welcome: "",
 };
@@ -71,7 +71,7 @@ export function FlashNotificationContainer() {
 
   const addFlash = useCallback((msg: FlashPayload) => {
     const id = ++flashId;
-    const dur = msg.type === "welcome" ? 2000 : 1200;
+    const dur = msg.type === "welcome" ? 2000 : msg.type === "error" ? 3500 : 1200;
     setMessages((prev) => [...prev, { ...msg, id }]);
     setTimeout(() => {
       setMessages((prev) => prev.filter((m) => m.id !== id));
