@@ -373,19 +373,18 @@ export default function Home() {
                 <div
                   className="absolute flex items-center justify-center"
                   style={{
-                    bottom: '7.5%',
-                    right: '14%',
-                    width: '28%',
-                    height: '8%',
-                    background: 'linear-gradient(180deg, #8BC34A 0%, #5D9E3C 50%, #4A8C2A 100%)',
-                    borderRadius: '4px',
+                    bottom: '11%',
+                    right: '13%',
+                    width: '30%',
+                    height: '9%',
+                    background: 'radial-gradient(ellipse at center, #ffffff 60%, rgba(255,255,255,0.85) 80%, rgba(255,255,255,0) 100%)',
                   }}
                 >
                   <span
                     style={{
                       color: '#E8651A',
                       fontWeight: 800,
-                      fontSize: 'clamp(14px, 4.5vw, 32px)',
+                      fontSize: 'clamp(18px, 5.5vw, 38px)',
                       lineHeight: 1,
                       letterSpacing: '-0.5px',
                       fontFamily: 'system-ui, -apple-system, sans-serif',
