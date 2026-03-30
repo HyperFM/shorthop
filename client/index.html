@@ -99,6 +99,17 @@
           });
         }
       }
+      window.__splashDone = false;
+      window.__removeSplash = function() {
+        if (window.__splashDone) return;
+        window.__splashDone = true;
+        var s = document.getElementById('sh-splash');
+        if (s) {
+          s.classList.add('fade-out');
+          setTimeout(function(){ try { s.remove(); } catch(e){} }, 600);
+        }
+      };
+      setTimeout(window.__removeSplash, 8000);
     </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
