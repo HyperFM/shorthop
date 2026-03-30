@@ -2147,6 +2147,19 @@ export async function registerRoutes(
                 await storage.logGpsEvent(activeHop.id, "greenlight2_triggered");
               }
             }
+
+            if (!activeHop.leftBehindFlag && activeHop.rideStartedAt) {
+              const rideAge = Date.now() - new Date(activeHop.rideStartedAt).getTime();
+              const myAccuracy = accuracy || 999;
+              if (rideAge > 90000 && dist > 0.5 && partnerLoc.accuracy < 50 && myAccuracy < 50) {
+                await db.update(shortHops).set({
+                  leftBehindFlag: true,
+                  leftBehindAt: new Date(),
+                }).where(eq(shortHops.id, activeHop.id));
+                await storage.logGpsEvent(activeHop.id, "left_behind_flagged");
+                console.log(`[SAFETY] Left-behind flagged for hop${activeHop.id} — distance: ${dist.toFixed(3)}mi, ride age: ${Math.round(rideAge / 1000)}s`);
+              }
+            }
           }
         }
       }
@@ -2615,6 +2628,104 @@ export async function registerRoutes(
     } catch (err) {
       console.error("False pickup violation error:", err);
       res.status(500).json({ message: "Failed to record violation" });
+    }
+  });
+
+  app.post('/api/hops/:id/hopper-left-behind', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.walkerId !== req.user.id) return res.status(403).json({ message: "Only the hopper can report being left behind" });
+      if (hop.status !== "in_ride") return res.status(400).json({ message: "Ride is not active" });
+
+      const driverLoc = hop.driverId ? liveLocations.get(hop.driverId) : null;
+      const hopperLoc = liveLocations.get(req.user.id);
+      let gpsConfirmed = false;
+      if (driverLoc && hopperLoc && Date.now() - driverLoc.updatedAt < 120000 && Date.now() - hopperLoc.updatedAt < 120000) {
+        const dist = getDistance(hopperLoc.latitude, hopperLoc.longitude, driverLoc.latitude, driverLoc.longitude);
+        gpsConfirmed = dist > 0.3;
+      }
+
+      if (!hop.leftBehindFlag) {
+        return res.status(400).json({ message: "No left-behind alert detected for this ride" });
+      }
+
+      if (!gpsConfirmed) {
+        return res.status(400).json({ message: "GPS shows you may still be near the driver. If you believe this is an error, please contact support." });
+      }
+
+      if (hop.paymentIntentId && !hop.paymentIntentId.startsWith("wheels_")) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          const pi = await stripe.paymentIntents.retrieve(hop.paymentIntentId);
+          if (pi.status === "requires_capture") {
+            await stripe.paymentIntents.cancel(hop.paymentIntentId);
+            console.log(`[REFUND] Cancelled uncaptured PI ${hop.paymentIntentId} for hop${hopId} — left behind`);
+          } else if (pi.status === "succeeded") {
+            await stripe.refunds.create({ payment_intent: hop.paymentIntentId });
+            console.log(`[REFUND] Refunded PI ${hop.paymentIntentId} for hop${hopId} — left behind`);
+          }
+          await db.update(shortHops).set({ paymentStatus: "refunded" }).where(eq(shortHops.id, hopId));
+        } catch (refundErr: any) {
+          console.error(`[REFUND] Failed for hop${hopId}:`, refundErr.message);
+          return res.status(500).json({ message: "We couldn't process your refund automatically. Please contact support and we'll make it right." });
+        }
+      } else if (hop.paymentIntentId?.startsWith("wheels_")) {
+        try {
+          const wheelAmount = parseFloat(hop.paymentIntentId.replace("wheels_", "").split("_")[0] || "0");
+          if (wheelAmount > 0 && hop.walkerId) {
+            const hopper = await storage.getUser(hop.walkerId);
+            const currentWheels = (hopper as any)?.wheels ?? 0;
+            await db.update(users).set({ credits: currentWheels + wheelAmount }).where(eq(users.id, hop.walkerId));
+            console.log(`[REFUND] Restored ${wheelAmount} wheels for hop${hopId} — left behind`);
+          }
+        } catch (wheelErr: any) {
+          console.error(`[REFUND] Wheels restore failed for hop${hopId}:`, wheelErr.message);
+        }
+      }
+
+      await db.update(shortHops).set({
+        status: "cancelled",
+        leftBehindFlag: true,
+      }).where(eq(shortHops.id, hopId));
+      await storage.logGpsEvent(hopId, "left_behind_confirmed_by_hopper");
+
+      if (hop.driverId) {
+        const driver = await storage.getUser(hop.driverId);
+        const newStrikes = ((driver?.leftBehindStrikes ?? 0) + 1);
+        await db.update(users).set({ leftBehindStrikes: newStrikes }).where(eq(users.id, hop.driverId));
+        console.log(`[SAFETY] Left-behind strike for driver ${hop.driverId} — strikes: ${newStrikes}/3`);
+
+        if (newStrikes >= 3) {
+          await db.update(users).set({ isDisabled: true, isActive: false }).where(eq(users.id, hop.driverId));
+          console.log(`[SAFETY] Driver ${hop.driverId} DEACTIVATED — 3 left-behind strikes`);
+        }
+      }
+
+      res.json({ message: "We're sorry this happened. Your ride has been cancelled and you've been refunded." });
+    } catch (err) {
+      console.error("Left behind error:", err);
+      res.status(500).json({ message: "Failed to process left-behind report" });
+    }
+  });
+
+  app.post('/api/hops/:id/hopper-not-left-behind', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const hopId = Number(req.params.id);
+      const hop = await storage.getHop(hopId);
+      if (!hop) return res.status(404).json({ message: "Hop not found" });
+      if (hop.walkerId !== req.user.id) return res.status(403).json({ message: "Unauthorized" });
+      if (hop.status !== "in_ride") return res.status(400).json({ message: "Ride is not active" });
+      await db.update(shortHops).set({ leftBehindFlag: false }).where(eq(shortHops.id, hopId));
+      await storage.logGpsEvent(hopId, "left_behind_dismissed_by_hopper");
+      const updated = await storage.getHop(hopId);
+      res.json(updated);
+    } catch (err) {
+      console.error("Not left behind error:", err);
+      res.status(500).json({ message: "Failed to dismiss" });
     }
   });
 

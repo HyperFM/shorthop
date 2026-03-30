@@ -1565,9 +1565,12 @@ function HopperRidePanel({ activeHop, user, tracking, queryClient }: {
   const isMatched = activeHop.status === "matched";
   const [collapsed, setCollapsed] = useState(false);
   const [confirmingHopperPickup, setConfirmingHopperPickup] = useState(false);
+  const [leftBehindProcessing, setLeftBehindProcessing] = useState(false);
+  const [leftBehindApology, setLeftBehindApology] = useState<string | null>(null);
   const driverConfirmed = !!(activeHop.driverConfirmedPickup);
   const hopperConfirmed = !!(activeHop.hopperConfirmedPickup);
   const needsHopperConfirm = isMatched && driverConfirmed && !hopperConfirmed;
+  const showLeftBehindPrompt = isInRide && !!(activeHop as any).leftBehindFlag && !leftBehindApology;
   const coMovementRef = useRef<{ dist: number; time: number }[]>([]);
   const falsePickupHandledRef = useRef(false);
   const autoConfirmedRef = useRef(false);
@@ -1710,6 +1713,90 @@ function HopperRidePanel({ activeHop, user, tracking, queryClient }: {
             <p className="text-gray-400 text-[10px] text-center">
               If you don't respond, the ride will auto-start once GPS confirms you're traveling together
             </p>
+          </motion.div>
+        )}
+
+        {leftBehindApology && (
+          <motion.div
+            className="bg-white rounded-2xl px-4 py-4 mb-3 shadow-xl space-y-2"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            data-testid="card-left-behind-apology"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-gray-900 text-sm font-black">We're sorry</p>
+                <p className="text-gray-500 text-xs mt-0.5">{leftBehindApology}</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {showLeftBehindPrompt && (
+          <motion.div
+            className="bg-white rounded-2xl px-4 py-4 mb-3 shadow-xl space-y-3"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            data-testid="card-left-behind-prompt"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-100 border-2 border-red-200 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-900 text-sm font-black">Were you left behind?</p>
+                <p className="text-gray-500 text-xs mt-0.5">GPS shows you and the driver may not be traveling together</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  setLeftBehindProcessing(true);
+                  try {
+                    const res = await fetch(`/api/hops/${activeHop.id}/hopper-left-behind`, {
+                      method: "POST",
+                      credentials: "include",
+                      headers: { "Content-Type": "application/json" },
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                      setLeftBehindApology(data.message || "Your ride has been cancelled and you've been refunded.");
+                      queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                    } else {
+                      showFlash("⚠️", data.message || "Could not process your report", "error");
+                    }
+                  } catch {
+                    showFlash("⚠️", "Something went wrong. Please contact support.", "error");
+                  } finally {
+                    setLeftBehindProcessing(false);
+                  }
+                }}
+                disabled={leftBehindProcessing}
+                className="flex-1 px-3 py-3 bg-red-500 text-white text-sm font-black rounded-xl shadow-lg disabled:opacity-50"
+                data-testid="button-left-behind-yes"
+              >
+                {leftBehindProcessing ? "Processing..." : "Yes, I was left behind"}
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await fetch(`/api/hops/${activeHop.id}/hopper-not-left-behind`, {
+                      method: "POST",
+                      credentials: "include",
+                      headers: { "Content-Type": "application/json" },
+                    });
+                    queryClient.invalidateQueries({ queryKey: ['/api/hops'] });
+                  } catch {}
+                }}
+                className="flex-1 px-3 py-3 bg-green-500 text-white text-sm font-black rounded-xl shadow-lg"
+                data-testid="button-left-behind-no"
+              >
+                No, I'm in the car
+              </button>
+            </div>
           </motion.div>
         )}
 
