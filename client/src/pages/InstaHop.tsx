@@ -4766,32 +4766,6 @@ function InstaHopView({ user }: { user: User }) {
             </motion.div>
           )}
 
-          {!isDriverMode && isMatching && prepaidInfo && (
-            <motion.div
-              key="top-matching-banner"
-              initial={{ y: -60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -60, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="absolute top-0 left-0 right-0 z-30 px-3 pt-3"
-              data-testid="top-matching-banner"
-            >
-              <div className="bg-white/95 dark:bg-black/95 backdrop-blur-xl rounded-2xl shadow-lg border border-blue-200/40 dark:border-blue-700/30 px-4 py-2.5 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Loader2 className="w-4 h-4 animate-spin text-orange-500 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-foreground dark:text-white truncate">{driverDroppedMsg ? "Still finding a driver..." : "Waiting for a match..."}</p>
-                      <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">${(prepaidInfo.amount / 100).toFixed(2)} authorized</p>
-                    </div>
-                  </div>
-                  {matchCountdown !== null && !driverDroppedMsg && (
-                    <span className="text-xs font-mono font-bold text-foreground dark:text-white shrink-0 bg-blue-50 dark:bg-blue-950/30 px-2 py-1 rounded-lg" data-testid="text-top-match-countdown">
-                      {Math.floor(matchCountdown / 60)}:{String(matchCountdown % 60).padStart(2, '0')}
-                    </span>
-                  )}
-                </div>
-            </motion.div>
-          )}
         </AnimatePresence>
 
         <AnimatePresence mode="wait">
@@ -4840,7 +4814,7 @@ function InstaHopView({ user }: { user: User }) {
               </>
             ) : (
               <>
-                {!driverDroppedMsg && (
+                {!isMatching && (
                 <div className="flex gap-2 mb-2 items-start">
                   <div className="flex-1">
                     <AnimatePresence>
@@ -4849,11 +4823,11 @@ function InstaHopView({ user }: { user: User }) {
                           key="greeting"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="text-base font-extrabold text-center mb-1 text-foreground dark:text-orange-400 dark:[text-shadow:0_0_6px_rgba(249,115,22,0.7),0_0_2px_rgba(0,0,0,0.8)]"
+                          className="text-base font-extrabold text-center mb-1 text-foreground"
                           data-testid="text-instahop-greeting"
                         >
                           happy hopping,{" "}
-                          <span className="font-black text-foreground dark:text-orange-300 dark:[text-shadow:0_0_8px_rgba(249,115,22,0.8),0_0_2px_rgba(0,0,0,0.9)]">{user.username}</span>
+                          <span className="font-black text-foreground">{user.username}</span>
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -4865,7 +4839,7 @@ function InstaHopView({ user }: { user: User }) {
                 </div>
                 )}
 
-                {cardHoldUrl && (
+                {cardHoldUrl && !isMatching && (
                   <Card className="border-orange-500/40 bg-gradient-to-br from-orange-500/10 to-transparent mb-2" data-testid="card-card-hold">
                     <CardContent className="py-3 px-4 space-y-2">
                       <p className="text-sm font-bold text-foreground">Add Your Card</p>
@@ -4888,7 +4862,7 @@ function InstaHopView({ user }: { user: User }) {
                   </Card>
                 )}
 
-                {tooFarForInstahop && (
+                {tooFarForInstahop && !isMatching && (
                   <Card className="border-blue-500/40 bg-gradient-to-br from-blue-500/10 to-transparent mb-2" data-testid="card-plan-ride">
                     <CardContent className="py-3 px-4 space-y-2">
                       <p className="text-sm font-bold text-foreground">Too Far for InstaHop</p>
@@ -4913,17 +4887,28 @@ function InstaHopView({ user }: { user: User }) {
                 )}
 
                 {isMatching && prepaidInfo && (
-                  <div className="mb-2 space-y-2" data-testid="card-matching-countdown">
-                    {driverDroppedMsg && (
-                      <div className="rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-300/60 dark:border-orange-700/40 px-4 py-3 space-y-1" data-testid="card-driver-canceled-notice">
-                        <p className="text-sm font-bold text-orange-700 dark:text-orange-300">Your driver canceled</p>
-                        <p className="text-xs text-orange-600/80 dark:text-orange-400/80">We're still looking for another driver near your route. You can keep waiting or cancel for a full refund.</p>
+                  <div className="flex flex-col items-center justify-center py-6 space-y-4" data-testid="card-matching-centered">
+                    <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
+                    {driverDroppedMsg ? (
+                      <div className="text-center space-y-1">
+                        <p className="text-sm font-bold text-orange-700" data-testid="text-driver-canceled-notice">Sorry, your driver canceled.</p>
+                        <p className="text-xs text-orange-600/80">We're still looking for another driver...</p>
                       </div>
+                    ) : (
+                      <div className="text-center space-y-1">
+                        <p className="text-sm font-bold text-foreground">Please wait while we find your driver.</p>
+                        <p className="text-xs text-muted-foreground">${(prepaidInfo.amount / 100).toFixed(2)} authorized</p>
+                      </div>
+                    )}
+                    {matchCountdown !== null && !driverDroppedMsg && (
+                      <span className="text-lg font-mono font-bold text-foreground bg-blue-50 px-3 py-1 rounded-lg" data-testid="text-center-match-countdown">
+                        {Math.floor(matchCountdown / 60)}:{String(matchCountdown % 60).padStart(2, '0')}
+                      </span>
                     )}
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full text-xs h-9 rounded-xl border-red-200/50 dark:border-red-700/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                      className="w-full text-xs h-9 rounded-xl border-red-200/50 text-red-600 hover:bg-red-50"
                       onClick={async () => {
                         if (activeHop) {
                           cancelHop.mutate(activeHop.id);
@@ -4938,7 +4923,7 @@ function InstaHopView({ user }: { user: User }) {
                       <X className="w-3.5 h-3.5 mr-1.5" /> Cancel & Refund
                     </Button>
                     {!driverDroppedMsg && (
-                      <p className="text-[10px] text-center text-foreground/50 dark:text-gray-500">
+                      <p className="text-[10px] text-center text-foreground/50">
                         Refunded automatically if no match found
                       </p>
                     )}
@@ -5015,19 +5000,6 @@ function InstaHopView({ user }: { user: User }) {
                       <SavedLocationChips user={user} onSelect={(addr) => form.setValue("endLocation", addr)} mode="hopper" target="end" />
                     </div>
                   </div>
-                  )}
-
-                  {isMatching && activeHop && (
-                    <div className="space-y-1.5 mb-2">
-                      <div className="flex items-center gap-2 px-2 py-2 rounded-xl bg-green-50/80 dark:bg-green-950/20 border border-green-200/50 dark:border-green-700/30">
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" />
-                        <p className="text-xs font-semibold text-foreground dark:text-white truncate">{activeHop.startLocation || "Current Location"}</p>
-                      </div>
-                      <div className="flex items-center gap-2 px-2 py-2 rounded-xl bg-orange-50/80 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-700/30">
-                        <div className="w-2.5 h-2.5 rounded-sm bg-orange-500 shrink-0" />
-                        <p className="text-xs font-semibold text-foreground dark:text-white truncate">{activeHop.endLocation || "Destination"}</p>
-                      </div>
-                    </div>
                   )}
 
                   {mode === "hop" && !isMatching && (
@@ -5148,49 +5120,22 @@ function InstaHopView({ user }: { user: User }) {
                     </div>
                   )}
 
+                  {!isMatching && (
                   <div className="flex items-center gap-2">
                     <motion.button
                       type="submit"
-                      disabled={requestHop.isPending || isMatching}
+                      disabled={requestHop.isPending}
                       whileTap={{ scale: 0.97 }}
-                      className={`flex-1 h-14 rounded-2xl text-white font-black text-base flex items-center justify-center gap-2.5 shadow-xl transition-all disabled:opacity-60 ${
-                        isMatching
-                          ? "bg-gradient-to-r from-orange-500 to-orange-600 shadow-orange-500/25"
-                          : "bg-gradient-to-r from-green-500 to-green-600 shadow-green-500/25"
-                      }`}
+                      className="flex-1 h-14 rounded-2xl text-white font-black text-base flex items-center justify-center gap-2.5 shadow-xl transition-all disabled:opacity-60 bg-gradient-to-r from-green-500 to-green-600 shadow-green-500/25"
                       data-testid="button-instahop"
                     >
-                      {isMatching ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          matching you...
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-5 h-5" />
-                          {requestHop.isPending ? 'Finding...' : 'Request Ride'}
-                        </>
-                      )}
+                      <Zap className="w-5 h-5" />
+                      {requestHop.isPending ? 'Finding...' : 'Request Ride'}
                     </motion.button>
-
-                    {isMatching && (
-                      <motion.button
-                        type="button"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        onClick={() => {
-                          cancelMatching();
-                          setDriverDroppedMsg(false);
-                        }}
-                        className="h-14 px-3 rounded-2xl bg-red-500 text-white flex flex-col items-center justify-center shadow-lg shadow-red-500/25 shrink-0"
-                        data-testid="button-cancel-matching-x"
-                      >
-                        <X className="w-5 h-5" strokeWidth={3} />
-                        <span className="text-[8px] font-bold leading-tight">Cancel</span>
-                      </motion.button>
-                    )}
                   </div>
+                  )}
 
+                  {!isMatching && (
                   <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                     {driversInCity > 0 && (
                       <div className="flex items-center gap-1.5">
@@ -5203,6 +5148,7 @@ function InstaHopView({ user }: { user: User }) {
                       <span>{hoppersNearby} hoppers nearby</span>
                     </div>
                   </div>
+                  )}
                 </form>
               </>
             )}
