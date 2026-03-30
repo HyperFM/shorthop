@@ -4646,6 +4646,7 @@ function InstaHopView({ user }: { user: User }) {
               </>
             ) : (
               <>
+                {!driverDroppedMsg && (
                 <div className="flex gap-2 mb-2 items-start">
                   <div className="flex-1">
                     <AnimatePresence>
@@ -4657,14 +4658,8 @@ function InstaHopView({ user }: { user: User }) {
                           className="text-base font-extrabold text-center mb-1 text-foreground dark:text-orange-400 dark:[text-shadow:0_0_6px_rgba(249,115,22,0.7),0_0_2px_rgba(0,0,0,0.8)]"
                           data-testid="text-instahop-greeting"
                         >
-                          {driverDroppedMsg ? (
-                            <span className="text-orange-600 dark:text-orange-400">Sorry, your driver canceled</span>
-                          ) : (
-                            <>
-                              happy hopping,{" "}
-                              <span className="font-black text-foreground dark:text-orange-300 dark:[text-shadow:0_0_8px_rgba(249,115,22,0.8),0_0_2px_rgba(0,0,0,0.9)]">{user.username}</span>
-                            </>
-                          )}
+                          happy hopping,{" "}
+                          <span className="font-black text-foreground dark:text-orange-300 dark:[text-shadow:0_0_8px_rgba(249,115,22,0.8),0_0_2px_rgba(0,0,0,0.9)]">{user.username}</span>
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -4674,6 +4669,7 @@ function InstaHopView({ user }: { user: User }) {
                     <GlowingCarousel user={user} />
                   </div>
                 </div>
+                )}
 
                 {cardHoldUrl && (
                   <Card className="border-orange-500/40 bg-gradient-to-br from-orange-500/10 to-transparent mb-2" data-testid="card-card-hold">
