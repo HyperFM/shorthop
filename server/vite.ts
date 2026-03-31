@@ -32,6 +32,29 @@ export async function setupVite(server: Server, app: Express) {
   app.use(vite.middlewares);
 
   app.use("/{*path}", async (req, res, next) => {
+    if (req.path.startsWith("/api/")) return next();
+    
+    const publicPath = path.resolve(
+      import.meta.dirname,
+      "..",
+      "client",
+      "public",
+      req.path,
+    );
+    const publicDir = path.resolve(
+      import.meta.dirname,
+      "..",
+      "client",
+      "public",
+    );
+    if (publicPath.startsWith(publicDir) && fs.existsSync(publicPath)) {
+      if (req.path.endsWith('.tar.gz')) {
+        res.setHeader('Content-Type', 'application/gzip');
+        res.setHeader('Content-Disposition', 'attachment; filename=shorthop-source.tar.gz');
+      }
+      return res.sendFile(publicPath);
+    }
+
     const url = req.originalUrl;
 
     try {

@@ -5618,13 +5618,13 @@ export async function registerRoutes(
 
   startMatchingCycle();
 
-  app.get('/download', async (req, res) => {
-    const fs = await import('fs');
+  app.get('/api/source-code', (req, res) => {
     const filePath = '/home/runner/workspace/client/public/shorthop-source.tar.gz';
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: "Archive not found" });
-    res.setHeader('Content-Disposition', 'attachment; filename=shorthop-source.tar.gz');
-    res.setHeader('Content-Type', 'application/gzip');
-    fs.createReadStream(filePath).pipe(res);
+    const fs = require('fs');
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Archive not found' });
+    res.download(filePath, 'shorthop-source.tar.gz', (err) => {
+      if (err && !res.headersSent) res.status(500).json({ error: 'Download failed' });
+    });
   });
 
   return httpServer;
