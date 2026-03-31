@@ -36,6 +36,16 @@ type ChatMsg = {
   editedAt?: string | null;
 };
 
+function parseBlockedError(err: Error): string | null {
+  try {
+    const match = err.message.match(/^\d+:\s*(.+)/);
+    if (!match) return null;
+    const json = JSON.parse(match[1]);
+    if (json.blocked && json.message) return json.message;
+  } catch {}
+  return null;
+}
+
 function TranslateButton({ text, light }: { text: string; light?: boolean }) {
   const { data: user } = useAuth();
   const [translated, setTranslated] = useState<string | null>(null);
@@ -237,8 +247,13 @@ function FoundersGroupChat({ user }: { user: any }) {
       setMsg("");
       queryClient.invalidateQueries({ queryKey: ["/api/founder-chat"] });
     },
-    onError: () => {
-      showFlash("❌", "Failed to send", "error");
+    onError: (err: Error) => {
+      const parsed = parseBlockedError(err);
+      if (parsed) {
+        showFlash("🚫", parsed, "error");
+      } else {
+        showFlash("❌", "Failed to send", "error");
+      }
     },
   });
 
@@ -504,8 +519,13 @@ function CityChat({ user }: { user: any }) {
       setMsg("");
       queryClient.invalidateQueries({ queryKey: [cityChatKey] });
     },
-    onError: () => {
-      showFlash("❌", "Failed to send", "error");
+    onError: (err: Error) => {
+      const parsed = parseBlockedError(err);
+      if (parsed) {
+        showFlash("🚫", parsed, "error");
+      } else {
+        showFlash("❌", "Failed to send", "error");
+      }
     },
   });
 

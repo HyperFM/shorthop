@@ -13,6 +13,7 @@ import { translateText, getLanguages } from "./translate";
 import { db } from "./db";
 import { notifications, founderMessages, vipMessages, cityMessages, shortHops, users, donations, routineRoutes, spontaneousStops, contactMessages, cashoutRequests } from "@shared/schema";
 import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
+import { filterMessage } from "./contentFilter";
 
 function sanitizeUser(user: any) {
   if (!user) return user;
@@ -4518,6 +4519,8 @@ export async function registerRoutes(
     try {
       const { message } = req.body;
       if (!message) return res.status(400).json({ message: "Message required" });
+      const filterResult = filterMessage(message);
+      if (filterResult.blocked) return res.status(422).json({ message: filterResult.reason, blocked: true });
       const userLang = user.language || "en";
       let storedMessage = message;
       if (userLang !== "en") {
@@ -4616,6 +4619,8 @@ export async function registerRoutes(
       if (!city) return res.status(400).json({ message: "City required" });
       const { message } = req.body;
       if (!message) return res.status(400).json({ message: "Message required" });
+      const filterResult = filterMessage(message);
+      if (filterResult.blocked) return res.status(422).json({ message: filterResult.reason, blocked: true });
       const userLang = user!.language || "en";
       let storedMessage = message;
       if (userLang !== "en") {
