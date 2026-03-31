@@ -346,16 +346,72 @@ function FoundersGroupChat({ user }: { user: any }) {
   );
 }
 
+function useUserCity() {
+  const [city, setCity] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const lastCoordsRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLoading(false);
+      return;
+    }
+
+    const reverseGeocode = async (lat: number, lng: number) => {
+      const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+      if (key === lastCoordsRef.current) return;
+      lastCoordsRef.current = key;
+
+      const token = (import.meta as any).env?.VITE_MAPBOX_TOKEN;
+      if (!token) { setLoading(false); return; }
+
+      try {
+        const res = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=place&access_token=${token}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const place = data.features?.[0]?.text;
+          if (place) setCity(place);
+        }
+      } catch {}
+      setLoading(false);
+    };
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => reverseGeocode(pos.coords.latitude, pos.coords.longitude),
+      () => setLoading(false),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  return { city, loading };
+}
+
 function CityChat({ user }: { user: any }) {
   const queryClient = useQueryClient();
   const [msg, setMsg] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const isFlexPlus = user?.subscription === "flex_hop" || user?.subscription === "power_hop";
+  const isFlexPlus = user?.subscription === "flex_hop" || user?.subscription === "power_hop" || user?.isFounder || user?.isAdmin;
+  const { city, loading: cityLoading } = useUserCity();
+
+  const chatName = city ? `${city} ShortHop` : "City Chat";
+  const cityKey = city || "";
+
+  const cityChatKey = `/api/city-chat/${encodeURIComponent(cityKey)}`;
 
   const { data: messages, isLoading } = useQuery<ChatMsg[]>({
-    queryKey: ["/api/founder-chat"],
+    queryKey: [cityChatKey],
+    queryFn: async () => {
+      if (!cityKey) return [];
+      const res = await fetch(cityChatKey, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
     refetchInterval: 10000,
-    enabled: isFlexPlus,
+    enabled: isFlexPlus && !!cityKey,
   });
 
   const sorted = messages ? [...messages].sort((a, b) =>
@@ -363,12 +419,12 @@ function CityChat({ user }: { user: any }) {
   ) : [];
 
   const fakeMsgs = [
-    "Hey anyone heading down Nicholasville?",
+    "Hey anyone heading downtown?",
     "Love the new update! So smooth",
-    "Looking for a ride from campus around 3pm",
-    "Just passed Keeneland, beautiful morning!",
-    "Who else is at the Rupp game tonight?",
-    "Traffic on New Circle is wild right now",
+    "Looking for a ride around 3pm",
+    "Beautiful morning out here!",
+    "Who else is out tonight?",
+    "Traffic is wild right now",
     "First hop today was amazing, driver was super nice",
   ];
 
@@ -380,11 +436,11 @@ function CityChat({ user }: { user: any }) {
 
   if (!isFlexPlus) {
     return (
-      <Card className="border-blue-200/40 dark:border-blue-800/40 overflow-hidden" data-testid="city-chat-locked">
+      <Card className="border-blue-200/40 overflow-hidden" data-testid="city-chat-locked">
         <CardContent className="p-4 relative">
           <div className="flex items-center gap-2 mb-3">
             <MessageCircle className="w-4 h-4 text-blue-500" />
-            <p className="text-sm font-extrabold">Lexington Chat</p>
+            <p className="text-sm font-extrabold">{chatName}</p>
             <Badge className="text-[8px] bg-blue-100 text-blue-700 border-0 ml-auto">FlexHop+</Badge>
           </div>
 
@@ -393,7 +449,7 @@ function CityChat({ user }: { user: any }) {
               <Lock className="w-6 h-6 text-muted-foreground mb-2" />
               <p className="text-sm font-bold text-foreground">Unlock City Chat</p>
               <p className="text-[10px] text-muted-foreground mt-1 text-center px-6">
-                Upgrade to FlexHop to join the Lexington chat and connect with your city.
+                Upgrade to FlexHop to join your city's chat and connect locally.
               </p>
               <Badge variant="secondary" className="text-[10px] mt-2">
                 <Sparkles className="w-3 h-3 mr-1" />
@@ -415,13 +471,38 @@ function CityChat({ user }: { user: any }) {
     );
   }
 
+  if (cityLoading) {
+    return (
+      <Card className="border-blue-200/40" data-testid="city-chat-loading">
+        <CardContent className="p-4 flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-blue-500 mr-2" />
+          <p className="text-xs text-muted-foreground">Detecting your city...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!city) {
+    return (
+      <Card className="border-blue-200/40" data-testid="city-chat-no-location">
+        <CardContent className="p-4 text-center py-6">
+          <Globe className="w-6 h-6 text-blue-300 mx-auto mb-2" />
+          <p className="text-sm font-bold">Enable Location</p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Allow location access to join your city's chat.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const sendMsg = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/founder-chat", { message: msg });
+      await apiRequest("POST", cityChatKey, { message: msg });
     },
     onSuccess: () => {
       setMsg("");
-      queryClient.invalidateQueries({ queryKey: ["/api/founder-chat"] });
+      queryClient.invalidateQueries({ queryKey: [cityChatKey] });
     },
     onError: () => {
       showFlash("❌", "Failed to send", "error");
@@ -429,11 +510,11 @@ function CityChat({ user }: { user: any }) {
   });
 
   return (
-    <Card className="border-blue-200/40 dark:border-blue-800/40" data-testid="city-chat">
+    <Card className="border-blue-200/40" data-testid="city-chat">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <MessageCircle className="w-4 h-4 text-blue-500" />
-          <p className="text-sm font-extrabold">Lexington Chat</p>
+          <p className="text-sm font-extrabold" data-testid="text-city-chat-name">{chatName}</p>
           <Badge className="text-[8px] bg-blue-100 text-blue-700 border-0 ml-auto">City</Badge>
         </div>
 
@@ -450,7 +531,7 @@ function CityChat({ user }: { user: any }) {
           {!isLoading && sorted.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <MessageCircle className="w-8 h-8 mb-2 text-blue-300" />
-              <p className="text-xs">Start a conversation with Lexington!</p>
+              <p className="text-xs">Start a conversation with {city}!</p>
             </div>
           )}
           {sorted.map(m => {
@@ -469,13 +550,13 @@ function CityChat({ user }: { user: any }) {
                   </p>
                   <ChatBubbleActions
                     messageId={m.id}
-                    chatType="founder-chat"
+                    chatType={`city-chat/${encodeURIComponent(cityKey)}`}
                     reactions={m.reactions}
                     editedAt={m.editedAt}
                     isOwnMessage={isMe}
                     messageText={m.message}
                     light={isMe}
-                    queryKey="/api/founder-chat"
+                    queryKey={cityChatKey}
                   />
                 </div>
               </div>
@@ -484,7 +565,7 @@ function CityChat({ user }: { user: any }) {
         </div>
         <div className="flex gap-1.5">
           <Input
-            placeholder="Chat with Lexington..."
+            placeholder={`Chat with ${city}...`}
             value={msg}
             onChange={e => setMsg(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && msg.trim()) sendMsg.mutate(); }}

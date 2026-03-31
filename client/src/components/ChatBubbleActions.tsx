@@ -19,7 +19,7 @@ export function ChatBubbleActions({
   queryKey,
 }: {
   messageId: number;
-  chatType: "founder-chat" | "vip-chat";
+  chatType: string;
   reactions?: Reactions | null;
   editedAt?: string | null;
   isOwnMessage: boolean;

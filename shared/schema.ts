@@ -436,6 +436,21 @@ export const insertFounderMessageSchema = createInsertSchema(founderMessages).om
 export type FounderMessage = typeof founderMessages.$inferSelect;
 export type InsertFounderMessage = z.infer<typeof insertFounderMessageSchema>;
 
+export const cityMessages = pgTable("city_messages", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  city: text("city").notNull(),
+  message: text("message").notNull(),
+  isAdminReply: boolean("is_admin_reply").default(false),
+  reactions: jsonb("reactions"),
+  editedAt: timestamp("edited_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCityMessageSchema = createInsertSchema(cityMessages).omit({ id: true, createdAt: true });
+export type CityMessage = typeof cityMessages.$inferSelect;
+export type InsertCityMessage = z.infer<typeof insertCityMessageSchema>;
+
 export const vipMessages = pgTable("vip_messages", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),

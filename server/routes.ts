@@ -11,7 +11,7 @@ import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
 import { db } from "./db";
-import { notifications, founderMessages, vipMessages, shortHops, users, donations, routineRoutes, spontaneousStops, contactMessages, cashoutRequests } from "@shared/schema";
+import { notifications, founderMessages, vipMessages, cityMessages, shortHops, users, donations, routineRoutes, spontaneousStops, contactMessages, cashoutRequests } from "@shared/schema";
 import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
 
 function sanitizeUser(user: any) {
@@ -4571,6 +4571,104 @@ export async function registerRoutes(
       const [msg] = await db.select().from(founderMessages).where(eq(founderMessages.id, id));
       if (!msg || msg.userId !== req.user.id) return res.status(403).json({ message: "Cannot edit" });
       const [updated] = await db.update(founderMessages).set({ message: message.slice(0, 1000), editedAt: new Date() }).where(eq(founderMessages.id, id)).returning();
+      res.json(updated);
+    } catch { res.status(500).json({ message: "Failed to edit" }); }
+  });
+
+  app.get('/api/city-chat/:city', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    const isFlexPlus = user?.subscription === "flex_hop" || user?.subscription === "power_hop" || user?.isFounder || user?.isAdmin;
+    if (!isFlexPlus) return res.status(403).json({ message: "FlexHop+ required" });
+    try {
+      const city = decodeURIComponent(req.params.city).trim();
+      if (!city) return res.status(400).json({ message: "City required" });
+      const messages = await db
+        .select({
+          id: cityMessages.id,
+          userId: cityMessages.userId,
+          username: users.username,
+          message: cityMessages.message,
+          isAdminReply: cityMessages.isAdminReply,
+          reactions: cityMessages.reactions,
+          editedAt: cityMessages.editedAt,
+          createdAt: cityMessages.createdAt,
+        })
+        .from(cityMessages)
+        .innerJoin(users, eq(cityMessages.userId, users.id))
+        .where(eq(cityMessages.city, city))
+        .orderBy(desc(cityMessages.createdAt))
+        .limit(100);
+      res.json(messages);
+    } catch (err) {
+      console.error("City chat GET error:", err);
+      res.status(500).json({ message: "Failed to get messages" });
+    }
+  });
+
+  app.post('/api/city-chat/:city', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    const isFlexPlus = user?.subscription === "flex_hop" || user?.subscription === "power_hop" || user?.isFounder || user?.isAdmin;
+    if (!isFlexPlus) return res.status(403).json({ message: "FlexHop+ required" });
+    try {
+      const city = decodeURIComponent(req.params.city).trim();
+      if (!city) return res.status(400).json({ message: "City required" });
+      const { message } = req.body;
+      if (!message) return res.status(400).json({ message: "Message required" });
+      const userLang = user!.language || "en";
+      let storedMessage = message;
+      if (userLang !== "en") {
+        const translated = await translateText(message, userLang, "en");
+        storedMessage = `${message}\n\n🌐 [EN]: ${translated}`;
+      }
+      const [msg] = await db.insert(cityMessages).values({
+        userId: req.user.id,
+        city,
+        message: storedMessage,
+        isAdminReply: req.user.isAdmin || false,
+      }).returning();
+      res.json(msg);
+    } catch (err) {
+      console.error("City chat POST error:", err);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  app.post('/api/city-chat/:city/:id/react', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    const isFlexPlus = user?.subscription === "flex_hop" || user?.subscription === "power_hop" || user?.isFounder || user?.isAdmin;
+    if (!isFlexPlus) return res.status(403).json({ message: "FlexHop+ required" });
+    try {
+      const city = decodeURIComponent(req.params.city).trim();
+      const reaction = req.body.reaction || req.body.emoji;
+      if (!["👍", "❤️", "😢", "😮", "😡"].includes(reaction)) return res.status(400).json({ message: "Invalid reaction" });
+      const id = Number(req.params.id);
+      const [msg] = await db.select().from(cityMessages).where(eq(cityMessages.id, id));
+      if (!msg) return res.status(404).json({ message: "Not found" });
+      if (msg.city !== city) return res.status(403).json({ message: "City mismatch" });
+      const currentReactions = (msg.reactions as Record<string, number>) || {};
+      currentReactions[reaction] = (currentReactions[reaction] || 0) + 1;
+      const [updated] = await db.update(cityMessages).set({ reactions: currentReactions }).where(eq(cityMessages.id, id)).returning();
+      res.json(updated);
+    } catch { res.status(500).json({ message: "Failed to react" }); }
+  });
+
+  app.patch('/api/city-chat/:city/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    const isFlexPlus = user?.subscription === "flex_hop" || user?.subscription === "power_hop" || user?.isFounder || user?.isAdmin;
+    if (!isFlexPlus) return res.status(403).json({ message: "FlexHop+ required" });
+    try {
+      const city = decodeURIComponent(req.params.city).trim();
+      const id = Number(req.params.id);
+      const { message } = req.body;
+      if (!message || typeof message !== "string") return res.status(400).json({ message: "Message required" });
+      const [msg] = await db.select().from(cityMessages).where(eq(cityMessages.id, id));
+      if (!msg || msg.userId !== req.user.id) return res.status(403).json({ message: "Cannot edit" });
+      if (msg.city !== city) return res.status(403).json({ message: "City mismatch" });
+      const [updated] = await db.update(cityMessages).set({ message: message.slice(0, 1000), editedAt: new Date() }).where(eq(cityMessages.id, id)).returning();
       res.json(updated);
     } catch { res.status(500).json({ message: "Failed to edit" }); }
   });
