@@ -5618,33 +5618,13 @@ export async function registerRoutes(
 
   startMatchingCycle();
 
-  app.get('/api/download-project', async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
-    const u = await storage.getUser(req.user.id);
-    if (!u?.isAdmin) return res.status(403).json({ message: "Admin only" });
-    try {
-      const archiver = (await import('archiver')).default;
-      const path = await import('path');
-      const fs = await import('fs');
-      const projectRoot = '/home/runner/workspace';
-      const exclude = new Set(['node_modules', '.git', '.cache', '.local', '.config', '.upm', 'tmp']);
-
-      res.setHeader('Content-Disposition', 'attachment; filename=shorthop-code.zip');
-      res.setHeader('Content-Type', 'application/zip');
-
-      const archive = archiver('zip', { zlib: { level: 5 } });
-      archive.on('error', (err: Error) => { res.status(500).end(); });
-      archive.pipe(res);
-      archive.glob('**/*', {
-        cwd: projectRoot,
-        ignore: ['node_modules/**', '.git/**', '.cache/**', '.local/**', '.config/**', '.upm/**', '*.lock', 'tmp/**'],
-        dot: true,
-      });
-      await archive.finalize();
-    } catch (err) {
-      console.error("Zip download error:", err);
-      if (!res.headersSent) res.status(500).json({ message: "Failed to generate download" });
-    }
+  app.get('/download', async (req, res) => {
+    const fs = await import('fs');
+    const filePath = '/home/runner/workspace/client/public/shorthop-source.tar.gz';
+    if (!fs.existsSync(filePath)) return res.status(404).json({ message: "Archive not found" });
+    res.setHeader('Content-Disposition', 'attachment; filename=shorthop-source.tar.gz');
+    res.setHeader('Content-Type', 'application/gzip');
+    fs.createReadStream(filePath).pipe(res);
   });
 
   return httpServer;
