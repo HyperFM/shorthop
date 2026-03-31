@@ -362,13 +362,13 @@ function scoreHopMatchForDriver(
   if (hop.departureTime) {
     const depTime = new Date(hop.departureTime).getTime();
     const nowMs = now.getTime();
-    if (depTime > nowMs) {
-      console.log(`${tag} FAIL: departure not yet (departs in ${Math.round((depTime - nowMs) / 60000)}min)`);
+    const diff = depTime - nowMs;
+    if (diff > MAX_TIME_DIFF_MS) {
+      console.log(`${tag} FAIL: departure too far in future (${Math.round(diff / 60000)}min away)`);
       return fail;
     }
-    const pastDiff = nowMs - depTime;
-    if (pastDiff > MAX_TIME_DIFF_MS) {
-      console.log(`${tag} FAIL: departure window expired (${Math.round(pastDiff / 60000)}min ago)`);
+    if (-diff > MAX_TIME_DIFF_MS) {
+      console.log(`${tag} FAIL: departure window expired (${Math.round(-diff / 60000)}min ago)`);
       return fail;
     }
   }
@@ -442,8 +442,8 @@ function scoreHopMatchForDriver(
     if (dirAngleDiff > Math.PI) dirAngleDiff = 2 * Math.PI - dirAngleDiff;
     console.log(`${tag} Route "${route.name}": ${routePoints.map(p => `(${p[0].toFixed(4)},${p[1].toFixed(4)})`).join('→')} | hopDir=${(hopBearing * 180 / Math.PI).toFixed(0)}° routeDir=${(routeBearing * 180 / Math.PI).toFixed(0)}° diff=${(dirAngleDiff * 180 / Math.PI).toFixed(0)}°`);
 
-    if (dirAngleDiff > Math.PI / 2) {
-      console.log(`${tag}   SKIP: rider traveling opposite direction (${(dirAngleDiff * 180 / Math.PI).toFixed(0)}° > 90°)`);
+    if (dirAngleDiff > MAX_DIRECTION_ANGLE) {
+      console.log(`${tag}   SKIP: rider traveling opposite direction (${(dirAngleDiff * 180 / Math.PI).toFixed(0)}° > ${(MAX_DIRECTION_ANGLE * 180 / Math.PI).toFixed(0)}°)`);
       continue;
     }
 
@@ -509,6 +509,7 @@ function scoreHopMatchForDriver(
 }
 
 const pendingAdditionalHops: Map<number, { hopId: number; driverId: number; hopperDest: string; createdAt: number }> = new Map();
+const stillSearchingNotified: Set<number> = new Set();
 
 async function executeMatch(hopId: number, driverId: number, isStar: boolean, hop: any) {
   const matched = await storage.acceptHop(hopId, driverId);
@@ -586,9 +587,10 @@ async function runMatchingCycle() {
     const BACKGROUND_NOTIFY_MS = 5 * 60 * 1000;
     const now = Date.now();
     for (const hop of allAvailable) {
-      if (hop.status === "requested" && hop.createdAt) {
+      if (hop.status === "requested" && hop.createdAt && !stillSearchingNotified.has(hop.id)) {
         const hopAge = now - new Date(hop.createdAt).getTime();
-        if (hopAge >= BACKGROUND_NOTIFY_MS && hopAge < BACKGROUND_NOTIFY_MS + MATCH_CYCLE_INTERVAL_MS + 1000) {
+        if (hopAge >= BACKGROUND_NOTIFY_MS) {
+          stillSearchingNotified.add(hop.id);
           await storage.createNotification({
             userId: hop.walkerId,
             type: "search_update",
@@ -598,6 +600,8 @@ async function runMatchingCycle() {
           });
           console.log(`[MATCH] 5-min background search notification sent to user${hop.walkerId} for hop${hop.id}`);
         }
+      } else if (hop.status !== "requested") {
+        stillSearchingNotified.delete(hop.id);
       }
     }
 
