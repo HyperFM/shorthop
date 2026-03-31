@@ -13,6 +13,8 @@ import { translateText, getLanguages } from "./translate";
 import { db } from "./db";
 import { notifications, founderMessages, vipMessages, cityMessages, shortHops, users, donations, routineRoutes, spontaneousStops, contactMessages, cashoutRequests } from "@shared/schema";
 import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
+import fs from "fs";
+import path from "path";
 import { filterMessage } from "./contentFilter";
 
 function sanitizeUser(user: any) {
@@ -5618,13 +5620,14 @@ export async function registerRoutes(
 
   startMatchingCycle();
 
-  app.get('/api/source-code', (req, res) => {
-    const filePath = '/home/runner/workspace/client/public/shorthop-source.tar.gz';
-    const fs = require('fs');
+  app.get('/api/download/source', (req, res) => {
+    const filePath = path.resolve('/home/runner/workspace/client/public/shorthop-source.tar.gz');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Archive not found' });
-    res.download(filePath, 'shorthop-source.tar.gz', (err) => {
-      if (err && !res.headersSent) res.status(500).json({ error: 'Download failed' });
-    });
+    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Disposition', 'attachment; filename=shorthop-source.tar.gz');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    const stream = fs.createReadStream(filePath);
+    stream.pipe(res);
   });
 
   return httpServer;
