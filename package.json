@@ -43,6 +43,7 @@
     "@replit/connectors-sdk": "^0.2.0",
     "@tanstack/react-query": "^5.60.5",
     "@types/leaflet": "^1.9.21",
+    "archiver": "^7.0.1",
     "bad-words": "^4.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
