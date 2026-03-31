@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award, FileText, Save, Copy, Check } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award, FileText, Save, Copy, Check, Download, Code } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -126,7 +126,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors" | "policies" | "verify" | "refunds";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors" | "policies" | "verify" | "refunds" | "source";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
@@ -372,6 +372,7 @@ export default function Admin() {
     { key: "verify", label: "Verify ID", icon: Shield, badge: idVerifications?.length || 0 },
     { key: "policies", label: "Policies", icon: FileText },
     { key: "refunds", label: "Refunds", icon: DollarSign },
+    { key: "source", label: "Source", icon: Code },
   ];
 
   return (
@@ -1376,6 +1377,53 @@ export default function Admin() {
               </Card>
             ))
           )}
+        </div>
+      )}
+
+      {tab === "source" && (
+        <div className="space-y-3" data-testid="admin-source-section">
+          <h2 className="text-base font-bold text-foreground">Source Code</h2>
+          <Card className="border-border/50">
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                  <Code className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">ShortHop Full Source</p>
+                  <p className="text-[10px] text-muted-foreground">Complete project archive (.tar.gz)</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Download the full ShortHop source code including frontend, backend, database schema, and all configurations.
+              </p>
+              <Button
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm h-11 rounded-xl"
+                onClick={async () => {
+                  try {
+                    showFlash("⏳", "Preparing download...", "info");
+                    const res = await fetch("/api/download/source");
+                    if (!res.ok) throw new Error("Download failed");
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "shorthop-source.tar.gz";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showFlash("✅", "Download started!", "success");
+                  } catch {
+                    showFlash("❌", "Download failed", "error");
+                  }
+                }}
+                data-testid="button-download-source"
+              >
+                <Download className="w-4 h-4 mr-2" /> Download Source Code
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

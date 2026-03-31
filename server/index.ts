@@ -9,16 +9,6 @@ const app = express();
 app.use("/uploads", express.static("server/uploads"));
 app.set('trust proxy', 1);
 
-import fsNode from "fs";
-import pathNode from "path";
-app.get('/api/download/source', (_req, res) => {
-  const filePath = pathNode.resolve('/home/runner/workspace/client/public/shorthop-source.tar.gz');
-  if (!fsNode.existsSync(filePath)) return res.status(404).json({ error: 'Archive not found' });
-  res.setHeader('Content-Type', 'application/gzip');
-  res.setHeader('Content-Disposition', 'attachment; filename=shorthop-source.tar.gz');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  fsNode.createReadStream(filePath).pipe(res);
-});
 const httpServer = createServer(app);
 
 declare module "http" {

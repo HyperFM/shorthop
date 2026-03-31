@@ -3286,6 +3286,15 @@ export async function registerRoutes(
     next();
   };
 
+  app.get('/api/download/source', requireAdmin, (_req, res) => {
+    const filePath = path.resolve(process.cwd(), 'client/public/shorthop-source.tar.gz');
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Archive not found' });
+    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Disposition', 'attachment; filename=shorthop-source.tar.gz');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    fs.createReadStream(filePath).pipe(res);
+  });
+
   app.post('/api/admin/force-cancel-hop/:id', requireAdmin, async (req, res) => {
     try {
       const hopId = Number(req.params.id);
@@ -5619,16 +5628,6 @@ export async function registerRoutes(
   }, 3600000);
 
   startMatchingCycle();
-
-  app.get('/api/download/source', (req, res) => {
-    const filePath = path.resolve('/home/runner/workspace/client/public/shorthop-source.tar.gz');
-    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Archive not found' });
-    res.setHeader('Content-Type', 'application/gzip');
-    res.setHeader('Content-Disposition', 'attachment; filename=shorthop-source.tar.gz');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    const stream = fs.createReadStream(filePath);
-    stream.pipe(res);
-  });
 
   return httpServer;
 }
