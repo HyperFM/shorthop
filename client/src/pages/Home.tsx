@@ -210,14 +210,14 @@ export default function Home() {
       </div>
 
       <section className="relative pt-16 pb-20 overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-          <img src={heroImg} alt="Background" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/30 to-background" />
+        <div className="absolute inset-0 z-0 opacity-50 pointer-events-none">
+          <img src={heroImg} alt="Background" className="w-full h-full object-cover contrast-[1.15] saturate-[1.2]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/20 to-background" />
         </div>
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full opacity-[0.08]" style={{ background: 'radial-gradient(circle, #E8651A 0%, transparent 70%)' }} />
-          <div className="absolute top-1/3 -right-16 w-64 h-64 rounded-full opacity-[0.06]" style={{ background: 'radial-gradient(circle, #4CAF50 0%, transparent 70%)' }} />
-          <div className="absolute bottom-10 left-1/4 w-56 h-56 rounded-full opacity-[0.07]" style={{ background: 'radial-gradient(circle, #F5A623 0%, transparent 70%)' }} />
+          <div className="absolute -top-20 -left-20 w-96 h-96 rounded-full opacity-[0.18] animate-pulse" style={{ background: 'radial-gradient(circle, #E8651A 0%, transparent 70%)', animationDuration: '4s' }} />
+          <div className="absolute top-1/3 -right-16 w-80 h-80 rounded-full opacity-[0.14] animate-pulse" style={{ background: 'radial-gradient(circle, #4CAF50 0%, transparent 70%)', animationDuration: '5s' }} />
+          <div className="absolute bottom-10 left-1/4 w-72 h-72 rounded-full opacity-[0.15] animate-pulse" style={{ background: 'radial-gradient(circle, #F5A623 0%, transparent 70%)', animationDuration: '6s' }} />
         </div>
 
         <div className="container mx-auto px-4 max-w-3xl relative z-10">
@@ -226,11 +226,12 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-primary/10 text-primary font-medium text-sm border border-primary/20"
+              className="inline-flex items-center justify-center px-5 py-2 rounded-full bg-primary/15 text-primary font-bold text-sm border-2 border-primary/40 shadow-sm"
+              style={{ textShadow: '0 0 8px rgba(232, 101, 26, 0.3)' }}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               {lang === "en" ? (
-                <GlowText text="Move Forward with ShortHop" glowIndices={[0, 2, 4, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, 26]} />
+                <GlowText text="Your daily commute, reimagined" glowIndices={[0, 2, 4, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29]} />
               ) : t(lang, "tagline")}
             </motion.div>
 
@@ -239,6 +240,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
               className="text-xl md:text-2xl font-bold text-foreground"
+              style={{ textShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
             >
               {lang === "en" ? (
                 <GlowText text="Affordable. Simple. Social." glowIndices={[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26]} />
@@ -249,7 +251,8 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="space-y-4 text-base text-muted-foreground leading-relaxed"
+              className="space-y-4 text-base text-foreground/80 leading-relaxed"
+              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
             >
               <p>{t(lang, "description")}</p>
               <div className="pt-4 space-y-1">
@@ -274,7 +277,7 @@ export default function Home() {
             >
               <Link href="/auth?tab=register">
                 <motion.div whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.97 }}>
-                  <Button size="lg" className="w-full sm:w-auto text-lg rounded-full px-8 bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-lg shadow-primary/30 transition-all" data-testid="button-get-started">
+                  <Button size="lg" className="w-full sm:w-auto text-xl font-bold rounded-full px-10 py-6 bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 hover:from-green-600 hover:via-emerald-600 hover:to-green-700 text-white shadow-xl shadow-green-500/40 transition-all" data-testid="button-get-started">
                     {t(lang, "get_started")}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
