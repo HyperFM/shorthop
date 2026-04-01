@@ -965,9 +965,9 @@ function FriendRequestsTab({ user }: { user: any }) {
                 <CardContent className="p-3 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
                     {r.profilePhoto ? (
-                      <img src={r.profilePhoto} alt={r.username} className="w-full h-full object-cover" />
+                      <img src={r.profilePhoto} alt={r.username || "User"} className="w-full h-full object-cover" />
                     ) : (
-                      r.username[0].toUpperCase()
+                      (r.username && r.username.length > 0 ? r.username[0].toUpperCase() : "?")
                     )}
                   </div>
                   <div className="flex-1">
@@ -1021,9 +1021,9 @@ function FriendRequestsTab({ user }: { user: any }) {
                 <CardContent className="p-3 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
                     {f.profilePhoto ? (
-                      <img src={f.profilePhoto} alt={f.username} className="w-full h-full object-cover" />
+                      <img src={f.profilePhoto} alt={f.username || "User"} className="w-full h-full object-cover" />
                     ) : (
-                      f.username[0].toUpperCase()
+                      (f.username && f.username.length > 0 ? f.username[0].toUpperCase() : "?")
                     )}
                   </div>
                   <p className="text-sm font-semibold flex-1" data-testid={`friend-username-${f.friendId}`}>{f.username}</p>
@@ -1274,7 +1274,7 @@ export default function Community() {
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-bold shrink-0 mt-1">
-                {user.username[0].toUpperCase()}
+                {(user.username && user.username.length > 0 ? user.username[0].toUpperCase() : "?")}
               </div>
               <div className="flex-1 space-y-3">
                 <Textarea
@@ -1338,7 +1338,7 @@ export default function Community() {
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-sm font-bold shrink-0">
-                    {post.username[0].toUpperCase()}
+                    {(post.username && post.username.length > 0 ? post.username[0].toUpperCase() : "?")}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
