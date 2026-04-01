@@ -1396,6 +1396,31 @@ export default function Admin() {
               </div>
               <div className="space-y-2">
                 <Button
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm h-11 rounded-xl"
+                  onClick={async () => {
+                    try {
+                      showFlash("⏳", "Preparing source code download...", "info");
+                      const res = await fetch("/api/download/source");
+                      if (!res.ok) throw new Error("Download failed");
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "shorthop-source.tar.gz";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      showFlash("✅", "Source code download started!", "success");
+                    } catch {
+                      showFlash("❌", "Source code download failed", "error");
+                    }
+                  }}
+                  data-testid="button-download-source"
+                >
+                  <Download className="w-4 h-4 mr-2" /> Complete Source Code
+                </Button>
+                <Button
                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm h-11 rounded-xl"
                   onClick={async () => {
                     try {
