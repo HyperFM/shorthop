@@ -1,1 +1,2 @@
 client/public/ShortHop-iOS.ipa filter=lfs diff=lfs merge=lfs -text
+client/public/ShortHop-Android.aab filter=lfs diff=lfs merge=lfs -text

@@ -1422,7 +1422,7 @@ export default function Admin() {
               >
                 <Download className="w-4 h-4 mr-2" /> Download Source Code
               </Button>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Button
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs h-10 rounded-lg"
                   onClick={async () => {
@@ -1473,6 +1473,31 @@ export default function Admin() {
                 >
                   <Download className="w-3 h-3 mr-1" /> iOS
                 </Button>
+                <Button
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-xs h-10 rounded-lg"
+                  onClick={async () => {
+                    try {
+                      showFlash("⏳", "Preparing Android download...", "info");
+                      const res = await fetch("/api/download/aab");
+                      if (!res.ok) throw new Error("Download failed");
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "ShortHop-Android.aab";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      showFlash("✅", "Android download started!", "success");
+                    } catch {
+                      showFlash("❌", "Android download failed", "error");
+                    }
+                  }}
+                  data-testid="button-download-aab"
+                >
+                  <Download className="w-3 h-3 mr-1" /> Android
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -1484,6 +1509,7 @@ export default function Admin() {
               <div className="text-[10px] text-slate-700 space-y-1">
                 <p><strong>Windows:</strong> MSIX for Microsoft Store distribution (Windows 10+)</p>
                 <p><strong>iOS:</strong> IPA for App Store submission (requires code signing)</p>
+                <p><strong>Android:</strong> AAB for Google Play Store submission (requires signing)</p>
               </div>
             </CardContent>
           </Card>
