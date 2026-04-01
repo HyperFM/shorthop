@@ -1434,7 +1434,7 @@ export default function Admin() {
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
-                      a.download = "ShortHop-Microsoft-Store.tar.gz";
+                      a.download = "ShortHop-Microsoft-Store.msix";
                       document.body.appendChild(a);
                       a.click();
                       document.body.removeChild(a);

@@ -3296,10 +3296,10 @@ export async function registerRoutes(
   });
 
   app.get('/api/download/msix', requireAdmin, (_req, res) => {
-    const filePath = path.resolve(process.cwd(), 'client/public/ShortHop-Microsoft-Store.tar.gz');
+    const filePath = path.resolve(process.cwd(), 'client/public/ShortHop-Microsoft-Store.msix');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'MSIX package not found' });
-    res.setHeader('Content-Type', 'application/gzip');
-    res.setHeader('Content-Disposition', 'attachment; filename=ShortHop-Microsoft-Store.tar.gz');
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename=ShortHop-Microsoft-Store.msix');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     fs.createReadStream(filePath).pipe(res);
   });
@@ -3307,7 +3307,7 @@ export async function registerRoutes(
   app.get('/api/download/ipa', requireAdmin, (_req, res) => {
     const filePath = path.resolve(process.cwd(), 'client/public/ShortHop-iOS.ipa');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'IPA package not found' });
-    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', 'attachment; filename=ShortHop-iOS.ipa');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     fs.createReadStream(filePath).pipe(res);
@@ -3316,7 +3316,7 @@ export async function registerRoutes(
   app.get('/api/download/aab', requireAdmin, (_req, res) => {
     const filePath = path.resolve(process.cwd(), 'client/public/ShortHop-Android.aab');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'AAB package not found' });
-    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', 'attachment; filename=ShortHop-Android.aab');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     fs.createReadStream(filePath).pipe(res);
