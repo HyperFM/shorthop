@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award, FileText, Save, Copy, Check, Download, Code } from "lucide-react";
+import { Loader2, Users, Car, Shield, Activity, Send, CheckCircle, XCircle, Ban, Eye, Mail, AlertTriangle, Trash2, MessageSquare, UserCog, Crown, Star, ArrowLeft, Gift, DollarSign, Building2, CreditCard, Search, Languages, MoreHorizontal, Award, FileText, Save, Copy, Check, Download } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
@@ -372,7 +372,7 @@ export default function Admin() {
     { key: "verify", label: "Verify ID", icon: Shield, badge: idVerifications?.length || 0 },
     { key: "policies", label: "Policies", icon: FileText },
     { key: "refunds", label: "Refunds", icon: DollarSign },
-    { key: "source", label: "Source", icon: Code },
+    { key: "source", label: "Downloads", icon: Download },
   ];
 
   return (
@@ -1382,52 +1382,24 @@ export default function Admin() {
 
       {tab === "source" && (
         <div className="space-y-3" data-testid="admin-source-section">
-          <h2 className="text-base font-bold text-foreground">Source Code</h2>
+          <h2 className="text-base font-bold text-foreground">Platform Downloads</h2>
           <Card className="border-border/50">
             <CardContent className="p-4 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                  <Code className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                  <Download className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-foreground">ShortHop Full Source</p>
-                  <p className="text-[10px] text-muted-foreground">Complete project archive (.tar.gz)</p>
+                  <p className="text-sm font-bold text-foreground">ShortHop App Packages</p>
+                  <p className="text-[10px] text-muted-foreground">Latest stable build for all platforms</p>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Download the full ShortHop source code including frontend, backend, database schema, and all configurations.
-              </p>
-              <Button
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm h-11 rounded-xl"
-                onClick={async () => {
-                  try {
-                    showFlash("⏳", "Preparing download...", "info");
-                    const res = await fetch("/api/download/source");
-                    if (!res.ok) throw new Error("Download failed");
-                    const blob = await res.blob();
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "shorthop-source.tar.gz";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    showFlash("✅", "Download started!", "success");
-                  } catch {
-                    showFlash("❌", "Download failed", "error");
-                  }
-                }}
-                data-testid="button-download-source"
-              >
-                <Download className="w-4 h-4 mr-2" /> Download Source Code
-              </Button>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-2">
                 <Button
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs h-10 rounded-lg"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm h-11 rounded-xl"
                   onClick={async () => {
                     try {
-                      showFlash("⏳", "Preparing MSIX download...", "info");
+                      showFlash("⏳", "Preparing Windows download...", "info");
                       const res = await fetch("/api/download/msix");
                       if (!res.ok) throw new Error("Download failed");
                       const blob = await res.blob();
@@ -1439,17 +1411,17 @@ export default function Admin() {
                       a.click();
                       document.body.removeChild(a);
                       URL.revokeObjectURL(url);
-                      showFlash("✅", "MSIX download started!", "success");
+                      showFlash("✅", "Windows download started!", "success");
                     } catch {
-                      showFlash("❌", "MSIX download failed", "error");
+                      showFlash("❌", "Windows download failed", "error");
                     }
                   }}
                   data-testid="button-download-msix"
                 >
-                  <Download className="w-3 h-3 mr-1" /> Windows
+                  <Download className="w-4 h-4 mr-2" /> Windows MSIX
                 </Button>
                 <Button
-                  className="bg-gradient-to-r from-black to-gray-800 hover:from-gray-900 hover:to-black text-white font-bold text-xs h-10 rounded-lg"
+                  className="w-full bg-gradient-to-r from-black to-gray-800 hover:from-gray-900 hover:to-black text-white font-bold text-sm h-11 rounded-xl"
                   onClick={async () => {
                     try {
                       showFlash("⏳", "Preparing iOS download...", "info");
@@ -1471,10 +1443,10 @@ export default function Admin() {
                   }}
                   data-testid="button-download-ipa"
                 >
-                  <Download className="w-3 h-3 mr-1" /> iOS
+                  <Download className="w-4 h-4 mr-2" /> iOS IPA
                 </Button>
                 <Button
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-xs h-10 rounded-lg"
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-sm h-11 rounded-xl"
                   onClick={async () => {
                     try {
                       showFlash("⏳", "Preparing Android download...", "info");
@@ -1496,7 +1468,7 @@ export default function Admin() {
                   }}
                   data-testid="button-download-aab"
                 >
-                  <Download className="w-3 h-3 mr-1" /> Android
+                  <Download className="w-4 h-4 mr-2" /> Android AAB
                 </Button>
               </div>
             </CardContent>

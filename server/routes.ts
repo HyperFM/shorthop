@@ -3286,15 +3286,6 @@ export async function registerRoutes(
     next();
   };
 
-  app.get('/api/download/source', requireAdmin, (_req, res) => {
-    const filePath = path.resolve(process.cwd(), 'client/public/shorthop-source.tar.gz');
-    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Archive not found' });
-    res.setHeader('Content-Type', 'application/gzip');
-    res.setHeader('Content-Disposition', 'attachment; filename=shorthop-source.tar.gz');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    fs.createReadStream(filePath).pipe(res);
-  });
-
   app.get('/api/download/msix', requireAdmin, (_req, res) => {
     const filePath = path.resolve(process.cwd(), 'client/public/ShortHop-Microsoft-Store.msix');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'MSIX package not found' });
