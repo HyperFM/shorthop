@@ -684,9 +684,9 @@ function CommunityProfiles({ user, onOpenDM }: { user: any; onOpenDM?: (target: 
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-sm font-bold shrink-0 overflow-hidden">
                   {p.profilePhoto ? (
-                    <img src={p.profilePhoto} alt={p.username} className="w-full h-full object-cover" />
+                    <img src={p.profilePhoto} alt={p.username || "User"} className="w-full h-full object-cover" />
                   ) : (
-                    p.username[0].toUpperCase()
+                    (p.username && p.username.length > 0 ? p.username[0].toUpperCase() : "?")
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
