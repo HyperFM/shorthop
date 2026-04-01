@@ -3304,6 +3304,15 @@ export async function registerRoutes(
     fs.createReadStream(filePath).pipe(res);
   });
 
+  app.get('/api/download/ipa', requireAdmin, (_req, res) => {
+    const filePath = path.resolve(process.cwd(), 'client/public/ShortHop-iOS.ipa');
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'IPA package not found' });
+    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Disposition', 'attachment; filename=ShortHop-iOS.ipa');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    fs.createReadStream(filePath).pipe(res);
+  });
+
   app.post('/api/admin/force-cancel-hop/:id', requireAdmin, async (req, res) => {
     try {
       const hopId = Number(req.params.id);
