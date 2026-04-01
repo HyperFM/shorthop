@@ -3295,6 +3295,15 @@ export async function registerRoutes(
     fs.createReadStream(filePath).pipe(res);
   });
 
+  app.get('/api/download/msix', requireAdmin, (_req, res) => {
+    const filePath = path.resolve(process.cwd(), 'client/public/ShortHop-Microsoft-Store.tar.gz');
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'MSIX package not found' });
+    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Disposition', 'attachment; filename=ShortHop-Microsoft-Store.tar.gz');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    fs.createReadStream(filePath).pipe(res);
+  });
+
   app.post('/api/admin/force-cancel-hop/:id', requireAdmin, async (req, res) => {
     try {
       const hopId = Number(req.params.id);

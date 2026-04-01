@@ -1422,6 +1422,37 @@ export default function Admin() {
               >
                 <Download className="w-4 h-4 mr-2" /> Download Source Code
               </Button>
+              <Button
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm h-11 rounded-xl mt-2"
+                onClick={async () => {
+                  try {
+                    showFlash("⏳", "Preparing MSIX download...", "info");
+                    const res = await fetch("/api/download/msix");
+                    if (!res.ok) throw new Error("Download failed");
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "ShortHop-Microsoft-Store.tar.gz";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showFlash("✅", "MSIX download started!", "success");
+                  } catch {
+                    showFlash("❌", "MSIX download failed", "error");
+                  }
+                }}
+                data-testid="button-download-msix"
+              >
+                <Download className="w-4 h-4 mr-2" /> Download Microsoft Store Version
+              </Button>
+            </CardContent>
+          </Card>
+          <Card className="border-border/50 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardContent className="p-3">
+              <p className="text-xs text-blue-900 font-medium">💾 Microsoft Store PWA</p>
+              <p className="text-[10px] text-blue-800 mt-1">MSIX package ready for Microsoft Store distribution. Contains full app with AppxManifest for Windows 10+.</p>
             </CardContent>
           </Card>
         </div>
