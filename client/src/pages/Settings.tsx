@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Bell, Users, Globe, Sparkles, Shield, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Palette, Camera, Plus, X, Eye, EyeOff, Lock, LogOut } from "lucide-react";
 import { PROFILE_TAB_COLORS } from "@/components/BottomTabBar";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
 import { useAuth, useLogout } from "@/hooks/use-auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -515,7 +515,12 @@ export default function Settings() {
 
   return (
     <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
-      <h1 data-testid="text-settings-title" className="text-xl font-display font-bold mb-1">Profile</h1>
+      <div className="flex items-center justify-between mb-1">
+        <h1 data-testid="text-settings-title" className="text-xl font-display font-bold">Profile</h1>
+        <Link href="/artist" data-testid="link-profile-artist">
+          <img src="/artist-icon.jpg" alt="" className="w-10 h-10 rounded-full object-cover drop-shadow-md hover:scale-105 transition-transform" />
+        </Link>
+      </div>
       <p className="text-xs text-muted-foreground mb-4">Your identity and preferences.</p>
 
       <div className="space-y-6">
