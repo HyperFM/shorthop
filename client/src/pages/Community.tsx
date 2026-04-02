@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { NetworkProgress } from "@/components/NetworkProgress";
 import { ChatBubbleActions } from "@/components/ChatBubbleActions";
+import { ALL_INTERESTS } from "@/components/InterestBubbles";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
 
 function timeAgo(date: string | null): string {
@@ -883,6 +884,148 @@ function DMChat({ user, friendId, friendName, friendPhoto, onClose }: { user: an
         </form>
       </div>
     </div>
+  );
+}
+
+type FriendProfileData = {
+  id: number;
+  username: string;
+  profilePhoto: string | null;
+  bio: string | null;
+  interests: string | null;
+  profileVisibility: string | null;
+  isFounder: boolean | null;
+  founderBadge: string | null;
+  subscription: string | null;
+  totalHops: number | null;
+  friendCount: number;
+  idVerified: boolean | null;
+  language: string | null;
+  preferredRoutes: string | null;
+  favoritePlaces: string | null;
+  hopStreak: number | null;
+};
+
+function FriendCard({ friend, canSocial, onDM }: { friend: { id: number; friendId: number; username: string; profilePhoto: string | null }; canSocial: boolean; onDM: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const { data: profile, isLoading: profileLoading } = useQuery<FriendProfileData>({
+    queryKey: ["/api/user/profile", friend.friendId],
+    queryFn: async () => {
+      const res = await fetch(`/api/user/profile/${friend.friendId}`, { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: expanded,
+  });
+
+  const interestList = profile?.interests ? profile.interests.split(",").filter(Boolean) : [];
+
+  return (
+    <Card data-testid={`friend-${friend.friendId}`} className={expanded ? "shadow-md" : ""}>
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all"
+            data-testid={`button-expand-${friend.friendId}`}
+          >
+            {friend.profilePhoto ? (
+              <img src={friend.profilePhoto} alt={friend.username || "User"} className="w-full h-full object-cover" />
+            ) : (
+              (friend.username && friend.username.length > 0 ? friend.username[0].toUpperCase() : "?")
+            )}
+          </button>
+          <button onClick={() => setExpanded(!expanded)} className="text-sm font-semibold flex-1 text-left hover:text-primary transition-colors" data-testid={`friend-username-${friend.friendId}`}>
+            {friend.username}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDM(); }}
+            className="relative p-1.5 rounded-full hover:bg-primary/10 transition-colors"
+            data-testid={`button-dm-${friend.friendId}`}
+            title={canSocial ? `Message ${friend.username}` : "Upgrade to message"}
+          >
+            <MessageCircle className={`w-5 h-5 ${canSocial ? "text-primary" : "text-muted-foreground"}`} />
+            {!canSocial && <Crown className="w-2.5 h-2.5 text-amber-500 absolute -top-0.5 -right-0.5" />}
+          </button>
+          <Badge variant="secondary" className="text-[9px]">
+            <UserCheck className="w-3 h-3 mr-0.5" />
+            Friends
+          </Badge>
+        </div>
+
+        {expanded && (
+          <div className="mt-3 pt-3 border-t border-border/40 space-y-2.5" data-testid={`friend-profile-expanded-${friend.friendId}`}>
+            {profileLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : !profile ? (
+              <p className="text-xs text-muted-foreground text-center py-3">This profile is private.</p>
+            ) : (
+              <>
+                {profile.profilePhoto && (
+                  <div className="flex justify-center">
+                    <img src={profile.profilePhoto} alt={profile.username || ""} className="w-20 h-20 rounded-full object-cover shadow-md" />
+                  </div>
+                )}
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold">{profile.username}</span>
+                  {profile.idVerified && (
+                    <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0" title="ID Verified">
+                      <Shield className="w-2.5 h-2.5 text-white" />
+                    </div>
+                  )}
+                  {profile.isFounder && (
+                    <Badge className="text-[7px] bg-amber-100 text-amber-700 border-0 px-1 py-0">
+                      <Crown className="w-2.5 h-2.5 mr-0.5" />
+                      {profile.founderBadge || "Founder"}
+                    </Badge>
+                  )}
+                  {profile.profileVisibility === "semi_private" && (
+                    <EyeOff className="w-3 h-3 text-muted-foreground" />
+                  )}
+                </div>
+                {profile.bio && (
+                  <p className="text-xs text-center text-muted-foreground" data-testid={`friend-bio-${friend.friendId}`}>{profile.bio}</p>
+                )}
+                <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
+                  <span>{profile.totalHops || 0} hops</span>
+                  {profile.hopStreak != null && profile.hopStreak > 0 && <span>🔥 {profile.hopStreak} streak</span>}
+                  <span>{profile.friendCount} friends</span>
+                </div>
+                {profile.preferredRoutes && (
+                  <div className="text-center">
+                    <p className="text-[10px] font-bold text-muted-foreground mb-0.5">Preferred Routes</p>
+                    <p className="text-xs text-foreground">{profile.preferredRoutes}</p>
+                  </div>
+                )}
+                {profile.favoritePlaces && (
+                  <div className="text-center">
+                    <p className="text-[10px] font-bold text-muted-foreground mb-0.5">Favorite Places</p>
+                    <p className="text-xs text-foreground">{profile.favoritePlaces}</p>
+                  </div>
+                )}
+                {interestList.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-muted-foreground mb-1 text-center">Interests</p>
+                    <div className="flex flex-wrap gap-1 justify-center">
+                      {interestList.map(id => {
+                        const interest = ALL_INTERESTS.find(i => i.id === id);
+                        return (
+                          <span key={id} className="inline-flex items-center gap-0.5 text-[10px] rounded-full px-2 py-0.5 bg-muted/60 text-muted-foreground">
+                            {interest ? <><span>{interest.emoji}</span><span>{interest.label}</span>{(interest as any).emojiRight && <span>{(interest as any).emojiRight}</span>}</> : id}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
