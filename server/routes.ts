@@ -1787,6 +1787,19 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/user/profile/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const targetId = parseInt(req.params.id);
+      if (isNaN(targetId)) return res.status(400).json({ message: "Invalid user ID" });
+      const profile = await storage.getUserProfile(targetId, req.user.id);
+      if (!profile) return res.status(404).json({ message: "Profile not found" });
+      res.json(profile);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
   // Ratings
   app.post(api.ratings.create.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });

@@ -202,6 +202,7 @@ export interface IStorage {
   sendDM(senderId: number, receiverId: number, message: string): Promise<any>;
   getUnreadDMCount(userId: number): Promise<number>;
   getPublicProfiles(currentUserId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number; idVerified: boolean | null }[]>;
+  getUserProfile(targetUserId: number, viewerId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number; idVerified: boolean | null; language: string | null; preferredRoutes: string | null; favoritePlaces: string | null; hopStreak: number | null } | null>;
 
   getCommunityPosts(): Promise<{ id: number; userId: number; content: string; createdAt: Date | null; username: string }[]>;
   createCommunityPost(post: InsertCommunityPost): Promise<CommunityPost>;
@@ -1186,6 +1187,36 @@ export class DatabaseStorage implements IStorage {
       result.push({ ...u, friendCount: fc });
     }
     return result;
+  }
+
+  async getUserProfile(targetUserId: number, viewerId: number): Promise<{ id: number; username: string; profilePhoto: string | null; bio: string | null; interests: string | null; profileVisibility: string | null; isFounder: boolean | null; founderBadge: string | null; subscription: string | null; totalHops: number | null; friendCount: number; idVerified: boolean | null; language: string | null; preferredRoutes: string | null; favoritePlaces: string | null; hopStreak: number | null } | null> {
+    const [u] = await db.select({
+      id: users.id,
+      username: users.username,
+      profilePhoto: users.profilePhoto,
+      bio: users.bio,
+      interests: users.interests,
+      profileVisibility: users.profileVisibility,
+      isFounder: users.isFounder,
+      founderBadge: users.founderBadge,
+      subscription: users.subscription,
+      totalHops: users.totalHops,
+      idVerified: users.idVerified,
+      language: users.language,
+      preferredRoutes: users.preferredRoutes,
+      favoritePlaces: users.favoritePlaces,
+      hopStreak: users.hopStreak,
+      isDisabled: users.isDisabled,
+    }).from(users).where(eq(users.id, targetUserId));
+    if (!u || u.isDisabled) return null;
+    const isFriend = await this.areFriends(viewerId, targetUserId);
+    if (u.profileVisibility === "private" && !isFriend) return null;
+    if (u.profileVisibility === "semi_private" && !isFriend) {
+      const fc = await this.getFriendCount(u.id);
+      return { id: u.id, username: u.username, profilePhoto: u.profilePhoto, bio: null, interests: null, profileVisibility: u.profileVisibility, isFounder: u.isFounder, founderBadge: u.founderBadge, subscription: u.subscription, totalHops: null, friendCount: fc, idVerified: u.idVerified, language: null, preferredRoutes: null, favoritePlaces: null, hopStreak: null };
+    }
+    const fc = await this.getFriendCount(u.id);
+    return { id: u.id, username: u.username, profilePhoto: u.profilePhoto, bio: u.bio, interests: u.interests, profileVisibility: u.profileVisibility, isFounder: u.isFounder, founderBadge: u.founderBadge, subscription: u.subscription, totalHops: u.totalHops, friendCount: fc, idVerified: u.idVerified, language: u.language, preferredRoutes: u.preferredRoutes, favoritePlaces: u.favoritePlaces, hopStreak: u.hopStreak };
   }
 
   async getCommunityPosts(): Promise<{ id: number; userId: number; content: string; createdAt: Date | null; username: string }[]> {

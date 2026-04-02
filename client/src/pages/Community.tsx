@@ -1017,31 +1017,7 @@ function FriendRequestsTab({ user }: { user: any }) {
         ) : (
           <div className="space-y-2" data-testid="list-friends">
             {friends.map((f) => (
-              <Card key={f.id} data-testid={`friend-${f.friendId}`}>
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
-                    {f.profilePhoto ? (
-                      <img src={f.profilePhoto} alt={f.username || "User"} className="w-full h-full object-cover" />
-                    ) : (
-                      (f.username && f.username.length > 0 ? f.username[0].toUpperCase() : "?")
-                    )}
-                  </div>
-                  <p className="text-sm font-semibold flex-1" data-testid={`friend-username-${f.friendId}`}>{f.username}</p>
-                  <button
-                    onClick={() => canSocial ? setDmTarget({ id: f.friendId, username: f.username, profilePhoto: f.profilePhoto }) : setShowUpgrade(true)}
-                    className="relative p-1.5 rounded-full hover:bg-primary/10 transition-colors"
-                    data-testid={`button-dm-${f.friendId}`}
-                    title={canSocial ? `Message ${f.username}` : "Upgrade to message"}
-                  >
-                    <MessageCircle className={`w-5 h-5 ${canSocial ? "text-primary" : "text-muted-foreground"}`} />
-                    {!canSocial && <Crown className="w-2.5 h-2.5 text-amber-500 absolute -top-0.5 -right-0.5" />}
-                  </button>
-                  <Badge variant="secondary" className="text-[9px]">
-                    <UserCheck className="w-3 h-3 mr-0.5" />
-                    Friends
-                  </Badge>
-                </CardContent>
-              </Card>
+              <FriendCard key={f.id} friend={f} canSocial={canSocial} onDM={() => canSocial ? setDmTarget({ id: f.friendId, username: f.username, profilePhoto: f.profilePhoto }) : setShowUpgrade(true)} />
             ))}
           </div>
         )}
