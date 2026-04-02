@@ -1099,59 +1099,11 @@ function FriendRequestsTab({ user }: { user: any }) {
           </CardContent>
         </Card>
       )}
-      {requests.length > 0 && (
-        <div>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Pending Requests</p>
-          <div className="space-y-2" data-testid="list-friend-requests">
-            {requests.map((r) => (
-              <Card key={r.id} data-testid={`friend-request-${r.id}`}>
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
-                    {r.profilePhoto ? (
-                      <img src={r.profilePhoto} alt={r.username || "User"} className="w-full h-full object-cover" />
-                    ) : (
-                      (r.username && r.username.length > 0 ? r.username[0].toUpperCase() : "?")
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold" data-testid={`request-username-${r.id}`}>{r.username}</p>
-                    <p className="text-[10px] text-muted-foreground">{timeAgo(r.createdAt)}</p>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <Button
-                      size="sm"
-                      className="h-8 px-3 bg-green-500 hover:bg-green-600 text-white text-xs"
-                      onClick={() => respond.mutate({ id: r.id, accept: true })}
-                      disabled={respond.isPending}
-                      data-testid={`button-accept-${r.id}`}
-                    >
-                      <UserCheck className="w-3.5 h-3.5 mr-1" />
-                      Accept
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-3 text-xs"
-                      onClick={() => respond.mutate({ id: r.id, accept: false })}
-                      disabled={respond.isPending}
-                      data-testid={`button-decline-${r.id}`}
-                    >
-                      <UserX className="w-3.5 h-3.5 mr-1" />
-                      Decline
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div>
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
-          My Friends ({friends.length})
+          Friends ({friends.length + requests.length})
         </p>
-        {friends.length === 0 ? (
+        {friends.length === 0 && requests.length === 0 ? (
           <div className="text-center py-8">
             <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">No friends yet</p>
@@ -1159,6 +1111,48 @@ function FriendRequestsTab({ user }: { user: any }) {
           </div>
         ) : (
           <div className="space-y-2" data-testid="list-friends">
+            {requests.map((r) => (
+              <Card key={`req-${r.id}`} data-testid={`friend-request-${r.id}`} className="border-primary/20">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden">
+                      {r.profilePhoto ? (
+                        <img src={r.profilePhoto} alt={r.username || "User"} className="w-full h-full object-cover" />
+                      ) : (
+                        (r.username && r.username.length > 0 ? r.username[0].toUpperCase() : "?")
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold" data-testid={`request-username-${r.id}`}>{r.username}</p>
+                      <p className="text-[10px] text-muted-foreground">{timeAgo(r.createdAt)}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        className="h-7 px-2.5 bg-green-500 hover:bg-green-600 text-white text-[10px]"
+                        onClick={() => respond.mutate({ id: r.id, accept: true })}
+                        disabled={respond.isPending}
+                        data-testid={`button-accept-${r.id}`}
+                      >
+                        <UserCheck className="w-3 h-3 mr-0.5" />
+                        Accept
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2.5 text-[10px]"
+                        onClick={() => respond.mutate({ id: r.id, accept: false })}
+                        disabled={respond.isPending}
+                        data-testid={`button-decline-${r.id}`}
+                      >
+                        <UserX className="w-3 h-3 mr-0.5" />
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
             {friends.map((f) => (
               <FriendCard key={f.id} friend={f} canSocial={canSocial} onDM={() => canSocial ? setDmTarget({ id: f.friendId, username: f.username, profilePhoto: f.profilePhoto }) : setShowUpgrade(true)} />
             ))}
