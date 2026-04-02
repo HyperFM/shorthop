@@ -46,6 +46,14 @@ for (const f of essentialFiles) {
 }
 console.log('✓ Essential web assets copied');
 
+const iconFile = path.join(publicDir, 'app-icon.png');
+if (fs.existsSync(iconFile)) {
+  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon.png'));
+  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon@2x.png'));
+  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon@3x.png'));
+  console.log('✓ App icons added to bundle');
+}
+
 if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
 
 const output = fs.createWriteStream(outputFile);
