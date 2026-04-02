@@ -64,7 +64,7 @@ export const ALL_INTERESTS = [
   { id: "uk_wildcats", label: "UK Wildcats", emoji: "🐾" },
   { id: "vinyl", label: "Vinyl", emoji: "🎶" },
   { id: "diy", label: "DIY", emoji: "🔧" },
-  { id: "hyper_fm", label: "HyperFM", emoji: "1️⃣🎸👩🏽‍🎤1️⃣" },
+  { id: "hyper_fm", label: "HyperFM", emoji: "🎸", emojiRight: "👩🏽‍🎤" },
   { id: "pole_dancing", label: "Pole Dancing", emoji: "🪩" },
   { id: "sewing", label: "Sewing", emoji: "🧶" },
   { id: "gardening", label: "Gardening", emoji: "🌻" },
@@ -120,6 +120,7 @@ export function InterestBubbles({ selected, onChange, maxSelections = 12, readOn
           >
             <span>{interest.emoji}</span>
             <span>{interest.label}</span>
+            {(interest as any).emojiRight && <span>{(interest as any).emojiRight}</span>}
             {isSelected && !readOnly && <Check className="w-3 h-3 ml-0.5" />}
           </motion.button>
         );
@@ -148,6 +149,7 @@ export function InterestTags({ interests, highlight }: { interests: string[]; hi
           >
             <span>{interest.emoji}</span>
             <span>{interest.label}</span>
+            {(interest as any).emojiRight && <span>{(interest as any).emojiRight}</span>}
           </span>
         );
       })}
