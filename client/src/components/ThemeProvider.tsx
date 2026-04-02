@@ -9,7 +9,7 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  mode: "light",
+  mode: "auto",
   setMode: () => {},
   isDark: false,
 });
@@ -47,8 +47,14 @@ function shouldBeDark(lat?: number | null, lng?: number | null): boolean {
   return currentHour < 6.5 || currentHour > 19.5;
 }
 
+const PUBLIC_PATHS = ["/", "/auth", "/privacy", "/terms", "/support", "/install", "/widget"];
+
+function isPublicPage(): boolean {
+  return PUBLIC_PATHS.includes(window.location.pathname);
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>(() => {
+  const [userMode, setUserModeState] = useState<ThemeMode>(() => {
     try {
       const saved = localStorage.getItem("sh_theme");
       if (saved === "light" || saved === "dark" || saved === "auto") return saved;
@@ -58,22 +64,36 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const [isDark, setIsDark] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [pathname, setPathname] = useState(window.location.pathname);
 
   useEffect(() => {
-    if (mode !== "auto") return;
+    const checkPath = () => setPathname(window.location.pathname);
+    window.addEventListener("popstate", checkPath);
+    const observer = new MutationObserver(checkPath);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      window.removeEventListener("popstate", checkPath);
+      observer.disconnect();
+    };
+  }, []);
+
+  const activeMode = isPublicPage() ? "auto" : userMode;
+
+  useEffect(() => {
+    if (activeMode !== "auto") return;
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => {},
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 600000 }
     );
-  }, [mode]);
+  }, [activeMode]);
 
   const applyTheme = useCallback(() => {
     let dark = false;
-    if (mode === "dark") {
+    if (activeMode === "dark") {
       dark = true;
-    } else if (mode === "auto") {
+    } else if (activeMode === "auto") {
       dark = shouldBeDark(coords?.lat, coords?.lng);
     }
     setIsDark(dark);
@@ -82,10 +102,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } else {
       document.documentElement.classList.remove("dark");
     }
-  }, [mode, coords]);
+  }, [activeMode, coords]);
 
   const setMode = useCallback((newMode: ThemeMode) => {
-    setModeState(newMode);
+    setUserModeState(newMode);
     try {
       localStorage.setItem("sh_theme", newMode);
     } catch {}
@@ -93,16 +113,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     applyTheme();
-  }, [applyTheme]);
+  }, [applyTheme, pathname]);
 
   useEffect(() => {
-    if (mode !== "auto") return;
+    if (activeMode !== "auto") return;
     const interval = setInterval(applyTheme, 60000);
     return () => clearInterval(interval);
-  }, [mode, applyTheme]);
+  }, [activeMode, applyTheme]);
 
   return (
-    <ThemeContext.Provider value={{ mode, setMode, isDark }}>
+    <ThemeContext.Provider value={{ mode: userMode, setMode, isDark }}>
       {children}
     </ThemeContext.Provider>
   );
