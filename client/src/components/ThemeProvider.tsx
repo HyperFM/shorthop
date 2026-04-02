@@ -49,15 +49,40 @@ function shouldBeDark(lat?: number | null, lng?: number | null): boolean {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(() => {
-    return "light";
+    try {
+      const saved = localStorage.getItem("sh_theme");
+      if (saved === "light" || saved === "dark" || saved === "auto") return saved;
+    } catch {}
+    return "auto";
   });
 
   const [isDark, setIsDark] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (mode !== "auto") return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 600000 }
+    );
+  }, [mode]);
 
   const applyTheme = useCallback(() => {
-    setIsDark(false);
-    document.documentElement.classList.remove("dark");
-  }, []);
+    let dark = false;
+    if (mode === "dark") {
+      dark = true;
+    } else if (mode === "auto") {
+      dark = shouldBeDark(coords?.lat, coords?.lng);
+    }
+    setIsDark(dark);
+    if (dark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [mode, coords]);
 
   const setMode = useCallback((newMode: ThemeMode) => {
     setModeState(newMode);
@@ -69,6 +94,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     applyTheme();
   }, [applyTheme]);
+
+  useEffect(() => {
+    if (mode !== "auto") return;
+    const interval = setInterval(applyTheme, 60000);
+    return () => clearInterval(interval);
+  }, [mode, applyTheme]);
 
   return (
     <ThemeContext.Provider value={{ mode, setMode, isDark }}>
