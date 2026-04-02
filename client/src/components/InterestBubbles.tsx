@@ -64,7 +64,7 @@ export const ALL_INTERESTS = [
   { id: "uk_wildcats", label: "UK Wildcats", emoji: "🐾" },
   { id: "vinyl", label: "Vinyl", emoji: "🎶" },
   { id: "diy", label: "DIY", emoji: "🔧" },
-  { id: "hyper_fm", label: "HyperFM", emoji: "👩🏽‍🎤" },
+  { id: "hyper_fm", label: "HyperFM", emoji: "🎸👩🏽‍🎤" },
   { id: "pole_dancing", label: "Pole Dancing", emoji: "🪩" },
   { id: "sewing", label: "Sewing", emoji: "🧶" },
   { id: "gardening", label: "Gardening", emoji: "🌻" },
