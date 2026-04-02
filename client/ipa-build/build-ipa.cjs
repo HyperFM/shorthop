@@ -63,14 +63,33 @@ if (fs.existsSync(appiconsetSrc)) {
   console.log(`✓ AppIcon.appiconset added (${files.length} files including Contents.json)`);
 }
 
-const iconFile = path.join(publicDir, 'app-icon.png');
-if (fs.existsSync(iconFile)) {
-  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon60x60@2x.png'));
-  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon60x60@3x.png'));
-  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon76x76@2x.png'));
-  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon83.5x83.5@2x.png'));
-  console.log('✓ Root-level app icons added');
+const iconSizes = {
+  'AppIcon20x20@2x.png': 40,
+  'AppIcon20x20@3x.png': 60,
+  'AppIcon29x29@2x.png': 58,
+  'AppIcon29x29@3x.png': 87,
+  'AppIcon40x40@2x.png': 80,
+  'AppIcon40x40@3x.png': 120,
+  'AppIcon60x60@2x.png': 120,
+  'AppIcon60x60@3x.png': 180,
+  'AppIcon20x20~ipad.png': 20,
+  'AppIcon20x20@2x~ipad.png': 40,
+  'AppIcon29x29~ipad.png': 29,
+  'AppIcon29x29@2x~ipad.png': 58,
+  'AppIcon40x40~ipad.png': 40,
+  'AppIcon40x40@2x~ipad.png': 80,
+  'AppIcon76x76~ipad.png': 76,
+  'AppIcon76x76@2x~ipad.png': 152,
+  'AppIcon83.5x83.5@2x~ipad.png': 167,
+};
+const appiconsetDir = path.join(scriptDir, 'Assets.xcassets', 'AppIcon.appiconset');
+for (const [filename, size] of Object.entries(iconSizes)) {
+  const src = path.join(appiconsetDir, `icon-${size}.png`);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(appDir, filename));
+  }
 }
+console.log('✓ Root-level app icons added (all sizes)');
 
 if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
 
