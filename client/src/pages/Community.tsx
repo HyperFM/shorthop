@@ -429,6 +429,24 @@ function CityChat({ user }: { user: any }) {
     enabled: isFlexPlus && !!cityKey,
   });
 
+  const sendMsg = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", cityChatKey, { message: msg });
+    },
+    onSuccess: () => {
+      setMsg("");
+      queryClient.invalidateQueries({ queryKey: [cityChatKey] });
+    },
+    onError: (err: Error) => {
+      const parsed = parseBlockedError(err);
+      if (parsed) {
+        showFlash("🚫", parsed, "error");
+      } else {
+        showFlash("❌", "Failed to send", "error");
+      }
+    },
+  });
+
   const sorted = messages ? [...messages].sort((a, b) =>
     new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   ) : [];
@@ -510,24 +528,6 @@ function CityChat({ user }: { user: any }) {
       </Card>
     );
   }
-
-  const sendMsg = useMutation({
-    mutationFn: async () => {
-      await apiRequest("POST", cityChatKey, { message: msg });
-    },
-    onSuccess: () => {
-      setMsg("");
-      queryClient.invalidateQueries({ queryKey: [cityChatKey] });
-    },
-    onError: (err: Error) => {
-      const parsed = parseBlockedError(err);
-      if (parsed) {
-        showFlash("🚫", parsed, "error");
-      } else {
-        showFlash("❌", "Failed to send", "error");
-      }
-    },
-  });
 
   return (
     <Card className="border-blue-200/40" data-testid="city-chat">
@@ -840,7 +840,7 @@ function DMChat({ user, friendId, friendName, friendPhoto, onClose }: { user: an
           <X className="w-4 h-4" />
         </Button>
         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden">
-          {friendPhoto ? <img src={friendPhoto} alt={friendName} className="w-full h-full object-cover" /> : friendName[0].toUpperCase()}
+          {friendPhoto ? <img src={friendPhoto} alt={friendName} className="w-full h-full object-cover" /> : (friendName && friendName.length > 0 ? friendName[0].toUpperCase() : "?")}
         </div>
         <p className="text-sm font-bold">{friendName}</p>
       </div>
