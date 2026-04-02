@@ -23,6 +23,12 @@ fs.mkdirSync(assetsDir, { recursive: true });
 fs.copyFileSync(path.join(scriptDir, 'Info.plist'), path.join(appDir, 'Info.plist'));
 fs.writeFileSync(path.join(appDir, 'PkgInfo'), 'APPL????');
 
+const provProfile = path.join(scriptDir, 'embedded.mobileprovision');
+if (fs.existsSync(provProfile)) {
+  fs.copyFileSync(provProfile, path.join(appDir, 'embedded.mobileprovision'));
+  console.log('✓ Provisioning profile (embedded.mobileprovision) added');
+}
+
 const codeResources = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
