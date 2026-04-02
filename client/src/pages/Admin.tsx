@@ -1468,7 +1468,32 @@ export default function Admin() {
                   }}
                   data-testid="button-download-ipa"
                 >
-                  <Download className="w-4 h-4 mr-2" /> iOS IPA
+                  <Download className="w-4 h-4 mr-2" /> iOS IPA (Legacy)
+                </Button>
+                <Button
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-sm h-11 rounded-xl"
+                  onClick={async () => {
+                    try {
+                      showFlash("⏳", "Preparing Expo iOS project...", "info");
+                      const res = await fetch("/api/download/expo");
+                      if (!res.ok) throw new Error("Download failed");
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "ShortHop-Expo-iOS.zip";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      showFlash("✅", "Expo iOS project download started!", "success");
+                    } catch {
+                      showFlash("❌", "Expo download failed", "error");
+                    }
+                  }}
+                  data-testid="button-download-expo"
+                >
+                  <Download className="w-4 h-4 mr-2" /> iOS Expo Build (App Store)
                 </Button>
                 <Button
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-sm h-11 rounded-xl"

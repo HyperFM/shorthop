@@ -3326,6 +3326,15 @@ export async function registerRoutes(
     fs.createReadStream(filePath).pipe(res);
   });
 
+  app.get('/api/download/expo', requireAdmin, (_req, res) => {
+    const filePath = path.resolve(process.cwd(), 'client/public/ShortHop-Expo-iOS.zip');
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Expo project not found' });
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename=ShortHop-Expo-iOS.zip');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    fs.createReadStream(filePath).pipe(res);
+  });
+
   app.get('/api/download/aab', requireAdmin, (_req, res) => {
     const filePath = path.resolve(process.cwd(), 'client/public/ShortHop-Android.aab');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'AAB package not found' });
