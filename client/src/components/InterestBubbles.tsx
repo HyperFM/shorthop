@@ -64,6 +64,23 @@ export const ALL_INTERESTS = [
   { id: "uk_wildcats", label: "UK Wildcats", emoji: "🐾" },
   { id: "vinyl", label: "Vinyl", emoji: "🎶" },
   { id: "diy", label: "DIY", emoji: "🔧" },
+  { id: "hyper_fm", label: "Hyper FM", emoji: "🤘" },
+  { id: "pole_dancing", label: "Pole Dancing", emoji: "🪩" },
+  { id: "sewing", label: "Sewing", emoji: "🧶" },
+  { id: "gardening", label: "Gardening", emoji: "🌻" },
+  { id: "dancing", label: "Dancing", emoji: "💃" },
+  { id: "swimming", label: "Swimming", emoji: "🏊" },
+  { id: "boxing", label: "Boxing", emoji: "🥊" },
+  { id: "painting", label: "Painting", emoji: "🖌️" },
+  { id: "karaoke", label: "Karaoke", emoji: "🎤" },
+  { id: "movies", label: "Movies", emoji: "🎬" },
+  { id: "volleyball", label: "Volleyball", emoji: "🏐" },
+  { id: "tennis", label: "Tennis", emoji: "🎾" },
+  { id: "cycling", label: "Cycling", emoji: "🚴" },
+  { id: "meditation", label: "Meditation", emoji: "🧘‍♂️" },
+  { id: "woodworking", label: "Woodworking", emoji: "🪵" },
+  { id: "nail_art", label: "Nail Art", emoji: "💅" },
+  { id: "makeup", label: "Makeup", emoji: "💄" },
 ];
 
 interface InterestBubblesProps {
