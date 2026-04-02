@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "ShortHop",
+    "slug": "shorthop",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.hyperquency.shorthopapp",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}

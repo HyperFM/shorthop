@@ -1,0 +1,22 @@
+{
+  "name": "shorthop-ios",
+  "version": "1.0.0",
+  "main": "App.js",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "build:ios": "eas build --platform ios"
+  },
+  "dependencies": {
+    "expo": "~52.0.0",
+    "expo-status-bar": "~2.0.0",
+    "react": "18.3.1",
+    "react-native": "0.76.6",
+    "react-native-webview": "13.12.5",
+    "expo-splash-screen": "~0.29.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0"
+  },
+  "private": true
+}
