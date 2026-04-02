@@ -53,7 +53,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem("sh_theme");
       if (saved === "light" || saved === "dark" || saved === "auto") return saved;
     } catch {}
-    return "light";
+    return "auto";
   });
 
   const [isDark, setIsDark] = useState(false);
