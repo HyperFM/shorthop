@@ -14,9 +14,11 @@ const payloadDir = path.join(tempDir, 'Payload');
 const appDir = path.join(payloadDir, 'ShortHop.app');
 const sigDir = path.join(appDir, '_CodeSignature');
 const wwwDir = path.join(appDir, 'www');
+const assetsDir = path.join(appDir, 'Assets.xcassets', 'AppIcon.appiconset');
 
 fs.mkdirSync(sigDir, { recursive: true });
 fs.mkdirSync(wwwDir, { recursive: true });
+fs.mkdirSync(assetsDir, { recursive: true });
 
 fs.copyFileSync(path.join(scriptDir, 'Info.plist'), path.join(appDir, 'Info.plist'));
 fs.writeFileSync(path.join(appDir, 'PkgInfo'), 'APPL????');
@@ -46,12 +48,22 @@ for (const f of essentialFiles) {
 }
 console.log('✓ Essential web assets copied');
 
+const appiconsetSrc = path.join(scriptDir, 'Assets.xcassets', 'AppIcon.appiconset');
+if (fs.existsSync(appiconsetSrc)) {
+  const files = fs.readdirSync(appiconsetSrc);
+  for (const f of files) {
+    fs.copyFileSync(path.join(appiconsetSrc, f), path.join(assetsDir, f));
+  }
+  console.log(`✓ AppIcon.appiconset added (${files.length} files including Contents.json)`);
+}
+
 const iconFile = path.join(publicDir, 'app-icon.png');
 if (fs.existsSync(iconFile)) {
-  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon.png'));
-  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon@2x.png'));
-  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon@3x.png'));
-  console.log('✓ App icons added to bundle');
+  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon60x60@2x.png'));
+  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon60x60@3x.png'));
+  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon76x76@2x.png'));
+  fs.copyFileSync(iconFile, path.join(appDir, 'AppIcon83.5x83.5@2x.png'));
+  console.log('✓ Root-level app icons added');
 }
 
 if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
