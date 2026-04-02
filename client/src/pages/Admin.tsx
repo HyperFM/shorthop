@@ -1406,7 +1406,7 @@ export default function Admin() {
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
-                      a.download = "shorthop-source.tar.gz";
+                      a.download = "shorthop-source.zip";
                       document.body.appendChild(a);
                       a.click();
                       document.body.removeChild(a);

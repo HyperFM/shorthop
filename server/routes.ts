@@ -3287,10 +3287,10 @@ export async function registerRoutes(
   };
 
   app.get('/api/download/source', requireAdmin, (_req, res) => {
-    const filePath = path.resolve(process.cwd(), 'client/public/shorthop-source.tar.gz');
+    const filePath = path.resolve(process.cwd(), 'client/public/shorthop-source.zip');
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Source archive not found' });
-    res.setHeader('Content-Type', 'application/gzip');
-    res.setHeader('Content-Disposition', 'attachment; filename=shorthop-source.tar.gz');
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename=shorthop-source.zip');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     fs.createReadStream(filePath).pipe(res);
   });
