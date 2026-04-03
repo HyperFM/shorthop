@@ -28,7 +28,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" translucent={false} />
       {hasError ? (
         <View style={styles.errorWrap}>
           <ActivityIndicator color="#fff" />
@@ -56,6 +56,9 @@ export default function App() {
           allowsFullscreenVideo={true}
           geolocationEnabled={true}
           originWhitelist={['https://*', 'http://*']}
+          automaticallyAdjustContentInsets={false}
+          contentInsetAdjustmentBehavior="never"
+          textZoom={100}
           userAgent={`ShortHop-iOS/1.0.0 ${Platform.OS}`}
         />
       )}
