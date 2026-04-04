@@ -1446,31 +1446,6 @@ export default function Admin() {
                   <Download className="w-4 h-4 mr-2" /> Windows MSIX
                 </Button>
                 <Button
-                  className="w-full bg-gradient-to-r from-black to-gray-800 hover:from-gray-900 hover:to-black text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={async () => {
-                    try {
-                      showFlash("⏳", "Preparing iOS download...", "info");
-                      const res = await fetch("/api/download/ipa");
-                      if (!res.ok) throw new Error("Download failed");
-                      const blob = await res.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "ShortHop-iOS.ipa";
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                      showFlash("✅", "iOS download started!", "success");
-                    } catch {
-                      showFlash("❌", "iOS download failed", "error");
-                    }
-                  }}
-                  data-testid="button-download-ipa"
-                >
-                  <Download className="w-4 h-4 mr-2" /> iOS IPA (Legacy)
-                </Button>
-                <Button
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-sm h-11 rounded-xl"
                   onClick={async () => {
                     try {
