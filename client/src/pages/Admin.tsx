@@ -145,6 +145,23 @@ export default function Admin() {
   const [adminDmTarget, setAdminDmTarget] = useState<{ id: number; username: string; profilePhoto: string | null } | null>(null);
   const [adminDmMsg, setAdminDmMsg] = useState("");
 
+  const downloadFile = async (url: string, filename: string, successMessage: string, errorMessage: string) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+      showFlash("✅", successMessage, "success");
+    } catch {
+      showFlash("❌", errorMessage, "error");
+    }
+  };
+
   const { data: stats } = useQuery<AdminStats>({ queryKey: ["/api/admin/stats"] });
   const { data: allUsers } = useQuery<AdminUser[]>({ queryKey: ["/api/admin/users"], enabled: tab === "users" });
   const { data: applications } = useQuery<DriverApp[]>({ queryKey: ["/api/admin/applications"], enabled: tab === "applications" || tab === "overview" });
@@ -1397,125 +1414,35 @@ export default function Admin() {
               <div className="space-y-2">
                 <Button
                   className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={async () => {
-                    try {
-                      showFlash("⏳", "Preparing source code download...", "info");
-                      const res = await fetch("/api/download/source");
-                      if (!res.ok) throw new Error("Download failed");
-                      const blob = await res.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "shorthop-source.zip";
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                      showFlash("✅", "Source code download started!", "success");
-                    } catch {
-                      showFlash("❌", "Source code download failed", "error");
-                    }
-                  }}
+                  onClick={() => downloadFile("/api/download/source", "shorthop-source.zip", "Source code download started!", "Source code download failed")}
                   data-testid="button-download-source"
                 >
                   <Download className="w-4 h-4 mr-2" /> Complete Source Code
                 </Button>
                 <Button
                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={async () => {
-                    try {
-                      showFlash("⏳", "Preparing Windows download...", "info");
-                      const res = await fetch("/api/download/msix");
-                      if (!res.ok) throw new Error("Download failed");
-                      const blob = await res.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "ShortHop-Microsoft-Store.msix";
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                      showFlash("✅", "Windows download started!", "success");
-                    } catch {
-                      showFlash("❌", "Windows download failed", "error");
-                    }
-                  }}
+                  onClick={() => downloadFile("/api/download/msix", "ShortHop-Microsoft-Store.msix", "Windows download started!", "Windows download failed")}
                   data-testid="button-download-msix"
                 >
                   <Download className="w-4 h-4 mr-2" /> Windows MSIX
                 </Button>
                 <Button
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={async () => {
-                    try {
-                      showFlash("⏳", "Preparing Expo iOS project...", "info");
-                      const res = await fetch("/api/download/expo");
-                      if (!res.ok) throw new Error("Download failed");
-                      const blob = await res.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "ShortHop-Expo-iOS.zip";
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                      showFlash("✅", "Expo iOS project download started!", "success");
-                    } catch {
-                      showFlash("❌", "Expo download failed", "error");
-                    }
-                  }}
+                  onClick={() => downloadFile("/api/download/expo", "ShortHop-Expo-iOS.zip", "Expo iOS project download started!", "Expo download failed")}
                   data-testid="button-download-expo"
                 >
                   <Download className="w-4 h-4 mr-2" /> iOS Expo Build (App Store)
                 </Button>
                 <Button
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={async () => {
-                    try {
-                      showFlash("⏳", "Preparing Android download...", "info");
-                      const res = await fetch("/api/download/aab");
-                      if (!res.ok) throw new Error("Download failed");
-                      const blob = await res.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "ShortHop-Android.aab";
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                      showFlash("✅", "Android download started!", "success");
-                    } catch {
-                      showFlash("❌", "Android download failed", "error");
-                    }
-                  }}
+                  onClick={() => downloadFile("/api/download/aab", "ShortHop-Android.aab", "Android download started!", "Android download failed")}
                   data-testid="button-download-aab"
                 >
                   <Download className="w-4 h-4 mr-2" /> Android AAB (Google Play)
                 </Button>
                 <Button
                   className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={async () => {
-                    try {
-                      showFlash("⏳", "Preparing APK download...", "info");
-                      const res = await fetch("/api/download/apk");
-                      if (!res.ok) throw new Error("Download failed");
-                      const blob = await res.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "ShortHop-Android.apk";
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                      showFlash("✅", "APK download started!", "success");
-                    } catch {
-                      showFlash("❌", "APK download failed", "error");
-                    }
-                  }}
+                  onClick={() => downloadFile("/api/download/apk", "ShortHop-Android.apk", "APK download started!", "APK download failed")}
                   data-testid="button-download-apk"
                 >
                   <Download className="w-4 h-4 mr-2" /> Android APK (Amazon / Galaxy)
