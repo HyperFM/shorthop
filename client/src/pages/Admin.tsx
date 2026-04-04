@@ -1518,7 +1518,32 @@ export default function Admin() {
                   }}
                   data-testid="button-download-aab"
                 >
-                  <Download className="w-4 h-4 mr-2" /> Android AAB
+                  <Download className="w-4 h-4 mr-2" /> Android AAB (Google Play)
+                </Button>
+                <Button
+                  className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-sm h-11 rounded-xl"
+                  onClick={async () => {
+                    try {
+                      showFlash("⏳", "Preparing APK download...", "info");
+                      const res = await fetch("/api/download/apk");
+                      if (!res.ok) throw new Error("Download failed");
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "ShortHop-Android.apk";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      showFlash("✅", "APK download started!", "success");
+                    } catch {
+                      showFlash("❌", "APK download failed", "error");
+                    }
+                  }}
+                  data-testid="button-download-apk"
+                >
+                  <Download className="w-4 h-4 mr-2" /> Android APK (Amazon / Galaxy)
                 </Button>
               </div>
             </CardContent>
@@ -1530,8 +1555,10 @@ export default function Admin() {
               </div>
               <div className="text-[10px] text-slate-700 space-y-1">
                 <p><strong>Windows:</strong> MSIX for Microsoft Store distribution (Windows 10+)</p>
-                <p><strong>iOS:</strong> IPA for App Store submission (requires code signing)</p>
-                <p><strong>Android:</strong> AAB for Google Play Store submission (requires signing)</p>
+                <p><strong>iOS Expo:</strong> Build via EAS for App Store (recommended)</p>
+                <p><strong>iOS IPA:</strong> Legacy package (requires Xcode signing)</p>
+                <p><strong>Android AAB:</strong> For Google Play Store submission</p>
+                <p><strong>Android APK:</strong> For Amazon Appstore &amp; Samsung Galaxy Store</p>
               </div>
             </CardContent>
           </Card>

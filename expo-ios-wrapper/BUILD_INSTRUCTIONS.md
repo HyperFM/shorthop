@@ -1,4 +1,4 @@
-# ShortHop iOS Build Instructions
+# ShortHop iOS & Android Build Instructions
 
 ## Prerequisites
 1. Install Node.js (v18+) on your computer
@@ -8,11 +8,10 @@
 ## Steps to Build
 
 ### 1. Copy this folder to your computer
-Download or copy the entire `expo-ios-wrapper` folder to your Mac or PC.
+Download or copy the entire project folder to your Mac or PC.
 
 ### 2. Install dependencies
 ```bash
-cd expo-ios-wrapper
 npm install
 ```
 
@@ -26,32 +25,35 @@ eas login
 eas build:configure
 ```
 
-### 5. Update eas.json with your Apple credentials
-Edit `eas.json` and fill in:
-- `appleId`: Your Apple ID email
-- `ascAppId`: Your App Store Connect app ID
-- `appleTeamId`: Your Apple Developer Team ID
-
-### 6. Build the iOS app
+### 5. Build iOS (App Store)
+Update `eas.json` with your Apple credentials, then:
 ```bash
 eas build --platform ios --profile production
 ```
 
-EAS will:
-- Compile the app on Apple's servers using Xcode
-- Include your icon (properly compiled into Assets.car)
-- Generate a real signed IPA
-- Give you a download link when done
+### 6. Build Android APK (Amazon / Galaxy Store)
+```bash
+eas build --platform android --profile production
+```
+This generates a signed APK file you can upload to Amazon Appstore or Samsung Galaxy Store.
 
-### 7. Submit to App Store
+### 7. Submit to Stores
+
+**iOS App Store:**
 ```bash
 eas submit --platform ios
 ```
-
 Or download the IPA from Expo's dashboard and upload via Apple Transporter.
 
+**Amazon Appstore:**
+Download the APK from Expo's dashboard and upload at https://developer.amazon.com
+
+**Samsung Galaxy Store:**
+Download the APK from Expo's dashboard and upload at https://seller.samsungapps.com
+
 ## Important Notes
-- The app loads your ShortHop web app (https://shorthop.replit.app) inside a native WebView
-- Your app icon is in `assets/icon.png`
-- Bundle ID: `com.hyperquency.shorthopapp`
-- EAS Build runs Xcode in the cloud — no Mac required!
+- The app opens directly to the sign-in/sign-up screen (`/auth`)
+- Bundle ID: `com.hyperquency.shorthopapp` (same for iOS and Android)
+- EAS Build runs Xcode/Android SDK in the cloud — no Mac or Android Studio required!
+- The app wraps your live ShortHop web app in a native shell
+- If the web content fails to load, a friendly error screen is shown instead of crashing

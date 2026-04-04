@@ -21,6 +21,22 @@
         }
       }
     },
+    "android": {
+      "package": "com.hyperquency.shorthopapp",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "permissions": [
+        "INTERNET",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_NETWORK_STATE",
+        "CAMERA",
+        "RECORD_AUDIO"
+      ]
+    },
     "assetBundlePatterns": [
       "**/*"
     ]
