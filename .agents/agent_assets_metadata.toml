@@ -6,3 +6,9 @@ id = "SrwBU7YPMAn89pIdmFDSk"
 uri = "file://shorthop-code.tar.gz"
 type = "unspecified"
 title = "ShortHop Project Code"
+
+[[outputs]]
+id = "i74QMnEaJBmtuiwVFeSCo"
+uri = "file://client/msix-build/Microsoft-Store-Restricted-Capability-Request.txt"
+type = "text"
+title = "Microsoft Store Restricted Capability Request"
