@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <title>ShortHop</title>
+    <meta name="description" content="Shared routes. Real connections. A micro-rideshare for Lexington, KY." />
+    <meta name="application-name" content="ShortHop" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ShortHop" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/app-icon-192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="preload" as="image" href="/app-icon-192.png" />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+
+      [class*="share-your-feedback"],
+      [class*="feedback"],
+      iframe[src*="feedback"],
+      #replit-feedback-button,
+      .replit-ui-theme-root,
+      div[id*="feedback"],
+      button[class*="feedback"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        position: absolute !important;
+        left: -9999px !important;
+      }
+
+      #sh-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #sh-splash img {
+        max-width: 60%;
+        max-height: 50%;
+        object-fit: contain;
+      }
+      #sh-splash.fade-out {
+        opacity: 0;
+        transition: opacity 0.5s ease-out;
+      }
+    </style>
+    <link rel="preload" as="image" href="/splash.jpeg" />
+    <meta property="og:title" content="ShortHop" />
+    <meta property="og:description" content="Shared routes. Real connections. A micro-rideshare for Lexington, KY." />
+    <meta property="og:image" content="/app-icon.png" />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300..800&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="sh-splash">
+      <img src="/splash.jpeg" alt="ShortHop" />
+    </div>
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(r) { r.unregister(); });
+        });
+        if ('caches' in window) {
+          caches.keys().then(function(keys) {
+            keys.forEach(function(k) { caches.delete(k); });
+          });
+        }
+      }
+      (function() {
+        var splash = document.getElementById('sh-splash');
+        setTimeout(function() {
+          splash.classList.add('fade-out');
+          setTimeout(function() { splash.remove(); }, 600);
+        }, 10000);
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
