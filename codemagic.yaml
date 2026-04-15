@@ -4,22 +4,24 @@ workflows:
     environment:
       xcode: 16.3
       node: 20.19.4
-    working_directory: expo-ios-wrapper
     scripts:
+      - name: Debug paths
+        script: |
+          echo "Current dir: $(pwd)"
+          ls -la
       - name: Install dependencies
         script: |
+          cd expo-ios-wrapper
           npm install --legacy-peer-deps
-          npm install expo --legacy-peer-deps
       - name: Install pods
         script: |
-          cd ios
-          pod install
+          cd expo-ios-wrapper/ios && pod install
       - name: Build iOS
         script: |
           xcodebuild clean archive \
-            -workspace ios/ShortHop.xcworkspace \
+            -workspace expo-ios-wrapper/ios/ShortHop.xcworkspace \
             -scheme ShortHop \
-            -archivePath ../build/ShortHop.xcarchive \
+            -archivePath build/ShortHop.xcarchive \
             -sdk iphoneos
     artifacts:
       - build/**/*.ipa
