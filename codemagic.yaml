@@ -4,8 +4,6 @@ workflows:
     environment:
       xcode: 16.3
       node: 18.17.0
-      groups:
-        - shorthop
     scripts:
       - name: Install dependencies
         script: npm install
