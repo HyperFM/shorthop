@@ -1,0 +1,23 @@
+workflows:
+  ios-workflow:
+    name: ShortHop iOS
+    environment:
+      xcode: 16.3
+      node: 18.17.0
+      groups:
+        - shorthop
+    scripts:
+      - name: Install dependencies
+        script: npm install
+      - name: Expo prebuild
+        script: npx expo prebuild --platform ios
+      - name: Build iOS
+        script: |
+          xcodebuild clean archive \
+            -workspace ios/shorthop.xcworkspace \
+            -scheme shorthop \
+            -archivePath build/ShortHop.xcarchive \
+            -sdk iphoneos
+    artifacts:
+      - build/**/*.ipa
+
