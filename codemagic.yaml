@@ -3,7 +3,7 @@ workflows:
     name: ShortHop iOS
     environment:
       xcode: 16.3
-      node: 18.17.0
+      node: 20.19.4
     scripts:
       - name: Install dependencies
         script: npm install
