@@ -7,14 +7,17 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
+          cd expo-ios-wrapper
           npm install --legacy-peer-deps
           npm install expo --legacy-peer-deps
       - name: Expo prebuild
-        script: npx expo prebuild --platform ios
+        script: |
+          cd expo-ios-wrapper
+          npx expo prebuild --platform ios --no-install
       - name: Build iOS
         script: |
           xcodebuild clean archive \
-            -workspace ios/shorthop.xcworkspace \
+            -workspace expo-ios-wrapper/ios/shorthop.xcworkspace \
             -scheme shorthop \
             -archivePath build/ShortHop.xcarchive \
             -sdk iphoneos
