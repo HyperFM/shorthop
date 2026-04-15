@@ -4,24 +4,18 @@ workflows:
     environment:
       xcode: 16.3
       node: 20.19.4
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.hyperquency.shorthopapp
     scripts:
-      - name: Debug paths
-        script: |
-          echo "Current dir: $(pwd)"
-          ls -la
-      - name: Install dependencies
-        script: |
-          cd expo-ios-wrapper
-          npm install --legacy-peer-deps
       - name: Install pods
-        script: |
-          cd expo-ios-wrapper/ios && pod install
+        script: cd /Users/builder/clone/expo-ios-wrapper/ios && pod install
       - name: Build iOS
         script: |
           xcodebuild clean archive \
-            -workspace expo-ios-wrapper/ios/ShortHop.xcworkspace \
+            -workspace /Users/builder/clone/expo-ios-wrapper/ios/ShortHop.xcworkspace \
             -scheme ShortHop \
-            -archivePath build/ShortHop.xcarchive \
+            -archivePath /Users/builder/clone/build/ShortHop.xcarchive \
             -sdk iphoneos
     artifacts:
       - build/**/*.ipa
