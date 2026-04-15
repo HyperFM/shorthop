@@ -6,7 +6,9 @@ workflows:
       node: 20.19.4
     scripts:
       - name: Install dependencies
-        script: npm install
+        script: |
+          npm install
+          npm install expo
       - name: Expo prebuild
         script: npx expo prebuild --platform ios
       - name: Build iOS
@@ -18,4 +20,3 @@ workflows:
             -sdk iphoneos
     artifacts:
       - build/**/*.ipa
-
