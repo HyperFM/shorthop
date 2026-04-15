@@ -8,8 +8,13 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.hyperquency.shorthopapp
     scripts:
+      - name: Install dependencies
+        script: |
+          cd /Users/builder/clone/expo-ios-wrapper
+          npm install --legacy-peer-deps
       - name: Install pods
-        script: cd /Users/builder/clone/expo-ios-wrapper/ios && pod install
+        script: |
+          cd /Users/builder/clone/expo-ios-wrapper/ios && pod install
       - name: Build iOS
         script: |
           xcodebuild clean archive \
