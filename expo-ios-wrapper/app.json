@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "com.hyperquency.shorthopapp",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#1a1a2e"
