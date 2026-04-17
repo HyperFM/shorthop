@@ -1,4 +1,3 @@
-cat > /Users/aysiathompson/Desktop/shorthop/codemagic.yaml << 'EOF'
 workflows:
   ios-workflow:
     name: ShortHop iOS
@@ -36,4 +35,3 @@ workflows:
             -exportOptionsPlist /Users/builder/clone/expo-ios-wrapper/ios/ExportOptions.plist
     artifacts:
       - /Users/builder/clone/build/*.ipa
-EOF
