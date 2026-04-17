@@ -1,3 +1,4 @@
+cat > /Users/aysiathompson/Desktop/shorthop/codemagic.yaml << 'EOF'
 workflows:
   ios-workflow:
     name: ShortHop iOS
@@ -29,5 +30,10 @@ workflows:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="iPhone Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="shorthop"
+          xcodebuild -exportArchive \
+            -archivePath /Users/builder/clone/build/ShortHop.xcarchive \
+            -exportPath /Users/builder/clone/build \
+            -exportOptionsPlist /Users/builder/clone/expo-ios-wrapper/ios/ExportOptions.plist
     artifacts:
-      - build/**/*.ipa
+      - /Users/builder/clone/build/*.ipa
+EOF
