@@ -126,7 +126,7 @@ type ReportItem = {
   createdAt: string;
 };
 
-type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors" | "policies" | "verify" | "refunds" | "source";
+type TabKey = "overview" | "users" | "applications" | "drivers" | "inbox" | "reports" | "logs" | "notify" | "founders" | "dms" | "payments" | "ambassadors" | "policies" | "verify" | "refunds";
 
 export default function Admin() {
   const { data: user, isLoading: authLoading } = useAuth();
@@ -389,7 +389,6 @@ export default function Admin() {
     { key: "verify", label: "Verify ID", icon: Shield, badge: idVerifications?.length || 0 },
     { key: "policies", label: "Policies", icon: FileText },
     { key: "refunds", label: "Refunds", icon: DollarSign },
-    { key: "source", label: "Downloads", icon: Download },
   ];
 
   return (
@@ -1397,75 +1396,6 @@ export default function Admin() {
         </div>
       )}
 
-      {tab === "source" && (
-        <div className="space-y-3" data-testid="admin-source-section">
-          <h2 className="text-base font-bold text-foreground">Platform Downloads</h2>
-          <Card className="border-border/50">
-            <CardContent className="p-4 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                  <Download className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-foreground">ShortHop App Packages</p>
-                  <p className="text-[10px] text-muted-foreground">Latest stable build for all platforms</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Button
-                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={() => downloadFile("/api/download/source", "shorthop-source.zip", "Source code download started!", "Source code download failed")}
-                  data-testid="button-download-source"
-                >
-                  <Download className="w-4 h-4 mr-2" /> Complete Source Code
-                </Button>
-                <Button
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={() => downloadFile("/api/download/msix", "ShortHop-Microsoft-Store.msix", "Windows download started!", "Windows download failed")}
-                  data-testid="button-download-msix"
-                >
-                  <Download className="w-4 h-4 mr-2" /> Windows MSIX
-                </Button>
-                <Button
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={() => downloadFile("/api/download/expo", "ShortHop-Expo-iOS.zip", "Expo iOS project download started!", "Expo download failed")}
-                  data-testid="button-download-expo"
-                >
-                  <Download className="w-4 h-4 mr-2" /> iOS Expo Build (App Store)
-                </Button>
-                <Button
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={() => downloadFile("/api/download/aab", "ShortHop-Android.aab", "Android download started!", "Android download failed")}
-                  data-testid="button-download-aab"
-                >
-                  <Download className="w-4 h-4 mr-2" /> Android AAB (Google Play)
-                </Button>
-                <Button
-                  className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-sm h-11 rounded-xl"
-                  onClick={() => downloadFile("/api/download/apk", "ShortHop-Android.apk", "APK download started!", "APK download failed")}
-                  data-testid="button-download-apk"
-                >
-                  <Download className="w-4 h-4 mr-2" /> Android APK (Amazon / Galaxy)
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/50 bg-gradient-to-br from-slate-50 to-slate-100">
-            <CardContent className="p-3 space-y-2">
-              <div className="flex items-start gap-2">
-                <p className="text-xs text-slate-900 font-medium flex-1">📦 Platform Packages</p>
-              </div>
-              <div className="text-[10px] text-slate-700 space-y-1">
-                <p><strong>Windows:</strong> MSIX for Microsoft Store distribution (Windows 10+)</p>
-                <p><strong>iOS Expo:</strong> Build via EAS for App Store (recommended)</p>
-                <p><strong>iOS IPA:</strong> Legacy package (requires Xcode signing)</p>
-                <p><strong>Android AAB:</strong> For Google Play Store submission</p>
-                <p><strong>Android APK:</strong> For Amazon Appstore &amp; Samsung Galaxy Store</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,0 +1,60 @@
+workflows:
+  ios-workflow:
+    name: ShortHop iOS
+    environment:
+      xcode: 16.2
+      node: 20.19.4
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.hyperquency.shorthopapp
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd /Users/builder/clone/expo-ios-wrapper
+          npm install --legacy-peer-deps
+      - name: Install pods
+        script: |
+          cd /Users/builder/clone/expo-ios-wrapper/ios
+          pod deintegrate
+          pod install
+      - name: Build iOS
+        script: |
+          xcodebuild clean archive \
+            -workspace /Users/builder/clone/expo-ios-wrapper/ios/ShortHop.xcworkspace \
+            -scheme ShortHop \
+            -archivePath /Users/builder/clone/build/ShortHop.xcarchive \
+            -sdk iphoneos \
+            -destination generic/platform=iOS \
+            DEVELOPMENT_TEAM=QWCFR6X85M \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
+        workflows:
+  ios-workflow:
+    name: ShortHop iOS
+    environment:
+      xcode: 16.3
+      node: 20.19.4
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.hyperquency.shorthopapp
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd /Users/builder/clone/expo-ios-wrapper
+          npm install --legacy-peer-deps
+      - name: Install pods
+        script: cd /Users/builder/clone/expo-ios-wrapper/ios && pod install
+      - name: Build iOS
+        script: |
+          xcodebuild clean archive \
+            -workspace /Users/builder/clone/expo-ios-wrapper/ios/ShortHop.xcworkspace \
+            -scheme ShortHop \
+            -archivePath /Users/builder/clone/build/ShortHop.xcarchive \
+            -sdk iphoneos \
+            -destination generic/platform=iOS \
+            DEVELOPMENT_TEAM=QWCFR6X85M \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="shorthop"
+    artifacts:
+      - build/**/*.ipa

