@@ -835,11 +835,6 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Username exists" });
       }
       const normalizedUsername = username.trim().toLowerCase();
-      const allUsersForCheck = await storage.getAllUsers();
-      const usernameTaken = allUsersForCheck.some(u => u.username?.toLowerCase() === normalizedUsername);
-      if (usernameTaken) {
-        return res.status(400).json({ message: "Username exists" });
-      }
       const isHyperFM = normalizedUsername === "hyperfm";
       const userReferralCode = "SH" + username.slice(0, 4).toUpperCase() + Math.random().toString(36).slice(2, 8).toUpperCase();
       let user = await storage.createUser({
@@ -852,52 +847,80 @@ export async function registerRoutes(
       });
 
       if (isHyperFM) {
-        await storage.setAdmin(user.id, true);
-        user = await storage.updateUser(user.id, { isAdmin: true, isFounder: true });
+        try {
+          await storage.setAdmin(user.id, true);
+          user = await storage.updateUser(user.id, { isAdmin: true, isFounder: true });
+        } catch (e) {
+          console.error("[register] HyperFM promotion failed (non-fatal):", e);
+        }
       }
 
-      const allUsers = await storage.getAllUsers();
-      const maxNum = allUsers.reduce((max, u) => Math.max(max, u.signupNumber || 0), 0);
-      const nextSignupNumber = maxNum + 1;
-      const isPioneer = nextSignupNumber <= 5;
-      user = await storage.updateUser(user.id, {
-        signupNumber: nextSignupNumber,
-        isRoutePioneer: isPioneer,
-      });
+      try {
+        const allUsers = await storage.getAllUsers();
+        const maxNum = allUsers.reduce((max, u) => Math.max(max, u.signupNumber || 0), 0);
+        const nextSignupNumber = maxNum + 1;
+        const isPioneer = nextSignupNumber <= 5;
+        user = await storage.updateUser(user.id, {
+          signupNumber: nextSignupNumber,
+          isRoutePioneer: isPioneer,
+        });
+      } catch (e) {
+        console.error("[register] Signup number assignment failed (non-fatal):", e);
+      }
 
-      user = await storage.checkAndAssignFounderStatus(user.id, !!user.isDriver);
+      try {
+        user = await storage.checkAndAssignFounderStatus(user.id, !!user.isDriver);
+      } catch (e) {
+        console.error("[register] Founder assignment failed (non-fatal):", e);
+      }
 
       if (referralInput) {
-        await storage.processReferral(user.id, referralInput);
+        try {
+          await storage.processReferral(user.id, referralInput);
+        } catch (e) {
+          console.error("[register] Referral processing failed (non-fatal):", e);
+        }
       }
 
-      if (isPioneer) {
+      const isPioneer = (user.signupNumber || 0) <= 5 && (user.signupNumber || 0) > 0;
+
+      try {
+        if (isPioneer) {
+          await storage.createNotification({
+            userId: user.id,
+            type: "welcome",
+            title: "👑 Welcome, Pioneer!",
+            message: `You are one of the first riders to join ShortHop.\nIt takes intuition and courage to try something new, and your early belief helps shape the future of shared rides.\n\nTo honor the trust of our first riders, I'll be out every morning promoting ShortHop and growing the community one rider at a time.\n\nThank you for being part of the beginning.\n\n— Hyper ❤️`,
+            isRead: false,
+          });
+        }
+
         await storage.createNotification({
           userId: user.id,
           type: "welcome",
-          title: "👑 Welcome, Pioneer!",
-          message: `You are one of the first riders to join ShortHop.\nIt takes intuition and courage to try something new, and your early belief helps shape the future of shared rides.\n\nTo honor the trust of our first riders, I'll be out every morning promoting ShortHop and growing the community one rider at a time.\n\nThank you for being part of the beginning.\n\n— Hyper ❤️`,
+          title: "Welcome to ShortHop! 🛞",
+          message: "Hello! It was nice seeing you earlier — welcome aboard! You're one of the early people helping bring ShortHop to life in Lexington. We're still growing, so if you know anyone who could use a ride or wants to help others get around, share the app with them. Every person makes this community stronger!",
           isRead: false,
         });
+      } catch (e) {
+        console.error("[register] Welcome notification failed (non-fatal):", e);
       }
 
-      await storage.createNotification({
-        userId: user.id,
-        type: "welcome",
-        title: "Welcome to ShortHop! 🛞",
-        message: "Hello! It was nice seeing you earlier — welcome aboard! You're one of the early people helping bring ShortHop to life in Lexington. We're still growing, so if you know anyone who could use a ride or wants to help others get around, share the app with them. Every person makes this community stronger!",
-        isRead: false,
-      });
-
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("[register] req.login failed:", err);
+          return next(err);
+        }
         res.status(201).json(sanitizeUser(user));
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("[register] Registration failed:", error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: error.errors[0].message });
+      } else if (error?.code === "23505") {
+        res.status(400).json({ message: "Username exists" });
       } else {
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({ message: error?.message || "Internal server error" });
       }
     }
   });

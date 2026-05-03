@@ -1,0 +1,8 @@
+{
+  "android": {
+    "package": "com.hyperquency.restexpress"
+  },
+  "ios": {
+    "bundleIdentifier": "com.hyperquency.restexpress"
+  }
+}

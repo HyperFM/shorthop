@@ -1,0 +1,8 @@
+** BUILD FAILED **
+
+
+The following build commands failed:
+	EmitSwiftModule normal x86_64 (in target 'ExpoFileSystem' from project 'Pods')
+	SwiftEmitModule normal x86_64 Emitting\ module\ for\ ExpoFileSystem (in target 'ExpoFileSystem' from project 'Pods')
+	Building workspace ShortHop with scheme ShortHop and configuration Debug
+(3 failures)
