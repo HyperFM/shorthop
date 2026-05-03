@@ -23,10 +23,12 @@ import { MatchFoundModal } from "@/components/MatchFoundModal";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { showFlash } from "@/components/FlashNotification";
 import { playDriverApproachingSound } from "@/lib/sounds";
+import { getProfileColorHex } from "@/lib/profileColor";
 import type { User } from "@shared/routes";
 
 type DriverInfo = {
   username: string;
+  profileColor: string | null;
   vehicleMake: string | null;
   vehicleModel: string | null;
   vehicleColor: string | null;
@@ -489,7 +491,12 @@ export default function WalkerDashboard({ user }: { user: User }) {
                   <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50 rounded-lg p-2.5 space-y-1.5" data-testid="card-driver-vehicle">
                     <div className="flex items-center gap-2">
                       <Car className="w-4 h-4 text-green-600" />
-                      <span className="text-xs font-bold text-foreground">Your Driver: {matchedDriverInfo.username}</span>
+                      <span className="text-xs font-bold text-foreground">
+                        Your Driver:{" "}
+                        <span style={{ color: getProfileColorHex(matchedDriverInfo.profileColor) }}>
+                          {matchedDriverInfo.username}
+                        </span>
+                      </span>
                     </div>
                     {matchedDriverInfo.vehicleMake && (
                       <p className="text-xs text-muted-foreground pl-6">

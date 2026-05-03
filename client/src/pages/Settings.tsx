@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Bell, Users, Globe, Sparkles, Shield, Gift, Copy, Share2, Check, Mail, AlertTriangle, Smartphone, Palette, Camera, Plus, X, Eye, EyeOff, Lock, LogOut } from "lucide-react";
-import { PROFILE_TAB_COLORS } from "@/components/BottomTabBar";
+import { PROFILE_TAB_PRESETS } from "@/components/BottomTabBar";
+import { getProfileColorHex } from "@/lib/profileColor";
 import { useLocation, Link } from "wouter";
 import { showFlash } from "@/components/FlashNotification";
 import { useAuth, useLogout } from "@/hooks/use-auth";
@@ -298,8 +299,10 @@ export default function Settings() {
   const [language, setLanguage] = useState((user as any)?.language || "en");
   const [travelTime, setTravelTime] = useState((user as any)?.travelTime || "");
   const [favoritePlaces, setFavoritePlaces] = useState((user as any)?.favoritePlaces || "");
+  const [relationshipStatus, setRelationshipStatus] = useState<string>((user as any)?.relationshipStatus || "");
+  const [showShareArtist, setShowShareArtist] = useState(false);
   const [profileTabColor, setProfileTabColor] = useState(() => {
-    try { return localStorage.getItem("sh-profile-tab-color") || "text-orange-500"; } catch { return "text-orange-500"; }
+    try { return localStorage.getItem("sh-profile-tab-color") || "#f97316"; } catch { return "#f97316"; }
   });
   const [preferredUsername, setPreferredUsername] = useState(user?.username || "");
   const [legalName, setLegalName] = useState((user as any)?.legalName || "");
@@ -354,6 +357,7 @@ export default function Settings() {
       setLanguage((user as any)?.language || "en");
       setTravelTime((user as any)?.travelTime || "");
       setFavoritePlaces((user as any)?.favoritePlaces || "");
+      setRelationshipStatus((user as any)?.relationshipStatus || "");
       setPreferredUsername(user.username || "");
       setLegalName((user as any)?.legalName || "");
       setProfilePhoto((user as any)?.profilePhoto || null);
@@ -374,6 +378,7 @@ export default function Settings() {
         travelTime: travelTime || null,
         favoritePlaces: favoritePlaces.trim() || null,
         profilePhoto: profilePhoto || null,
+        relationshipStatus: relationshipStatus || null,
       });
     },
     onSuccess: () => {
@@ -517,9 +522,19 @@ export default function Settings() {
     <div className="px-4 pt-4 pb-6 max-w-lg mx-auto">
       <div className="flex items-center justify-between mb-1">
         <h1 data-testid="text-settings-title" className="text-xl font-display font-bold">Profile</h1>
-        <Link href="/artist" data-testid="link-profile-artist">
-          <img src="/artist-icon.jpg" alt="" className="w-10 h-10 rounded-full object-cover drop-shadow-md hover:scale-105 transition-transform" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowShareArtist(true)}
+            className="w-7 h-7 rounded-full bg-orange-500/10 hover:bg-orange-500/20 border border-orange-300/50 flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+            title="Share the artist"
+            data-testid="button-share-artist"
+          >
+            <Share2 className="w-3.5 h-3.5 text-orange-600" />
+          </button>
+          <Link href="/artist" data-testid="link-profile-artist">
+            <img src="/artist-icon.jpg" alt="" className="w-10 h-10 rounded-full object-cover drop-shadow-md hover:scale-105 transition-transform" />
+          </Link>
+        </div>
       </div>
       <p className="text-xs text-muted-foreground mb-4">Your identity and preferences.</p>
 
@@ -549,32 +564,44 @@ export default function Settings() {
                   {user.subscription === "power_hop" ? "PowerHop" : "FlexHop"} Perk
                 </Badge>
               </div>
-              <p className="text-[10px] text-muted-foreground mb-3">Customize the color of your Profile tab in the navigation bar.</p>
-              <div className="flex flex-wrap gap-2">
-                {PROFILE_TAB_COLORS.map((color) => {
-                  const isSelected = profileTabColor === color.value;
-                  const bgMap: Record<string, string> = {
-                    "text-orange-500": "bg-orange-500",
-                    "text-violet-500": "bg-violet-500",
-                    "text-cyan-500": "bg-cyan-500",
-                    "text-rose-500": "bg-rose-500",
-                    "text-lime-500": "bg-lime-500",
-                    "text-amber-400": "bg-amber-400",
-                    "text-sky-500": "bg-sky-500",
-                    "text-fuchsia-500": "bg-fuchsia-500",
-                  };
+              <p className="text-[10px] text-muted-foreground mb-3">Pick any shade for your Profile, Tailor, Connect, and Planned Hops tabs — and the name shown to your driver when matched.</p>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {PROFILE_TAB_PRESETS.map((hex) => {
+                  const currentHex = getProfileColorHex(profileTabColor);
+                  const isSelected = currentHex.toLowerCase() === hex.toLowerCase();
                   return (
                     <button
-                      key={color.value}
-                      onClick={() => applyProfileTabColor(color.value)}
-                      className={`w-8 h-8 rounded-full ${bgMap[color.value] || "bg-gray-500"} transition-all ${
-                        isSelected ? "ring-2 ring-offset-2 ring-foreground scale-110" : "opacity-70 hover:opacity-100"
+                      key={hex}
+                      onClick={() => applyProfileTabColor(hex)}
+                      style={{ backgroundColor: hex }}
+                      className={`w-8 h-8 rounded-full transition-all ${
+                        isSelected ? "ring-2 ring-offset-2 ring-foreground scale-110" : "opacity-80 hover:opacity-100"
                       }`}
-                      title={color.label}
-                      data-testid={`button-profile-color-${color.label.toLowerCase()}`}
+                      title={hex}
+                      data-testid={`button-profile-color-preset-${hex.replace("#", "")}`}
                     />
                   );
                 })}
+              </div>
+              <div className="flex items-center gap-3 p-2 rounded-xl bg-background/60 border border-border">
+                <label htmlFor="profile-color-picker" className="text-[11px] font-bold text-foreground shrink-0">Pick exact shade:</label>
+                <input
+                  id="profile-color-picker"
+                  type="color"
+                  value={getProfileColorHex(profileTabColor)}
+                  onChange={(e) => applyProfileTabColor(e.target.value)}
+                  className="w-10 h-10 rounded-lg cursor-pointer border border-border bg-transparent"
+                  data-testid="input-profile-color-picker"
+                />
+                <div className="flex-1 flex items-center gap-2 min-w-0">
+                  <div
+                    className="w-6 h-6 rounded-full border border-border shrink-0"
+                    style={{ backgroundColor: getProfileColorHex(profileTabColor) }}
+                  />
+                  <span className="text-[11px] font-mono text-muted-foreground uppercase truncate">
+                    {getProfileColorHex(profileTabColor)}
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -597,16 +624,7 @@ export default function Settings() {
         {user && (
           <Card
             className="border-2"
-            style={{
-              borderColor: profileTabColor.includes("violet") ? "#8b5cf680"
-                : profileTabColor.includes("cyan") ? "#06b6d480"
-                : profileTabColor.includes("rose") ? "#f43f5e80"
-                : profileTabColor.includes("lime") ? "#84cc1680"
-                : profileTabColor.includes("amber") ? "#fbbf2480"
-                : profileTabColor.includes("sky") ? "#0ea5e980"
-                : profileTabColor.includes("fuchsia") ? "#d946ef80"
-                : "#f9731680",
-            }}
+            style={{ borderColor: getProfileColorHex(profileTabColor) + "80" }}
             data-testid="card-your-profile"
           >
             <CardHeader>
@@ -645,16 +663,7 @@ export default function Settings() {
                 <div
                   className="relative w-24 h-24 rounded-full flex items-center justify-center cursor-pointer overflow-hidden transition-colors"
                   style={{
-                    border: `4px solid`,
-                    borderColor: profileTabColor.replace("text-", "").replace("-500", "").replace("-400", "") === "orange" ? "#f97316"
-                      : profileTabColor.includes("violet") ? "#8b5cf6"
-                      : profileTabColor.includes("cyan") ? "#06b6d4"
-                      : profileTabColor.includes("rose") ? "#f43f5e"
-                      : profileTabColor.includes("lime") ? "#84cc16"
-                      : profileTabColor.includes("amber") ? "#fbbf24"
-                      : profileTabColor.includes("sky") ? "#0ea5e9"
-                      : profileTabColor.includes("fuchsia") ? "#d946ef"
-                      : "#f97316",
+                    border: `4px solid ${getProfileColorHex(profileTabColor)}`,
                   }}
                   onClick={() => fileInputRef.current?.click()}
                   data-testid="button-profile-photo"
@@ -791,6 +800,37 @@ export default function Settings() {
                   maxSelections={12}
                 />
                 <p className="text-[9px] text-muted-foreground text-right mt-1">{selectedInterests.length}/12 selected</p>
+              </div>
+
+              <div>
+                <Label className="text-xs font-bold mb-1.5 block">Relationship Status</Label>
+                <p className="text-[10px] text-muted-foreground mb-2">Optional — share if you'd like</p>
+                <Select value={relationshipStatus || "unset"} onValueChange={(v) => setRelationshipStatus(v === "unset" ? "" : v)}>
+                  <SelectTrigger className="text-sm" data-testid="select-relationship-status">
+                    <SelectValue placeholder="Prefer not to say" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unset">Prefer not to say</SelectItem>
+                    <SelectItem value="single">Single</SelectItem>
+                    <SelectItem value="taken">Taken / In a relationship</SelectItem>
+                    <SelectItem value="married">Married</SelectItem>
+                    <SelectItem value="engaged">Engaged</SelectItem>
+                    <SelectItem value="dating">Dating around</SelectItem>
+                    <SelectItem value="open">Open relationship</SelectItem>
+                    <SelectItem value="poly">Polyamorous</SelectItem>
+                    <SelectItem value="situationship">It's complicated</SelectItem>
+                    <SelectItem value="healing">Healing / Taking time</SelectItem>
+                    <SelectItem value="separated">Separated</SelectItem>
+                    <SelectItem value="divorced">Divorced</SelectItem>
+                    <SelectItem value="widowed">Widowed</SelectItem>
+                    <SelectItem value="asexual">Asexual</SelectItem>
+                    <SelectItem value="aromantic">Aromantic</SelectItem>
+                    <SelectItem value="questioning">Questioning / Exploring</SelectItem>
+                    <SelectItem value="not_looking">Not looking</SelectItem>
+                    <SelectItem value="focused">Focused on me</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -1118,7 +1158,120 @@ export default function Settings() {
           onOpenChange={(open) => !open && setSubscriptionPlan(null)}
         />
       )}
+
+      <ShareArtistDialog open={showShareArtist} onOpenChange={setShowShareArtist} />
     </div>
+  );
+}
+
+function ShareArtistDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const [copied, setCopied] = useState(false);
+  const ARTIST_URL = "https://beacons.ai/hyperfm";
+  const SHARE_TEXT = "Check out HyperFM — the artist behind ShortHop. Music, art, and a Lexington-built rideshare for the people. Help spread the impact:";
+
+  async function nativeShare() {
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      try {
+        await (navigator as any).share({ title: "HyperFM", text: SHARE_TEXT, url: ARTIST_URL });
+      } catch {}
+    } else {
+      copyLink();
+    }
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(`${SHARE_TEXT} ${ARTIST_URL}`);
+      setCopied(true);
+      showFlash("✅", "Link copied!", "success");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showFlash("❌", "Couldn't copy", "error");
+    }
+  }
+
+  function shareTo(platform: "sms" | "twitter" | "facebook" | "whatsapp" | "email") {
+    const enc = encodeURIComponent;
+    const text = enc(SHARE_TEXT);
+    const url = enc(ARTIST_URL);
+    let href = "";
+    switch (platform) {
+      case "sms": href = `sms:?&body=${text}%20${url}`; break;
+      case "twitter": href = `https://twitter.com/intent/tweet?text=${text}&url=${url}`; break;
+      case "facebook": href = `https://www.facebook.com/sharer/sharer.php?u=${url}`; break;
+      case "whatsapp": href = `https://wa.me/?text=${text}%20${url}`; break;
+      case "email": href = `mailto:?subject=${enc("HyperFM — the artist behind ShortHop")}&body=${text}%20${url}`; break;
+    }
+    window.open(href, "_blank");
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm" data-testid="dialog-share-artist">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Share2 className="w-5 h-5 text-orange-500" />
+            Share the Artist
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-1">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/20 border border-orange-200/50">
+            <img src="/artist-icon.jpg" alt="HyperFM" className="w-12 h-12 rounded-full object-cover shadow-md shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold text-foreground">HyperFM</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">The Lexington artist behind ShortHop. Help spread it.</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Tap a button below to send the artist's page to people you know. Every share helps build impact.
+          </p>
+
+          <button
+            onClick={nativeShare}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+            data-testid="button-share-native"
+          >
+            <Share2 className="w-4 h-4" />
+            Share…
+          </button>
+
+          <div className="grid grid-cols-5 gap-2">
+            <button onClick={() => shareTo("sms")} className="flex flex-col items-center gap-1 p-2 rounded-lg border border-border hover:bg-muted transition-colors" data-testid="button-share-sms">
+              <Smartphone className="w-4 h-4 text-green-600" />
+              <span className="text-[9px] font-bold">SMS</span>
+            </button>
+            <button onClick={() => shareTo("whatsapp")} className="flex flex-col items-center gap-1 p-2 rounded-lg border border-border hover:bg-muted transition-colors" data-testid="button-share-whatsapp">
+              <span className="text-base leading-none">💬</span>
+              <span className="text-[9px] font-bold">WhatsApp</span>
+            </button>
+            <button onClick={() => shareTo("twitter")} className="flex flex-col items-center gap-1 p-2 rounded-lg border border-border hover:bg-muted transition-colors" data-testid="button-share-twitter">
+              <span className="text-base leading-none">𝕏</span>
+              <span className="text-[9px] font-bold">X</span>
+            </button>
+            <button onClick={() => shareTo("facebook")} className="flex flex-col items-center gap-1 p-2 rounded-lg border border-border hover:bg-muted transition-colors" data-testid="button-share-facebook">
+              <span className="text-base leading-none">📘</span>
+              <span className="text-[9px] font-bold">Facebook</span>
+            </button>
+            <button onClick={() => shareTo("email")} className="flex flex-col items-center gap-1 p-2 rounded-lg border border-border hover:bg-muted transition-colors" data-testid="button-share-email">
+              <Mail className="w-4 h-4 text-blue-600" />
+              <span className="text-[9px] font-bold">Email</span>
+            </button>
+          </div>
+
+          <button
+            onClick={copyLink}
+            className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-border bg-background hover:bg-muted transition-colors"
+            data-testid="button-share-copy"
+          >
+            <span className="text-[11px] font-mono text-muted-foreground truncate">{ARTIST_URL}</span>
+            <span className="flex items-center gap-1 text-[11px] font-bold text-orange-600 shrink-0">
+              {copied ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
+            </span>
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

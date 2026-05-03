@@ -2,7 +2,8 @@ import { useLocation } from "wouter";
 import { Calendar, Activity, User } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { getProfileColorHex } from "@/lib/profileColor";
 import hopBtnSrc from "@assets/Untitled_design_1773404932229.png";
 import driveBtnSrc from "@assets/Untitled_design_1773404932231.png";
 
@@ -16,24 +17,26 @@ function BowTieIcon({ className }: { className?: string }) {
   );
 }
 
-const PROFILE_TAB_COLORS = [
-  { label: "Orange", value: "text-orange-500" },
-  { label: "Violet", value: "text-violet-500" },
-  { label: "Cyan", value: "text-cyan-500" },
-  { label: "Rose", value: "text-rose-500" },
-  { label: "Lime", value: "text-lime-500" },
-  { label: "Amber", value: "text-amber-400" },
-  { label: "Sky", value: "text-sky-500" },
-  { label: "Fuchsia", value: "text-fuchsia-500" },
+export const PROFILE_TAB_PRESETS = [
+  "#f97316",
+  "#8b5cf6",
+  "#06b6d4",
+  "#f43f5e",
+  "#84cc16",
+  "#fbbf24",
+  "#0ea5e9",
+  "#d946ef",
+  "#22c55e",
+  "#ef4444",
+  "#3b82f6",
+  "#ec4899",
 ];
 
-export { PROFILE_TAB_COLORS };
-
-function getProfileTabColor(): string {
+function getStoredProfileColor(): string {
   try {
-    return localStorage.getItem("sh-profile-tab-color") || "text-orange-500";
+    return localStorage.getItem("sh-profile-tab-color") || "#f97316";
   } catch {
-    return "text-orange-500";
+    return "#f97316";
   }
 }
 
@@ -53,7 +56,7 @@ function getActiveMode(): "hopper" | "driver" {
 export function BottomTabBar() {
   const [location, setLocation] = useLocation();
   const { data: user } = useAuth();
-  const [profileColor, setProfileColor] = useState(getProfileTabColor);
+  const [profileColorRaw, setProfileColorRaw] = useState(getStoredProfileColor);
   const [activeMode, setActiveMode] = useState<"hopper" | "driver">(() => {
     const lock = user?.modeLock || "none";
     if (lock === "driver_only") return "driver";
@@ -64,7 +67,7 @@ export function BottomTabBar() {
   useEffect(() => {
     function onColorChange(e: Event) {
       const color = (e as CustomEvent).detail;
-      if (color) setProfileColor(color);
+      if (color) setProfileColorRaw(color);
     }
     function onModeChange(e: Event) {
       const lock = user?.modeLock || "none";
@@ -83,7 +86,7 @@ export function BottomTabBar() {
   if (!user) return null;
 
   const isFlexPlus = user.subscription === "flex_hop" || user.subscription === "power_hop";
-  const isOnHopPage = location === "/instahop" || location === "/hop";
+  const customHex = isFlexPlus ? getProfileColorHex(profileColorRaw) : "#f97316";
 
   const userModeLock = user.modeLock || "none";
 
@@ -102,6 +105,47 @@ export function BottomTabBar() {
   const leftTabs = sideTabs.slice(0, 2);
   const rightTabs = sideTabs.slice(2);
 
+  function renderSideTab(tab: typeof sideTabs[number]) {
+    const isProfileTab = (tab as any).isProfile;
+    const isActive = location === tab.path || (isProfileTab && location === "/profile");
+    const showAdminDot = isProfileTab && user!.isAdmin;
+    const Icon = tab.icon as typeof User | undefined;
+    const CustomIcon = (tab as any).customIcon as typeof BowTieIcon | undefined;
+
+    const activeStyle = isActive ? { color: customHex } : undefined;
+    const indicatorStyle = isActive ? { backgroundColor: customHex } : undefined;
+
+    return (
+      <button
+        key={tab.path}
+        onClick={() => setLocation(tab.path)}
+        style={activeStyle}
+        className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors relative ${
+          isActive ? "" : "text-muted-foreground"
+        }`}
+        data-testid={`tab-${tab.label.toLowerCase().replace(/\s+/g, "-")}`}
+      >
+        {CustomIcon ? (
+          <CustomIcon className={`w-5 h-5 ${isActive ? "stroke-[2.5]" : ""}`} />
+        ) : Icon ? (
+          <Icon className={`w-5 h-5 ${isActive ? "stroke-[2.5]" : ""}`} />
+        ) : null}
+        <span className={`text-[10px] leading-none ${isActive ? "font-bold" : "font-medium"}`}>{tab.label}</span>
+        {isActive && (
+          <motion.div
+            layoutId="tabIndicator"
+            style={indicatorStyle}
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          />
+        )}
+        {showAdminDot && (
+          <div className="absolute top-2 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-red-500" />
+        )}
+      </button>
+    );
+  }
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg safe-area-bottom"
@@ -109,30 +153,7 @@ export function BottomTabBar() {
     >
       <div className="h-px bg-gradient-to-r from-orange-500/40 via-orange-400/60 to-orange-500/40" />
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
-        {leftTabs.map((tab) => {
-          const isActive = location === tab.path;
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.path}
-              onClick={() => setLocation(tab.path)}
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors relative ${
-                isActive ? "text-orange-500" : "text-muted-foreground"
-              }`}
-              data-testid={`tab-${tab.label.toLowerCase()}`}
-            >
-              <Icon className={`w-5 h-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-              <span className={`text-[10px] leading-none ${isActive ? "font-bold" : "font-medium"}`}>{tab.label}</span>
-              {isActive && (
-                <motion.div
-                  layoutId="tabIndicator"
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-orange-500"
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
-            </button>
-          );
-        })}
+        {leftTabs.map(renderSideTab)}
 
         <motion.button
           onClick={toggleMode}
@@ -158,45 +179,7 @@ export function BottomTabBar() {
           }`}>{activeMode === "hopper" ? "Hop" : "Drive"}</span>
         </motion.button>
 
-        {rightTabs.map((tab) => {
-          const isActive = location === tab.path || ((tab as any).isProfile && location === "/profile");
-          const showAdminDot = (tab as any).isProfile && user.isAdmin;
-          const Icon = tab.icon as typeof User | undefined;
-          const CustomIcon = (tab as any).customIcon as typeof BowTieIcon | undefined;
-          const isProfileTab = (tab as any).isProfile;
-          const activeColor = isProfileTab && isFlexPlus && isActive ? profileColor : isActive ? "text-orange-500" : "text-muted-foreground";
-          const inactiveColor = isProfileTab && isFlexPlus ? profileColor.replace("-500", "-400").replace("-400", "-300") : "";
-
-          return (
-            <button
-              key={tab.path}
-              onClick={() => setLocation(tab.path)}
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors relative ${
-                isActive ? activeColor : inactiveColor || "text-muted-foreground"
-              }`}
-              data-testid={`tab-${tab.label.toLowerCase()}`}
-            >
-              {CustomIcon ? (
-                <CustomIcon className={`w-5 h-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-              ) : Icon ? (
-                <Icon className={`w-5 h-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-              ) : null}
-              <span className={`text-[10px] leading-none ${isActive ? "font-bold" : "font-medium"}`}>{tab.label}</span>
-              {isActive && (
-                <motion.div
-                  layoutId="tabIndicator"
-                  className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full ${
-                    isProfileTab && isFlexPlus ? profileColor.replace("text-", "bg-") : "bg-orange-500"
-                  }`}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
-              {showAdminDot && (
-                <div className="absolute top-2 right-[calc(50%-14px)] w-2 h-2 rounded-full bg-red-500" />
-              )}
-            </button>
-          );
-        })}
+        {rightTabs.map(renderSideTab)}
       </div>
     </nav>
   );

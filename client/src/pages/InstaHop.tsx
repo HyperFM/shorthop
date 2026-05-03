@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { getProfileColorHex } from "@/lib/profileColor";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -1016,7 +1017,10 @@ function HopperCard({ hop, compact, onConfirmPickup, onCompleteRide }: {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-gray-900 text-xs font-black truncate">
-              {hopperUser?.username || "Hopper"} in your car?
+              <span style={hopperUser?.profileColor ? { color: getProfileColorHex(hopperUser.profileColor) } : undefined}>
+                {hopperUser?.username || "Hopper"}
+              </span>{" "}
+              in your car?
             </p>
           </div>
         </div>
@@ -1065,7 +1069,10 @@ function HopperCard({ hop, compact, onConfirmPickup, onCompleteRide }: {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
             <p className={`text-white ${textSize} font-bold truncate`}>
-              {hopperUser?.username || "Hopper"} {rideStyleEmoji}
+              <span style={hopperUser?.profileColor ? { color: getProfileColorHex(hopperUser.profileColor) } : undefined}>
+                {hopperUser?.username || "Hopper"}
+              </span>{" "}
+              {rideStyleEmoji}
             </p>
             {hopperUser?.phone && (
               <a href={`tel:${hopperUser.phone}`} className="shrink-0" data-testid={`button-call-hopper-${hop.id}`}>

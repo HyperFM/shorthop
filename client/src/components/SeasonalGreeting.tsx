@@ -151,7 +151,9 @@ export function SeasonalGreeting({
     return () => window.removeEventListener("sh-profile-color-change", onColorChange);
   }, []);
 
-  const nameColor = profileColor || getRoleColors(role).nameColor;
+  const isHexColor = profileColor.startsWith("#");
+  const nameColor = !isHexColor && profileColor ? profileColor : getRoleColors(role).nameColor;
+  const nameStyle = isHexColor ? { color: profileColor } : undefined;
 
   const { data: weather } = useQuery<WeatherData>({
     queryKey: ["/api/weather"],
@@ -184,7 +186,7 @@ export function SeasonalGreeting({
 
           <div className="flex items-center gap-2">
             <span className="text-3xl leading-none" data-testid="seasonal-emoji">{emoji}</span>
-            <h1 className={`text-xl font-display font-extrabold tracking-tight ${nameColor}`} style={{ textShadow: "0 1px 4px rgba(0,0,0,0.12)" }}>
+            <h1 className={`text-xl font-display font-extrabold tracking-tight ${nameColor}`} style={{ textShadow: "0 1px 4px rgba(0,0,0,0.12)", ...(nameStyle || {}) }}>
               {greeting}
             </h1>
           </div>

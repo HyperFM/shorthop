@@ -102,6 +102,7 @@ export const users = pgTable("users", {
   customLocationLat: text("custom_location_lat"),
   customLocationLng: text("custom_location_lng"),
   profileColor: text("profile_color").default("text-orange-500"),
+  relationshipStatus: text("relationship_status"),
   tipRatingOptOut: boolean("tip_rating_opt_out").default(false),
   riderCredits: doublePrecision("rider_credits").default(0),
   driverEarnings: doublePrecision("driver_earnings").default(0),

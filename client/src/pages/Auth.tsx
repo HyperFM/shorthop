@@ -368,6 +368,39 @@ export default function Auth() {
                       <><Bell className="w-4 h-4 mr-2" /> Notify Me When ShortHop Comes To My City</>
                     )}
                   </Button>
+
+                  <div className="relative py-1">
+                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border/60" /></div>
+                    <div className="relative flex justify-center"><span className="bg-background/60 px-2 text-[10px] uppercase tracking-wider text-muted-foreground font-bold">or</span></div>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl py-5 text-sm font-bold border-primary/40 hover:bg-primary/5"
+                    onClick={() => {
+                      if (!pendingRegistration) return;
+                      const data = pendingRegistration;
+                      setShowExpansion(false);
+                      registerMutation.mutate({
+                        ...data,
+                        city: data.city.trim(),
+                        phone: data.phone.trim(),
+                        notificationsEnabled: data.notificationsEnabled,
+                        referredBy: data.referredBy?.trim() || undefined,
+                      } as any);
+                    }}
+                    disabled={registerMutation.isPending}
+                    data-testid="button-signup-anyway"
+                  >
+                    {registerMutation.isPending ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating account...</>
+                    ) : (
+                      <>Sign Up Anyway →</>
+                    )}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground text-center leading-tight px-2">
+                    Heads up: matches will be limited until ShortHop launches in {pendingCity}. You can still set up your profile and explore.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4 pt-2">

@@ -1010,7 +1010,7 @@ export async function registerRoutes(
         if ((hop.status === "matched" || hop.status === "in_ride") && hop.walkerId) {
           const walker = await storage.getUser(hop.walkerId);
           if (walker) {
-            return { ...hop, walker: { username: walker.username, profilePhoto: walker.profilePhoto, rideVibe: walker.rideVibe, bio: walker.bio, phone: walker.phone } };
+            return { ...hop, walker: { username: walker.username, profilePhoto: walker.profilePhoto, rideVibe: walker.rideVibe, bio: walker.bio, phone: walker.phone, profileColor: walker.profileColor } };
           }
         }
         return hop;
@@ -1976,7 +1976,7 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
       const SUPPORTED_LANGUAGES = Object.keys(getLanguages());
-      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility', 'legalName', 'profileColor', 'tipRatingOptOut', 'phone'];
+      const allowed = ['driverConvoComfort', 'driverMusicPref', 'driverPetsOk', 'driverGroceriesOk', 'driverLifestyleTags', 'driverQuestionnaireCompleted', 'bio', 'interests', 'language', 'preferredRoutes', 'travelTime', 'favoritePlaces', 'profilePhoto', 'profileVisibility', 'legalName', 'profileColor', 'tipRatingOptOut', 'phone', 'relationshipStatus'];
       const updates: Record<string, any> = {};
       for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
