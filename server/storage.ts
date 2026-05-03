@@ -291,7 +291,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const values = Object.fromEntries(
+      Object.entries(insertUser).filter(([, value]) => value !== undefined),
+    ) as InsertUser;
+    const [user] = await db.insert(users).values(values).returning();
     return user;
   }
 
@@ -358,28 +361,47 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNetworkStats(): Promise<{ totalUsers: number; totalDrivers: number; totalHoppers: number; activeDrivers: number; nextMilestone: number; foundingHoppersRemaining: number; foundingDriversRemaining: number }> {
-    const TEST_ACCOUNTS = ["walker", "driver"];
-    const allUsers = (await db.select().from(users)).filter(u => !TEST_ACCOUNTS.includes(u.username));
-    const totalUsers = allUsers.length;
-    const totalDrivers = allUsers.filter(u => u.isDriver).length;
-    const totalHoppers = allUsers.filter(u => !u.isDriver).length;
-    const activeDriversResult = await this.getActiveDrivers();
+    try {
+      const rows = await db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE username NOT IN ('walker', 'driver')) AS total_users,
+          COUNT(*) FILTER (WHERE username NOT IN ('walker', 'driver') AND is_driver = true) AS total_drivers,
+          COUNT(*) FILTER (WHERE username NOT IN ('walker', 'driver') AND is_driver = false) AS total_hoppers,
+          COUNT(*) FILTER (WHERE username NOT IN ('walker', 'driver') AND is_founder = true) AS total_founders
+        FROM users
+      `);
+      const row = (rows as any).rows?.[0] ?? rows[0] ?? {};
+      const totalUsers = Number(row.total_users ?? 0);
+      const totalDrivers = Number(row.total_drivers ?? 0);
+      const totalHoppers = Number(row.total_hoppers ?? 0);
+      const totalFounders = Number(row.total_founders ?? 0);
 
-    const milestones = [10, 25, 50, 100, 250, 500, 1000, 2000, 3000, 5000];
-    const nextMilestone = milestones.find(m => m > totalUsers) || 5000;
+      const activeDriversResult = await this.getActiveDrivers();
+      const milestones = [10, 25, 50, 100, 250, 500, 1000, 2000, 3000, 5000];
+      const nextMilestone = milestones.find(m => m > totalUsers) || 5000;
+      const foundingSpotsRemaining = Math.max(0, 50 - totalFounders);
 
-    const totalFounders = allUsers.filter(u => u.isFounder).length;
-    const foundingSpotsRemaining = Math.max(0, 50 - totalFounders);
-
-    return {
-      totalUsers,
-      totalDrivers,
-      totalHoppers,
-      activeDrivers: activeDriversResult.length,
-      nextMilestone,
-      foundingHoppersRemaining: foundingSpotsRemaining,
-      foundingDriversRemaining: foundingSpotsRemaining,
-    };
+      return {
+        totalUsers,
+        totalDrivers,
+        totalHoppers,
+        activeDrivers: activeDriversResult.length,
+        nextMilestone,
+        foundingHoppersRemaining: foundingSpotsRemaining,
+        foundingDriversRemaining: foundingSpotsRemaining,
+      };
+    } catch (err: any) {
+      console.error("[getNetworkStats] DB error, returning zeros:", err?.message);
+      return {
+        totalUsers: 0,
+        totalDrivers: 0,
+        totalHoppers: 0,
+        activeDrivers: 0,
+        nextMilestone: 10,
+        foundingHoppersRemaining: 50,
+        foundingDriversRemaining: 50,
+      };
+    }
   }
 
   async checkAndAssignFounderStatus(userId: number, isDriver: boolean): Promise<User> {
