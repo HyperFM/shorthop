@@ -839,12 +839,14 @@ export async function registerRoutes(
       const isHyperFM = normalizedUsername === "hyperfm";
       const userReferralCode = "SH" + username.slice(0, 4).toUpperCase() + Math.random().toString(36).slice(2, 8).toUpperCase();
       let user = await storage.createUser({
-        username, password, isDriver: false,
-        city: city?.trim() || null,
-        phone: phone?.trim() || null,
+        username,
+        password,
+        isDriver: false,
+        city: city?.trim() || undefined,
+        phone: phone?.trim() || undefined,
         notificationsEnabled: !!notificationsEnabled,
         referralCode: userReferralCode,
-        referredBy: referralInput || null,
+        referredBy: referralInput || undefined,
       });
 
       if (isHyperFM) {

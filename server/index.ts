@@ -1,9 +1,10 @@
-import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { WebhookHandlers } from "./webhookHandlers";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 const app = express();
 
@@ -94,6 +95,13 @@ app.use((req, res, next) => {
     log(`Stripe connected: ${account.id}`, 'stripe');
   } catch (e: any) {
     console.error('Stripe init check (non-fatal):', e.message);
+  }
+
+  try {
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS relationship_status text`);
+    log("DB migration: relationship_status column ensured", "startup");
+  } catch (e: any) {
+    console.error("DB migration (non-fatal):", e.message);
   }
 
   await registerRoutes(httpServer, app);
