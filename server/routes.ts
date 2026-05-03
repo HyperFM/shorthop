@@ -827,7 +827,8 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Phone number is required" });
       }
       const cityStr = (city || "").trim().toLowerCase();
-      if (!cityStr || !LAUNCH_CITIES_AUTH.some(c => cityStr.includes(c))) {
+      const bypassCityCheck = req.body.bypassCityCheck === true;
+      if (!bypassCityCheck && (!cityStr || !LAUNCH_CITIES_AUTH.some(c => cityStr.includes(c)))) {
         return res.status(409).json({ message: "ShortHop is not yet available in your city. Join our waitlist to be notified!", unavailableCity: true });
       }
       const existing = await storage.getUserByUsername(username);

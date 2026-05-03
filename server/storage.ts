@@ -265,13 +265,29 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (e: any) {
+      if (e?.code === '42703' || e?.code === '42P01') {
+        const result = await db.execute(sql`SELECT * FROM users WHERE id = ${id} LIMIT 1`);
+        return (result.rows?.[0] ?? result[0]) as User | undefined;
+      }
+      throw e;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(sql`lower(${users.username}) = lower(${username})`);
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(sql`lower(${users.username}) = lower(${username})`);
+      return user;
+    } catch (e: any) {
+      if (e?.code === '42703' || e?.code === '42P01') {
+        const result = await db.execute(sql`SELECT * FROM users WHERE lower(username) = lower(${username}) LIMIT 1`);
+        return (result.rows?.[0] ?? result[0]) as User | undefined;
+      }
+      throw e;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {

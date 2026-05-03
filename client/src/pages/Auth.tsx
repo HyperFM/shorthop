@@ -387,6 +387,7 @@ export default function Auth() {
                         phone: data.phone.trim(),
                         notificationsEnabled: data.notificationsEnabled,
                         referredBy: data.referredBy?.trim() || undefined,
+                        bypassCityCheck: true,
                       } as any);
                     }}
                     disabled={registerMutation.isPending}
