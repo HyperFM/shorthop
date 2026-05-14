@@ -10,7 +10,7 @@ import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { notifications, founderMessages, vipMessages, cityMessages, shortHops, users, donations, routineRoutes, spontaneousStops, contactMessages, cashoutRequests } from "@shared/schema";
 import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
 import fs from "fs";
@@ -758,12 +758,12 @@ export async function registerRoutes(
 ): Promise<Server> {
 
   const PgStore = connectPgSimple(session);
-  const sessionPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  
 
   app.use(
     session({
       store: new PgStore({
-        pool: sessionPool,
+        pool: pool,
         createTableIfMissing: true,
         tableName: 'session',
       }),
