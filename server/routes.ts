@@ -10,7 +10,7 @@ import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { getUncachableStripeClient } from "./stripeClient";
 import { translateText, getLanguages } from "./translate";
-import { db, pool } from "./db";
+import { db } from "./db";
 import { notifications, founderMessages, vipMessages, cityMessages, shortHops, users, donations, routineRoutes, spontaneousStops, contactMessages, cashoutRequests } from "@shared/schema";
 import { eq, and, lt, isNotNull, desc, sql } from "drizzle-orm";
 import fs from "fs";
@@ -758,12 +758,12 @@ export async function registerRoutes(
 ): Promise<Server> {
 
   const PgStore = connectPgSimple(session);
-  
+  const sessionPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
   app.use(
     session({
       store: new PgStore({
-        pool: pool,
+        pool: sessionPool,
         createTableIfMissing: true,
         tableName: 'session',
       }),
@@ -2051,6 +2051,15 @@ export async function registerRoutes(
       res.json(stats);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch network stats" });
+    }
+  });
+
+  app.get('/api/live-activity', async (_req, res) => {
+    try {
+      const activity = await storage.getLiveActivity();
+      res.json(activity);
+    } catch (err) {
+      res.status(500).json({ activeDrivers: 0, activeHops: 0, newMembersToday: 0 });
     }
   });
 

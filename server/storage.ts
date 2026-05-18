@@ -1454,6 +1454,26 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users).where(and(eq(users.isActive, true), eq(users.isDriver, true)));
   }
 
+  async getLiveActivity(): Promise<{ activeDrivers: number; activeHops: number; newMembersToday: number }> {
+    try {
+      const rows: any = await db.execute(sql`
+        SELECT
+          (SELECT COUNT(*) FROM users WHERE is_active = true AND is_driver = true AND username NOT IN ('walker','driver')) AS active_drivers,
+          (SELECT COUNT(*) FROM short_hops WHERE status IN ('matched','accepted','in_ride','driver_en_route','pickup_pending')) AS active_hops,
+          (SELECT COUNT(*) FROM users WHERE created_at >= CURRENT_DATE AND username NOT IN ('walker','driver')) AS new_today
+      `);
+      const row = rows.rows?.[0] ?? rows[0] ?? {};
+      return {
+        activeDrivers: Number(row.active_drivers ?? 0),
+        activeHops: Number(row.active_hops ?? 0),
+        newMembersToday: Number(row.new_today ?? 0),
+      };
+    } catch (err: any) {
+      console.error("[getLiveActivity] DB error, returning zeros:", err?.message);
+      return { activeDrivers: 0, activeHops: 0, newMembersToday: 0 };
+    }
+  }
+
   async getAllUsers(): Promise<User[]> {
     return db.select().from(users).orderBy(desc(users.createdAt));
   }

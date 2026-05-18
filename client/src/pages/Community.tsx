@@ -96,6 +96,40 @@ function LiveActivityItem({ icon, text }: { icon: React.ReactNode; text: string 
   );
 }
 
+function LiveActivityCard() {
+  const { data } = useQuery<{ activeDrivers: number; activeHops: number; newMembersToday: number }>({
+    queryKey: ["/api/live-activity"],
+    refetchInterval: 15000,
+  });
+  const activeDrivers = data?.activeDrivers ?? 0;
+  const activeHops = data?.activeHops ?? 0;
+  const newMembersToday = data?.newMembersToday ?? 0;
+  return (
+    <Card className="mb-4 border-border/50 shadow-sm rounded-2xl" data-testid="card-live-activity">
+      <CardContent className="p-3">
+        <div className="flex items-center gap-2 mb-2.5">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Live Activity</p>
+        </div>
+        <div className="space-y-2">
+          <LiveActivityItem
+            icon={<Car className="w-3.5 h-3.5 text-green-500" />}
+            text={`${activeDrivers} driver${activeDrivers === 1 ? "" : "s"} active right now`}
+          />
+          <LiveActivityItem
+            icon={<Footprints className="w-3.5 h-3.5 text-blue-500" />}
+            text={`${activeHops} hop${activeHops === 1 ? "" : "s"} in progress`}
+          />
+          <LiveActivityItem
+            icon={<UserPlus className="w-3.5 h-3.5 text-orange-500" />}
+            text={`${newMembersToday} new member${newMembersToday === 1 ? "" : "s"} joined today`}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function VipHyperChat({ user, onClose }: { user: any; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [msg, setMsg] = useState("");
@@ -1336,19 +1370,7 @@ export default function Community() {
 
       {connectTab !== "feed" ? null : (
       <>
-      <Card className="mb-4 border-border/50 shadow-sm rounded-2xl" data-testid="card-live-activity">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-2.5">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Live Activity</p>
-          </div>
-          <div className="space-y-2">
-            <LiveActivityItem icon={<Car className="w-3.5 h-3.5 text-green-500" />} text={`${Math.max(1, Math.floor(Math.random() * 4) + 1)} driver${Math.random() > 0.5 ? 's' : ''} heading toward downtown`} />
-            <LiveActivityItem icon={<Footprints className="w-3.5 h-3.5 text-blue-500" />} text={`${Math.floor(Math.random() * 3) + 1} riders traveling Richmond Rd this morning`} />
-            <LiveActivityItem icon={<UserPlus className="w-3.5 h-3.5 text-orange-500" />} text={`${Math.floor(Math.random() * 5) + 1} new members joined today`} />
-          </div>
-        </CardContent>
-      </Card>
+      <LiveActivityCard />
 
       <div className="mb-4">
         <NetworkProgress />
