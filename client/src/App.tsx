@@ -28,7 +28,7 @@ import SchedulePage from "@/pages/Schedule";
 import InstaHop from "@/pages/InstaHop";
 import { apiRequest } from "@/lib/queryClient";
 import type { Notification } from "@shared/schema";
-import shorthopIcon from "@assets/48110E6E-F081-4980-81F1-2C04E89CDE95_1781997457548.png";
+const shorthopIcon = "/app-store-icon.png";
 
 function OrangeGlow() {
   return (
