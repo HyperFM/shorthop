@@ -947,9 +947,9 @@ export default function Settings() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {user.isAdmin ? (
+              {user.isAdmin || user.isFounder ? (
                 <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Admin: Switch between tiers freely</p>
+                  <p className="text-xs text-muted-foreground">{user.isAdmin ? "Admin" : "Founder"}: Switch between tiers freely</p>
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { key: null, label: "Standard", icon: "🚶", desc: "Free tier" },

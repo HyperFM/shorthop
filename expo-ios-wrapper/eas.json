@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 12.0.0"
+    "version": ">= 20.0.0"
   },
   "build": {
     "development": {
@@ -12,19 +12,11 @@
     },
     "production": {
       "ios": {
-        "buildConfiguration": "Release"
+        "buildConfiguration": "Release",
+        "image": "macos-sequoia-15.6-xcode-26.2"
       },
       "android": {
         "buildType": "apk"
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "hqmbuisness@gmail.com",
-        "ascAppId": "45JMF34Z82",
-        "appleTeamId": "QWCFR6X85M"
       }
     }
   }

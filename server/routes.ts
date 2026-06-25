@@ -4442,7 +4442,14 @@ export async function registerRoutes(
     }
   });
 
-  app.patch('/api/admin/my-tier', requireAdmin, async (req, res) => {
+  const requireAdminOrFounder = async (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const user = await storage.getUser(req.user.id);
+    if (!user?.isAdmin && !user?.isFounder) return res.status(403).json({ message: "Admin or Founder access required" });
+    next();
+  };
+
+  app.patch('/api/admin/my-tier', requireAdminOrFounder, async (req, res) => {
     try {
       const { subscription } = req.body;
       const validTiers = [null, "flex_hop", "power_hop"];

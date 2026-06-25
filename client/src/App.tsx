@@ -28,6 +28,7 @@ import SchedulePage from "@/pages/Schedule";
 import InstaHop from "@/pages/InstaHop";
 import { apiRequest } from "@/lib/queryClient";
 import type { Notification } from "@shared/schema";
+import shorthopIcon from "@assets/48110E6E-F081-4980-81F1-2C04E89CDE95_1781997457548.png";
 
 function OrangeGlow() {
   return (
@@ -248,6 +249,48 @@ function AdminNotificationOverlay() {
   );
 }
 
+function AppStoreBanner() {
+  const isInApp = /ShortHop-iOS/g.test(navigator.userAgent);
+  if (isInApp) return null;
+
+  function openAppStore() {
+    const ua = navigator.userAgent;
+    if (/(iPad|iPhone|iPod)/g.test(ua)) {
+      window.location.href = "https://apps.apple.com/search?term=shorthop%20app";
+    } else if (/Windows Phone|Windows Mobile/g.test(ua)) {
+      window.location.href = "https://www.microsoft.com/search/shop?q=shorthop+app";
+    } else if (/Huawei|HMS|HONOR/g.test(ua)) {
+      window.location.href = "https://appgallery.huawei.com/search?keyword=shorthop";
+    } else if (/Android/g.test(ua)) {
+      window.location.href = "https://play.google.com/store/search?q=shorthop+app&c=apps";
+    } else {
+      window.location.href = "https://www.google.com/search?q=shorthop+app";
+    }
+  }
+
+  return (
+    <>
+      {/* Floating icon — bigger with glow + sparkles */}
+      <button
+        onClick={openAppStore}
+        className="fixed bottom-16 left-3 z-50 cursor-pointer"
+        style={{ background: "none", border: "none", padding: 0, width: 56, height: 56, filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.5))" }}
+        data-testid="app-store-icon"
+      >
+        <img
+          src={shorthopIcon}
+          alt="Get ShortHop"
+          className="w-14 h-14"
+          style={{ objectFit: "cover", borderRadius: 12, filter: "drop-shadow(0 0 10px rgba(249,115,22,0.6)) drop-shadow(0 0 20px rgba(249,115,22,0.3))" }}
+        />
+        <span className="absolute -top-1 -left-2 text-sm animate-pulse" style={{ animationDuration: "1.8s", textShadow: "0 0 4px rgba(249,115,22,1), 0 0 8px rgba(249,115,22,0.9)" }}>✨</span>
+        <span className="absolute -bottom-1 -right-2 text-base animate-pulse" style={{ animationDuration: "2.3s", animationDelay: "0.6s", textShadow: "0 0 4px rgba(249,115,22,1), 0 0 8px rgba(249,115,22,0.9)" }}>✨</span>
+        <span className="absolute top-2 -right-3 text-xs animate-pulse" style={{ animationDuration: "1.5s", animationDelay: "1.2s", textShadow: "0 0 4px rgba(249,115,22,1), 0 0 8px rgba(249,115,22,0.9)" }}>✨</span>
+      </button>
+    </>
+  );
+}
+
 function App() {
   useEffect(() => {
     try {
@@ -275,6 +318,7 @@ function App() {
           <main className="min-h-screen pb-32">
             <Router />
           </main>
+          <AppStoreBanner />
           <BottomTabBar />
         </TooltipProvider>
       </ThemeProvider>

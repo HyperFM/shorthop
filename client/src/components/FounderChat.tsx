@@ -81,6 +81,9 @@ export function FounderChat({ isAdminView = false }: { isAdminView?: boolean }) 
       queryClient.invalidateQueries({ queryKey: ["/api/founder-chat"] });
       showFlash("✅", "Message sent", "success");
     },
+    onError: (err: any) => {
+      showFlash("⚠️", err.message || "Failed to send", "warning");
+    },
   });
 
   useEffect(() => {

@@ -1,34 +1,38 @@
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, StyleSheet, Platform, Text, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, Platform, Text, View, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
-import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import useIconRotation from './useIconRotation';
+import SplashScreen from './SplashScreen';
 
-SplashScreen.preventAutoHideAsync();
-
-const APP_URL = 'https://49591681-5167-4dba-9528-350383bb09f8-00-zhm23k33wr5b.kirk.replit.dev';
+const APP_URL = 'https://shorthop.site';
 
 export default function App() {
+  useIconRotation();
+
   const webViewRef = useRef(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const source = useMemo(() => ({ uri: `${APP_URL}/auth` }), []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 6000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const onLoadEnd = useCallback(() => {
     if (!isLoaded) {
       setIsLoaded(true);
-      SplashScreen.hideAsync();
     }
   }, [isLoaded]);
 
   const onError = useCallback(() => {
     setHasError(true);
-    SplashScreen.hideAsync();
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" translucent={false} />
+    <View style={styles.container}>
+      <SplashScreen visible={showSplash} onDone={() => setShowSplash(false)} />
       {hasError ? (
         <View style={styles.errorWrap}>
           <ActivityIndicator color="#fff" />
@@ -62,14 +66,15 @@ export default function App() {
           userAgent={`ShortHop-iOS/1.0.0 ${Platform.OS}`}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#FD7700',
+    paddingTop: 0,
   },
   webview: {
     flex: 1,

@@ -2,7 +2,7 @@
   "expo": {
     "name": "ShortHop",
     "slug": "shorthop",
-    "version": "1.0.4",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -14,17 +14,44 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hyperquency.shorthopapp",
-      "buildNumber": "4",
+      "buildNumber": "1",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
-        "ITSAppUsesNonExemptEncryption": false
+        "NSLocationWhenInUseUsageDescription": "ShortHop needs your location to match you with nearby rides and show drivers where to pick you up.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "ShortHop needs your location to track active rides and show nearby drivers.",
+        "NSLocationAlwaysUsageDescription": "ShortHop uses your location to provide live ride tracking and nearby driver matching.",
+        "NSCameraUsageDescription": "ShortHop needs camera access to take photos for your profile and driver verification.",
+        "NSPhotoLibraryUsageDescription": "ShortHop needs photo library access to upload your profile picture and driver documents.",
+        "NSPhotoLibraryAddUsageDescription": "ShortHop needs permission to save photos to your library."
+      },
+      "alternateIcons": {
+        "icon_january":               { "image": "./assets/icons/icon_january.png" },
+        "icon_february_v1":           { "image": "./assets/icons/icon_february_v1.png" },
+        "icon_february_v2":           { "image": "./assets/icons/icon_february_v2.png" },
+        "icon_march":                 { "image": "./assets/icons/icon_march.png" },
+        "icon_april":                 { "image": "./assets/icons/icon_april.png" },
+        "icon_may":                   { "image": "./assets/icons/icon_may.png" },
+        "icon_june":                  { "image": "./assets/icons/icon_june.png" },
+        "icon_july":                  { "image": "./assets/icons/icon_july.png" },
+        "icon_september":             { "image": "./assets/icons/icon_september.png" },
+        "icon_october_v1":            { "image": "./assets/icons/icon_october_v1.png" },
+        "icon_october_v2":            { "image": "./assets/icons/icon_october_v2.png" },
+        "icon_november_v1":           { "image": "./assets/icons/icon_november_v1.png" },
+        "icon_november_v2":           { "image": "./assets/icons/icon_november_v2.png" },
+        "icon_november_v3":           { "image": "./assets/icons/icon_november_v3.png" },
+        "icon_december_christmas_v1": { "image": "./assets/icons/icon_december_christmas_v1.png" },
+        "icon_december_christmas_v2": { "image": "./assets/icons/icon_december_christmas_v2.png" },
+        "icon_december_christmas_v3": { "image": "./assets/icons/icon_december_christmas_v3.png" },
+        "icon_birthday_v1":           { "image": "./assets/icons/icon_birthday_v1.png" },
+        "icon_birthday_v2":           { "image": "./assets/icons/icon_birthday_v2.png" },
+        "icon_birthday_v3":           { "image": "./assets/icons/icon_birthday_v3.png" }
       }
     },
     "android": {
       "package": "com.hyperquency.shorthopapp",
-      "versionCode": 4,
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#1a1a2e"
@@ -40,11 +67,6 @@
     },
     "assetBundlePatterns": [
       "**/*"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "3d52bf46-fedf-4efd-b03f-6ffe898e8441"
-      }
-    }
+    ]
   }
 }

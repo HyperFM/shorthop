@@ -53,17 +53,58 @@
         align-items: center;
         justify-content: center;
       }
-      #sh-splash img {
-        max-width: 60%;
-        max-height: 50%;
+      #sh-splash .splash-ring {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40%;
+        height: 35%;
+      }
+      #sh-splash .splash-ring img {
+        max-width: 55%;
+        max-height: 55%;
         object-fit: contain;
+        border-radius: 14px;
+        animation: pulseIcon 2s ease-in-out infinite;
+      }
+      #sh-splash .splash-ring::before {
+        content: '';
+        position: absolute;
+        inset: -40px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(249,115,22,0.5) 0%, rgba(249,115,22,0.25) 20%, rgba(249,115,22,0.08) 45%, rgba(249,115,22,0.02) 65%, transparent 80%);
+        animation: pulseGlow 2s ease-in-out infinite;
+        z-index: 0;
+      }
+      #sh-splash .splash-ring::after {
+        content: '';
+        position: absolute;
+        inset: -120px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(249,115,22,0.2) 0%, rgba(249,115,22,0.08) 20%, rgba(249,115,22,0.02) 40%, transparent 60%);
+        animation: stretchGlow 3s ease-in-out infinite;
+        z-index: -1;
+      }
+      @keyframes pulseIcon {
+        0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(249,115,22,0.6)) drop-shadow(0 0 40px rgba(249,115,22,0.4)); }
+        50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(249,115,22,0.9)) drop-shadow(0 0 60px rgba(249,115,22,0.6)) drop-shadow(0 0 100px rgba(249,115,22,0.35)); }
+      }
+      @keyframes pulseGlow {
+        0%, 100% { transform: scale(1); opacity: 0.7; }
+        50% { transform: scale(1.25); opacity: 1; }
+      }
+      @keyframes stretchGlow {
+        0% { transform: scale(0.6); opacity: 0; }
+        50% { transform: scale(1.2); opacity: 0.5; }
+        100% { transform: scale(1.8); opacity: 0; }
       }
       #sh-splash.fade-out {
         opacity: 0;
         transition: opacity 0.5s ease-out;
       }
     </style>
-    <link rel="preload" as="image" href="/splash.jpeg" />
+    <link rel="preload" as="image" href="/splash.png" />
     <meta property="og:title" content="ShortHop" />
     <meta property="og:description" content="Shared routes. Real connections. A micro-rideshare for Lexington, KY." />
     <meta property="og:image" content="/app-icon.png" />
@@ -74,10 +115,23 @@
   </head>
   <body>
     <div id="sh-splash">
-      <img src="/splash.jpeg" alt="ShortHop" />
+      <div class="splash-ring">
+        <img src="/splash.png" alt="ShortHop" />
+      </div>
     </div>
     <div id="root"></div>
     <script>
+      if (navigator.userAgent.indexOf('ShortHop-iOS') !== -1) {
+        document.getElementById('sh-splash').remove();
+      } else {
+        (function() {
+          var splash = document.getElementById('sh-splash');
+          setTimeout(function() {
+            splash.classList.add('fade-out');
+            setTimeout(function() { splash.remove(); }, 600);
+          }, 6000);
+        })();
+      }
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(regs) {
           regs.forEach(function(r) { r.unregister(); });
@@ -88,13 +142,6 @@
           });
         }
       }
-      (function() {
-        var splash = document.getElementById('sh-splash');
-        setTimeout(function() {
-          splash.classList.add('fade-out');
-          setTimeout(function() { splash.remove(); }, 600);
-        }, 10000);
-      })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
