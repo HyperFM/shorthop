@@ -1,0 +1,93 @@
+MICROSOFT STORE — RESTRICTED CAPABILITY REQUEST
+App Name: ShortHop
+Publisher: ShortHop Cooperative
+Package Identity: ShortHopCoop.ShortHop
+Version: 1.0.0.0
+
+================================================================================
+CAPABILITY REQUESTED: runFullTrust
+================================================================================
+
+1. WHAT THE APP DOES
+--------------------
+ShortHop is a cooperative micro-rideshare Progressive Web App (PWA) serving the
+Lexington, Kentucky community. It connects riders with nearby drivers for short,
+affordable trips within the city. The app handles ride matching, real-time GPS
+tracking, in-app payments via Stripe, community features, and driver payouts.
+
+2. WHY THE CAPABILITY IS NEEDED
+--------------------------------
+ShortHop is a hosted web application packaged for the Microsoft Store to give
+Windows users a native install experience. The runFullTrust capability is
+required because the app is distributed as a packaged web application (PWA)
+that needs to:
+
+  - Launch in a full-trust context to render web content from the hosted
+    ShortHop service (https://shorthop.replit.app)
+  - Access browser-level APIs for geolocation (required for ride matching
+    and GPS tracking during active rides)
+  - Handle push notification registration for ride alerts and driver
+    availability updates
+  - Integrate with the device camera for profile photos and ID verification
+
+The app does NOT:
+  - Access the local file system beyond standard browser sandboxed storage
+  - Install or launch other executables
+  - Modify system settings or registry entries
+  - Run background services or daemons
+  - Access any hardware beyond what the browser sandbox permits
+
+3. HOW THE CAPABILITY IS USED IN THE PRODUCT
+---------------------------------------------
+When a user installs ShortHop from the Microsoft Store:
+
+  Step 1: The MSIX package installs the app with a Start Menu shortcut and
+          taskbar pin capability, like any other Store app.
+
+  Step 2: On launch, the app opens a WebView that loads the ShortHop web
+          application at https://shorthop.replit.app/auth (the sign-in page).
+
+  Step 3: All functionality runs inside the WebView. The runFullTrust context
+          allows the WebView host process to operate, but the app itself is
+          fully sandboxed within browser security boundaries.
+
+  Step 4: Users interact with ShortHop exactly as they would in a browser —
+          requesting rides, tracking drivers on a map, chatting, and making
+          payments — but with the convenience of a native Windows app.
+
+The runFullTrust capability is solely used to host the WebView process that
+renders the PWA. No desktop-specific APIs, COM objects, or Win32 calls are
+made by the application.
+
+4. ALTERNATIVES CONSIDERED
+--------------------------
+  - UWP WebView without runFullTrust: Does not support the full range of
+    modern web APIs (geolocation, camera, notifications) required by ShortHop.
+  - Browser-only distribution: Users prefer a native app experience with
+    taskbar integration and Start Menu presence, which the Store package
+    provides.
+
+5. PRIVACY AND SECURITY
+------------------------
+  - All user data is transmitted over HTTPS/TLS
+  - Payment processing is handled entirely by Stripe (PCI-DSS compliant)
+  - No user data is stored locally on the Windows device
+  - The app collects only the data disclosed in our privacy policy
+  - GPS location is only accessed with explicit user permission and only
+    during active ride sessions
+
+6. CONTACT INFORMATION
+-----------------------
+Publisher: ShortHop Cooperative
+Contact Email: [YOUR EMAIL HERE]
+Website: https://shorthop.replit.app
+
+================================================================================
+INSTRUCTIONS FOR SUBMISSION:
+1. Log into Microsoft Partner Center
+2. Go to your ShortHop app submission
+3. Navigate to "Restricted capabilities" or "Capability request" section
+4. Copy/paste the relevant sections above into the form fields
+5. Replace [YOUR EMAIL HERE] with your actual contact email
+6. Submit the request — Microsoft typically reviews within 3-5 business days
+================================================================================
