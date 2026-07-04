@@ -2,3 +2,4 @@ expo-ios-wrapper/node_modules/
 node_modules
 node_modules/
 node_modules/
+.env

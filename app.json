@@ -4,5 +4,10 @@
   },
   "ios": {
     "bundleIdentifier": "com.hyperquency.shorthopapp"
+  },
+  "extra": {
+    "eas": {
+      "projectId": "779fb556-cfce-4500-b7b1-6a2514bdb763"
+    }
   }
 }
